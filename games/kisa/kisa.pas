@@ -1,7 +1,6 @@
 program kisa;
 var
-	okCommand, exitCmd, clicked: command;
-	TF, y, i, j, nm, ox, oy, label_id, ncol: integer;
+	i, j, nm, ox, oy, label_id, ncol: integer;
 	vv, out, lastmess, zgu: string;
 	vc: char;
 	vopr, otv: boolean;
@@ -700,54 +699,16 @@ begin
 	ncol:=0;
 end;
 
-procedure mydt (str: string; bool: boolean);
-	var x: integer;
-begin
-	if bool then X := (getWidth - getStringWidth(str))mod 2 else
-	X := (getWidth - getStringWidth(str));
-	drawText(str, X, Y);
-	Y := Y + getStringHeight(str)+2;
-	repaint
-end;
-
 procedure myrun;
 	var b: integer;
 begin
-	y:= (getHeight) mod 2;
-	mydT('Киса офлайн.',true);
-	mydt('1.0 Demo',true);
-	delay(2000);
-	repaint;
+	writeln ('Киса офлайн.');
 	for b:=1 to 21 do qz[b]:=1;
 	qz[1]:=0;
-	clearForm;
 	nm:=0;
 	ox:=0;
 	oy:=0;
 	lastmess:='0 9 e9d9q9z';
-end;
-
-procedure myexit;
-begin
-	setColor (255, 255, 255);
-	fillRect (0, 0, getWidth, getHeight);
-	showCanvas;
-	setColor (255, 0, 0);
-	y:= 0;
-	mydt('Идея взята с фильма',true);
-	mydt('}{0TT@БЬ)Ч',true);
-	mydt('http://hottabych.net/',true);
-	mydt('Автор мидлета-Данил(S48GS)',true);
-	mydt('http://S48GS.NAROD.RU/',true);
-	repaint;
-	delay(3000);
-	halt;
-end;
-
-procedure vvod;
-begin
-	vopr := false;
-	TF := formAddTextField ('Вы:', '', 128, TF_ANY);
 end;
 
 Procedure dma;
@@ -756,12 +717,21 @@ var
 	o, a: boolean;
 	z: char;
 begin
-	if ncol>5 then begin qz[1]:=0;qz[2]:=16 ;ncol:=0 end;
-	otv:=true;qz[20]:=0;
-	vv:=formGetText(TF);
-	o:=true ;
+	vopr := false;
+	if ncol>5 then begin
+		qz[1] := 0;
+		qz[2] := 16;
+		ncol := 0
+	end;
+	otv := true;
+	qz[20] := 0;
+ 	writeln ('Вы:');
+	readln (vv);
+writeln ('<' + vv + '>');
+	o:=true;
 	i:=length(vv);
-	k:=1;vz[k]:=getChar(vv,k);
+	k:=1;
+	vz[k]:=vv[k];
 	n:=0;a:=true;
 	if (i=0) or (i=1) then begin otv:=false;qz[1]:=qz[1]+1;qz[20]:=1;ncol:=0 end else
 	if lastmess=vv then begin otv:=false;qz[20]:=2;ncol:=0 end else
@@ -769,7 +739,7 @@ begin
 	z:=vz[k];
 	if vz[k]='?' then vopr:=true;
 	k:=k+1;ncol:=ncol+1;
-	vz[k]:=getChar(vv,k);
+	vz[k]:=vv[k];
 	if z=vz[k] then n:=n+1;
 	if n>4 then o:=false;
 	if k=i then a:=false
@@ -779,10 +749,8 @@ end;
 
 procedure myvyvod;
 begin
-	clearForm;
-	label_id := formAddString (baza[65]);
-	delay (2000);
-	myexit;
+	writeln (baza[65]);
+	halt;
 end;
 
 procedure slova;
@@ -793,9 +761,9 @@ begin
 	for k:=0 to i do begin
 		slovo[k]:='';
 		if vz[k]<>' ' then
-			slovo[j]:=locase(slovo[j])+vz[k]
+			slovo[j] := {lowercase (} slovo[j] + vz[k]
 		else
-			j:=j+1;
+			j := j+1;
 	end;
 end;
 
@@ -919,7 +887,14 @@ begin
 	if (otv)and(poisk('как',true)) and (poisk('поживаеш',true))
 	then begin otv:=false;qz[20]:=14;vyvod:=poslevyvod end;
 	if (otv)and((vv='пока') or (vv='прощай') or (vv='до свидания')or (vv='до скорого')or (vv='бай'))
-	then begin randomize;otv:=false;qz[20]:=15;qz[15]:=random(6)+112;label_id:=formAddString(poslevyvod);delay(2000);myexit; end;
+	then begin
+		randomize;
+		otv:=false;
+		qz[20]:=15;
+		qz[15]:=random(6)+112;
+		writeln (poslevyvod);
+		halt;
+	end;
 	if (otv)and((poisk('почему',true)) or ((poisk('почему',true))and(poisk('?',false))))
 	then begin otv:=false;qz[20]:=16;vyvod:=poslevyvod end;
 	if (otv)and(vopr) then begin otv:=false;qz[20]:=17;vyvod:=poslevyvod end;
@@ -943,48 +918,11 @@ end;
 begin
 	myrun;
 	first;
-	showForm;
-	label_id := formAddString ('Привет! Познакомимся?');
-	exitCmd := createCommand ('Отмена', CM_EXIT, 1);
-	okCommand := createCommand ('OK', CM_OK, 1);
-	addCommand (okCommand);
-	addCommand (exitCmd);
+	writeln ('Привет! Познакомимся?');
 
 	repeat
-		clicked := getClickedCommand;
-	until (clicked = okCommand) or (clicked = exitCmd);
-	if clicked = exitCmd then
-		myexit;
-
-	repeat
-		clearForm;
-		vvod;
-		exitCmd := createCommand ('Exit', CM_EXIT, 1);
-		okCommand := createCommand ('OK', CM_OK, 1);
-		addCommand (okCommand);
-		addCommand (exitCmd);
-
-		repeat
-			clicked := getClickedCommand;
-		until (clicked = okCommand) or (clicked = exitCmd);
-		if clicked = exitCmd then
-			myexit;
-
 		dma;
-		clearForm;
 		zgu := vyvod;
-		label_id := formAddString (zgu);
-		exitCmd := createCommand ('Exit', CM_EXIT, 1);
-		okCommand := createCommand ('OK', CM_OK, 1);
-		addCommand (okCommand);
-		addCommand (exitCmd);
-
-		repeat
-			clicked := getClickedCommand;
-		until (clicked = okCommand) or (clicked = exitCmd);
-		if clicked = exitCmd then
-			myexit;
-
-		clearForm;
+		writeln (zgu);
 	until false;
 end.
