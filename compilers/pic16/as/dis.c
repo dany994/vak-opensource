@@ -1,19 +1,19 @@
 /*
- * Disassembler for PIC12C50x processors.
+ * Disassembler for PIC16Cxx processors.
  *
- * Copyright (C) 1997-1998 Cronyx Engineering Ltd.
- * Author: Serge Vakulenko, <vak@cronyx.ru>
+ * Copyright (C) 1997-2002 Serge Vakulenko <vak@cronyx.ru>
  *
- * This software is distributed with NO WARRANTIES, not even the implied
- * warranties for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.
  *
- * Authors grant any other persons or organisations permission to use
- * or modify this software as long as this message is kept with the software,
- * all derivative works or modified versions.
- *
- * For permission to use this software in commercial purposes,
- * please, contact the author.
+ * You can redistribute this file and/or modify it under the terms of the GNU
+ * General Public License (GPL) as published by the Free Software Foundation;
+ * either version 2 of the License, or (at your discretion) any later version.
+ * See the accompanying file "COPYING.txt" for more details.
  */
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -82,7 +82,7 @@ int gethex (int *len, long *addr, unsigned char *line)
 	char buf [80];
 	unsigned char sum;
 	int i, eof;
-	static high;
+	static int high;
 again:
 	if (! fgets (buf, sizeof (buf), stdin))
 		uerror ("unexpected EOF");
@@ -300,8 +300,7 @@ int main (int argc, char **argv)
 		}
 
 	if (! infile) {
-usage:          printf ("PIC 12c50x Disassembler, by Serge V.Vakulenko\n");
-		printf ("Copyright (C) 1998 Cronyx Engineering Ltd.\n\n");
+usage:          printf ("PIC 16Cxx Disassembler, by Serge V.Vakulenko\n\n");
 		printf ("Usage:\n\tdis12 [-o outfile.hex] infile.s ...\n\n");
 		return -1;
 	}

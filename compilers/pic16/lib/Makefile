@@ -1,17 +1,17 @@
-INCLUDE = -I../include
-OBJS    =
-INSTDIR	= /usr/local
+INCLUDE		= -I../include
+OBJS		=
+INSTDIR		= /usr/local
 
-all:    $(OBJS)
+all:		$(OBJS)
 
 clean:
-	rm -f *.b *.lib *.hex
+		rm -f *~ *.lib *.hex
 
-install: $(OBJS)
-	install -d $(INSTDIR)/lib/pic16
-	for f in $(OBJS); do install -c $$f $(INSTDIR)/lib/pic16; done
+install:	$(OBJS)
+		install -d $(INSTDIR)/lib/pic16
+		for f in $(OBJS); do install -c $$f $(INSTDIR)/lib/pic16; done
 
-.SUFFIXES: .lib
+.SUFFIXES:	.lib
 
 .s.lib:
-	$(CPP) $(INCLUDE) $< | sed -f %clean.sed > $@
+		$(CPP) $(INCLUDE) $< | sed -f %clean.sed > $@
