@@ -3,7 +3,7 @@ INSTDIR	= /usr/local
 all:
 
 clean:
-	rm -f *.tmp *.o *.b
+	rm -f *.tmp *.o *~
 
 install:
 	install -d $(INSTDIR)/lib/pic17/include

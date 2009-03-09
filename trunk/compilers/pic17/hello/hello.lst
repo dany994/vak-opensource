@@ -33,11 +33,8 @@ Data symbols:
 	007f  D  gets_c
 	0080  D  main_buf
 	00d0  D  A13
-
-Code symbols:
-	0000  A  _INDF0
 	0000  A  INDF0
-	0000  T  __startup
+	0000  A  _INDF0
 	0001  A  FSR0
 	0001  A  _FSR0
 	0002  A  _PCL
@@ -46,74 +43,77 @@ Code symbols:
 	0005  A  _T0STA
 	0006  A  _CPUSTA
 	0007  A  _INTSTA
-	0008  A  _INDF1
 	0008  A  INDF1
-	0009  A  _A1
-	0009  A  _FSR1
+	0008  A  _INDF1
 	0009  A  A1
+	0009  A  _FSR1
+	0009  A  _A1
 	000a  A  A0
-	000a  A  _A0
 	000a  A  _WREG
+	000a  A  _A0
 	000b  A  _TMR0L
 	000b  A  _TMR0
 	000c  A  _TMR0H
-	000d  A  _A2
+	000d  A  A2
 	000d  A  TBLPTRL
 	000d  A  _TBLPTRL
 	000d  A  _TBLPTR
-	000d  A  A2
-	000e  A  TBLPTRH
-	000e  A  _A3
+	000d  A  _A2
 	000e  A  A3
+	000e  A  TBLPTRH
 	000e  A  _TBLPTRH
+	000e  A  _A3
 	000f  A  _BSR
-	0010  A  _TMR1
-	0010  A  _DDRC
-	0010  T  __intr_timer0
-	0010  A  _PW1DCL
 	0010  A  _PORTA
-	0011  A  _PW2DCL
+	0010  A  _DDRC
+	0010  A  _TMR1
+	0010  A  _PW1DCL
+	0011  A  _DDRB
 	0011  A  _PORTC
 	0011  A  _TMR2
-	0011  A  _DDRB
-	0012  A  _TMR3
-	0012  A  _TMR3L
-	0012  A  _PW1DCH
-	0012  A  _DDRD
+	0011  A  _PW2DCL
 	0012  A  _PORTB
+	0012  A  _DDRD
+	0012  A  _TMR3L
+	0012  A  _TMR3
+	0012  A  _PW1DCH
 	0013  A  _RCSTA
-	0013  A  _TMR3H
 	0013  A  _PORTD
+	0013  A  _TMR3H
 	0013  A  _PW2DCH
-	0014  A  _CA2L
-	0014  A  _DDRE
-	0014  A  _CA2
 	0014  A  _RCREG
+	0014  A  _DDRE
 	0014  A  _PR1
-	0015  A  _PORTE
+	0014  A  _CA2L
+	0014  A  _CA2
 	0015  A  _TXSTA
-	0015  A  _CA2H
+	0015  A  _PORTE
 	0015  A  _PR2
-	0016  A  _CA1
+	0015  A  _CA2H
 	0016  A  _TXREG
 	0016  A  _PIR
 	0016  A  _PR3L
 	0016  A  _PR3
 	0016  A  _CA1L
+	0016  A  _CA1
 	0016  A  _TCON1
-	0017  A  _CA1H
-	0017  A  _TCON2
+	0017  A  _SPBRG
 	0017  A  _PIE
 	0017  A  _PR3H
-	0017  A  _SPBRG
+	0017  A  _CA1H
+	0017  A  _TCON2
+	0018  A  PRODL
 	0018  A  _PRODL
 	0018  A  _PROD
-	0018  A  PRODL
 	0019  A  PRODH
 	0019  A  _PRODH
 	001a  A  _save_wreg
 	001b  A  _save_status
 	001c  A  _save_bsr
+
+Code symbols:
+	0000  T  __startup
+	0010  T  __intr_timer0
 	0020  T  __intr_periph
 	0053  T  _init
 	0076  T  _print
@@ -132,6 +132,7 @@ Code symbols:
 	0202  T  mul22
 	021c  T  divcorr2
 	0248  T  gt21
+	028c  T  <end>
 
 Text constants:
 	0250  C  "\r\nEnter any string: "
