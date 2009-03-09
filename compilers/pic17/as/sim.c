@@ -4,18 +4,16 @@
  * No OV status bit.
  * No sleep and watchdog yet.
  *
- * Copyright (C) 1997-1998 Cronyx Engineering Ltd.
- * Author: Serge Vakulenko, <vak@cronyx.ru>
+ * Copyright (C) 1997-2002 Serge Vakulenko <vak@cronyx.ru>
  *
- * This software is distributed with NO WARRANTIES, not even the implied
- * warranties for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.
  *
- * Authors grant any other persons or organisations permission to use
- * or modify this software as long as this message is kept with the software,
- * all derivative works or modified versions.
- *
- * For permission to use this software in commercial purposes,
- * please, contact the author.
+ * You can redistribute this file and/or modify it under the terms of the GNU
+ * General Public License (GPL) as published by the Free Software Foundation;
+ * either version 2 of the License, or (at your discretion) any later version.
+ * See the accompanying file "COPYING.txt" for more details.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -266,7 +264,7 @@ int gethex (int *len, long *addr, unsigned char *line)
 	char buf [80];
 	unsigned char sum;
 	int i, eof;
-	static high;
+	static int high;
 again:
 	if (! fgets (buf, sizeof (buf), input))
 		uerror ("unexpected EOF");
@@ -366,7 +364,8 @@ void cycle ()
 		if (read (0, &RCREG, 1) == 1) {
 			if (RCREG == ('t' & 037)) {
 				/* ^T - switch the debug mode */
-				debug = (++debug % 3);
+				++debug;
+				debug &= 3;
 			} else {
 				/* Receive interrupt */
 				PIR |= RCIF;
@@ -461,14 +460,16 @@ unsigned char load (int addr)
 
 	switch ((unsigned char) addr) {
 	case 0:
-		if (! (ALUSTA & FS1))
+		if (! (ALUSTA & FS1)) {
 			if (ALUSTA & FS0) ++FSR0;
 			else              --FSR0;
+		}
 		return val;
 	case 8:
-		if (! (ALUSTA & FS3))
+		if (! (ALUSTA & FS3)) {
 			if (ALUSTA & FS2) ++FSR1;
 			else              --FSR1;
+		}
 		break;
 	}
 	return val;
@@ -656,7 +657,7 @@ void run ()
 		else           INTSTA &= ~PEIF;
 
 		/* Process interrupts. */
-		if (! (CPUSTA & GLINTD))
+		if (! (CPUSTA & GLINTD)) {
 			if ((INTSTA & INTF) && (INTSTA & INTE)) {
 				/* External interrupt on INT pin. */
 				trace ("external INT interrupt");
@@ -689,7 +690,7 @@ void run ()
 				push (PC);
 				PC = 0x20;
 			}
-
+		}
 		if (PC > TXTSIZE)
 			uerror ("ran out of program memory");
 		if (debug > 1 ||

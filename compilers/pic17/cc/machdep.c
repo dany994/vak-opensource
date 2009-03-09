@@ -1,18 +1,16 @@
 /*
  * C Compiler for PIC17C4x processors.
  *
- * Copyright (C) 1997-1998 Cronyx Engineering Ltd.
- * Author: Serge Vakulenko, <vak@cronyx.ru>
+ * Copyright (C) 1997-2002 Serge Vakulenko <vak@cronyx.ru>
  *
- * This software is distributed with NO WARRANTIES, not even the implied
- * warranties for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.
  *
- * Authors grant any other persons or organisations permission to use
- * or modify this software as long as this message is kept with the software,
- * all derivative works or modified versions.
- *
- * For permission to use this software in commercial purposes,
- * please, contact the author.
+ * You can redistribute this file and/or modify it under the terms of the GNU
+ * General Public License (GPL) as published by the Free Software Foundation;
+ * either version 2 of the License, or (at your discretion) any later version.
+ * See the accompanying file "COPYING.txt" for more details.
  */
 #include <stdio.h>
 #include "global.h"
@@ -1633,7 +1631,7 @@ void printbinary (int op, int type, int ltype, node_t *arg, int target)
 				if (arg->op == OP_NAME)       output (" xta %n; atx A5; xta %n+1;", arg, arg);
 				else if (arg->op == OP_CONST) output (" cta %l #`=%n; atx A5; cta %h;", arg, arg, arg);
 				else error ("bad == op");
-				output (" xz A6; xz  A7;");
+				output (" xz A6; xz A7;");
 			} else {
 				if (arg->op == OP_NAME)       output (" xta %n; atx A5; xta %n+1; atx A6; xta %n+2; atx A7; xta %n+3;", arg, arg, arg, arg);
 				else if (arg->op == OP_CONST) output (" cta %l #`=%n; atx A5; cta %h; atx A6; cta %2; atx A7; cta %3;", arg, arg, arg, arg, arg);

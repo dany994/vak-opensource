@@ -1,15 +1,15 @@
-CC      = cc17
-AS      = as17 -O
-CFLAGS  = -DMHZ=16384000
-OBJ     = hello.s
+CC		= cc17
+AS		= as17
+CFLAGS		= -DMHZ=16384000 -O
+OBJ		= hello.s
 
-all:    hello.hex
+all:		hello.hex
 
-hello.hex: $(OBJ)
-	$(AS) $(OBJ) -o hello.hex
+hello.hex:	hello.c
+		$(CC) $(CFLAGS) hello.c -o hello.hex
 
 clean:
-	rm -f $(OBJ) *.[bi] *.core
+		rm -f $(OBJ) *~ *.i *.core
 
 .c.s:
-	$(CC) $(CFLAGS) -S $<
+		$(CC) $(CFLAGS) -S $<
