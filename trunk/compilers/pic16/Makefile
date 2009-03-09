@@ -1,13 +1,11 @@
 SUBDIRS = as cc lib include
 
 all:
-	@for subdir in $(SUBDIRS); do (cd $$subdir; \
-		echo "=== $$subdir ==="; $(MAKE) all); done
+	@for subdir in $(SUBDIRS); do $(MAKE) -C $$subdir all; done
 
 install:
-	@for subdir in $(SUBDIRS); do (cd $$subdir; \
-		echo "=== $$subdir ==="; $(MAKE) install); done
+	@for subdir in $(SUBDIRS); do $(MAKE) -C $$subdir install; done
 
 clean:
-	for subdir in $(SUBDIRS); do (cd $$subdir; $(MAKE) clean); done
-	rm -f *.b
+	for subdir in $(SUBDIRS); do $(MAKE) -C $$subdir clean; done
+	rm -f *~
