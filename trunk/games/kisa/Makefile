@@ -1,14 +1,10 @@
-PC		= gpc
+#PC		= gpc
+PC		= fpc
 
 all:		kisa
 
 clean:
-		rm -f *~
+		rm -f *~ *.o kisa
 
-kisa:		kisa.o
-		$(PC) kisa.o -o $@
-
-.pas.o:
-		$(PC) -c $<
-
-.SUFFIXES:	.pas
+kisa:		kisa.pas
+		$(PC) $< -o $@

@@ -1,8 +1,7 @@
 program kisa;
 var
-	i, j, nm, ox, oy, label_id, ncol: integer;
-	vv, out, lastmess, zgu: string;
-	vc: char;
+	i, j, nm, ncol: integer;
+	vv, lastmess, zgu: string;
 	vopr, otv: boolean;
 	vz: array [0..128] of char;
 	slovo: array [0..128] of string;
@@ -706,8 +705,6 @@ begin
 	for b:=1 to 21 do qz[b]:=1;
 	qz[1]:=0;
 	nm:=0;
-	ox:=0;
-	oy:=0;
 	lastmess:='0 9 e9d9q9z';
 end;
 
@@ -725,7 +722,7 @@ begin
 	end;
 	otv := true;
 	qz[20] := 0;
- 	writeln ('Вы:');
+ 	write ('Вы: ');
 	readln (vv);
 writeln ('<' + vv + '>');
 	o:=true;
@@ -785,7 +782,6 @@ end;
 
 function poslevyvod: string;
 var
-	qw: integer;
 	otv1: boolean;
 begin
 	otv1:=true;
@@ -858,8 +854,6 @@ begin
 end;
 
 function vyvod: string;
-var
-	qw: integer;
 begin
 	if (qz[20]=1)or(qz[20]=2)then begin otv:=false;vyvod:=poslevyvod end;
 	if (otv)and(poisk('как',true)) and (poisk('меня',false)) and (poisk('зовут',false))
