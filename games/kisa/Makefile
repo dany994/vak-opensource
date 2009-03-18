@@ -1,5 +1,5 @@
-#PC		= gpc
-PC		= fpc
+PC		= gpc -g
+#PC		= fpc
 
 all:		kisa
 
