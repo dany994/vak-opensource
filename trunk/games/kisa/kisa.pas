@@ -1,15 +1,14 @@
 program kisa;
 var
-	i, j, nm, ncol: integer;
-	vv, lastmess, zgu: string;
-	vopr, otv: boolean;
-	vz: array [0..128] of char;
-	slovo: array [0..128] of string;
+	input_length, mood, nm: integer;
+	input, lastmess: string;
+	question, reply_needed: boolean;
 	baza: array [1..301] of string;
-	qz: array [1..21] of integer;
+	qz: array [1..20] of integer;
 
-procedure first;
-var kj:integer;
+procedure init;
+var
+	kj: integer;
 begin
 	{Если пусто или 1 символ}
 	kj := 1;	baza[kj] := 'Ну, венец природы, не стесняйся.';
@@ -55,7 +54,7 @@ begin
 
 	{Вопрос-Как меня зовут}
 			baza[kj] := 'В этом чате нет регистрации, так что я не знаю как тебя зовут.';
-	kj := kj+1;	baza[kj] := 'Я всёравно забуду.';
+	kj := kj+1;	baza[kj] := 'Я всё равно забуду.';
 	kj := kj+1;	baza[kj] := 'Мне передать это своему куратору?';
 	kj := kj+1;	baza[kj] := 'Владимир Владимирович, у Вас мания величия!';
 	kj := kj+1;	baza[kj] := 'Надеюсь не Киса.';
@@ -374,7 +373,7 @@ begin
 	kj := kj+1;	baza[kj] := 'С Новым Годом свиньи!';
 
 	{kj=301}
-	qz[1] := 0;
+	qz[1] := 1;
 	qz[2] := 16;
 	qz[3] := 37;
 	qz[4] := 44;
@@ -393,399 +392,305 @@ begin
 	qz[17] := 123;
 	qz[18] := 202;
 	qz[19] := 208;
-	qz[21] := 214;
-	ncol := 0;
+	qz[20] := 214;
 end;
 
-procedure myrun;
-	var b: integer;
-begin
-	writeln ('Киса офлайн.');
-	for b:=1 to 21 do
-		qz[b] := 1;
-	qz[1] := 0;
-	nm := 0;
-	lastmess := '0 9 e9d9q9z';
-end;
-
-procedure dma;
-var
-	n, k: integer;
-	o, a: boolean;
-	z: char;
-begin
-	vopr := false;
-	if ncol>5 then begin
-		qz[1] := 0;
-		qz[2] := 16;
-		ncol := 0
-	end;
-	otv := true;
-	qz[20] := 0;
- 	write ('Вы: ');
-	readln (vv);
-writeln ('<' + vv + '>');
-	o := true;
-	i := length(vv);
-	k := 1;
-	vz[k] := vv[k];
-	n := 0;
-	a := true;
-	if (i=0) or (i=1) then begin
-		otv := false;
-		qz[1] := qz[1] + 1;
-		qz[20] := 1;
-		ncol := 0
-	end else if lastmess=vv then begin
-		otv := false;
-		qz[20] := 2;
-		ncol := 0
-	end else
-		while (o) and (a) do begin
-			z := vz[k];
-			if vz[k] = '?' then
-				vopr := true;
-			k := k+1;
-			ncol := ncol+1;
-			vz[k] := vv[k];
-			if z=vz[k] then
-				n := n+1;
-			if n>4 then
-				o := false;
-			if k=i then
-				a := false
-		end;
-	lastmess := vv;
-	if not(o) then begin
-		qz[1] := qz[1] + 1;
-		qz[20] := 1
-	end
-end;
-
-procedure myvyvod;
+procedure offence;
 begin
 	writeln (baza[65]);
 	halt;
 end;
 
-procedure slova;
+function poisk (po: string; start: boolean): boolean;
 var
-	k: integer;
+	k, i: integer;
+	found: boolean;
 begin
-	j := 0;
-	for k:=0 to i do begin
-		slovo[k] := '';
-		if vz[k]<>' ' then
-			slovo[j] := {lowercase (} slovo[j] + vz[k]
-		else
-			j := j+1;
-	end;
-end;
-
-function poisk (po: string; mat: boolean): boolean;
-var
-	k: integer;
-	tru, fol: boolean;
-begin
-	tru := true;
-	fol := false;
-	if mat then
+	if start then
 		nm := 0;
 	k := nm;
-	while tru do begin
-		if slovo[k]=po then begin
-			fol := true;
-			tru := false
-		end else
-			k := k+1;
-		if k>=i then
-			tru := false;
+	poisk := false;
+	while k < input_length do begin
+		found := true;
+		for i:=1 to length (po) do begin
+			if (k+i > input_length) or (input[k+i] <> po[i]) then begin
+				found := false;
+				break;
+			end;
+		end;
+		if found then begin
+			poisk := true;
+			break
+		end;
+		k := k+1
 	end;
-	if fol then
-		poisk := true
-	else
-		poisk := false;
 	nm := k;
 end;
 
 function poslevyvod: string;
-var
-	otv1: boolean;
 begin
-	otv1 := true;
-	if qz[20]=1 then begin
-		if (qz[1]<=15) then begin
-			poslevyvod := baza[qz[1]];
-			otv1 := false;
-		end;
-		if (qz[1]>15) and (otv1) then
-			if qz[1]>=17 then
-				myvyvod
-			else begin
-				poslevyvod := baza[qz[1] + 48];
-				qz[1] := qz[1] + 1
-			end
-	end else if qz[20]=2 then begin
-		if (qz[2]<=36) then begin
-			poslevyvod := baza[qz[2]];
-			qz[2] := qz[2] + 1;
-			otv1 := false;
-		end;
-		if (qz[2]>36)and(otv1) then
-			if qz[2]>=38 then
-				myvyvod
-			else begin
-				poslevyvod := baza[qz[2] + 27];
-				qz[2] := qz[2] + 1
-			end
-	end else if qz[20]=3 then begin
+{writeln ("mood=", mood);}
+	if mood=1 then begin
+		if qz[1] >= 17 then
+			offence;
+		if qz[1] <= 15 then
+			poslevyvod := baza[qz[1]]
+		else begin
+			poslevyvod := baza[qz[1] + 48];
+			qz[1] := qz[1] + 1
+		end
+	end else if mood=2 then begin
+		if qz[2]>=38 then
+			offence;
+		if (qz[2]<=36) then
+			poslevyvod := baza[qz[2]]
+		else
+			poslevyvod := baza[qz[2] + 27];
+		qz[2] := qz[2] + 1
+	end else if mood=3 then begin
 		if (qz[3]<=43) then begin
 			poslevyvod := baza[qz[3]];
 			qz[3] := qz[3] + 1
 		end;
 		if (qz[3]>43) then
 			qz[3] := 37
-	end else if qz[20]=4 then begin
+	end else if mood=4 then begin
 		if (qz[4]<=51) then begin
 			poslevyvod := baza[qz[4]];
 			qz[4] := qz[4] + 1
 		end;
 		if (qz[4]>51) then
 			qz[4] := 44
-	end else if qz[20]=5 then begin
+	end else if mood=5 then begin
 		if (qz[5]<=57) then begin
 			poslevyvod := baza[qz[5]];
 			qz[5] := qz[5] + 1
 		end;
 		if (qz[5]>57) then
 			qz[5] := 52
-	end else if qz[20]=6 then begin
+	end else if mood=6 then begin
 		if (qz[6]<=63) then begin
 			poslevyvod := baza[qz[6]];
 			qz[6] := qz[6] + 1
 		end;
 		if (qz[6]>63) then
 			qz[6] := 58
-	end else if qz[20]=7 then begin
+	end else if mood=7 then begin
 		if (qz[7]<=69) then begin
 			poslevyvod := baza[qz[7]];
 			qz[7] := qz[7] + 1
 		end;
 		if (qz[7]>69) then
 			qz[7] := 66
-	end else if qz[20]=8 then begin
+	end else if mood=8 then begin
 		if (qz[8]<=77) then begin
 			poslevyvod := baza[qz[8]];
 			qz[8] := qz[8] + 1
 		end;
 		if (qz[8]>77) then
 			qz[8] := 70
-	end else if qz[20]=9 then begin
+	end else if mood=9 then begin
 		if (qz[9]<=85) then begin
 			poslevyvod := baza[qz[9]];
 			qz[9] := qz[9] + 1
 		end;
 		if (qz[9]>85) then
 			qz[9] := 78
-	end else if qz[20]=10 then begin
+	end else if mood=10 then begin
 		if (qz[10]<=96) then begin
 			poslevyvod := baza[qz[10]];
 			qz[10] := qz[10] + 1
 		end;
 		if (qz[10]>=97) then
 			poslevyvod := baza[qz[10]]
-	end else if qz[20]=11 then begin
+	end else if mood=11 then begin
 		if (qz[11]<=100) then begin
 			poslevyvod := baza[qz[11]];
 			qz[11] := qz[11] + 1
 		end;
 		if (qz[11]>100) then
 			qz[11] := 98
-	end else if qz[20]=12 then begin
+	end else if mood=12 then begin
 		if (qz[12]<=103) then begin
 			poslevyvod := baza[qz[12]];
 			qz[12] := qz[12] + 1
 		end;
 		if (qz[12]>103) then
 			qz[12] := 101
-	end else if qz[20]=13 then begin
+	end else if mood=13 then begin
 		if (qz[13]<=108) then begin
 			poslevyvod := baza[qz[13]];
 			qz[13] := qz[13] + 1
 		end;
 		if (qz[13]>108) then
 			qz[13] := 104
-	end else if qz[20]=14 then begin
+	end else if mood=14 then begin
 		if (qz[14]<=111) then begin
 			poslevyvod := baza[qz[14]];
 			qz[14] := qz[14] + 1
 		end;
 		if (qz[14]>111) then
 			qz[14] := 109
-	end else if qz[20]=15 then begin
+	end else if mood=15 then begin
 		if (qz[15]<=117) then begin
 			poslevyvod := baza[qz[15]];
 			qz[15] := qz[15] + 1
 		end
-	end else if qz[20]=16 then begin
+	end else if mood=16 then begin
 		if (qz[16]<=122) then begin
 			poslevyvod := baza[qz[16]];
 			qz[16] := qz[16] + 1
 		end;
 		if (qz[16]>122) then
 			qz[16] := 118
-	end else if qz[20]=17 then begin
+	end else if mood=17 then begin
 		if (qz[17]<=201) then begin
 			poslevyvod := baza[qz[17]];
 			qz[17] := qz[17] + 1
 		end;
 		if (qz[17]>201) then
 			qz[17] := 123
-	end else if qz[20]=18 then begin
+	end else if mood=18 then begin
 		if (qz[18]<=207) then begin
 			poslevyvod := baza[qz[18]];
 			qz[18] := qz[18] + 1
 		end;
 		if (qz[18]>207) then
 			qz[18] := 202
-	end else if qz[20]=17 then begin
-		if (qz[19]<=213) then begin
-			poslevyvod := baza[qz[19]];
-			qz[19] := qz[19] + 1
+	end else if mood=19 then begin
+		if qz[19]=215 then
+			offence;
+		if (qz[19]<=213) then
+			poslevyvod := baza[qz[19]]
+		else
+			poslevyvod := baza[qz[19] - 150];
+		qz[19] := qz[19] + 1
+	end else if mood = 20 then begin
+		if (qz[20] <= 301) then begin
+			poslevyvod := baza[qz[20]];
+			qz[20] := qz[20] + 1
 		end;
-		if (qz[19]>213)and(otv1) then
-			if qz[19]=215 then
-				myvyvod
-			else begin
-				poslevyvod := baza[qz[19] - 150];
-				qz[19] := qz[19] + 1
-			end
-	end else if qz[20] = 21 then begin
-		if (qz[21] <= 301) then begin
-			poslevyvod := baza[qz[21]];
-			qz[21] := qz[21] + 1
-		end;
-		if (qz[21] > 301) then
-			qz[21] := 301
+		if (qz[20] > 301) then
+			qz[20] := 301
 	end
 end;
 
 function vyvod: string;
 begin
-	if (qz[20]=1) or (qz[20]=2) then begin
-		otv := false;
+	if (mood=1) or (mood=2) then begin
+		reply_needed := false;
 		vyvod := poslevyvod
 	end;
-	if (otv) and (poisk('как',true)) and (poisk('меня',false)) and
+	if (reply_needed) and (poisk('как',true)) and (poisk('меня',false)) and
 	    (poisk('зовут',false)) then begin
-		otv := false;
-		qz[20] := 3;
+		reply_needed := false;
+		mood := 3;
 		vyvod := poslevyvod
 	end;
-	if (otv) and (poisk('ты',true)) and (poisk('кто',true)) then begin
-		otv := false;
-		qz[20] := 4;
+	if (reply_needed) and (poisk('ты',true)) and (poisk('кто',true)) then begin
+		reply_needed := false;
+		mood := 4;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((poisk(':)',true)) or (poisk(':-)',true))) then begin
-		otv := false;
-		qz[20] := 5;
+	if (reply_needed) and ((poisk(':)',true)) or (poisk(':-)',true))) then begin
+		reply_needed := false;
+		mood := 5;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((poisk(':(',true)) or (poisk(':-(',true))) then begin
-		otv := false;
-		qz[20] := 6;
+	if (reply_needed) and ((poisk(':(',true)) or (poisk(':-(',true))) then begin
+		reply_needed := false;
+		mood := 6;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((poisk('да?',true)) or (poisk('да',true)) and
+	if (reply_needed) and ((poisk('да?',true)) or (poisk('да',true)) and
 	    (poisk('?',false))) then begin
-		otv := false;
-		qz[20] := 7;
+		reply_needed := false;
+		mood := 7;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((poisk('да',true)) or (poisk('да.',true)) or
+	if (reply_needed) and ((poisk('да',true)) or (poisk('да.',true)) or
 	    (poisk('да',true)) and (poisk('!',false))) then begin
-		otv := false;
-		qz[20] := 8;
+		reply_needed := false;
+		mood := 8;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((poisk('нет',true)) or (poisk('нет.',true)) or
+	if (reply_needed) and ((poisk('нет',true)) or (poisk('нет.',true)) or
 	    (poisk('нет',true)) and (poisk('!',false))) then begin
-		otv := false;
-		qz[20] := 9;
+		reply_needed := false;
+		mood := 9;
 		vyvod := poslevyvod
 	end;
-	if (otv) and (poisk('привет',true)) then begin
-		otv := false;
-		qz[20] := 10;
+	if (reply_needed) and (poisk('привет',true)) then begin
+		reply_needed := false;
+		mood := 10;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((poisk('здорова',true)) or
+	if (reply_needed) and ((poisk('здорова',true)) or
 	    (poisk('здорово',true))) then begin
-		otv := false;
-		qz[20] := 11;
+		reply_needed := false;
+		mood := 11;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((vv='давай') or (vv='давай.') or (vv='давай!')) then begin
-		otv := false;
-		qz[20] := 12;
+	if (reply_needed) and ((input='давай') or (input='давай.') or (input='давай!')) then begin
+		reply_needed := false;
+		mood := 12;
 		vyvod := poslevyvod
 	end;
-	if (otv) and (((poisk('как',true)) and (poisk('дела',false))) or
+	if (reply_needed) and (((poisk('как',true)) and (poisk('дела',false))) or
 	    ((poisk('как',true)) and (poisk('жизнь',false))) or
 	    ((poisk('как',true)) and (poisk('твое',false)) and
 	    (poisk('ничего',false)))) then begin
-		otv := false;
-		qz[20] := 13;
+		reply_needed := false;
+		mood := 13;
 		vyvod := poslevyvod
 	end;
-	if (otv) and (poisk('как',true)) and (poisk('поживаеш',true)) then begin
-		otv := false;
-		qz[20] := 14;
+	if (reply_needed) and (poisk('как',true)) and (poisk('поживаеш',true)) then begin
+		reply_needed := false;
+		mood := 14;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((vv='пока') or (vv='прощай') or (vv='до свидания') or
-	    (vv='до скорого') or (vv='бай')) then begin
+	if (reply_needed) and ((input='пока') or (input='прощай') or (input='до свидания') or
+	    (input='до скорого') or (input='бай')) then begin
 		randomize;
-		otv := false;
-		qz[20] := 15;
+		reply_needed := false;
+		mood := 15;
 		qz[15] := random(6) + 112;
 		writeln (poslevyvod);
 		halt;
 	end;
-	if (otv) and ((poisk('почему',true)) or ((poisk('почему',true)) and
+	if (reply_needed) and ((poisk('почему',true)) or ((poisk('почему',true)) and
 	    (poisk('?',false)))) then begin
-		otv := false;
-		qz[20] := 16;
+		reply_needed := false;
+		mood := 16;
 		vyvod := poslevyvod
 	end;
-	if (otv) and (vopr) then begin
-		otv := false;
-		qz[20] := 17;
+	if (reply_needed) and (question) then begin
+		reply_needed := false;
+		mood := 17;
 		vyvod := poslevyvod
 	end;
-	if (otv) and (poisk('дура',true)) then begin
-		otv := false;
-		qz[20] := 18;
+	if (reply_needed) and (poisk('дура',true)) then begin
+		reply_needed := false;
+		mood := 18;
 		vyvod := poslevyvod
 	end;
-	if (otv) and ((poisk('блядь',true)) or (poisk('блять',true)) or
+{	if (reply_needed) and ((poisk('блядь',true)) or (poisk('блять',true)) or
 	    (poisk('гандон',true)) or (poisk('дура',true)) or
 	    (poisk('ебану',true)) or (poisk('ебать',true)) or
-	    (pos('ебись',vv)>-1) or (pos('ебля',vv)>-1) or
-	    (pos('ебну',vv)>-1) or (pos('пизда',vv)>-1) or
-	    (pos('проститутка',vv)>-1) or (pos('уебище',vv)>-1) or
-	    (pos('хуйня',vv)>-1) or (pos('шлюха',vv)>-1)) then begin
-		otv := false;
-		qz[20] := 19;
+	    (pos('ебись',input)>-1) or (pos('ебля',input)>-1) or
+	    (pos('ебну',input)>-1) or (pos('пизда',input)>-1) or
+	    (pos('проститутка',input)>-1) or (pos('уебище',input)>-1) or
+	    (pos('хуйня',input)>-1) or (pos('шлюха',input)>-1)) then begin
+		reply_needed := false;
+		mood := 19;
+		vyvod := poslevyvod
+	end;}
+	if reply_needed then begin
+		reply_needed := false;
+		mood := 20;
 		vyvod := poslevyvod
 	end;
-	if otv then begin
-		otv := false;
-		qz[20] := 21;
-		vyvod := poslevyvod
-	end;
-	if otv then
+	if reply_needed then
 		if poisk('сколько',true) and poisk('будет:',false) then
 			vyvod := 'С данным вопросом обращайся к другим программам'
 		else if poisk('сколько',true) and poisk('будет',false) then
@@ -796,14 +701,57 @@ begin
 			vyvod := 'С данным вопросом обращайся к другим программам';
 end;
 
+procedure parse;
+var
+	n, k: integer;
+	o, a: boolean;
+	z: char;
 begin
-	myrun;
-	first;
-	writeln ('Привет! Познакомимся?');
+	question := false;
+	reply_needed := true;
+	o := true;
+	input_length := length (input);
+	k := 1;
+	n := 0;
+	a := true;
+	if (input_length = 0) or (input_length = 1) then begin
+		reply_needed := false;
+		qz[1] := qz[1] + 1;
+		mood := 1;
+	end else if lastmess = input then begin
+		reply_needed := false;
+		mood := 2;
+	end else
+		while (o) and (a) do begin
+			z := input[k];
+			if z = '?' then
+				question := true;
+			k := k+1;
+			if z = input[k] then
+				n := n+1;
+			if n > 4 then
+				o := false;
+			if k = input_length then
+				a := false
+		end;
+	lastmess := input;
+	if not(o) then begin
+		qz[1] := qz[1] + 1;
+		mood := 1
+	end
+end;
 
+begin
+	nm := 0;
+	lastmess := '';
+	init;
+
+	writeln ('Киса офлайн.');
+	writeln ('Привет! Познакомимся?');
 	repeat
-		dma;
-		zgu := vyvod;
-		writeln (zgu);
+		write ('>> ');
+		readln (input);
+		parse;
+		writeln (vyvod);
 	until false;
 end.
