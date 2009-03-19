@@ -2,8 +2,6 @@
 // Note - Eliza is a Classic Model of chat Bots.. but this implementation is mine :)
 // May be used/modified if credit line is retained (c) 1997 All rights reserved
 
-loaded = false;				// load flag for interlocking the pages
-
 // OBJECT TYPE DEFINITIONS
 
 // Keys
@@ -235,7 +233,9 @@ function listen(User)
 			greet = true; wPrevious = wInput;  			// save input to check repeats
 			return phrase( sInput, foundkey );			// Get our response
 		}
-	} else { return "I can't help, if you will not chat with me!"; }
+	} else {
+		return "I can't help, if you will not chat with me!";
+	}
 }
 
 function wakeup()
@@ -438,8 +438,6 @@ response[115]="Come, come, elucidate your thoughts.";
 
 response[116]="Please don't repeat yourself!";
 
-loaded = true;			// set the flag as load done
-
 ///////////////////////////////////////////////////////////////
 //***********************************************************//
 //* everything below here was originally in dia_1.html      *//
@@ -466,12 +464,12 @@ function hello()
 
 function start()
 {
-	for( i = 0; i < chatmax; i++){ chatter[i] = ""; }
+	for (i = 0; i < chatmax; i++) {
+		chatter[i] = "";
+	}
 	chatter[chatpoint] = "  Loading...";
-	document.Eliza.input.focus();
 	write();
-	if( loaded ){ hello() }
-	else { setTimeout("start()", 1000); }
+	hello();
 }
 
 // Fake time thinking to allow for user self reflection
@@ -482,8 +480,11 @@ var elizaresponse = "";
 function think()
 {
 	document.Eliza.input.value = "";
-	if( elizaresponse != "" ){ respond(); }
-	else { setTimeout("think()", 250); }
+	if (elizaresponse != "") {
+		respond();
+	} else {
+		setTimeout("think()", 250);
+	}
 }
 
 function dialog()
@@ -524,8 +525,11 @@ function write()
 	document.Eliza.log.value = "";
 	for(i = 0; i < chatmax; i++){
 		n = chatpoint + i;
-		if( n < chatmax ){ document.Eliza.log.value += chatter[ n ]; }
-		else { document.Eliza.log.value += chatter[ n - chatmax ]; }
+		if (n < chatmax) {
+			print (chatter [n]);
+		} else {
+			print (chatter [n - chatmax]);
+		}
 	}
 	refresh();
 	return false;				// don't redraw the ELIZA's form!
@@ -537,3 +541,5 @@ function refresh()
 {
 	setTimeout ("write()", 10000);
 }
+
+print ("Not implemented yet");

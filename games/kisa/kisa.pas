@@ -1,3 +1,9 @@
+(*
+ * Исходный вариант паскалевских текстов Кисы взят
+ * с сайта http://hottabych.net/kisa/.
+ * Адаптирован к Gnu Pascal и Free Pascal
+ * Сергеем Вакуленко, serge@vak.ru.
+ *)
 program kisa;
 var
 	input_length, mood, nm: integer;
