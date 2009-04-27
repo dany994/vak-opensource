@@ -6,7 +6,7 @@
 # Массив разрешается просматривать всего один раз.
 # Дополнительную память использовать нельзя.
 #
-#array = [3, -2, 1, 4, 5, 2, -7, 3]
+array = [3, -2, 1, 4, 5, 2, -7, 3]
 #array = [3, -2, 1, 4, 5, 2, -7, 3, -100, 90]
 #array = [1, -100, 2, -100, 1]
 #array = [-7, -2, -3]
@@ -25,17 +25,14 @@ for i in range (0, len (array)):
 			first = bottom
 			last = i
 			maxsum = sum - bsum
-#			print "[%d]=%d: first=%d, last=%d" % (i, array[i], first, last)
 	else:
 		if sum < bsum:
 			bottom = i+1
 			bsum = sum
-#			print "[%d]=%d: bottomt=%d" % (i, array[i], bottom)
 		if maxneg >= 0 or array[i] > maxneg:
 			maxneg = array[i]
 
 print "Array:", array
-#print "first =", first, "last =", last, "bottom =", bottom
 if first <= last:
 	print "Solution:", array [first : last+1]
 else:
