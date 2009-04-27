@@ -6,31 +6,37 @@
 # Массив разрешается просматривать всего один раз.
 # Дополнительную память использовать нельзя.
 #
-array = [3, -2, 1, 4, 5, 2, -7, 3]
+#array = [3, -2, 1, 4, 5, 2, -7, 3]
+#array = [3, -2, 1, 4, 5, 2, -7, 3, -100, 90]
+#array = [1, -100, 2, -100, 1]
+#array = [-7, -2, -3]
 
-fsum = 0
+sum = 0
 bsum = 0
+maxsum = 0
 last = -1
-first = -1
-n = len (array)
-for i in range (0, n):
-	fsum += array[i]
+first = 0
+bottom = 0
+maxneg = 0
+for i in range (0, len (array)):
+	sum += array[i]
 	if array[i] > 0:
-		if last < 0 or fsum > fmax:
-			fmax = fsum
+		if sum - bsum > maxsum:
+			first = bottom
 			last = i
-	bsum += array[n-1-i]
-	if array[n-1-i] > 0:
-		if first < 0 or bsum > bmax:
-			bmax = bsum
-			first = n-1-i
+			maxsum = sum - bsum
+#			print "[%d]=%d: first=%d, last=%d" % (i, array[i], first, last)
+	else:
+		if sum < bsum:
+			bottom = i+1
+			bsum = sum
+#			print "[%d]=%d: bottomt=%d" % (i, array[i], bottom)
+		if maxneg >= 0 or array[i] > maxneg:
+			maxneg = array[i]
 
 print "Array:", array
-if first < 0:
-	print "Solution: empty subarray"
-elif last >= first:
+#print "first =", first, "last =", last, "bottom =", bottom
+if first <= last:
 	print "Solution:", array [first : last+1]
-elif fmax >= bmax:
-	print "Solution:", array [ : last+1]
 else:
-	print "Solution:", array [first : ]
+	print "Solution:", [maxneg]
