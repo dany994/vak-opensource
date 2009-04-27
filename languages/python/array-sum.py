@@ -26,7 +26,11 @@ for i in range (0, n):
 			first = n-1-i
 
 print "Array:", array
-if first >= 0:
-	print "Solution:", array [first : last+1]
-else:
+if first < 0:
 	print "Solution: empty subarray"
+elif last >= first:
+	print "Solution:", array [first : last+1]
+elif fmax >= bmax:
+	print "Solution:", array [ : last+1]
+else:
+	print "Solution:", array [first : ]
