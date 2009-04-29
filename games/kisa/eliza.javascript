@@ -1,4 +1,4 @@
-#!/usr/bin/js
+#!/usr/bin/env js
 // Chat Bot by George Dunlop, www.peccavi.com
 // Note - Eliza is a Classic Model of chat Bots.. but this implementation is mine :)
 // May be used/modified if credit line is retained (c) 1997 All rights reserved
