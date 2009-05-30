@@ -595,19 +595,21 @@ unsigned *address()
 	i = get_var();
 	if(expr_type)
 		return (unsigned*) &char_vars[i];
-	else {
-		if(test_next('(')) {	/* Array */
-			if(expr_type) error(0);
-			if(!(dptr = (unsigned*) dim_vars[i]))
-				error(10);
-			nest = 0;
-			j = eval_sub();
-			if(j >= dim_check[i])
-				error(10);
-			return &dptr[j];
-		}
-	}
-	return (unsigned*) &num_vars[i];
+
+	if(! test_next('('))
+		return (unsigned*) &num_vars[i];
+
+	/* Array */
+	if(expr_type)
+		error(0);
+	dptr = (unsigned*) dim_vars[i];
+	if(! dptr)
+		error(10);
+	nest = 0;
+	j = eval_sub();
+	if(j >= dim_check[i])
+		error(10);
+	return &dptr[j];
 }
 
 /*
@@ -769,7 +771,7 @@ struct line_record *execute(char cmd)
 
 		if(j != expr_type)
 			error(0);
-		if(!expr_type)		/* numeric assignment */
+		if(! expr_type)		/* numeric assignment */
 			*dptr = k;
 		else {			/* character assignment */
 			if(*dptr)
@@ -860,7 +862,7 @@ newline:
 				--j;
 			else {
 				i = eval();
-				if(!expr_type) {
+				if(! expr_type) {
 					num_string(i, sa1);
 					putc(' ',fileout);
 				}
@@ -1025,7 +1027,7 @@ input:		if(ii == -1)
 			cptr = (struct line_record*) cmdptr;
 			cmdptr = dataptr;
 			ii = line;
-			if(!skip_blank()) {		/* End of line */
+			if(!skip_blank()) {	/* End of line */
 				readptr = readptr->Llink;
 				cmdptr = readptr->Ltext;
 				if(get_next() != -128+DATA)
@@ -1041,7 +1043,7 @@ input:		if(ii == -1)
 				error(11);
 			if(!expr_type)		/* numeric assignment */
 				*dptr = k;
-			else {				/* character assignment */
+			else {			/* character assignment */
 				if(*dptr)
 					free((void*) *dptr);
 				if(*sa1) {
@@ -1176,7 +1178,7 @@ void get_char_value(char *ptr)
 	} else if(isalpha(c)) {		/* variable */
 		--cmdptr;
 		i = get_var();
-		if(!expr_type)
+		if(! expr_type)
 			error(0);
 		st = char_vars[i];
 		if(st)
@@ -1222,13 +1224,13 @@ int get_value()
 			break;
 		case -128+ASC:		/* Convert character to number */
 			eval_sub();
-			if(!expr_type) error(4);
+			if(! expr_type) error(4);
 			value = *sa1 & 255;
 			expr_type = 0;
 			break;
 		case -128+NUM:		/* Convert string to number */
 			eval_sub();
-			if(!expr_type) error(4);
+			if(! expr_type) error(4);
 			value = atoi(sa1);
 			expr_type = 0;
 			break;
