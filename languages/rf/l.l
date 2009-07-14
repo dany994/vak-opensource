@@ -17,7 +17,7 @@ extern yylval;
 
 %}
 
-L                       [a-zA-Z¡-—·-Ò]
+L                       [a-zA-Z–ë-–°–±-—Å]
 D                       [0-9]
 LD                      ({L}|{D})
 SP                      [ \t]

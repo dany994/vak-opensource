@@ -205,7 +205,7 @@ real *r;
 	if (neg)
 		v = -v;
 	e = 0;
-	if (*s=='e' || *s=='E' || *s=='•' || *s=='Ö') {
+	if (*s=='e' || *s=='E' || *s=='–µ' || *s=='–ï') {
 		++s;
 		if (*s == '-') {
 			eneg = 1;
@@ -265,12 +265,12 @@ register c;
 			return (c - '0');
 		}
 		switch (c) {
-		case 'a': case 'A': case '†': case 'Ä': return (10);
-		case 'b': case 'B': case '°': case 'Å': return (11);
-		case 'c': case 'C': case 'Ê': case 'ñ': return (12);
-		case 'd': case 'D': case '§': case 'Ñ': return (13);
-		case 'e': case 'E': case '•': case 'Ö': return (14);
-		case 'f': case 'F': case '‰': case 'î': return (15);
+		case 'a': case 'A': case '–∞': case '–ê': return (10);
+		case 'b': case 'B': case '–±': case '–ë': return (11);
+		case 'c': case 'C': case '—Ü': case '–¶': return (12);
+		case 'd': case 'D': case '–¥': case '–î': return (13);
+		case 'e': case 'E': case '–µ': case '–ï': return (14);
+		case 'f': case 'F': case '—Ñ': case '–§': return (15);
 		}
 		return (-1);
 	}

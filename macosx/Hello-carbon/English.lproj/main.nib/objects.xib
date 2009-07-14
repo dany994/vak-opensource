@@ -33,7 +33,7 @@
                 <ostype name="command">new </ostype>
               </object>
               <object class="IBCarbonMenuItem" id="134">
-                <string name="title">Open…</string>
+                <string name="title">OpenтАж</string>
                 <string name="keyEquivalent">o</string>
                 <ostype name="command">open</ostype>
               </object>
@@ -51,7 +51,7 @@
                 <ostype name="command">save</ostype>
               </object>
               <object class="IBCarbonMenuItem" id="137">
-                <string name="title">Save As…</string>
+                <string name="title">Save AsтАж</string>
                 <string name="keyEquivalent">S</string>
                 <ostype name="command">svas</ostype>
               </object>
@@ -64,12 +64,12 @@
                 <boolean name="separator">TRUE</boolean>
               </object>
               <object class="IBCarbonMenuItem" id="135">
-                <string name="title">Page Setup…</string>
+                <string name="title">Page SetupтАж</string>
                 <string name="keyEquivalent">P</string>
                 <ostype name="command">page</ostype>
               </object>
               <object class="IBCarbonMenuItem" id="136">
-                <string name="title">Print…</string>
+                <string name="title">PrintтАж</string>
                 <string name="keyEquivalent">p</string>
                 <ostype name="command">prnt</ostype>
               </object>
@@ -122,7 +122,7 @@
                 <boolean name="separator">TRUE</boolean>
               </object>
               <object class="IBCarbonMenuItem" id="198">
-                <string name="title">Special Characters…</string>
+                <string name="title">Special CharactersтАж</string>
                 <ostype name="command">chrp</ostype>
               </object>
             </array>

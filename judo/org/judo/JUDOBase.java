@@ -1587,7 +1587,7 @@ public class JUDOBase extends Frame implements KeyListener, MouseListener {
   // events from mouse and keyboard.
   //
   // In case of mouse or keyboard events, false is returned.
-  // But only when getMouseEvent() orи getKeyState() were
+  // But only when getMouseEvent() orРё getKeyState() were
   // called before getTimerEvent().
 
   // Flags:
