@@ -146,7 +146,7 @@ int callsys (char *f, char **v)
 		return (1);
 	}
 	if (t == 0) {
-		/* порожденный процесс */
+		/* п©п╬я─п╬п╤п╢п╣п╫п╫я▀п╧ п©я─п╬я├п╣я│я│ */
 		execv (f, v);
 		error ("cannot find %s", f);
 		exit (1);

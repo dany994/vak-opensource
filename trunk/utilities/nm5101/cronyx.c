@@ -15,7 +15,7 @@
 #define O 1
 
 /*
- * Фразы.
+ * п╓я─п╟п╥я▀.
  */
 static unsigned char pic_cronyx [] __attribute__ ((progmem)) = {
 	ROW (_,_,_,_,_,_,_),
