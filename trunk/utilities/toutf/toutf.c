@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 
 int verbose;
-int force;
+int force = 1;
 int preserve;
 int error;
 
@@ -35,6 +35,7 @@ struct option longopts[] = {
 	{ "verbose",		0,	0,	'v'		},
 	{ "force",		0,	0,	'f'		},
 	{ "preserve",		0,	0,	'p'		},
+	{ "interactive",	0,	0,	'i'		},
 	{ 0,			0,	0,	0		},
 };
 
@@ -364,6 +365,7 @@ void process (char *filename)
 		return;
 	}
 	if (strcmp (encoding, "utf-8") == 0) {
+		fclose (fin);
 		if (verbose)
 			printf ("%s: already utf-8, skipped\n", filename);
 		return;
@@ -431,7 +433,7 @@ void process (char *filename)
 
 void usage ()
 {
-	fprintf (stderr, "Auto-UTF version 1.0, Copyright (GPL) Serge Vakulenko\n");
+	fprintf (stderr, "UTF encoder, Copyright (GPL) Serge Vakulenko\n");
 	fprintf (stderr, "This is free software, covered by the GNU General Public License.\n");
 	fprintf (stderr, "\n");
 	fprintf (stderr, "Automatic conversion from KOI8-R, CP-1251 and CP-866 to UTF-8.\n");
@@ -439,7 +441,8 @@ void usage ()
 	fprintf (stderr, "\ttoutf [options] file...\n");
 	fprintf (stderr, "Options:\n");
 	fprintf (stderr, "\t-v, --verbose\tdisplay information encoding detection\n");
-	fprintf (stderr, "\t-f, --force\tdo not prompt before convertion\n");
+	fprintf (stderr, "\t-i, --interactive\tprompt before convertion\n");
+	fprintf (stderr, "\t-f, --force\tdo not prompt before convertion (default)\n");
 	fprintf (stderr, "\t-p, --preserve\tpreserve moditivation times\n");
 	exit (1);
 }
@@ -449,7 +452,7 @@ int main (int argc, char **argv)
 	int i;
 
 	for (;;) {
-		i = getopt_long (argc, argv, "hVvfp", longopts, 0);
+		i = getopt_long (argc, argv, "hVvfpi", longopts, 0);
 		if (i < 0)
 			break;
 		switch (i) {
@@ -457,13 +460,16 @@ int main (int argc, char **argv)
 			usage ();
 			break;
 		case 'V':
-			printf ("Version: 1.0\n");
+			printf ("Version: $Rev$\n");
 			return 0;
 		case 'v':
 			verbose = 1;
 			break;
 		case 'f':
 			force = 1;
+			break;
+		case 'i':
+			force = 0;
 			break;
 		case 'p':
 			preserve = 1;
