@@ -22,6 +22,9 @@
 #include <wchar.h>
 #include <sys/stat.h>
 
+/* Revision number is updated automatically by SVN. */
+static const char revision[] = "$Rev$";
+
 int verbose;
 int force = 1;
 int preserve;
@@ -433,17 +436,19 @@ void process (char *filename)
 
 void usage ()
 {
-	fprintf (stderr, "UTF encoder, Copyright (GPL) Serge Vakulenko\n");
+	fprintf (stderr, "UTF encoder, Version 1.%d, Copyright (GPL) Serge Vakulenko\n",
+		atoi (revision+6));
 	fprintf (stderr, "This is free software, covered by the GNU General Public License.\n");
 	fprintf (stderr, "\n");
 	fprintf (stderr, "Automatic conversion from KOI8-R, CP-1251 and CP-866 to UTF-8.\n");
 	fprintf (stderr, "Usage:\n");
-	fprintf (stderr, "\ttoutf [options] file...\n");
+	fprintf (stderr, "        toutf [options] file...\n");
+	fprintf (stderr, "\n");
 	fprintf (stderr, "Options:\n");
-	fprintf (stderr, "\t-v, --verbose\tdisplay information encoding detection\n");
-	fprintf (stderr, "\t-i, --interactive\tprompt before convertion\n");
-	fprintf (stderr, "\t-f, --force\tdo not prompt before convertion (default)\n");
-	fprintf (stderr, "\t-p, --preserve\tpreserve moditivation times\n");
+	fprintf (stderr, "  -v, --verbose      display information encoding detection\n");
+	fprintf (stderr, "  -i, --interactive  prompt before convertion\n");
+	fprintf (stderr, "  -f, --force        do not prompt before convertion (default)\n");
+	fprintf (stderr, "  -p, --preserve     preserve moditivation times\n");
 	exit (1);
 }
 
@@ -460,7 +465,7 @@ int main (int argc, char **argv)
 			usage ();
 			break;
 		case 'V':
-			printf ("Version: $Rev$\n");
+			printf ("Version: 1.%d\n", atoi (revision+6));
 			return 0;
 		case 'v':
 			verbose = 1;
