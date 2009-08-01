@@ -6,7 +6,6 @@ clean:
 		rm -f *~ *.o vxt-to-utf8 irps.log
 
 txt:		vxt-to-utf8
-		iconv -fcp866 -tutf8 HDDDOC.TXT > hdddoc.txt
 		./vxt-to-utf8 ANBASIC.VXT > anbasic.txt
 		./vxt-to-utf8 ISM_VX.VXT  > ism_vx.txt
 		./vxt-to-utf8 PRIST2.VXT  > prist2.txt
