@@ -11,5 +11,3 @@ txt:		vxt-to-utf8
 		./vxt-to-utf8 PRIST2.VXT  > prist2.txt
 		./vxt-to-utf8 PRISTM1.VXT > pristm1.txt
 		./vxt-to-utf8 SPECIF.VXT  > specif.txt
-		./vxt-to-utf8 VXDOC.VXT	  > vxdoc.txt
-		./vxt-to-utf8 VXSETUP.VXT > vxsetup.txt
