@@ -201,7 +201,7 @@ int main (int argc, char **argv)
 	if (argc < 1)
 		usage ();
 
-	conv = iconv_open ("UTF8", "KOI8R");
+	conv = iconv_open ("UTF-8", "KOI8-R");
 	if (conv == (iconv_t) -1) {
 		perror ("iconv from KOI8 to UTF8");
 		exit (-1);
