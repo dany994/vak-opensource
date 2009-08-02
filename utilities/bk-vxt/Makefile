@@ -1,4 +1,5 @@
 CFLAGS		= -Wall -g
+LDFLAGS		= -liconv
 
 all:		vxt-to-utf8 txt
 
