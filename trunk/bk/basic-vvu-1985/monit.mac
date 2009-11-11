@@ -270,84 +270,84 @@ CLRCOD::MOV	TABTOP,LENT
 	INC	ENDCOD
 	BIC	#1,ENDCOD
 	MOV	@PC,ERRS	;ЗАПРЕТИТЬ ВЫПОЛНЕНИЕ РАБОЧЕЙ ПРОГРАММ
-	цлр	стррег
-	ретурн
+	clr	strreg
+	return
 ;
-стрмем:	мож	ендцод,р1
-	мож	р1,фребег
-	адд	стрсиз,р1
-	мож	стрсиз,фрелен
-	цмп	р1,лент
-	бхи	мемфул
-	мож	р1,ендцод
-	мож	фребег,стррег
-	ретурн
+strmem:	mov	endcod,r1
+	mov	r1,frebeg
+	add	strsiz,r1
+	mov	strsiz,frelen
+	cmp	r1,lent
+	bhi	memful
+	mov	r1,endcod
+	mov	frebeg,strreg
+	return
 ;
-нев:	трап	106
-	мож	#стацк,сп
-	цалл	цлоалл
-	цалл	цлртьт
-	цалл	исжсс
-	ймп	монит
+new:	trap	106
+	mov	#stack,sp
+	call	cloall
+	call	clrtxt
+	call	isvss
+	jmp	monit
 ;
-ллист:	мож	#-1,иодеж
+llist:	mov	#-1,iodev
 ;
-лист::	мож	р5,-(сп) 
-	цалл	ларг		; пирмас аргументас - р4, антрас - р0
-;	цлр	-(сп)
-	инц	лыгис
-	цмп	р4,р0
-	бло	лс66	;прие пуслапиажимо лс6
-лс1:	мож	р4,-(сп)
-лс2:	мож	р0,-(сп)
-   	цалл	цурофф		
-;	цлр	-(сп)
-лс3:	цалл	еилуте
-;	адд	р2,юсп
-;	цмп	юсп,#1340
-;	бгт	лс7
-лс4:	мож	#5000,р2
-	мож	2(р4),цурлин
-   	цалл	исжето
-;11$:	бит	#37,юсп 
-;	бея	8$
-;	инц	юсп
-;	бр	11$
-8$:	цмп	-(р4),-(р4)
-	цмп	р4,юсп	;2(сп) прие пуслапиажимо
-	бхис	лс3
-;	тст	иодеж
-;	бея	лс8
-	цлр	иодеж
-лс6:	цмп	(сп)+,(сп)+	;тст прие  пуслапиажимо
-;	бне	лс6
-лс66:	ймп	ст0
-;лс7:	тст	иодеж
-;	бми	лс4
-;	тст	(р4)+
-;лс8:	мож	р4,юсп
-;лс9:	цалл	цурон
-;	цалл	ижеил
-;	цмпб	буф,#12
-;   	бея	3$
-;	цлр	лыгис
-;44$:	тст	(сп)+
-;	бне	44$
-;  	ймп	анализ
-;3$:	цмп	(сп),2(сп)
-;	бло	лс9
-;	мож	(сп)+,р4
-;	мож	(сп)+,р0
-;	бр	лс1
-;листбц:	мож	6(сп),р4
-;	бея	лс9
-;	тст	(сп)+
-;	мож	(сп)+,р0
-;	тст	(сп)+
-;	бр	лс2
+list::	mov	r5,-(sp) 
+	call	larg		; pirmas argumentas - r4, antras - r0
+;	clr	-(sp)
+	inc	lygis
+	cmp	r4,r0
+	blo	ls66	;prie puslapiavimo ls6
+ls1:	mov	r4,-(sp)
+ls2:	mov	r0,-(sp)
+   	call	curoff		
+;	clr	-(sp)
+ls3:	call	eilute
+;	add	r2,@sp
+;	cmp	@sp,#1340
+;	bgt	ls7
+ls4:	mov	#5000,r2
+	mov	2(r4),curlin
+   	call	isveto
+;11$:	bit	#37,@sp 
+;	beq	8$
+;	inc	@sp
+;	br	11$
+8$:	cmp	-(r4),-(r4)
+	cmp	r4,@sp	;2(sp) prie puslapiavimo
+	bhis	ls3
+;	tst	iodev
+;	beq	ls8
+	clr	iodev
+ls6:	cmp	(sp)+,(sp)+	;tst prie  puslapiavimo
+;	bne	ls6
+ls66:	jmp	st0
+;ls7:	tst	iodev
+;	bmi	ls4
+;	tst	(r4)+
+;ls8:	mov	r4,@sp
+;ls9:	call	curon
+;	call	iveil
+;	cmpb	buf,#12
+;   	beq	3$
+;	clr	lygis
+;44$:	tst	(sp)+
+;	bne	44$
+;  	jmp	analiz
+;3$:	cmp	(sp),2(sp)
+;	blo	ls9
+;	mov	(sp)+,r4
+;	mov	(sp)+,r0
+;	br	ls1
+;listbc:	mov	6(sp),r4
+;	beq	ls9
+;	tst	(sp)+
+;	mov	(sp)+,r0
+;	tst	(sp)+
+;	br	ls2
 ;
-ларг:	цлр	-(сп)		;пирмас аргументас
-	цалл	аргум		;ПРИЗНАК НАЛИЧИЯ ПЕРВОГО АРГУМЕНТА
+larg:	clr	-(sp)		;pirmas argumentas
+	call	argum		;ПРИЗНАК НАЛИЧИЯ ПЕРВОГО АРГУМЕНТА
 	BEQ	1$
 	INC	(SP)
 	TRAP	111
