@@ -14,7 +14,8 @@ SRCS		= 8859-2.txt 8859-3.txt 8859-4.txt 8859-5.txt\
 		  koi8-u.txt mac-arabic.txt mac-centeuro.txt\
 		  mac-croatian.txt mac-cyrillic.txt mac-farsi.txt\
 		  mac-greek.txt mac-iceland.txt mac-roman.txt\
-		  mac-turkish.txt mac-ukraine.txt nextstep.txt
+		  mac-turkish.txt mac-ukraine.txt nextstep.txt\
+		  koi7.txt
 OBJS		= $(patsubst %.txt,%.o,$(SRCS)) Unicoder.o
 CFLAGS		= -O -Wall -I.
 
