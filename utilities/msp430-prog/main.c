@@ -165,10 +165,15 @@ void load_library ()
 	MSP430_Initialize       = (void*) GetProcAddress (h, "MSP430_Initialize");
 	MSP430_Close            = (void*) GetProcAddress (h, "MSP430_Close");
 	MSP430_Configure        = (void*) GetProcAddress (h, "MSP430_Configure");
+	MSP430_VCC              = (void*) GetProcAddress (h, "MSP430_VCC");
 	MSP430_Identify         = (void*) GetProcAddress (h, "MSP430_Identify");
+	MSP430_Reset            = (void*) GetProcAddress (h, "MSP430_Reset");
+	MSP430_Erase            = (void*) GetProcAddress (h, "MSP430_Erase");
+	MSP430_Memory           = (void*) GetProcAddress (h, "MSP430_Memory");
 
 	if (! MSP430_Initialize || ! MSP430_Close || ! MSP430_Configure ||
-	    ! MSP430_Identify) {
+	    ! MSP430_VCC || ! MSP430_Identify || ! MSP430_Reset ||
+	    ! MSP430_Erase || ! MSP430_Memory) {
 		fprintf (stderr, "%s: incompatible library\n", library);
 		exit (1);
 	}
@@ -176,36 +181,19 @@ void load_library ()
 
 void quit (void)
 {
+	if (MSP430_Reset)
+		MSP430_Reset (RESET_VCC, 1, 1);
 	if (MSP430_Close)
 		MSP430_Close (0);
 }
 
-#if 0
 void program_block (unsigned addr, int len)
 {
-	int i;
-	unsigned word;
-
 	/* Write flash memory. */
-	for (i=0; i<len; i+=4) {
-		word = *(unsigned*) (memory_data + addr + i);
-		if (word != 0xffffffff)
-			multicore_flash_write (memory_base + addr + i,
-				word);
-	}
-}
-
-void write_block (unsigned addr, int len)
-{
-	int i;
-	unsigned word;
-
-	/* Write static memory. */
-	word = *(unsigned*) (memory_data + addr);
-	multicore_write_word (memory_base + addr, word);
-	for (i=4; i<len; i+=4) {
-		word = *(unsigned*) (memory_data + addr + i);
-		multicore_write_next (memory_base + addr + i, word);
+	if (MSP430_Memory (memory_base + addr, memory_data + addr,
+	    len, MEMORY_WRITE) != 0) {
+		fprintf (stderr, "Error writing flash.\n");
+		exit (1);
 	}
 }
 
@@ -224,14 +212,19 @@ void progress ()
 void verify_block (unsigned addr, int len)
 {
 	int i;
+	unsigned char block [BLOCKSZ];
 	unsigned word, expected;
 
-	multicore_read_start ();
+	if (MSP430_Memory (memory_base + addr, block, len,
+	    MEMORY_READ) != 0) {
+		fprintf (stderr, "Error reading memory.\n");
+		exit (1);
+	}
 	for (i=0; i<len; i+=4) {
 		expected = *(unsigned*) (memory_data+addr+i);
 		if (expected == 0xffffffff)
 			continue;
-		word = multicore_read_next (memory_base + addr + i);
+		word = *(unsigned*) (block+i);
 		if (debug > 1)
 			printf ("read word %08X at address %08X\n",
 				word, addr + i + memory_base);
@@ -246,34 +239,21 @@ void verify_block (unsigned addr, int len)
 void do_program (int verify_only)
 {
 	unsigned addr;
-	unsigned mfcode, devcode, bytes, width;
-	char mfname[40], devname[40];
 	int len;
 	void *t0;
 
-	multicore_init ();
 	printf ("Memory: %08X-%08X, total %d bytes\n", memory_base,
 		memory_base + memory_len, memory_len);
-
-	/* Open and detect the device. */
-	atexit (quit);
-	if (! multicore_open ()) {
-		fprintf (stderr, "Error detecting device -- check cable!\n");
+	if (MSP430_Configure (CONFIGURE_LOCKED_FLASH_ACCESS, 1) != 0) {
+		fprintf (stderr, "Error enabling locked flash access.\n");
 		exit (1);
 	}
-	/*printf ("Processor: %s\n", multicore_cpu_name ());*/
-
-	if (! multicore_flash_detect (memory_base,
-	    &mfcode, &devcode, mfname, devname, &bytes, &width)) {
-		printf ("No flash memory detected.\n");
-		return;
-	}
-	printf ("Flash: %s %s, size %d Mbytes\n",
-		mfname, devname, bytes / 1024 / 1024);
-
 	if (! verify_only) {
 		/* Erase flash. */
-		multicore_erase (memory_base);
+		if (MSP430_Erase (ERASE_MAIN, memory_base, memory_len) != 0) {
+			fprintf (stderr, "Error erasing flash.\n");
+			exit (1);
+		}
 	}
 	for (progress_step=1; ; progress_step<<=1) {
 		len = 1 + memory_len / progress_step / BLOCKSZ;
@@ -300,7 +280,6 @@ void do_program (int verify_only)
 	printf ("Rate: %ld bytes per second\n",
 		memory_len * 1000L / mseconds_elapsed (t0));
 }
-#endif
 
 void do_probe (const char *port, int iface)
 {
@@ -320,8 +299,13 @@ void do_probe (const char *port, int iface)
 		fprintf (stderr, "Error setting interface -- check cable!\n");
 		exit (1);
 	}
+	if (MSP430_VCC (3300) != 0) {
+		fprintf (stderr, "Error setting VCC.\n");
+		exit (1);
+	}
+	MSP430_Reset (RESET_RST, 0, 0);
 	if (MSP430_Identify (devtype, sizeof (devtype), 0) != 0) {
-		fprintf (stderr, "Cannot identify microcontroller -- check cable!\n");
+		fprintf (stderr, "Cannot identify microcontroller -- check power!\n");
 		exit (1);
 	}
 	printf ("Device type: %s\n", &devtype[4]);
@@ -369,7 +353,7 @@ usage:		printf ("Probe:\n");
 			fprintf (stderr, "%s: read error\n", argv[0]);
 			exit (1);
 		}
-/*		do_program (verify_only);*/
+		do_program (verify_only);
 	}
 	quit ();
 	return 0;
