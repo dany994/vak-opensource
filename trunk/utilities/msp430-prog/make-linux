@@ -1,0 +1,15 @@
+CC		= gcc
+CFLAGS		= -Wall -g -O
+OBJS		=
+
+all:		msp430-prog
+
+msp430-prog:	$(OBJS) main.o
+		$(CC) -o $@ main.o $(OBJS)
+clean:
+		rm -f *~ *.o core msp430-prog msp430-prog.exe
+
+install:	msp430-prog
+		install -c -s -oroot -m4755 msp430-prog /usr/local/bin/msp430-prog
+
+###
