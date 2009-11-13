@@ -1,7 +1,7 @@
 #CC		= gcc
 CC		= i586-mingw32msvc-gcc
 CFLAGS		= -Wall -g -O -DMINGW32
-LDFLAGS		= -s
+LDFLAGS		= -g
 OBJS		=
 
 all:		msp430-prog.exe
@@ -10,4 +10,4 @@ msp430-prog.exe: $(OBJS) main.o
 		$(CC) $(LDFLAGS) -o $@ main.o $(OBJS)
 
 clean:
-		rm -f *~ *.o
+		rm -f *~ *.o msp430-prog

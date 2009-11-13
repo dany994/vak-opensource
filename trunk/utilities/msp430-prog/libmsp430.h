@@ -1,6 +1,9 @@
 /*
  * Library: MSP430.dll
  */
+#ifndef MINGW32
+#define __stdcall /*empty*/
+#endif
 
 /*
  * Initialize the interface.
