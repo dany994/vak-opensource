@@ -162,10 +162,13 @@ void load_library ()
 		fprintf (stderr, "%s: not found\n", library);
 		exit (1);
 	}
-	MSP430_Initialize = (void*) GetProcAddress (h, "MSP430_Initialize");
-	MSP430_Close      = (void*) GetProcAddress (h, "MSP430_Close");
+	MSP430_Initialize       = (void*) GetProcAddress (h, "MSP430_Initialize");
+	MSP430_Close            = (void*) GetProcAddress (h, "MSP430_Close");
+	MSP430_Configure        = (void*) GetProcAddress (h, "MSP430_Configure");
+	MSP430_Identify         = (void*) GetProcAddress (h, "MSP430_Identify");
 
-	if (! MSP430_Initialize || ! MSP430_Close) {
+	if (! MSP430_Initialize || ! MSP430_Close || ! MSP430_Configure ||
+	    ! MSP430_Identify) {
 		fprintf (stderr, "%s: incompatible library\n", library);
 		exit (1);
 	}
@@ -299,9 +302,9 @@ void do_program (int verify_only)
 }
 #endif
 
-void do_probe ()
+void do_probe (const char *port, int iface)
 {
-	const char *port = "COM1";
+	char devtype [80];
 	long version;
 
 	/* Open and detect the device. */
@@ -311,15 +314,17 @@ void do_probe ()
 		exit (1);
 	}
 	atexit (quit);
-	printf ("MSP430 library version = %ld\n", version);
-#if 0
-	if (! multicore_open ()) {
-		fprintf (stderr, "Error detecting device -- check cable!\n");
+	printf ("MSP430.dll version: %ld\n", version);
+
+	if (MSP430_Configure (CONFIGURE_INTERFACE_MODE, iface) != 0) {
+		fprintf (stderr, "Error setting interface -- check cable!\n");
 		exit (1);
 	}
-	printf ("Processor: %s (id %08X)\n", multicore_cpu_name (),
-		multicore_idcode ());
-#endif
+	if (MSP430_Identify (devtype, sizeof (devtype), 0) != 0) {
+		fprintf (stderr, "Cannot identify microcontroller -- check cable!\n");
+		exit (1);
+	}
+	printf ("Device type: %s\n", &devtype[4]);
 }
 
 int main (int argc, char **argv)
@@ -330,7 +335,6 @@ int main (int argc, char **argv)
 	setvbuf (stderr, (char *)NULL, _IOLBF, 0);
 	printf (PROGNAME ", Version " VERSION ", Copyright (C) 2009 Serge Vakulenko\n");
 	progname = argv[0];
-	load_library ();
 
 	while ((ch = getopt(argc, argv, "vDh")) != -1) {
 		switch (ch) {
@@ -354,20 +358,18 @@ usage:		printf ("Probe:\n");
 	}
 	argc -= optind;
 	argv += optind;
-	switch (argc) {
-	case 0:
-		do_probe ();
-		break;
-	case 1:
+	if (argc > 1)
+		goto usage;
+
+	load_library ();
+	do_probe ("COM1", INTERFACE_SPYBIWIRE_IF);
+	if (argc) {
 		memory_len = read_srec (argv[0], memory_data);
 		if (memory_len == 0) {
 			fprintf (stderr, "%s: read error\n", argv[0]);
 			exit (1);
 		}
 /*		do_program (verify_only);*/
-		break;
-	default:
-		goto usage;
 	}
 	quit ();
 	return 0;
