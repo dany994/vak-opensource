@@ -20,7 +20,11 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <sys/time.h>
+#ifdef MINGW32
 #include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
 #include "libmsp430.h"
 
 #define PROGNAME	"Programmer for TI MSP430"
@@ -154,6 +158,7 @@ void print_symbols (char symbol, int cnt)
 
 void load_library ()
 {
+#ifdef MINGW32
 	HINSTANCE h;
 	const char *library = "msp430.dll";
 
@@ -170,7 +175,24 @@ void load_library ()
 	MSP430_Reset            = (void*) GetProcAddress (h, "MSP430_Reset");
 	MSP430_Erase            = (void*) GetProcAddress (h, "MSP430_Erase");
 	MSP430_Memory           = (void*) GetProcAddress (h, "MSP430_Memory");
+#else
+	void *h;
+	const char *library = "libMSP430.so";
 
+	h = dlopen (library, 2);
+	if (! h) {
+		fprintf (stderr, "%s: not found\n", library);
+		exit (1);
+	}
+	MSP430_Initialize       = (void*) dlsym (h, "MSP430_Initialize");
+	MSP430_Close            = (void*) dlsym (h, "MSP430_Close");
+	MSP430_Configure        = (void*) dlsym (h, "MSP430_Configure");
+	MSP430_VCC              = (void*) dlsym (h, "MSP430_VCC");
+	MSP430_Identify         = (void*) dlsym (h, "MSP430_Identify");
+	MSP430_Reset            = (void*) dlsym (h, "MSP430_Reset");
+	MSP430_Erase            = (void*) dlsym (h, "MSP430_Erase");
+	MSP430_Memory           = (void*) dlsym (h, "MSP430_Memory");
+#endif
 	if (! MSP430_Initialize || ! MSP430_Close || ! MSP430_Configure ||
 	    ! MSP430_VCC || ! MSP430_Identify || ! MSP430_Reset ||
 	    ! MSP430_Erase || ! MSP430_Memory) {
@@ -185,6 +207,22 @@ void quit (void)
 		MSP430_Reset (RESET_VCC, 1, 1);
 	if (MSP430_Close)
 		MSP430_Close (0);
+}
+
+int block_is_clean (unsigned addr, int len)
+{
+	int i;
+
+	/* Skip clean blocks. */
+	for (i=0; i<len; i++) {
+		if (memory_data [addr+i] != 0xff) {
+			if (debug)
+				fprintf (stderr, "write %02x at address %04x\n",
+					memory_data [addr+i], addr + i + memory_base);
+			return 0;
+		}
+	}
+	return 1;
 }
 
 void program_block (unsigned addr, int len)
@@ -225,8 +263,8 @@ void verify_block (unsigned addr, int len)
 		if (expected == 0xffffffff)
 			continue;
 		word = *(unsigned*) (block+i);
-		if (debug > 1)
-			printf ("read word %08X at address %08X\n",
+		if (debug)
+			fprintf (stderr, "read word %08x at address %08x\n",
 				word, addr + i + memory_base);
 		if (word != *(unsigned*) (memory_data+addr+i)) {
 			printf ("\nerror at address %08X: file=%08X, mem=%08X\n",
@@ -271,10 +309,11 @@ void do_program (int verify_only)
 		len = BLOCKSZ;
 		if (memory_len - addr < len)
 			len = memory_len - addr;
-		if (! verify_only)
+		if (! verify_only && ! block_is_clean (addr, len))
 			program_block (addr, len);
 		progress ();
-		verify_block (addr, len);
+		if (! block_is_clean (addr, len))
+			verify_block (addr, len);
 	}
 	printf ("# done\n");
 	printf ("Rate: %ld bytes per second\n",
@@ -293,7 +332,8 @@ void do_probe (const char *port, int iface)
 		exit (1);
 	}
 	atexit (quit);
-	printf ("MSP430.dll version: %ld\n", version);
+	if (version >= 0)
+		printf ("MSP430.dll version: %ld\n", version);
 
 	if (MSP430_Configure (CONFIGURE_INTERFACE_MODE, iface) != 0) {
 		fprintf (stderr, "Error setting interface -- check cable!\n");
@@ -346,8 +386,13 @@ usage:		printf ("Probe:\n");
 		goto usage;
 
 	load_library ();
+#ifdef MINGW32
 	do_probe ("COM1", INTERFACE_SPYBIWIRE_IF);
+#else
+	do_probe ("/dev/ttyUSB0", INTERFACE_SPYBIWIRE_IF);
+#endif
 	if (argc) {
+		memset (memory_data, 0xff, sizeof (memory_data));
 		memory_len = read_srec (argv[0], memory_data);
 		if (memory_len == 0) {
 			fprintf (stderr, "%s: read error\n", argv[0]);

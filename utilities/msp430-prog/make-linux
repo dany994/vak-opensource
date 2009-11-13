@@ -5,7 +5,7 @@ OBJS		=
 all:		msp430-prog
 
 msp430-prog:	$(OBJS) main.o
-		$(CC) -o $@ main.o $(OBJS)
+		$(CC) -o $@ main.o $(OBJS) -ldl
 clean:
 		rm -f *~ *.o core msp430-prog msp430-prog.exe
 
