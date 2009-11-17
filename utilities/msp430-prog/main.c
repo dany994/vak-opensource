@@ -127,13 +127,13 @@ int read_srec (char *filename, unsigned char *output)
 				memory_base = address;
 			}
 			if (address < memory_base) {
-				fprintf (stderr, "%s: incorrect address %08X, must be %08X or greater\n",
+				fprintf (stderr, "%s: incorrect address %05X, must be %05X or greater\n",
 					filename, address, memory_base);
 				exit (1);
 			}
 			address -= memory_base;
 			if (address+bytes > sizeof (memory_data)) {
-				fprintf (stderr, "%s: address too large: %08X + %08X\n",
+				fprintf (stderr, "%s: address too large: %05X + %05X\n",
 					filename, address + memory_base, bytes);
 				exit (1);
 			}
@@ -160,11 +160,10 @@ void load_library ()
 {
 #ifdef MINGW32
 	HINSTANCE h;
-	const char *library = "msp430.dll";
 
-	h = LoadLibrary (library);
+	h = LoadLibrary (LIBRARY);
 	if (! h) {
-		fprintf (stderr, "%s: not found\n", library);
+		fprintf (stderr, "%s: not found\n", LIBRARY);
 		exit (1);
 	}
 	MSP430_Initialize       = (void*) GetProcAddress (h, "MSP430_Initialize");
@@ -177,11 +176,10 @@ void load_library ()
 	MSP430_Memory           = (void*) GetProcAddress (h, "MSP430_Memory");
 #else
 	void *h;
-	const char *library = "libMSP430.so";
 
-	h = dlopen (library, 2);
+	h = dlopen (LIBRARY, 2);
 	if (! h) {
-		fprintf (stderr, "%s: not found\n", library);
+		fprintf (stderr, "%s: not found\n", LIBRARY);
 		exit (1);
 	}
 	MSP430_Initialize       = (void*) dlsym (h, "MSP430_Initialize");
@@ -196,7 +194,7 @@ void load_library ()
 	if (! MSP430_Initialize || ! MSP430_Close || ! MSP430_Configure ||
 	    ! MSP430_VCC || ! MSP430_Identify || ! MSP430_Reset ||
 	    ! MSP430_Erase || ! MSP430_Memory) {
-		fprintf (stderr, "%s: incompatible library\n", library);
+		fprintf (stderr, "%s: incompatible library\n", LIBRARY);
 		exit (1);
 	}
 }
@@ -264,10 +262,10 @@ void verify_block (unsigned addr, int len)
 			continue;
 		word = *(unsigned*) (block+i);
 		if (debug)
-			fprintf (stderr, "read word %08x at address %08x\n",
+			fprintf (stderr, "read word %08X at address %05X\n",
 				word, addr + i + memory_base);
 		if (word != *(unsigned*) (memory_data+addr+i)) {
-			printf ("\nerror at address %08X: file=%08X, mem=%08X\n",
+			printf ("\nerror at address %05X: file=%08X, mem=%08X\n",
 				addr + i + memory_base, expected, word);
 			exit (1);
 		}
@@ -280,7 +278,7 @@ void do_program (int verify_only)
 	int len;
 	void *t0;
 
-	printf ("Memory: %08X-%08X, total %d bytes\n", memory_base,
+	printf ("Memory: %05X-%05X, total %d bytes\n", memory_base,
 		memory_base + memory_len, memory_len);
 	if (MSP430_Configure (CONFIGURE_LOCKED_FLASH_ACCESS, 1) != 0) {
 		fprintf (stderr, "Error enabling locked flash access.\n");
@@ -332,8 +330,11 @@ void do_probe (const char *port, int iface)
 		exit (1);
 	}
 	atexit (quit);
+
+	printf ("Library: %s", LIBRARY);
 	if (version >= 0)
-		printf ("MSP430.dll version: %ld\n", version);
+		printf (", version %ld", version);
+	printf ("\n");
 
 	if (MSP430_Configure (CONFIGURE_INTERFACE_MODE, iface) != 0) {
 		fprintf (stderr, "Error setting interface -- check cable!\n");

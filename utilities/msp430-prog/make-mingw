@@ -1,13 +1,20 @@
-#CC		= gcc
 CC		= i586-mingw32msvc-gcc
-CFLAGS		= -Wall -g -O -DMINGW32
+CFLAGS		= -Wall -g -O -DMINGW32 -DLIBRARY=\"/usr/local/lib/msp430.dll\"
 LDFLAGS		= -g
 OBJS		=
+PROG		= msp430-prog.exe
 
-all:		msp430-prog.exe
+all:		$(PROG)
 
-msp430-prog.exe: $(OBJS) main.o
+$(PROG):	$(OBJS) main.o
 		$(CC) $(LDFLAGS) -o $@ main.o $(OBJS)
 
 clean:
-		rm -f *~ *.o msp430-prog
+		rm -f *~ *.o $(PROG)
+
+install:	$(PROG)
+		install -c -s -oroot -m4755 $(PROG) /usr/local/bin/$(PROG)
+		install -c -m444 msp430.dll /usr/local/lib/msp430.dll
+		install -c -m444 hil.dll $(HOME)/.wine/drive_c/windows/hil.dll
+
+###
