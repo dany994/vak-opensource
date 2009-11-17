@@ -1,15 +1,18 @@
 CC		= gcc
-CFLAGS		= -Wall -g -O
+CFLAGS		= -Wall -g -O -DLIBRARY=\"/usr/local/lib/libMSP430.so\"
+LDFLAGS		= -g
 OBJS		=
+PROG		= msp430-prog
 
-all:		msp430-prog
+all:		$(PROG)
 
-msp430-prog:	$(OBJS) main.o
-		$(CC) -o $@ main.o $(OBJS) -ldl
+$(PROG):	$(OBJS) main.o
+		$(CC) $(LDFLAGS) -o $@ main.o $(OBJS) -ldl
+
 clean:
-		rm -f *~ *.o core msp430-prog msp430-prog.exe
+		rm -f *~ *.o core $(PROG) $(PROG).exe
 
-install:	msp430-prog
-		install -c -s -oroot -m4755 msp430-prog /usr/local/bin/msp430-prog
+install:	$(PROG)
+		install -c -s -oroot -m4755 $(PROG) /usr/local/bin/$(PROG)
 
 ###
