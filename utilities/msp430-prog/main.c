@@ -38,7 +38,7 @@
 unsigned char memory_data [0x40000];	/* Code - up to 256 kbytes */
 int memory_len;
 unsigned memory_base;
-unsigned progress_count, progress_step;
+unsigned progress_count;
 int debug;
 char *progname;
 
@@ -238,11 +238,8 @@ void progress ()
 	++progress_count;
 	putchar ("/-\\|" [progress_count & 3]);
 	putchar ('\b');
+	putchar ('#');
 	fflush (stdout);
-	if (progress_count % progress_step == 0) {
-		putchar ('#');
-		fflush (stdout);
-	}
 }
 
 void verify_block (unsigned addr, int len)
@@ -256,16 +253,16 @@ void verify_block (unsigned addr, int len)
 		fprintf (stderr, "Error reading memory.\n");
 		exit (1);
 	}
-	for (i=0; i<len; i+=4) {
-		expected = *(unsigned*) (memory_data+addr+i);
-		if (expected == 0xffffffff)
+	for (i=0; i<len; i+=2) {
+		expected = *(unsigned short*) (memory_data + addr + i);
+		if (expected == 0xffff)
 			continue;
-		word = *(unsigned*) (block+i);
+		word = *(unsigned short*) (block + i);
 		if (debug)
-			fprintf (stderr, "read word %08X at address %05X\n",
+			fprintf (stderr, "read word %04X at address %05X\n",
 				word, addr + i + memory_base);
-		if (word != *(unsigned*) (memory_data+addr+i)) {
-			printf ("\nerror at address %05X: file=%08X, mem=%08X\n",
+		if (word != expected) {
+			printf ("\nerror at address %05X: file=%04X, mem=%04X\n",
 				addr + i + memory_base, expected, word);
 			exit (1);
 		}
@@ -275,11 +272,35 @@ void verify_block (unsigned addr, int len)
 void do_program (int verify_only)
 {
 	unsigned addr;
-	int len;
+	int len, first, last;
 	void *t0;
 
-	printf ("Memory: %05X-%05X, total %d bytes\n", memory_base,
-		memory_base + memory_len, memory_len);
+	printf ("Memory:");
+	progress_count = 0;
+	first = -1;
+	last = 0;
+	for (addr=0; (int)addr<memory_len; addr+=BLOCKSZ) {
+		len = BLOCKSZ;
+		if (memory_len - addr < len)
+			len = memory_len - addr;
+		if (block_is_clean (addr, len)) {
+			if (first >= 0) {
+				printf (" %05X-%05X,", memory_base + first,
+					memory_base + last + BLOCKSZ-1);
+				first = -1;
+			}
+		} else {
+			++progress_count;
+			if (first < 0)
+				first = addr;
+			last = addr;
+		}
+	}
+	if (first >= 0)
+		printf (" %05X-%05X,", memory_base + first,
+			memory_base + last + BLOCKSZ-1);
+	printf (" total %d bytes\n", progress_count * BLOCKSZ);
+
 	if (MSP430_Configure (CONFIGURE_LOCKED_FLASH_ACCESS, 1) != 0) {
 		fprintf (stderr, "Error enabling locked flash access.\n");
 		exit (1);
@@ -291,14 +312,9 @@ void do_program (int verify_only)
 			exit (1);
 		}
 	}
-	for (progress_step=1; ; progress_step<<=1) {
-		len = 1 + memory_len / progress_step / BLOCKSZ;
-		if (len < 64)
-			break;
-	}
 	printf (verify_only ? "Verify: " : "Program: " );
-	print_symbols ('.', len);
-	print_symbols ('\b', len);
+	print_symbols ('.', progress_count);
+	print_symbols ('\b', progress_count);
 	fflush (stdout);
 
 	progress_count = 0;
@@ -307,13 +323,14 @@ void do_program (int verify_only)
 		len = BLOCKSZ;
 		if (memory_len - addr < len)
 			len = memory_len - addr;
-		if (! verify_only && ! block_is_clean (addr, len))
+		if (block_is_clean (addr, len))
+			continue;
+		if (! verify_only)
 			program_block (addr, len);
 		progress ();
-		if (! block_is_clean (addr, len))
-			verify_block (addr, len);
+		verify_block (addr, len);
 	}
-	printf ("# done\n");
+	printf (" done\n");
 	printf ("Rate: %ld bytes per second\n",
 		memory_len * 1000L / mseconds_elapsed (t0));
 }
