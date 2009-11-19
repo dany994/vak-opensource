@@ -13,6 +13,6 @@ clean:
 		rm -f *~ *.o core $(PROG) $(PROG).exe
 
 install:	$(PROG)
-		install -c -s -oroot -m4755 $(PROG) /usr/local/bin/$(PROG)
+		install -c -s -m755 $(PROG) /usr/local/bin/$(PROG)
 
 ###
