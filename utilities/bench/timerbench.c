@@ -7,9 +7,12 @@
 
 #define N	10
 
-int t0, t1, counter;
+unsigned t0, t1, counter;
 
-int getusec ()
+/*
+ * Реальное время в микросекундах.
+ */
+unsigned getusec ()
 {
 	struct timeval tv;
 
@@ -18,7 +21,7 @@ int getusec ()
 }
 
 /*
- * Функция вызывается каждые 4 миллисекунды реального времени.
+ * Функция вызывается по таймеру реального времени.
  */
 static void cpu_sigalarm (int signum)
 {
