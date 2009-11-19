@@ -45,7 +45,7 @@ int main (int argc, char *argv[])
 	 * makes sure things are cleaned up when we quit. */
 	atexit (SDL_Quit);
 
-	/* Attempt to create a 640 x480 window with 32 bit pixels. */
+	/* Attempt to create a 640x480 window with 32 bit pixels. */
 	screen = SDL_SetVideoMode (640, 480, 32, SDL_SWSURFACE);
 
 	/* If we fail, return error. */
@@ -53,7 +53,7 @@ int main (int argc, char *argv[])
 		fprintf (stderr, "Unable to set 640x480 video: %s\n", SDL_GetError ());
 		exit (1);
 	}
-	/* Main loop:loop forever. */
+	/* Main loop: loop forever. */
 	while (1) {
 		/* Render stuff */
 		render ();
