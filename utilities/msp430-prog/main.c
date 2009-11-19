@@ -29,7 +29,7 @@
 
 #define PROGNAME	"Programmer for TI MSP430"
 #define VERSION		"1.0"
-#define BLOCKSZ		1024
+#define BLOCKSZ		512
 
 /* Macros for converting between hex and binary. */
 #define NIBBLE(x)	(isdigit(x) ? (x)-'0' : tolower(x)+10-'a')
@@ -37,9 +37,9 @@
 
 unsigned char memory_data [0x40000];	/* Code - up to 256 kbytes */
 int memory_len;
-unsigned memory_base;
 unsigned progress_count;
 int debug;
+int verify_only;
 char *progname;
 
 void *fix_time ()
@@ -122,19 +122,9 @@ int read_srec (char *filename, unsigned char *output)
 			data += 2;
 			bytes -= 2;
 
-			if (! memory_base) {
-				/* Автоматическое определение базового адреса. */
-				memory_base = address;
-			}
-			if (address < memory_base) {
-				fprintf (stderr, "%s: incorrect address %05X, must be %05X or greater\n",
-					filename, address, memory_base);
-				exit (1);
-			}
-			address -= memory_base;
 			if (address+bytes > sizeof (memory_data)) {
 				fprintf (stderr, "%s: address too large: %05X + %05X\n",
-					filename, address + memory_base, bytes);
+					filename, address, bytes);
 				exit (1);
 			}
 			while (bytes-- > 0) {
@@ -199,6 +189,16 @@ void load_library ()
 	}
 }
 
+void reinit_device ()
+{
+	char devtype [80];
+
+	if (MSP430_Identify (devtype, sizeof (devtype), 0) != 0) {
+		fprintf (stderr, "Cannot identify microcontroller -- check power!\n");
+		exit (1);
+	}
+}
+
 void quit (void)
 {
 	if (MSP430_Reset)
@@ -216,19 +216,29 @@ int block_is_clean (unsigned addr, int len)
 		if (memory_data [addr+i] != 0xff) {
 			if (debug)
 				fprintf (stderr, "write %02x at address %04x\n",
-					memory_data [addr+i], addr + i + memory_base);
+					memory_data [addr+i], addr + i);
 			return 0;
 		}
 	}
 	return 1;
 }
 
-void program_block (unsigned addr, int len)
+/*
+ * Write flash memory.
+ * Return 1 on success.
+ */
+int program_block (unsigned addr, int len)
 {
-	/* Write flash memory. */
-	if (MSP430_Memory (memory_base + addr, memory_data + addr,
-	    len, MEMORY_WRITE) != 0) {
-		fprintf (stderr, "Error writing flash.\n");
+	if (MSP430_Memory (addr, memory_data + addr,
+	    len, MEMORY_WRITE) == 0)
+		return 1;
+	return 0;
+}
+
+void erase_block (unsigned addr, int len)
+{
+	if (MSP430_Erase (ERASE_SEGMENT, addr, len) != 0) {
+		fprintf (stderr, "Error erasing sector.\n");
 		exit (1);
 	}
 }
@@ -242,13 +252,13 @@ void progress ()
 	fflush (stdout);
 }
 
-void verify_block (unsigned addr, int len)
+int verify_block (unsigned addr, int len)
 {
 	int i;
 	unsigned char block [BLOCKSZ];
 	unsigned word, expected;
 
-	if (MSP430_Memory (memory_base + addr, block, len,
+	if (MSP430_Memory (addr, block, len,
 	    MEMORY_READ) != 0) {
 		fprintf (stderr, "Error reading memory.\n");
 		exit (1);
@@ -258,25 +268,28 @@ void verify_block (unsigned addr, int len)
 		if (expected == 0xffff)
 			continue;
 		word = *(unsigned short*) (block + i);
-		if (debug)
+		if (debug > 1)
 			fprintf (stderr, "read word %04X at address %05X\n",
-				word, addr + i + memory_base);
+				word, addr + i);
 		if (word != expected) {
-			printf ("\nerror at address %05X: file=%04X, mem=%04X\n",
-				addr + i + memory_base, expected, word);
-			exit (1);
+			if (debug)
+				printf (" data error at address %05X: file=%04X, mem=%04X\n",
+					addr + i, expected, word);
+			return 0;
 		}
 	}
+	return 1;
 }
 
-void do_program (int verify_only)
+void do_program ()
 {
 	unsigned addr;
-	int len, first, last;
+	int len, first, last, base;
 	void *t0;
 
 	printf ("Memory:");
 	progress_count = 0;
+	base = -1;
 	first = -1;
 	last = 0;
 	for (addr=0; (int)addr<memory_len; addr+=BLOCKSZ) {
@@ -285,21 +298,27 @@ void do_program (int verify_only)
 			len = memory_len - addr;
 		if (block_is_clean (addr, len)) {
 			if (first >= 0) {
-				printf (" %05X-%05X,", memory_base + first,
-					memory_base + last + BLOCKSZ-1);
+				printf (" %05X-%05X,", first,
+					last + BLOCKSZ-1);
 				first = -1;
 			}
 		} else {
 			++progress_count;
 			if (first < 0)
 				first = addr;
+			if (base < 0)
+				base = addr;
 			last = addr;
 		}
 	}
 	if (first >= 0)
-		printf (" %05X-%05X,", memory_base + first,
-			memory_base + last + BLOCKSZ-1);
+		printf (" %05X-%05X,", first,
+			last + BLOCKSZ-1);
 	printf (" total %d bytes\n", progress_count * BLOCKSZ);
+	if (base < 0) {
+		printf ("No data in input file.\n");
+		exit (1);
+	}
 
 	if (MSP430_Configure (CONFIGURE_LOCKED_FLASH_ACCESS, 1) != 0) {
 		fprintf (stderr, "Error enabling locked flash access.\n");
@@ -307,10 +326,13 @@ void do_program (int verify_only)
 	}
 	if (! verify_only) {
 		/* Erase flash. */
-		if (MSP430_Erase (ERASE_MAIN, memory_base, memory_len) != 0) {
+		printf ("Erase:");
+		fflush (stdout);
+		if (MSP430_Erase (ERASE_MAIN, base, memory_len - base) != 0) {
 			fprintf (stderr, "Error erasing flash.\n");
 			exit (1);
 		}
+		printf (" done\n");
 	}
 	printf (verify_only ? "Verify: " : "Program: " );
 	print_symbols ('.', progress_count);
@@ -325,10 +347,28 @@ void do_program (int verify_only)
 			len = memory_len - addr;
 		if (block_is_clean (addr, len))
 			continue;
-		if (! verify_only)
-			program_block (addr, len);
+		if (! verify_only) {
+			while (! program_block (addr, len)) {
+				if (debug)
+					printf (" write error at address %05X\n", addr);
+retry:				reinit_device ();
+				putchar ('*');
+				putchar ('\b');
+				fflush (stdout);
+				erase_block (addr, len);
+				putchar ('%');
+				putchar ('\b');
+				fflush (stdout);
+			}
+		}
+		if (! verify_block (addr, len)) {
+			putchar ('!');
+			putchar ('\b');
+			fflush (stdout);
+			if (! verify_only)
+				goto retry;
+		}
 		progress ();
-		verify_block (addr, len);
 	}
 	printf (" done\n");
 	printf ("Rate: %ld bytes per second\n",
@@ -366,20 +406,28 @@ void do_probe (const char *port, int iface)
 		fprintf (stderr, "Cannot identify microcontroller -- check power!\n");
 		exit (1);
 	}
-	printf ("Device type: %s\n", &devtype[4]);
+	printf ("Device: %s\n", &devtype[4]);
 }
 
 int main (int argc, char **argv)
 {
-	int ch, verify_only = 0;
+	int ch;
+#ifdef MINGW32
+	const char *serial = "COM1";
+#else
+	const char *serial = "/dev/ttyUSB0";
+#endif
 
 	setvbuf (stdout, (char *)NULL, _IOLBF, 0);
 	setvbuf (stderr, (char *)NULL, _IOLBF, 0);
 	printf (PROGNAME ", Version " VERSION ", Copyright (C) 2009 Serge Vakulenko\n");
 	progname = argv[0];
 
-	while ((ch = getopt(argc, argv, "vDh")) != -1) {
+	while ((ch = getopt(argc, argv, "vDhl:")) != -1) {
 		switch (ch) {
+		case 'l':
+			serial = optarg;
+			continue;
 		case 'v':
 			++verify_only;
 			continue;
@@ -404,11 +452,8 @@ usage:		printf ("Probe:\n");
 		goto usage;
 
 	load_library ();
-#ifdef MINGW32
-	do_probe ("COM1", INTERFACE_SPYBIWIRE_IF);
-#else
-	do_probe ("/dev/ttyUSB0", INTERFACE_SPYBIWIRE_IF);
-#endif
+	do_probe (serial, INTERFACE_SPYBIWIRE_IF);
+
 	if (argc) {
 		memset (memory_data, 0xff, sizeof (memory_data));
 		memory_len = read_srec (argv[0], memory_data);
