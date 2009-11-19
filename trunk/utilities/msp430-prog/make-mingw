@@ -10,7 +10,7 @@ $(PROG):	$(OBJS) main.o
 		$(CC) $(LDFLAGS) -o $@ main.o $(OBJS)
 
 clean:
-		rm -f *~ *.o $(PROG)
+		rm -f *~ *.o msp430-prog
 
 install:	$(PROG)
 		install -c -s -m755 $(PROG) /usr/local/bin/$(PROG)
