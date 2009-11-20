@@ -39,7 +39,6 @@ unsigned char memory_data [0x40000];	/* Code - up to 256 kbytes */
 int memory_len;
 unsigned progress_count;
 int debug;
-int verify_only;
 char *progname;
 
 void *fix_time ()
@@ -281,7 +280,7 @@ int verify_block (unsigned addr, int len)
 	return 1;
 }
 
-void do_program ()
+void do_program (int verify_only)
 {
 	unsigned addr;
 	int len, first, last, base;
@@ -411,23 +410,16 @@ void do_probe (const char *port, int iface)
 
 int main (int argc, char **argv)
 {
-	int ch;
-#ifdef MINGW32
-	const char *serial = "COM1";
-#else
-	const char *serial = "/dev/ttyUSB0";
-#endif
+	int ch, verify_only = 0;
+	char *serial, *filename = 0;
 
 	setvbuf (stdout, (char *)NULL, _IOLBF, 0);
 	setvbuf (stderr, (char *)NULL, _IOLBF, 0);
 	printf (PROGNAME ", Version " VERSION ", Copyright (C) 2009 Serge Vakulenko\n");
 	progname = argv[0];
 
-	while ((ch = getopt(argc, argv, "vDhl:")) != -1) {
+	while ((ch = getopt(argc, argv, "vDh")) != -1) {
 		switch (ch) {
-		case 'l':
-			serial = optarg;
-			continue;
 		case 'v':
 			++verify_only;
 			continue;
@@ -438,27 +430,31 @@ int main (int argc, char **argv)
 			break;
 		}
 usage:		printf ("Probe:\n");
-		printf ("        msp430-prog\n");
+		printf ("        msp430-prog dev\n");
 		printf ("\nWrite flash memory:\n");
-		printf ("        msp430-prog [-v] file.srec\n");
+		printf ("        msp430-prog [-v] dev file.srec\n");
 		printf ("\nArgs:\n");
-		printf ("        file.srec  Code file in SREC format\n");
-		printf ("        -v         Verify only\n");
+		printf ("        dev        Device with FET USB attached (e.g. COM1 or /dev/ttyUSB0)\n");
+		printf ("        file.srec  Flash memory image in SREC format\n");
+		printf ("        -v         Verify only, do not write to flash\n");
 		exit (0);
 	}
 	argc -= optind;
 	argv += optind;
-	if (argc > 1)
+	if (argc < 1 || argc > 2)
 		goto usage;
+	serial = argv[0];
+	if (argc > 1)
+		filename = argv[1];
 
 	load_library ();
 	do_probe (serial, INTERFACE_SPYBIWIRE_IF);
 
-	if (argc) {
+	if (filename) {
 		memset (memory_data, 0xff, sizeof (memory_data));
-		memory_len = read_srec (argv[0], memory_data);
+		memory_len = read_srec (filename, memory_data);
 		if (memory_len == 0) {
-			fprintf (stderr, "%s: read error\n", argv[0]);
+			fprintf (stderr, "%s: read error\n", filename);
 			exit (1);
 		}
 		do_program (verify_only);
