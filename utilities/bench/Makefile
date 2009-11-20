@@ -1,6 +1,6 @@
 CC		= gcc -g -Wall
 CFLAGS		= -O2
-PROG		= timerbench
+PROG		= timerbench usleepbench
 
 all:		$(PROG)
 
