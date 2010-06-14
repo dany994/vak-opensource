@@ -1,4 +1,4 @@
-#!/opt/local/bin/runhugs
+#!/usr/bin/env runhugs
 
 module Main where
 
