@@ -35,5 +35,8 @@ $1. Читалка PDF.
 == Loopt Pulse ==
 Бесплатно. Обзор достопримечателностей в ближайшей окрестности: www.loopt.com
 
+== Pocket Legends for iPad ==
+Бесплатно. Игрушка-бродилка: www.spacetimestudios.com
+
 TODO:
   * DejaVue reader
