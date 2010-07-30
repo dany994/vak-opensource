@@ -17,6 +17,9 @@
 == NewsRack ==
 Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/newsrack/id288815275?mt=8
 
+== Feeddler RSS Reader ==
+Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/feeddler-rss-reader-for-ipad/id364873582?mt=8
+
 == Korg iElectribe R =
 $10. Музыкальный синтезатор: www.korg.com
 
