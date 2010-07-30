@@ -77,5 +77,11 @@ $1. Читалка PDF.
 == Mondo Solitaire ==
 Бесплатно. Игрушка-пасьянс.
 
+== Backgrounds HD ==
+Бесплатно. Каталог фотографий-обоев.
+
+== Air Video ==
+Бесплатно. Просмотр фильмов в формате AVI, DivX, MKV. http://itunes.apple.com/us/app/air-video-watch-your-videos/id306550020
+
 TODO:
   * DejaVue reader
