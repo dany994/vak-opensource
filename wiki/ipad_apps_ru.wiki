@@ -20,6 +20,9 @@
 == Feeddler RSS Reader ==
 Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/feeddler-rss-reader-for-ipad/id364873582?mt=8
 
+== Fluent News Reader ==
+Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/fluent-news-reader/id312886230?mt=8
+
 == Korg iElectribe R =
 $10. Музыкальный синтезатор: www.korg.com
 
