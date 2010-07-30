@@ -14,6 +14,8 @@
 
   * Обзор: http://www.mydigitallife.info/2010/01/29/classics-ipad-ibooks-alternative-iphone-and-ipod-touch-app-free-download/
 
+== NewsRack ==
+Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/newsrack/id288815275?mt=8
 
 TODO:
   * DejaVue reader
