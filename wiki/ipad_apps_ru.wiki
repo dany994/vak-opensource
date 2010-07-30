@@ -53,6 +53,9 @@ $5. Звёздный атлас: www.vitotechnology.com
 == GoodReader ==
 $1. Читалка PDF.
 
+== Easy DJVU Reader ==
+$1. Читалка DejaVu.
+
 == iPDF Reader ==
 Бесплатно. Читалка PDF: http://itunes.apple.com/us/app/ipdf-reader-free/id363822054?mt=8#
 
