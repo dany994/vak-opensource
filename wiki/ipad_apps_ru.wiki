@@ -2,12 +2,13 @@
 
 = Лучшие приложения для iPad =
 
-Add your content here.
+== iBooks ==
+Бесплатно. Официальная читалка книг от Apple. Позволяет покупать книги на App Store. Поддерживает русский язык. Можно загружать любые книги в формате e-pub.
 
+  * Обзор: http://www.prostomac.com/2010/04/ibooks-rodnaya-chitalka-knig-dlya-ipad/
+  * Конвертер из FB2 в e-pub: http://sorotokin.com/fb2epub.html
+  * Обсуждение, где брать книги на русском языке: http://community.livejournal.com/ru_mac/15506036.html
 
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+TODO:
+  * DejaVue reader
+  * PDF reader
