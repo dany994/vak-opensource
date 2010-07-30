@@ -53,6 +53,9 @@ $1. Читалка PDF.
 == AcccuWeather.com free for the iPad ==
 Бесплатно. Прогноз погоды.
 
+== The Weather Channel Max ==
+Бесплатно. Прогноз погоды. http://itunes.apple.com/us/app/the-weather-channel-max-for/id364252504?mt=8
+
 == Pocket Pond HD ==
 Бесплатно. Игрушка-аквариум.
 
