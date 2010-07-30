@@ -17,6 +17,12 @@
 == NewsRack ==
 Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/newsrack/id288815275?mt=8
 
+== Korg iElectribe R =
+$9.99. Музыкальный синтезатор: www.korg.com
+
+== Pianist Pro ==
+$9.99. Виртуальное пианино: Ltd; www.moocowmusic.com
+
 TODO:
   * DejaVue reader
   * PDF reader
