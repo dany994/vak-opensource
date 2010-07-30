@@ -5,6 +5,9 @@
 == Читалки книг ==
 || iBooks || Бесплатно || Позволяет покупать книги на App Store. Поддерживает русский язык. Можно загружать любые книги в формате e-pub. Обзор: http://www.prostomac.com/2010/04/ibooks-rodnaya-chitalka-knig-dlya-ipad/ Конвертер из FB2 в e-pub: http://sorotokin.com/fb2epub.html Обсуждение, где брать книги на русском языке: http://community.livejournal.com/ru_mac/15506036.html ||
 || Classics || Бесплатно на ограниченное время или $3 || http://www.mydigitallife.info/2010/01/29/classics-ipad-ibooks-alternative-iphone-and-ipod-touch-app-free-download/ ||
+|| GoodReader || $1 || Читалка PDF ||
+|| Easy DJVU Reader || $1 || Читалка DejaVu ||
+|| iPDF Reader || Бесплатно || Читалка PDF: http://itunes.apple.com/us/app/ipdf-reader-free/id363822054?mt=8 ||
 
 == Читалки RSS ==
 || NewsRack || Бесплатно || http://itunes.apple.com/us/app/newsrack/id288815275?mt=8 ||
@@ -18,74 +21,36 @@
 || Pro Keys || Бесплатно || Виртуальное пианино ||
 || Beatwave || Бесплатно || Виртуальный ударник ||
 
-== SketchBook Pro ==
-$8. Профессиональная рисовалка: www.autodesk.com
+== Графические редакторы ==
+|| SketchBook Pro || $8 || Профессиональная рисовалка: www.autodesk.com ||
+|| Draw || Бесплатно || Рисовалка ||
+|| Adobe Ideas for iPad || Бесплатно || Простая рисовалка ||
+|| Backgrounds HD || Бесплатно || Каталог фотографий-обоев ||
 
-== Draw ==
-Бесплатно. Рисовалка.
+== Навигация ==
+|| Star Walk for iPad || $5 || Звёздный атлас: www.vitotechnology.com ||
+|| GoSkyWatch Planetarium for iPad || Бесплатно || Звёздный атлас: http://itunes.apple.com/us/app/goskywatch-planetarium-for/id364209241?mt=8 ||
+|| Loopt Pulse || Бесплатно || Обзор достопримечателностей в ближайшей окрестности: www.loopt.com ||
 
-== Star Walk for iPad ==
-$5. Звёздный атлас: www.vitotechnology.com
+== Видеоплееры ==
+|| Air Video || Бесплатно || Просмотр фильмов в формате AVI, DivX, MKV. http://itunes.apple.com/us/app/air-video-watch-your-videos/id306550020 ||
 
-== GoSkyWatch Planetarium for iPad ==
-Бесплатно. Звёздный атлас: http://itunes.apple.com/us/app/goskywatch-planetarium-for/id364209241?mt=8
+== Игрушки ==
+|| Pocket Legends for iPad || Бесплатно || Игрушка-бродилка: www.spacetimestudios.com ||
+|| Air Hockey Gold || Бесплатно || Игрушка - настольный хоккей: www.acceleroto.com ||
+|| Pocket Pond HD || Бесплатно || Игрушка-аквариум ||
+|| Isaac Newton’s Gravity HD iPad App || Бесплатно || Логическая игрушка ||
+|| Mahjong Artifacts: Chapter 2 HD Free || Бесплатно || Логическая игрушка ||
+|| Mondo Solitaire || Бесплатно || Игрушка-пасьянс ||
 
-== GoodReader ==
-$1. Читалка PDF.
+== Текстовые редакторы ==
+|| Evernote || Бесплатно || Редактор-блокнот с хранением в интернете. http://itunes.apple.com/us/app/evernote/id281796108?mt=8 ||
+|| PaperDesk Lite for iPad || Бесплатно || Простой редактор-блокнот ||
 
-== Easy DJVU Reader ==
-$1. Читалка DejaVu.
+== Погода ==
+|| AcccuWeather.com free for the iPad || Бесплатно || Прогноз погоды ||
+|| The Weather Channel Max || Бесплатно || Прогноз погоды. http://itunes.apple.com/us/app/the-weather-channel-max-for/id364252504?mt=8 ||
 
-== iPDF Reader ==
-Бесплатно. Читалка PDF: http://itunes.apple.com/us/app/ipdf-reader-free/id363822054?mt=8#
-
-== Loopt Pulse ==
-Бесплатно. Обзор достопримечателностей в ближайшей окрестности: www.loopt.com
-
-== Pocket Legends for iPad ==
-Бесплатно. Игрушка-бродилка: www.spacetimestudios.com
-
-== Air Hockey Gold ==
-Бесплатно. Игрушка-настольный хоккей: www.acceleroto.com
-
-== Evernote ==
-Бесплатно. Редактор-блокнот с хранением в интернете. http://itunes.apple.com/us/app/evernote/id281796108?mt=8
-
-== PaperDesk Lite for iPad ==
-Бесплатно. Простой редактор-блокнот.
-
-== AcccuWeather.com free for the iPad ==
-Бесплатно. Прогноз погоды.
-
-== The Weather Channel Max ==
-Бесплатно. Прогноз погоды. http://itunes.apple.com/us/app/the-weather-channel-max-for/id364252504?mt=8
-
-== Pocket Pond HD ==
-Бесплатно. Игрушка-аквариум.
-
-== Isaac Newton’s Gravity HD iPad App ==
-Бесплатно. Логическая игрушка.
-
-== Mahjong Artifacts: Chapter 2 HD Free ==
-Бесплатно. Логическая игрушка.
-
-==Adobe Ideas for iPad ==
-Бесплатно. Простая рисовалка.
-
-== Big Calculator ==
-Бесплатно. Простой калькулятор.
-
-== PCalc Lite ==
-Бесплатно. Калькулятор с возможностью расширения.
-
-== Mondo Solitaire ==
-Бесплатно. Игрушка-пасьянс.
-
-== Backgrounds HD ==
-Бесплатно. Каталог фотографий-обоев.
-
-== Air Video ==
-Бесплатно. Просмотр фильмов в формате AVI, DivX, MKV. http://itunes.apple.com/us/app/air-video-watch-your-videos/id306550020
-
-TODO:
-  * DejaVue reader
+== Наука ==
+|| Big Calculator || Бесплатно || Простой калькулятор ||
+|| PCalc Lite || Бесплатно || Калькулятор с возможностью расширения ||
