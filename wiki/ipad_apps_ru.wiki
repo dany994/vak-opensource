@@ -10,7 +10,7 @@
 || iPDF Reader || Бесплатно || Читалка PDF: http://itunes.apple.com/us/app/ipdf-reader-free/id363822054?mt=8 ||
 
 == Читалки RSS ==
-|| NewsRack || Бесплатно || http://itunes.apple.com/us/app/newsrack/id288815275?mt=8 ||
+|| NewsRack || $5 || http://itunes.apple.com/us/app/newsrack/id288815275?mt=8 ||
 || Feeddler RSS Reader || Бесплатно || http://itunes.apple.com/us/app/feeddler-rss-reader-for-ipad/id364873582?mt=8 ||
 || Fluent News Reader || Бесплатно || http://itunes.apple.com/us/app/fluent-news-reader/id312886230?mt=8 ||
 
@@ -30,7 +30,6 @@
 == Навигация ==
 || Star Walk for iPad || $5 || Звёздный атлас: www.vitotechnology.com ||
 || GoSkyWatch Planetarium for iPad || Бесплатно || Звёздный атлас: http://itunes.apple.com/us/app/goskywatch-planetarium-for/id364209241?mt=8 ||
-|| Loopt Pulse || Бесплатно || Обзор достопримечателностей в ближайшей окрестности: www.loopt.com ||
 
 == Видеоплееры ==
 || Air Video || Бесплатно || Просмотр фильмов в формате AVI, DivX, MKV. http://itunes.apple.com/us/app/air-video-watch-your-videos/id306550020 ||
