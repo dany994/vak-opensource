@@ -50,5 +50,8 @@ $1. Читалка PDF.
 == Pocket Pond HD ==
 Бесплатно. Игрушка-аквариум.
 
+==Adobe Ideas for iPad ==
+Бесплатно. Простая рисовалка.
+
 TODO:
   * DejaVue reader
