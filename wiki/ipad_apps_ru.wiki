@@ -3,20 +3,13 @@
 = Лучшие приложения для iPad =
 
 == Читалки книг ==
-|| iBooks        || Бесплатно. Официальная читалка книг от Apple. Позволяет покупать книги на App Store. Поддерживает русский язык. Можно загружать любые книги в формате e-pub. Обзор: http://www.prostomac.com/2010/04/ibooks-rodnaya-chitalka-knig-dlya-ipad/ Конвертер из FB2 в e-pub: http://sorotokin.com/fb2epub.html Обсуждение, где брать книги на русском языке: http://community.livejournal.com/ru_mac/15506036.html ||
+|| iBooks || Бесплатно. Официальная читалка книг от Apple. Позволяет покупать книги на App Store. Поддерживает русский язык. Можно загружать любые книги в формате e-pub. Обзор: http://www.prostomac.com/2010/04/ibooks-rodnaya-chitalka-knig-dlya-ipad/ Конвертер из FB2 в e-pub: http://sorotokin.com/fb2epub.html Обсуждение, где брать книги на русском языке: http://community.livejournal.com/ru_mac/15506036.html ||
+|| Classics || Бесплатно на ограниченное время или $3. Альтернативная читалка книг: http://www.mydigitallife.info/2010/01/29/classics-ipad-ibooks-alternative-iphone-and-ipod-touch-app-free-download/ ||
 
-|| Classics      || Бесплатно на ограниченное время или $3. Альтернативная читалка книг. ||
-
-  * Обзор: http://www.mydigitallife.info/2010/01/29/classics-ipad-ibooks-alternative-iphone-and-ipod-touch-app-free-download/
-
-== NewsRack ==
-Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/newsrack/id288815275?mt=8
-
-== Feeddler RSS Reader ==
-Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/feeddler-rss-reader-for-ipad/id364873582?mt=8
-
-== Fluent News Reader ==
-Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/fluent-news-reader/id312886230?mt=8
+== Читалки RSS ==
+|| NewsRack || Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/newsrack/id288815275?mt=8 ||
+|| Feeddler RSS Reader || Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/feeddler-rss-reader-for-ipad/id364873582?mt=8 ||
+|| Fluent News Reader || Бесплатно. Читалка новостей через RSS: http://itunes.apple.com/us/app/fluent-news-reader/id312886230?mt=8 ||
 
 == Korg iElectribe R =
 $10. Музыкальный синтезатор: www.korg.com
