@@ -38,5 +38,8 @@ $1. Читалка PDF.
 == Pocket Legends for iPad ==
 Бесплатно. Игрушка-бродилка: www.spacetimestudios.com
 
+== Air Hockey Gold ==
+Бесплатно. Игрушка-настольный хоккей: www.acceleroto.com
+
 TODO:
   * DejaVue reader
