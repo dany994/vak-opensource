@@ -32,6 +32,8 @@ $5. Звёздный атлас: www.vitotechnology.com
 == GoodReader ==
 $1. Читалка PDF.
 
+== Loopt Pulse ==
+Бесплатно. Обзор достопримечателностей в ближайшей окрестности: www.loopt.com
+
 TODO:
   * DejaVue reader
-  * PDF reader
