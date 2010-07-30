@@ -29,6 +29,9 @@ $8. Профессиональная рисовалка: www.autodesk.com
 == Star Walk for iPad ==
 $5. Звёздный атлас: www.vitotechnology.com
 
+== GoodReader ==
+$1. Читалка PDF.
+
 TODO:
   * DejaVue reader
   * PDF reader
