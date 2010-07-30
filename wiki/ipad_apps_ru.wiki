@@ -44,6 +44,9 @@ $5. Звёздный атлас: www.vitotechnology.com
 == GoodReader ==
 $1. Читалка PDF.
 
+== iPDF Reader ==
+Бесплатно. Читалка PDF: http://itunes.apple.com/us/app/ipdf-reader-free/id363822054?mt=8#
+
 == Loopt Pulse ==
 Бесплатно. Обзор достопримечателностей в ближайшей окрестности: www.loopt.com
 
@@ -70,6 +73,9 @@ $1. Читалка PDF.
 
 == Big Calculator ==
 Бесплатно. Простой калькулятор.
+
+== Mondo Solitaire ==
+Бесплатно. Игрушка-пасьянс.
 
 TODO:
   * DejaVue reader
