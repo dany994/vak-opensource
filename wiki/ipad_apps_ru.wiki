@@ -41,5 +41,14 @@ $1. Читалка PDF.
 == Air Hockey Gold ==
 Бесплатно. Игрушка-настольный хоккей: www.acceleroto.com
 
+== Evernote ==
+Бесплатно. Редактор-блокнот с хранением в интернете. http://itunes.apple.com/us/app/evernote/id281796108?mt=8
+
+== AcccuWeather.com free for the iPad ==
+Бесплатно. Прогноз погоды.
+
+== Pocket Pond HD ==
+Бесплатно. Игрушка-аквариум.
+
 TODO:
   * DejaVue reader
