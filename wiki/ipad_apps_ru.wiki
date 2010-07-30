@@ -56,5 +56,8 @@ $1. Читалка PDF.
 ==Adobe Ideas for iPad ==
 Бесплатно. Простая рисовалка.
 
+== Big Calculator ==
+Бесплатно. Простой калькулятор.
+
 TODO:
   * DejaVue reader
