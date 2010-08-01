@@ -49,6 +49,9 @@
 == Текстовые редакторы ==
 || Evernote || Бесплатно || Редактор-блокнот с хранением в интернете. http://itunes.apple.com/us/app/evernote/id281796108?mt=8 ||
 || PaperDesk Lite for iPad || Бесплатно || Простой редактор-блокнот ||
+|| Pages || $10 || Аналог Microsoft Word ||
+|| Numbers || $10 || Аналог Microsoft Excel ||
+|| Keynote || $10 || Аналог Microsoft PowerPoint ||
 
 == Погода ==
 || AcccuWeather.com free for the iPad || Бесплатно || Прогноз погоды ||
