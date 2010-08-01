@@ -34,12 +34,18 @@
 || Air Video || Бесплатно || Просмотр фильмов в формате AVI, DivX, MKV. http://itunes.apple.com/us/app/air-video-watch-your-videos/id306550020 ||
 
 == Игрушки ==
-|| Pocket Legends for iPad || Бесплатно || Игрушка-бродилка: www.spacetimestudios.com ||
 || Air Hockey Gold || Бесплатно || Игрушка - настольный хоккей: www.acceleroto.com ||
 || Pocket Pond HD || Бесплатно || Игрушка-аквариум ||
 || Isaac Newton’s Gravity HD iPad App || Бесплатно || Логическая игрушка ||
-|| Mahjong Artifacts: Chapter 2 HD Free || Бесплатно || Логическая игрушка ||
+|| Shanghai Lite || Бесплатно || Пасьянс Mahjong ||
 || Mondo Solitaire || Бесплатно || Игрушка-пасьянс ||
+|| LUDO || Бесплатно || Настольная игра для 4-х человек ||
+|| Hearts || Бесплатно || Настольная карточная игра ||
+|| Labyrinth Lite Edition || Бесплатно || Катаем шарик по лабиринту ||
+|| Checkers on iPad || $2 || Шашки ||
+|| Warships: Sea on Fire! HD || $3 || Морской бой ||
+|| Sudoku HD for iPad || $2 || Судоку ||
+|| Domino Touch HD || $1 || Домино ||
 
 == Текстовые редакторы ==
 || Evernote || Бесплатно || Редактор-блокнот с хранением в интернете. http://itunes.apple.com/us/app/evernote/id281796108?mt=8 ||
