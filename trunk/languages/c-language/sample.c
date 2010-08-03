@@ -14,6 +14,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 
 const char version[] = "1.0";
 const char copyright[] = "Copyright (C) 1993 Serge Vakulenko";
