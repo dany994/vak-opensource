@@ -1,4 +1,4 @@
-#summary Best iPad applications (Russian).
+#summary Specification of k1801vm1 microcontroller (Russian).
 
 = Микропроцессор К1801 ВМ1 =
 //Автор неизвестен. Текст обнаружен в дебрях интернета и приведен
