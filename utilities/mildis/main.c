@@ -137,19 +137,6 @@ unsigned short read_short (unsigned address)
 	return *(unsigned short*) (memory_data + address - memory_base);
 }
 
-void disasm (unsigned address, unsigned last)
-{
-	struct arm_instruction instr;
-
-	while (address < last) {
-		if (thumb2_opcode (address, &instr, read_short) != 0)
-			break;
-
-		printf ("%s\n", instr.text);
-		address += instr.instruction_size;
-	}
-}
-
 int main (int argc, char **argv)
 {
 	for (;;) {
@@ -174,6 +161,37 @@ usage:			printf ("ARM Cortex-M3 Disassembler, by Serge V.Vakulenko\n");
 
 	infile = argv[0];
         memory_len = read_srec (infile, memory_data);
-	disasm (memory_base, memory_base + memory_len);
+	if (memory_len < 192)
+		uerror ("not enough data");
+	if (memory_base != 0x08000000)
+		uerror ("invalid base address %08x, expected 08000000", memory_base);
+
+	/* Vectors. */
+	unsigned address = memory_base;
+	unsigned min_addr = memory_base + 0xc0;
+	while (address < min_addr) {
+		unsigned word = *(unsigned*) (memory_data + address - memory_base);
+		if (word) {
+			printf ("0x%08x  0x%08x\n", address, word);
+			if (address > 0 && (min_addr == 0 || word < min_addr))
+				min_addr = word & ~3;
+		} else {
+			printf ("0x%08x  --\n", address);
+		}
+		address += 4;
+	}
+	printf ("----------\n");
+
+	/* Code. */
+	if (min_addr)
+		address = min_addr;
+	while (address < memory_base + memory_len) {
+		struct arm_instruction instr;
+		if (thumb2_opcode (address, &instr, read_short) != 0)
+			break;
+
+		printf ("%s\n", instr.text);
+		address += instr.instruction_size;
+	}
 	return 0;
 }
