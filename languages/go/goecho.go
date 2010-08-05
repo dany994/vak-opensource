@@ -15,11 +15,11 @@ const (
 func main() {
 	flag.Parse() // Сканирование списка аргументов и установка флагов
 	var s string = ""
-	for i := 0; i < flag.NArg(); i++ {
-		if i > 0 {
+	for ы := 0; ы < flag.NArg(); ы++ {
+		if ы > 0 {
 			s += Space
 		}
-		s += flag.Arg(i)
+		s += flag.Arg(ы)
 	}
 	if !*omitNewline {
 		s += Newline

@@ -243,12 +243,23 @@ int probe_encoding (FILE *fin, const unsigned short *to_unicode)
 			continue;
 		}
 		++good_chars;
-		if (prev && wcschr (bad_pair [prev - L'а'], ch))
+		if (prev && wcschr (bad_pair [prev - L'а'], ch)) {
 			++bad_pairs;
+			if (verbose > 1) {
+				printf ("    bad pair: ");
+				utf8_putc (prev, stdout);
+				printf ("-");
+				utf8_putc (ch, stdout);
+				printf (", %04x-%04x\n", prev, ch);
+			}
+		}
 		prev = ch;
 	}
 	if (verbose > 1) {
-		printf ("*** good chars = %d, bad chars = %d, bad pairs = %d\n",
+		printf ("*** %s: good chars = %d, bad chars = %d, bad pairs = %d\n",
+			to_unicode == koi8_to_unicode ? "koi8" :
+			to_unicode == cp866_to_unicode ? "cp866" :
+			to_unicode == cp1251_to_unicode ? "cp1251" : "utf",
 			good_chars, bad_chars, bad_pairs);
 	}
 	return 32 * bad_pairs + 64 * bad_chars - good_chars;
@@ -468,7 +479,7 @@ int main (int argc, char **argv)
 			printf ("Version: 1.%d\n", atoi (revision+6));
 			return 0;
 		case 'v':
-			verbose = 1;
+			++verbose;
 			break;
 		case 'f':
 			force = 1;
