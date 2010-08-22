@@ -15,7 +15,9 @@ void _start (Stream_t console)
 	console.call->Put_Unsigned (console.data, (unsigned long) &_start, 8, 16);
 	console.call->Put_String (console.data, "\n");
 
-	console.call->Put_String (console.data, "Global variable x = ");
+	console.call->Put_String (console.data, "Global variable x at ");
+	console.call->Put_Unsigned (console.data, (unsigned long) &x, 8, 16);
+	console.call->Put_String (console.data, " = ");
 	console.call->Put_Integer (console.data, x, 0, 10);
 	console.call->Put_String (console.data, "\n");
 	x += x;
