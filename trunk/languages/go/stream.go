@@ -38,8 +38,7 @@ func (x *stream_string_t) Flush() {
 	x.buf = ""
 }
 
-func message (x	Stream_t, msg string)
-{
+func message (x Stream_t, msg string) {
 	x.Putc ('Ё')
 	Puts (x, msg)
 	x.Flush()
