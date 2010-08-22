@@ -1,7 +1,8 @@
 GOC		= gccgo -g
-GOFLAGS		= -O -Wall
+GOFLAGS		= -O -Wall -fno-split-stack -fno-exceptions
+LDFLAGS		= #-static-libgo -lffi -lpthread
 
-PROGS		= args goecho sieve
+PROGS		= args goecho sieve stream stream.s
 
 all:		$(PROGS)
 
@@ -9,10 +10,16 @@ clean:
 		rm -f *~ $(PROGS) a.out
 
 args:		args.go
-		$(GOC) $< -o $@
+		$(GOC) $(LDFLAGS) $(GOFLAGS) $< -o $@
 
 goecho:		goecho.go
-		$(GOC) $< -o $@
+		$(GOC) $(LDFLAGS) $(GOFLAGS) $< -o $@
 
 sieve:		sieve.go
-		$(GOC) $< -o $@
+		$(GOC) $(LDFLAGS) $(GOFLAGS) $< -o $@
+
+stream:		stream.go
+		$(GOC) $(LDFLAGS) $(GOFLAGS) $< -o $@
+
+stream.s:	stream.go
+		$(GOC) $(LDFLAGS) $(GOFLAGS) -S $<
