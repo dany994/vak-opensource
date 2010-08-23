@@ -39,6 +39,9 @@ TSTS    = sample curve card bant pup sphere cyl cyl1 demos gist graf mfti\
 
 all:    $(TSTS)
 
+pcl:	$(TSTS)
+	for i in $(TSTS); do rm -f $$i.pcl && ./$$i && metaplot -j grafor.mtf > $$i.pcl; done
+
 mtf:    sample.mtf curve.mtf card.mtf bant.mtf pup.mtf sphere.mtf cyl.mtf\
 	cyl1.mtf demos.mtf gist.mtf graf.mtf mfti.mtf mfti2.mtf mfti1.mtf\
 	surf.mtf symset.mtf
