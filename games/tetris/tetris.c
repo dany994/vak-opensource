@@ -38,30 +38,30 @@
 
 /* PC console colors */
 enum pccolors {
-	BLACK, BLUE, GREEN, CYAN, RED, MAGENTA, BROWN, WHITE,
-	GREY, LT_BLUE, LT_GREEN, LT_CYAN, LT_RED, LT_MAGENTA, YELLOW, HI_WHITE
+	BLACK, RED, GREEN, BROWN, BLUE, MAGENTA, CYAN, WHITE,
+	GREY, LT_RED, LT_GREEN, YELLOW, LT_BLUE, LT_MAGENTA, LT_CYAN, HI_WHITE
 };
 
 #ifndef DEBUG
-#define SCORE_4 "/usr/games/lib/tetris.scores"
-#define SCORE_5 "/usr/games/lib/pentis.scores"
+#  define SCORE_4	"/usr/games/lib/tetris.scores"
+#  define SCORE_5	"/usr/games/lib/pentis.scores"
 #else
-#define SCORE_4 "tetris.scores"
-#define SCORE_5 "pentis.scores"
+#  define SCORE_4	"tetris.scores"
+#  define SCORE_5	"pentis.scores"
 #endif
 
-#define BORDER_COL    GREEN
-#define DOT_COL       BROWN
+#define BORDER_COL	GREEN
+#define DOT_COL		BROWN
 
-#define TOPS 10
+#define TOPS		10
 
-#define PITY    25
-#define PITWIDTH  12
-#define PITDEPTH  24
+#define PITY		25
+#define PITWIDTH	12
+#define PITDEPTH	24
 
 #define TOPSLINE        12      /* tops start at that line */
 
-#define NPIECES   6
+#define NPIECES		6
 
 struct tops {
 	char    name[10];
@@ -74,10 +74,10 @@ struct coord {
 	int     color;
 };
 
-#define END     127
+#define END		127
 
-#define NTYPES_4 7
-#define NTYPES_5 24
+#define NTYPES_4	7
+#define NTYPES_5	24
 
 struct tet {
 	char    color;
@@ -163,15 +163,10 @@ void color(int c)
 	if( !colored ||  c == curcol )
 		return;
 	curcol = c;
-	printf("\33[=%dF", c);
-}
-
-/*
- * Save color
- */
-void savecolor()
-{
-	printf("\33[=S");
+	if (c < 8)
+		printf("\33[0;3%dm", c);
+	else
+		printf("\33[1;3%dm", c & 7);
 }
 
 /*
@@ -179,7 +174,7 @@ void savecolor()
  */
 void restorecolor()
 {
-	printf("\33[=R");
+	printf("\33[m");
 }
 
 /*
@@ -648,7 +643,6 @@ int main(ac, av)
 
 	/* Draw the pit */
 	erase();
-	savecolor();
 	pos(1, 0);
 	color(WHITE);
 	printf("Lines:       ");
