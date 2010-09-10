@@ -17,7 +17,12 @@
 #define USE_POSIXTTY
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 #include <unistd.h>
+#include <time.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/time.h>
 
@@ -36,11 +41,6 @@ enum pccolors {
 	BLACK, BLUE, GREEN, CYAN, RED, MAGENTA, BROWN, WHITE,
 	GREY, LT_BLUE, LT_GREEN, LT_CYAN, LT_RED, LT_MAGENTA, YELLOW, HI_WHITE
 };
-
-#define U       { if(pentix != 0 && pentix != 1) { \
-			t_resetmode(); \
-			abort(); \
-		} }
 
 #ifndef DEBUG
 #define SCORE_4 "/usr/games/lib/tetris.scores"
@@ -85,48 +85,48 @@ struct tet {
 	struct cc { char x, y; } p[NPIECES];
 } tet[NTYPES_5] = {
 	/* OOOO */
-	HI_WHITE,   0, 3, { {0,0}, {0,1}, {0,2}, {0,3}, {END,END} },
+	{ HI_WHITE,   0, 3, { {0,0}, {0,1}, {0,2}, {0,3}, {END,END} } },
 
 	/* O    O    O  OO OO */
 	/* OOO OOO OOO OO   OO */
-	YELLOW,     1, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {END,END} },
-	LT_MAGENTA, 1, 2, { {0,1}, {1,0}, {1,1}, {1,2}, {END,END} },
-	LT_CYAN,    1, 2, { {0,2}, {1,0}, {1,1}, {1,2}, {END,END} },
-	LT_GREEN,   1, 2, { {0,0}, {0,1}, {1,1}, {1,2}, {END,END} },
-	LT_RED,     1, 2, { {0,1}, {0,2}, {1,0}, {1,1}, {END,END} },
+	{ YELLOW,     1, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {END,END} } },
+	{ LT_MAGENTA, 1, 2, { {0,1}, {1,0}, {1,1}, {1,2}, {END,END} } },
+	{ LT_CYAN,    1, 2, { {0,2}, {1,0}, {1,1}, {1,2}, {END,END} } },
+	{ LT_GREEN,   1, 2, { {0,0}, {0,1}, {1,1}, {1,2}, {END,END} } },
+	{ LT_RED,     1, 2, { {0,1}, {0,2}, {1,0}, {1,1}, {END,END} } },
 
 	/* OO */
 	/* OO */
-	LT_BLUE,    1, 1, { {0,0}, {0,1}, {1,0}, {1,1}, {END,END} },
+	{ LT_BLUE,    1, 1, { {0,0}, {0,1}, {1,0}, {1,1}, {END,END} } },
 
 	/* OOOOO */
-	WHITE,      0, 4, { {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {END,END} },
+	{ WHITE,      0, 4, { {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {END,END} } },
 
 	/* O     O     O     O  OOO OO   */
 	/* OOOO OOOO OOOO OOOO OO    OOO */
-	BROWN,      1, 3, { {0,0}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} },
-	CYAN,       1, 3, { {0,1}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} },
-	MAGENTA,    1, 3, { {0,2}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} },
-	BLUE,       1, 3, { {0,3}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} },
-	GREEN,      1, 3, { {0,1}, {0,2}, {0,3}, {1,0}, {1,1}, {END,END} },
-	RED,        1, 3, { {0,0}, {0,1}, {1,1}, {1,2}, {1,3}, {END,END} },
+	{ BROWN,      1, 3, { {0,0}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} } },
+	{ CYAN,       1, 3, { {0,1}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} } },
+	{ MAGENTA,    1, 3, { {0,2}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} } },
+	{ BLUE,       1, 3, { {0,3}, {1,0}, {1,1}, {1,2}, {1,3}, {END,END} } },
+	{ GREEN,      1, 3, { {0,1}, {0,2}, {0,3}, {1,0}, {1,1}, {END,END} } },
+	{ RED,        1, 3, { {0,0}, {0,1}, {1,1}, {1,2}, {1,3}, {END,END} } },
 
 	/* OO  O O  OO */
 	/* OOO OOO OOO */
-	LT_MAGENTA, 1, 2, { {0,0}, {0,1}, {1,0}, {1,1}, {1,2}, {END,END} },
-	LT_GREEN,   1, 2, { {0,0}, {0,2}, {1,0}, {1,1}, {1,2}, {END,END} },
-	LT_CYAN,    1, 2, { {0,1}, {0,2}, {1,0}, {1,1}, {1,2}, {END,END} },
+	{ LT_MAGENTA, 1, 2, { {0,0}, {0,1}, {1,0}, {1,1}, {1,2}, {END,END} } },
+	{ LT_GREEN,   1, 2, { {0,0}, {0,2}, {1,0}, {1,1}, {1,2}, {END,END} } },
+	{ LT_CYAN,    1, 2, { {0,1}, {0,2}, {1,0}, {1,1}, {1,2}, {END,END} } },
 
 	/* O    O    O O    O  O    O   */
 	/* OOO OOO OOO OOO OOO OOO  O   */
 	/* O   O   O    O   O    O  OOO */
-	LT_RED,     2, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {2,0}, {END,END} },
-	MAGENTA,    2, 2, { {0,1}, {1,0}, {1,1}, {1,2}, {2,0}, {END,END} },
-	GREEN,      2, 2, { {0,2}, {1,0}, {1,1}, {1,2}, {2,0}, {END,END} },
-	CYAN,       2, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {2,1}, {END,END} },
-	YELLOW,     2, 2, { {0,1}, {1,0}, {1,1}, {1,2}, {2,1}, {END,END} },
-	RED,        2, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {2,2}, {END,END} },
-	LT_BLUE,    2, 2, { {0,0}, {1,0}, {2,0}, {2,1}, {2,2}, {END,END} },
+	{ LT_RED,     2, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {2,0}, {END,END} } },
+	{ MAGENTA,    2, 2, { {0,1}, {1,0}, {1,1}, {1,2}, {2,0}, {END,END} } },
+	{ GREEN,      2, 2, { {0,2}, {1,0}, {1,1}, {1,2}, {2,0}, {END,END} } },
+	{ CYAN,       2, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {2,1}, {END,END} } },
+	{ YELLOW,     2, 2, { {0,1}, {1,0}, {1,1}, {1,2}, {2,1}, {END,END} } },
+	{ RED,        2, 2, { {0,0}, {1,0}, {1,1}, {1,2}, {2,2}, {END,END} } },
+	{ LT_BLUE,    2, 2, { {0,0}, {1,0}, {2,0}, {2,1}, {2,2}, {END,END} } },
 };
 
 char pit[PITDEPTH+1][PITWIDTH];
@@ -197,7 +197,7 @@ void pos(int x, int y)
 /*
  * Erase the screen
  */
-erase()
+void erase()
 {
 	printf("\033c");
 }
@@ -220,7 +220,6 @@ void pdots(struct tet *t, struct cc c, int a, struct coord *res)
 	int yw, xw;
 	int i;
 
-	U;
 	if( a & 1 ) {   /* 90 deg */
 		xw = t->dy;
 		yw = t->dx;
@@ -272,7 +271,6 @@ void pdots(struct tet *t, struct cc c, int a, struct coord *res)
 			res[i+1] = tmp;
 		}
 	} while( xw );
-	U;
 }
 
 /*
@@ -280,7 +278,6 @@ void pdots(struct tet *t, struct cc c, int a, struct coord *res)
  */
 void draw(struct coord *p)
 {
-	U;
 	for( ; p->x != END ; p++ ) {
 		if( p->x < 0 )
 			continue;
@@ -289,7 +286,6 @@ void draw(struct coord *p)
 		printf("[]");
 		cur.y += 2;
 	}
-	U;
 }
 
 /*
@@ -297,7 +293,6 @@ void draw(struct coord *p)
  */
 void move(struct coord *old, struct coord *new, int dot)
 {
-	U;
 	for(;;) {
 		if( old->x == END )
 			goto draw;
@@ -335,7 +330,6 @@ draw:           if( new->x == END )
 		}
 		new++;
 	}
-	U;
 }
 
 /*
@@ -362,7 +356,6 @@ void showtop()
 	int f = open(pentix? SCORE_5 : SCORE_4, 0);
 	int i, j;
 
-	U;
 	if( f == -1 || read(f, tops, sizeof tops) != sizeof tops )
 		bzero(tops, sizeof tops);
 	close(f);
@@ -392,7 +385,6 @@ void showtop()
 			j++;
 		}
 	}
-	U;
 }
 
 /*
@@ -403,7 +395,6 @@ void savescore()
 	char *name = pentix? SCORE_5 : SCORE_4;
 	int i, j, f;
 
-	U;
 	f = open(name, 2);
 	if( f == -1 || read(f, tops, sizeof tops) != sizeof tops ) {
 		bzero(tops, sizeof tops);
@@ -428,8 +419,55 @@ void savescore()
 	tops[i].class = class;
 	tops[i].score = score;
 	(void) lseek(f, 0l, 0);
-	(void) write(f, tops, sizeof tops);
+	if (write(f, tops, sizeof tops) < 0)
+		/*ignore*/;
 	close(f);
+}
+
+/*
+ * Draw the class in large friendly figures
+ */
+void drawclass()
+{
+	int i = class+1;
+	static char *msd[3][3] = {
+		{ "    ", "    ", " __ " },
+		{ "    ", "   |", " __|" },
+		{ "    ", "   |", "|__ " },
+	};
+	static char *lsd[3][10] = {
+{ " __ ", "    ", " __ ", " __ ", "    ", " __ ", " __ ", " __ ", " __ ", " __ " },
+{ "|  |", "   |", " __|", " __|", "|__|", "|__ ", "|__ ", "   |", "|__|", "|__|" },
+{ "|__|", "   |", "|__ ", " __|", "   |", " __|", "|__|", "   |", "|__|", "   |" },
+	};
+
+	color(LT_GREEN);
+	pos(5, 5);
+	printf("%s %s", msd[0][i/10], lsd[0][i%10]);
+	cur.y += 9;
+	pos(6, 5);
+	printf("%s %s", msd[1][i/10], lsd[1][i%10]);
+	cur.y += 9;
+	pos(7, 5);
+	printf("%s %s", msd[2][i/10], lsd[2][i%10]);
+	cur.y += 9;
+}
+
+/*
+ * Switch to the next class
+ */
+void nextclass()
+{
+	if( class >= NCLASSES-1 )
+		return;
+	class++;
+	interval -= interval / 5;
+	drawclass();
+	if( mytopsline < TOPS ) {
+		color(medcol(mytopsline));
+		pos(TOPSLINE+mytopsline, 12);
+		printf("%2d", class+1);
+	}
 }
 
 /*
@@ -440,7 +478,6 @@ void scarp(struct coord *c)
 	int i, nfull, j, k;
 	struct coord z;
 
-	U;
 	nfull = 0;
 	for( ; c->x != END ; c++ ) {
 		if( c->x <= 0 ) {
@@ -461,7 +498,6 @@ void scarp(struct coord *c)
 		if( ++pitcnt[c->x] == PITWIDTH )
 			nfull++;
 	}
-	U;
 			/* Remove the full lines */
 	if( nfull ) {
 		/* Clear upper nfull lines */
@@ -520,7 +556,6 @@ void scarp(struct coord *c)
 		if( lines >= classlines[class] )
 			nextclass();
 	}
-	U;
 
 	score += shownext? (class/2 + 1) : class;
 	pos(2, 7);
@@ -534,61 +569,12 @@ void scarp(struct coord *c)
 		pos(TOPSLINE+mytopsline, 15);
 		printf("%7d", score);
 	}
-	U;
-}
-
-/*
- * Switch to the next class
- */
-nextclass()
-{
-	U;
-	if( class >= NCLASSES-1 )
-		return;
-	class++;
-	interval -= interval / 5;
-	drawclass();
-	if( mytopsline < TOPS ) {
-		color(medcol(mytopsline));
-		pos(TOPSLINE+mytopsline, 12);
-		printf("%2d", class+1);
-	}
-	U;
-}
-
-/*
- * Draw the class in large friendly figures
- */
-drawclass()
-{
-	int i = class+1;
-	static char *msd[3][3] = {
-		"    ", "    ", " __ ",
-		"    ", "   |", " __|",
-		"    ", "   |", "|__ ",
-	};
-	static char *lsd[3][10] = {
-" __ ", "    ", " __ ", " __ ", "    ", " __ ", " __ ", " __ ", " __ ", " __ ",
-"|  |", "   |", " __|", " __|", "|__|", "|__ ", "|__ ", "   |", "|__|", "|__|",
-"|__|", "   |", "|__ ", " __|", "   |", " __|", "|__|", "   |", "|__|", "   |",
-	};
-
-	color(LT_GREEN);
-	pos(5, 5);
-	printf("%s %s", msd[0][i/10], lsd[0][i%10]);
-	cur.y += 9;
-	pos(6, 5);
-	printf("%s %s", msd[1][i/10], lsd[1][i%10]);
-	cur.y += 9;
-	pos(7, 5);
-	printf("%s %s", msd[2][i/10], lsd[2][i%10]);
-	cur.y += 9;
 }
 
 /*
  * The main routine
  */
-main(ac, av)
+int main(ac, av)
 	int ac;
 	char **av;
 {
@@ -602,7 +588,7 @@ main(ac, av)
 	char cc;
 	long restusec;
 	struct timeval tv;
-	struct fd_set fds;
+	fd_set fds;
 	long t;
 	char *p;
 	int rotf;       /* direction of rotation */
@@ -748,7 +734,6 @@ main(ac, av)
 		nextold[i].x = nextold[i].y = END;
 
 newpiece:
-	U;
 	ptype = nextptype;
 	angle = nextangle;
 	if( !pentix )
@@ -808,7 +793,8 @@ ok:
 			}
 			goto check;
 		}
-		read(0, &cc, 1);
+		if (read(0, &cc, 1) < 0)
+			exit(0);
 		restusec /= 2;
 		switch( cc ) {
 		case 'q':
