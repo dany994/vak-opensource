@@ -16,7 +16,7 @@ gdb:		hello.bin
 		qemu-system-mipsel -M mips -nographic -L . -s -S -bios $<
 
 clean:
-		rm -f *~ *.o *.elf *.bin
+		rm -f *~ *.o
 
 hello.bin:	hello.elf
 		$(OBJCOPY) -O binary $< $@
