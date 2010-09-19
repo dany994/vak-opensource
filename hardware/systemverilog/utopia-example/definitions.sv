@@ -61,6 +61,9 @@
 `ifndef _INCL_DEFINITIONS
 `define _INCL_DEFINITIONS
 
+`define TxPorts 4  // set number of transmit ports
+`define RxPorts 4  // set number of receive ports
+
 /*
   Cell Formats
 */

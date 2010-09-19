@@ -76,7 +76,7 @@ module squat
 
     // Utopia Level 2 parallel management interface
     // Intel-style Utopia parallel management interface
-    cpu_ifc.Peripheral mif,
+    CpuInterface.Peripheral mif,
 
     // Miscellaneous control interfaces
     input wire rst, clk
@@ -252,9 +252,11 @@ module squat
           if (ATMcell.uni.HEC != hec(ATMcell.Mem[0:3])) begin
             SquatState <= wait_rx_valid;
             `ifndef SYNTHESIS // synthesis ignores this code
-              $display("@%0t: Bad HEC: ATMcell.uni.HEC(0x%x) != (0x%x) hec(ATMcell.Mem[0:3])(0x%x)", 
+              $display("@%0t: Bad HEC: ATMcell.uni.HEC(0x%x) != (0x%x) hec(ATMcell.Mem[0:3])(0x%x)",
 		       $time, ATMcell.uni.HEC, hec(ATMcell.Mem[0:3]), ATMcell.Mem[0:3]);
-	     $write("Bad HEC for: "); foreach (ATMcell.Mem[i]) $write("%x ", ATMcell.Mem[i]); $display;
+//	      $write("Bad HEC for: "); foreach (ATMcell.Mem[i]) $write("%x ", ATMcell.Mem[i]); $display;
+	      $write("Bad HEC for: "); for (int i=0; i<ATMcell.Mem.size; i+=1) $write("%x ", ATMcell.Mem[i]); $display;
+
             `endif
           end
           else begin

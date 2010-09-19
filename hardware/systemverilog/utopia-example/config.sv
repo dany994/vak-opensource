@@ -9,7 +9,7 @@
 /////////////////////////////////////////////////////////////////////////////
 class Config;
    int nErrors, nWarnings;		// Number of errors, warnings during simulation
-   
+
    bit [31:0] numRx, numTx;		// Copy of parameters
 
    constraint c_numRxTx_valid
@@ -35,8 +35,8 @@ class Config;
    constraint c_zero_unused_channels
      {foreach (cells_per_chan[i])
        {
-	solve in_use_Rx[i] before cells_per_chan[i];  // Needed for even dist of in_use
-	if (in_use_Rx[i]) 
+//	solve in_use_Rx[i] before cells_per_chan[i];  // Needed for even dist of in_use
+	if (in_use_Rx[i])
 	     cells_per_chan[i] inside {[1:nCells]};
 	else cells_per_chan[i] == 0;
 	}
@@ -50,14 +50,14 @@ endclass : Config
 
 //---------------------------------------------------------------------------
    function Config::new(input bit [31:0] numRx, numTx);
-   if (!(numRx inside {[1:16]})) begin
+   if (numRx < 1 || numRx > 16) begin
       $display("FATAL %m numRx %0d out of bounds 1..16", numRx);
       $finish;
    end
    this.numRx = numRx;
    in_use_Rx = new[numRx];
 
-   if (!(numTx inside{[1:16]})) begin
+   if (numTx < 1 || numTx > 16) begin
       $display("FATAL %m numTx %0d out of bounds 1..16", numTx);
       $finish;
    end
@@ -68,7 +68,7 @@ endfunction : new
 
 
 //---------------------------------------------------------------------------
-function void Config::display(input string prefix);
+function void Config::display(input string prefix="");
     $write("%sConfig: numRx=%0d, numTx=%0d, nCells=%0d (", prefix, numRx, numTx, nCells);
    foreach (cells_per_chan[i])
       $write("%0d ", cells_per_chan[i]);

@@ -76,11 +76,11 @@ interface Utopia;
   ATMCellType ATMcell;  // union of structures for ATM cells
 
   modport TopReceive (
-    input  data, soc, clav, 
+    input  data, soc, clav,
     output clk_in, reset, ready, clk_out, en, ATMcell, valid );
 
   modport TopTransmit (
-    input  clav, 
+    input  clav,
     inout  selected,
     output clk_in, clk_out, ATMcell, data, soc, en, valid, reset, ready );
 

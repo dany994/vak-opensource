@@ -24,7 +24,6 @@
 
 `include "atm_cell.sv"
 
-
 typedef class Driver;
 /////////////////////////////////////////////////////////////////////////////
 // Driver callback class
@@ -52,8 +51,8 @@ class Driver;
    vUtopiaRx Rx;	// Virtual interface for transmitting cells
    Driver_cbs cbsq[$];  // Queue of callback objects
    int PortID;
-   
-   extern function new(input mailbox gen2drv, input event drv2gen, 
+
+   extern function new(input mailbox gen2drv, input event drv2gen,
 		       input vUtopiaRx Rx, input int PortID);
    extern task run();
    extern task send (input UNI_cell cell);
@@ -72,11 +71,11 @@ function Driver::new(input mailbox gen2drv,
    this.drv2gen = drv2gen;
    this.Rx      = Rx;
    this.PortID  = PortID;
-endfunction : new 
+endfunction : new
 
 
 //---------------------------------------------------------------------------
-// run(): Run the driver. 
+// run(): Run the driver.
 // Get transaction from generator, send into DUT
 //---------------------------------------------------------------------------
 task Driver::run();
@@ -100,7 +99,7 @@ task Driver::run();
 
 	 cell.display($psprintf("@%0t: Drv%0d: ", $time, PortID));
 	 send(cell);
-	 
+
 	 // Post-transmit callbacks
 	 foreach (cbsq[i])
 	   cbsq[i].post_tx(this, cell);
@@ -119,7 +118,7 @@ task Driver::send(input UNI_cell cell);
    ATMCellType Pkt;
 
    cell.pack(Pkt);
-   $write("Sending cell: "); foreach (Pkt.Mem[i]) $write("%x ", Pkt.Mem[i]); $display;
+   $write("Sending cell: "); for (int i=0; i<Pkt.Mem.size; i+=1) $write("%x ", Pkt.Mem[i]); $display;
 
    // Iterate through bytes of cell, deasserting Start Of Cell indicater
    @(Rx.cbr);

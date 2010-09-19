@@ -73,7 +73,8 @@ function void Scoreboard::check_actual(input NNI_cell cell,
    expect_cells[portn].iactual++;
    iactual++;
 
-   foreach (expect_cells[portn].q[i]) begin
+// foreach (expect_cells[portn].q[i]) begin
+   for (int i=0; i<cells[portn].q.size; i++) begin
       if (expect_cells[portn].q[i].compare(cell)) begin
 	 $display("@%0t: Match found for cell", $time);
 	 expect_cells[portn].q.delete(i);
@@ -107,11 +108,11 @@ endfunction : wrap_up
 //---------------------------------------------------------------------------
 // Print the contents of the scoreboard, mainly for debugging
 //---------------------------------------------------------------------------
-function void Scoreboard::display(string prefix);
+function void Scoreboard::display(string prefix="");
    $display("@%0t: %m so far %0d expected cells, %0d actual cells received", $time, iexpect, iactual);
-   foreach (expect_cells[i]) begin
+   for (int i=0; i<expect_cells.size; i++) begin
       $display("Tx[%0d]: exp=%0d, act=%0d", i, expect_cells[i].iexpect, expect_cells[i].iactual);
-      foreach (expect_cells[i].q[j])
+      for (int j=0; j<expect_cells[i].q.size; j++)
 	expect_cells[i].q[j].display($psprintf("%sScoreboard: Tx%0d: ", prefix, i));
    end
 endfunction : display

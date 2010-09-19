@@ -10,7 +10,7 @@
 `include "config.sv"
 `include "scoreboard.sv"
 `include "coverage.sv"
-`include "cpu_ifc.sv"
+//`include "CpuInterface.sv"
 `include "cpu_driver.sv"
 
 
@@ -122,7 +122,7 @@ function Environment::new(input vUtopiaRx Rx[],
    end
    else
      $display("Simulation run with default random seed");
-   
+
 endfunction : new
 
 
@@ -150,7 +150,7 @@ function void Environment::build();
    drv2gen = new[numRx];
    scb = new(cfg);
    cov = new();
-   
+
    foreach(gen[i]) begin
       gen2drv[i] = new();
       gen[i] = new(gen2drv[i], drv2gen[i], cfg.cells_per_chan[i], i);
@@ -220,7 +220,7 @@ task Environment::run();
       end
    join_any
    disable timeout_block;
-   
+
    // Wait a little longer for the data flow through switch, into monitors, and scoreboards
    repeat (1_000) @(Rx[0].cbr);
 endtask : run
@@ -230,10 +230,10 @@ endtask : run
 // Any post-run cleanup / reporting
 //---------------------------------------------------------------------------
 function void Environment::wrap_up();
-   $display("@%0t: End of simulation, %0d error%s, %0d warning%s", 
+   $display("@%0t: End of simulation, %0d error%s, %0d warning%s",
 	    $time, cfg.nErrors, cfg.nErrors==1 ? "" : "s", cfg.nWarnings, cfg.nWarnings==1 ? "" : "s");
    scb.wrap_up;
-   
+
 endfunction : wrap_up
 
 `endif // ENVIRONMENT__SV

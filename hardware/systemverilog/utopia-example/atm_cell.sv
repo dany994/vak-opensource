@@ -38,6 +38,9 @@ endclass // BaseTr
 
 typedef class NNI_cell;
 
+typedef virtual Utopia vUtopia;
+typedef virtual Utopia.TB_Rx vUtopiaRx;
+typedef virtual Utopia.TB_Tx vUtopiaTx;
 
 /////////////////////////////////////////////////////////////////////////////
 // UNI Cell Format
@@ -101,14 +104,15 @@ function bit UNI_cell::compare(input BaseTr to);
 endfunction : compare
 
 
-function void UNI_cell::display(input string prefix);
+function void UNI_cell::display(input string prefix="");
    ATMCellType p;
 
    $display("%sUNI id:%0d GFC=%x, VPI=%x, VCI=%x, CLP=%b, PT=%x, HEC=%x, Payload[0]=%x",
 	    prefix, id, GFC, VPI, VCI, CLP, PT, HEC, Payload[0]);
    this.pack(p);
    $write("%s", prefix);
-   foreach (p.Mem[i]) $write("%x ", p.Mem[i]); $display;
+//   foreach (p.Mem[i]) $write("%x ", p.Mem[i]); $display;
+   for (int i=0; i<p.Mem.size; i+=1) $write("%x ", p.Mem[i]); $display;
    //$write("%sUNI Payload=%x %x %x %x %x %x ...",
    //	  prefix, Payload[0], Payload[1], Payload[2], Payload[3], Payload[4], Payload[5]);
    //foreach(Payload[i]) $write(" %x", Payload[i]);
@@ -127,7 +131,7 @@ function void UNI_cell::copy_data(input UNI_cell copy);
 endfunction : copy_data
 
 
-function BaseTr UNI_cell::copy(input BaseTr to);
+function BaseTr UNI_cell::copy(input BaseTr to=null);
    UNI_cell dst;
    if (to == null) dst = new();
    else            $cast(dst, to);
@@ -260,14 +264,15 @@ function bit NNI_cell::compare(input BaseTr to);
 endfunction : compare
 
 
-function void NNI_cell::display(input string prefix);
+function void NNI_cell::display(input string prefix="");
    ATMCellType p;
 
    $display("%sNNI id:%0d VPI=%x, VCI=%x, CLP=%b, PT=%x, HEC=%x, Payload[0]=%x",
 	    prefix, id, VPI, VCI, CLP, PT, HEC, Payload[0]);
    this.pack(p);
    $write("%s", prefix);
-   foreach (p.Mem[i]) $write("%x ", p.Mem[i]); $display;
+// foreach (p.Mem[i]) $write("%x ", p.Mem[i]); $display;
+   for (int i=0; i<p.Mem.size; i+=1) $write("%x ", p.Mem[i]); $display;
    //$write("%sUNI Payload=%x %x %x %x %x %x ...",
    $display;
 endfunction : display
@@ -281,7 +286,7 @@ function void NNI_cell::copy_data(input NNI_cell copy);
    copy.Payload = this.Payload;
 endfunction : copy_data
 
-function BaseTr NNI_cell::copy(input BaseTr to);
+function BaseTr NNI_cell::copy(input BaseTr to=null);
    NNI_cell dst;
    if (to == null) dst = new();
    else            $cast(dst, to);
