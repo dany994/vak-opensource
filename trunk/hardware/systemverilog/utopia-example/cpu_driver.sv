@@ -4,8 +4,11 @@
  `define CPU_DRIVER__SV
 
 `include "atm_cell.sv"
-`include "cpu_ifc.sv"
+//`include "CpuInterface.sv"
 //`include "CPUMethod.sv"
+
+typedef virtual CpuInterface vCPU;
+typedef virtual CpuInterface.Test vCPU_T;
 
 class CPU_driver;
    vCPU_T mif;

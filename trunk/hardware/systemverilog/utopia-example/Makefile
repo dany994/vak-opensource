@@ -1,25 +1,36 @@
-VSRC	= top.sv Utopia.sv cpu_ifc.sv
-ISRC	= LookupTable.sv squat.sv utopia1_atm_rx.sv utopia1_atm_tx.sv test.sv
-SSRC	= definitions.sv atm_cell.sv environment.sv config.sv generator.sv \
-	  driver.sv monitor.sv scoreboard.sv coverage.sv cpu_driver.sv
-VOPTS	= -sverilog -debug_all +libext+.sv -y . -cm line+tgl -lca
-SOPT	= +ntb_solver_mode=1 -l simv.log -cm line+tgl
+VSRC		= top.sv cpu_ifc.sv
+ISRC		= LookupTable.sv squat.sv utopia1_atm_rx.sv utopia1_atm_tx.sv Utopia.sv test.sv
+SSRC		= definitions.sv atm_cell.sv environment.sv config.sv generator.sv \
+		  driver.sv monitor.sv scoreboard.sv coverage.sv cpu_driver.sv
+NCVLOG		= ncvlog -sv -logfile ncvlog.log -errormax 15 -update -linedebug #-status
+NCELAB		= ncelab -logfile ncelab.log -errormax 15 -access +wc #-status
+NCSIM		= ncsim -logfile ncsim.log -errormax 15 #-status
+NCSIM_GUI	= ${NCSIM} -gui -input restore.tcl
 
-cov:	simv.vdb
-	urg -dir simv.vdb
-	urg -dir simv.vdb -format text
+default:	build elaborate sim
 
-dve:	simv.vdb
-	dve -lca -cov -covdir simv.cm
+gui:		build elaborate simgui
 
-run simv.vdb:	simv
-	@rm -rf simv.vdb
-#	./simv ${SOPT} +ntb_random_seed=19
-	./simv ${SOPT} +ntb_random_seed_automatic
+build:
+#		${NCVLOG} ${ISRC}
+		${NCVLOG} LookupTable.sv
+		${NCVLOG} squat.sv
+		${NCVLOG} utopia1_atm_rx.sv
+		${NCVLOG} utopia1_atm_tx.sv
+		${NCVLOG} Utopia.sv
+		${NCVLOG} CpuInterface.sv
+		${NCVLOG} test.sv
+		${NCVLOG} ${VSRC}
 
-simv:   ${VSRC} ${SSRC} ${ISRC}
-	vcs ${VOPTS} -l comp.log ${VSRC}
+elaborate:
+		${NCELAB} top
+
+sim:
+		${NCSIM} top:module
+
+simgui:
+		${NCSIM_GUI} top:module
 
 clean:
-	@rm -rf *~ *.log *.vpd vc_hdrs.h .vcsmx_rebuild DVEfiles .nfs* .restartSimSession*
-	@rm -rf simv* csrc* core* *.vrh *shell.v .__solver* *.key .ucli* .nfs* *.tcl urgReport
+		rm -f *~ *.log hdl.var ncsim.key cds.lib
+		rm -r -f INCA_libs .simvision waves.shm

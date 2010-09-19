@@ -65,7 +65,7 @@
  *********************************************************************/
 
 `ifndef LOOKUPTABLE__SV
-`define LOOKUPTABLE__SV 
+`define LOOKUPTABLE__SV
 
 
 `include "definitions.sv"  // include external definitions
@@ -87,7 +87,7 @@ interface LookupTable;
 
   // Function to perform read
   function dType read (input bit [Asize-1:0] addr);
-     //$display("@%0t: lut.read Mem[%0x]=%0x", $time, addr, Mem[addr]);     
+     //$display("@%0t: lut.read Mem[%0x]=%0x", $time, addr, Mem[addr]);
      return (Mem[addr]);
   endfunction
 endinterface
