@@ -292,7 +292,7 @@ int estimate (int *mypit, int *herpit)
 	int score, i, n;
 	static int weight[13] = { 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2 };
 
-	/* Aapproximate a number of stones, available for every player.
+	/* Approximate a number of stones, available for every player.
 	 * Assume we have distributed all stones according to game rules.
 	 * Count every player pit. */
 	score = 0;
