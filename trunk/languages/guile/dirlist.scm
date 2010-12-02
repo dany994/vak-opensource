@@ -1,4 +1,4 @@
-#!/opt/local/bin/guile -s
+#!/usr/bin/env guile -s
 !#
 (define arg (cadr (command-line)))
 (define dir (opendir arg))
