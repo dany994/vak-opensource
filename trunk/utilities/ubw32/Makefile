@@ -11,7 +11,7 @@ else
 # Rules for Linux, etc.
   OBJS    += usb-linux.o
   CFLAGS   = -O3
-  LDFLAGS  = -lhid -lusb
+  LDFLAGS  = -lusb
 endif
 
 all: $(EXECS)
@@ -20,7 +20,7 @@ all: $(EXECS)
 
 .c.o:
 	$(CC) $(CFLAGS) -c $*.c
- 
+
 ubw32: $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS) -o ubw32
 	strip ubw32
@@ -30,5 +30,4 @@ install: ubw32
 	cp ubw32 /usr/local/bin
 
 clean:
-	rm -f $(EXECS) *.o core
-
+	rm -f $(EXECS) *.o core *~

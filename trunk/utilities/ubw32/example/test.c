@@ -12,52 +12,51 @@
 	2/19/2009 - Phillip Burgess - pburgess@dslextreme.com
 */
 
-#include <p32xxxx.h>
-#include <plib.h>
-#include <math.h>
+/*#include <p32xxxx.h>*/
+/*#include <plib.h>*/
+/*#include <math.h>*/
 
-#define DEG2RAD (M_PI / 180.0)
+#define BIT_0	(1 << 0)
+#define BIT_1	(1 << 1)
+#define BIT_2	(1 << 2)
+#define BIT_3	(1 << 3)
 
-static void pwm(
-  const short a,
-  const short b,
-  const short c,
-  const short d)
+static void pwm (int a, int b, int c, int d)
 {
-	int   bits;
-	short i;
+	int bits, i;
 
 	bits = a ? BIT_0 : 0;
-	if(b > 0) bits |= BIT_1;
-	if(c > 0) bits |= BIT_2;
-	if(d > 0) bits |= BIT_3;
-	mPORTEClearBits(bits);
+	if (b > 0) bits |= BIT_1;
+	if (c > 0) bits |= BIT_2;
+	if (d > 0) bits |= BIT_3;
+	mPORTEClearBits (bits);
 
-	for(i=0;i<=1000;i++) {
+	for (i=0; i<=1000; i++) {
 		bits = (i >= a) ? BIT_0 : 0;
-		if(i >= b) bits |= BIT_1;
-		if(i >= c) bits |= BIT_2;
-		if(i >= d) bits |= BIT_3;
+		if (i >= b) bits |= BIT_1;
+		if (i >= c) bits |= BIT_2;
+		if (i >= d) bits |= BIT_3;
 
-		mPORTESetBits(bits);
+		mPORTESetBits (bits);
 	}
 }
 
-int main(void)
+int main (void)
 {
-	double d;
+	int a, b, c, d;
 
 	/* Configure PB frequency and wait states */
-	SYSTEMConfigPerformance(80000000L);
+/*	SYSTEMConfigPerformance(80000000L);*/
 
-	PORTSetPinsDigitalOut(IOPORT_E,BIT_0 | BIT_1 | BIT_2 | BIT_3);
+	PORTSetPinsDigitalOut (IOPORT_E, BIT_0 | BIT_1 | BIT_2 | BIT_3);
 
-	for(d = 0.0;;d += 0.005) {
-	  pwm((int)(pow(0.5 + cos(d                  ) * 0.5,3.0) * 1000.0),
-	      (int)(pow(0.5 + cos(d +  90.0 * DEG2RAD) * 0.5,3.0) * 1000.0),
-	      (int)(pow(0.5 + cos(d + 180.0 * DEG2RAD) * 0.5,3.0) * 1000.0),
-	      (int)(pow(0.5 + cos(d + 270.0 * DEG2RAD) * 0.5,3.0) * 1000.0));
+	a = b = c = d = 0;
+	for (;;) {
+		pwm (a, b, c, d);
+		a += 10;
+		b += 100;
+		c += 1000;
+		d += 100000;
 	}
-
 	return 0;
 }

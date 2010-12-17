@@ -5,7 +5,9 @@
                its own source file, providing a common calling syntax to the
                portable sections of the code.
  History     : 3/16/2009  Initial Linux support for ubw32 program.
+	       12/15/1010 Get rid of libhid; using libusb directly.
  License     : Copyright 2009 Phillip Burgess - pburgess@dslextreme.com
+               Portions Copyright 2010 Serge Vakulenko - serge@vak.ru
 
                This file is part of 'ubw32' program.
 
@@ -35,11 +37,10 @@
 
 #include <stdio.h>
 #include <usb.h>
-#include <hid.h>
 #include "ubw32.h"
 #include <errno.h>
 
-static HIDInterface *hid = NULL;
+static usb_dev_handle *usbdev;
 unsigned char        usbBuf[64];
 
 /****************************************************************************
@@ -64,27 +65,33 @@ ErrorCode usbOpen(
   const unsigned short vendorID,
   const unsigned short productID)
 {
-	ErrorCode           status = ERR_USB_INIT1;
-	HIDInterfaceMatcher matcher;
+	struct usb_bus *bus;
+	struct usb_device *dev;
 
-	matcher.vendor_id  = vendorID;
-	matcher.product_id = productID;
-	matcher.matcher_fn = NULL;
-
-	if(HID_RET_SUCCESS == hid_init()) {
-		status = ERR_USB_INIT2;
-		if((hid = hid_new_HIDInterface())) {
-			if(HID_RET_SUCCESS ==
-			  hid_force_open(hid,0,&matcher,3)) {
+	usb_init();
+	usb_find_busses();
+	usb_find_devices();
+	for (bus = usb_get_busses(); bus; bus = bus->next) {
+		for (dev = bus->devices; dev; dev = dev->next) {
+			if (dev->descriptor.idVendor == vendorID &&
+			    dev->descriptor.idProduct == productID) {
+				usbdev = usb_open (dev);
+				if (! usbdev) {
+					return ERR_USB_INIT2;
+				}
+				if (usb_claim_interface (usbdev, 0) != 0) {
+					if (usb_detach_kernel_driver_np (usbdev, 0) < 0) {
+						return ERR_USB_INIT2;
+					}
+					if (usb_claim_interface (usbdev, 0) != 0) {
+						return ERR_USB_INIT2;
+					}
+				}
 				return ERR_NONE;
 			}
-			status = ERR_UBW32_NOT_FOUND;
-			hid_delete_HIDInterface(&hid);
 		}
-		hid_cleanup();
 	}
-
-	return status;
+	return ERR_UBW32_NOT_FOUND;
 }
 
 /****************************************************************************
@@ -113,15 +120,19 @@ ErrorCode usbWrite(
 	DEBUGMSG("\nAbout to write");
 #endif
 
-	if(HID_RET_SUCCESS != hid_interrupt_write(hid,0x01,usbBuf,len,0))
+	int bytes_written = usb_interrupt_write (usbdev, 0x01, usbBuf, len, 0);
+	if (bytes_written != len) {
 		return ERR_USB_WRITE;
-
+	}
 	DEBUGMSG("Done w/write");
 
 	if(read) {
 		DEBUGMSG("About to read");
-		if(HID_RET_SUCCESS != hid_interrupt_read(hid,0x81,usbBuf,64,0))
+
+		int len = usb_interrupt_read (usbdev, 0x81, usbBuf, 64, 0);
+		if (len != 64) {
 			return ERR_USB_READ;
+		}
 #ifdef DEBUG
 		(void)puts("Done reading\nReceived:");
 		for(i=0;i<8;i++) (void)printf("%02x ",usbBuf[i]);
@@ -144,8 +155,7 @@ ErrorCode usbWrite(
  ****************************************************************************/
 void usbClose(void)
 {
-	(void)hid_close(hid);
-	hid_delete_HIDInterface(&hid);
-	(void)hid_cleanup();
-	hid = NULL;
+	usb_release_interface (usbdev, 0);
+	usb_close (usbdev);
+	usbdev = 0;
 }
