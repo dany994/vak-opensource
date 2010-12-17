@@ -12,12 +12,6 @@ To build the ubw32 program for Mac, you'll need to have Xcode (Apple's
 developer tools) already installed.  The IDE portion is not used here, just
 the command line interface.
 
-For Linux, you'll need the 'libhid' development library (and associated
-dependencies) installed, which can be handled by most package managers or
-from the command line (Mac users can ignore this step):
-
-	sudo apt-get install libhid-dev
-
 Assuming you're reading this as the README.txt alongside the source code,
 to compile ubw32, in the Terminal window type:
 

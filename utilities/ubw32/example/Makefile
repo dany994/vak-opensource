@@ -20,13 +20,13 @@
 HEX  = test.hex
 UBW  = ubw32 -r
 PROC = 32MX460F512L
-CC   = pic32mx-gcc -s -mprocessor=$(PROC)
-#CC   = pic32mx-gcc -O3 -mips16 -s -mprocessor=$(PROC)
+CC   = /usr/local/pic32mx/bin/pic32mx-gcc -s -mprocessor=$(PROC)
+#CC   = /usr/local/pic32mx/bin/pic32mx-gcc -O3 -mips16 -s -mprocessor=$(PROC)
 
 all: $(HEX)
 
 $(HEX): test.elf
-	pic32mx-bin2hex -a test.elf
+	/usr/local/pic32mx/bin/pic32mx-bin2hex -a test.elf
 
 test.elf: test.c
 	$(CC) test.c -o test.elf
