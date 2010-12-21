@@ -283,6 +283,8 @@ ErrorCode hexWrite(const char verify)
 	        addrSave = addr32;
 	      }
 
+	    } else if(5 == type) { /* Start address, ignore */
+
 	    } else { /* Unsupported record type */
 	      return ERR_HEX_RECORD;
 	    }
@@ -328,4 +330,3 @@ void hexClose(void)
 	hexFileData = NULL;
 	(void)close(hexFd);
 }
-
