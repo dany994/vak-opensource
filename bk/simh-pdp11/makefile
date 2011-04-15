@@ -31,7 +31,7 @@ endif
 #
 # Common Libraries
 #
-BIN = BIN/
+BIN = ../demos-dvk/
 SIM = scp.c sim_console.c sim_fio.c sim_timer.c sim_sock.c \
 	sim_tmxr.c sim_ether.c sim_tape.c
 
@@ -58,7 +58,7 @@ ECLIPSE = ${NOVAD}/eclipse_cpu.c ${NOVAD}/eclipse_tt.c ${NOVAD}/nova_sys.c \
 	${NOVAD}/nova_dkp.c ${NOVAD}/nova_dsk.c ${NOVAD}/nova_lp.c \
 	${NOVAD}/nova_mta.c ${NOVAD}/nova_plt.c ${NOVAD}/nova_pt.c \
 	${NOVAD}/nova_clk.c ${NOVAD}/nova_tt1.c ${NOVAD}/nova_qty.c
-ECLIPSE_OPT = -I ${NOVAD} -DECLIPSE -DUSE_INT64 
+ECLIPSE_OPT = -I ${NOVAD} -DECLIPSE -DUSE_INT64
 
 
 PDP18BD = PDP18B
@@ -72,7 +72,7 @@ PDP9_OPT = -DPDP9 -I ${PDP18BD}
 PDP15_OPT = -DPDP15 -I ${PDP18BD}
 
 
-PDP11D = PDP11
+PDP11D = .
 PDP11 = ${PDP11D}/pdp11_fp.c ${PDP11D}/pdp11_cpu.c ${PDP11D}/pdp11_dz.c \
 	${PDP11D}/pdp11_cis.c ${PDP11D}/pdp11_lp.c ${PDP11D}/pdp11_rk.c \
 	${PDP11D}/pdp11_rl.c ${PDP11D}/pdp11_rp.c ${PDP11D}/pdp11_rx.c \
@@ -257,9 +257,9 @@ SDS_OPT = -I ${SDSD}
 ALL = pdp1 pdp4 pdp7 pdp8 pdp9 pdp15 pdp11 pdp10 \
 	vax vax780 nova eclipse hp2100 i1401 i1620 s3 \
 	altair altairz80 gri i1620 i7094 ibm1130 id16 \
-	id32 sds lgp h316 
+	id32 sds lgp h316
 
-all : ${ALL}
+all : pdp11 #${ALL}
 
 clean :
 ifeq ($(WIN32),)
@@ -373,7 +373,7 @@ ${BIN}altair${EXE} : ${ALTAIR} ${SIM}
 
 altairz80 : ${BIN}altairz80${EXE}
 
-${BIN}altairz80${EXE} : ${ALTAIRZ80} ${SIM} 
+${BIN}altairz80${EXE} : ${ALTAIRZ80} ${SIM}
 	${CC} ${ALTAIRZ80} ${SIM} ${ALTAIRZ80_OPT} -o $@ ${LDFLAGS}
 
 gri : ${BIN}gri${EXE}
