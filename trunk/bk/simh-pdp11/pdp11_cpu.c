@@ -307,6 +307,7 @@ extern int32 sim_int_char;
 extern uint32 sim_switches;
 extern uint32 sim_brk_types, sim_brk_dflt, sim_brk_summ; /* breakpoint info */
 extern t_bool sim_idle_enab;
+extern FILE *sim_deb;
 extern DEVICE *sim_devices[];
 extern CPUTAB cpu_tab[];
 
@@ -353,6 +354,8 @@ extern t_stat iopageR (int32 *data, uint32 addr, int32 access);
 extern t_stat iopageW (int32 data, uint32 addr, int32 access);
 extern int32 calc_ints (int32 nipl, int32 trq);
 extern int32 get_vector (int32 nipl);
+extern t_stat fprint_sym (FILE *ofile, t_addr addr, t_value *val,
+    UNIT *uptr, int32 sw);
 
 /* Trap data structures */
 
@@ -629,7 +632,7 @@ DEVICE cpu_dev = {
     1, 8, 22, 2, 8, 16,
     &cpu_ex, &cpu_dep, &cpu_reset,
     NULL, NULL, NULL,
-    NULL, DEV_DYNM, 0,
+    NULL, DEV_DYNM | DEV_DEBUG, 0,
     NULL, &cpu_set_size, NULL
     };
 
@@ -708,7 +711,7 @@ if (abortval != 0) {
 
    Check for traps or interrupts.  If trap, locate the vector and check
    for stop condition.  If interrupt, locate the vector.
-*/ 
+*/
 
 while (reason == 0)  {
 
@@ -841,6 +844,13 @@ while (reason == 0)  {
         hst_p = (hst_p + 1);
         if (hst_p >= hst_lnt)
             hst_p = 0;
+        }
+    if (sim_deb && cpu_dev.dctrl) {
+	fprintf (sim_deb, "*** %06o: (%03o) %06o  ", PC, get_PSW (), IR);
+        fprint_sym (sim_deb, PC, &IR, &cpu_unit, SWMASK ('M'));
+//	if (reg)
+//		fprintf (sim_deb, "\tМ[%o]=%05o", reg, M[reg]);
+	fprintf (sim_deb, "\n");
         }
     PC = (PC + 2) & 0177777;                            /* incr PC, mod 65k */
     switch ((IR >> 12) & 017) {                         /* decode IR<15:12> */
@@ -1000,7 +1010,7 @@ while (reason == 0)  {
         case 010: case 011:                             /* BNE */
             if (Z == 0) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 012: case 013:                             /* BNE */
@@ -1012,7 +1022,7 @@ while (reason == 0)  {
         case 014: case 015:                             /* BEQ */
             if (Z) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 016: case 017:                             /* BEQ */
@@ -1024,7 +1034,7 @@ while (reason == 0)  {
         case 020: case 021:                             /* BGE */
             if ((N ^ V) == 0) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 022: case 023:                             /* BGE */
@@ -1048,7 +1058,7 @@ while (reason == 0)  {
         case 030: case 031:                             /* BGT */
             if ((Z | (N ^ V)) == 0) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 032: case 033:                             /* BGT */
@@ -1058,7 +1068,7 @@ while (reason == 0)  {
         case 034: case 035:                             /* BLE */
             if (Z | (N ^ V)) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 036: case 037:                             /* BLE */
@@ -1659,7 +1669,7 @@ while (reason == 0)  {
         case 000: case 001:                             /* BPL */
             if (N == 0) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 002: case 003:                             /* BPL */
@@ -1671,7 +1681,7 @@ while (reason == 0)  {
         case 004: case 005:                             /* BMI */
             if (N) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 006: case 007:                             /* BMI */
@@ -1683,7 +1693,7 @@ while (reason == 0)  {
         case 010: case 011:                             /* BHI */
             if ((C | Z) == 0) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 012: case 013:                             /* BHI */
@@ -1695,7 +1705,7 @@ while (reason == 0)  {
         case 014: case 015:                             /* BLOS */
             if (C | Z) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 016: case 017:                             /* BLOS */
@@ -1707,7 +1717,7 @@ while (reason == 0)  {
         case 020: case 021:                             /* BVC */
             if (V == 0) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 022: case 023:                             /* BVC */
@@ -1719,7 +1729,7 @@ while (reason == 0)  {
         case 024: case 025:                             /* BVS */
             if (V) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 026: case 027:                             /* BVS */
@@ -1731,7 +1741,7 @@ while (reason == 0)  {
         case 030: case 031:                             /* BCC */
             if (C == 0) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 032: case 033:                             /* BCC */
@@ -1743,7 +1753,7 @@ while (reason == 0)  {
         case 034: case 035:                             /* BCS */
             if (C) {
                 BRANCH_F (IR);
-                } 
+                }
             break;
 
         case 036: case 037:                             /* BCS */
@@ -2419,7 +2429,7 @@ if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
         M[pa >> 1] = (M[pa >> 1] & 0377) | (data << 8);
     else M[pa >> 1] = (M[pa >> 1] & ~0377) | data;
     return;
-    }             
+    }
 if (pa < IOPAGEBASE) {                                  /* not I/O address? */
     setCPUERR (CPUE_NXM);
     ABORT (TRAP_NXM);
@@ -2455,7 +2465,7 @@ if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
         M[pa >> 1] = (M[pa >> 1] & 0377) | (data << 8);
     else M[pa >> 1] = (M[pa >> 1] & ~0377) | data;
     return;
-    }             
+    }
 if (pa < IOPAGEBASE) {                                  /* not I/O address? */
     setCPUERR (CPUE_NXM);
     ABORT (TRAP_NXM);
@@ -3114,8 +3124,6 @@ char *cptr = (char *) desc;
 t_value sim_eval[HIST_ILNT];
 t_stat r;
 InstHistory *h;
-extern t_stat fprint_sym (FILE *ofile, t_addr addr, t_value *val,
-    UNIT *uptr, int32 sw);
 
 if (hst_lnt == 0)                                       /* enabled? */
     return SCPE_NOFNC;
