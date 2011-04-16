@@ -846,10 +846,42 @@ while (reason == 0)  {
             hst_p = 0;
         }
     if (sim_deb && cpu_dev.dctrl) {
+        static const char *rname [] = {
+            "R0", "R1", "R2", "R3", "R4", "R5", "SP", "PC"
+        };
 	fprintf (sim_deb, "*** %06o: (%03o) %06o  ", PC, get_PSW (), IR);
         fprint_sym (sim_deb, PC, &IR, &cpu_unit, SWMASK ('M'));
-//	if (reg)
-//		fprintf (sim_deb, "\tМ[%o]=%05o", reg, M[reg]);
+        if ((IR >= 000100 && IR <= 000177) ||       /* single operand */
+  	    (IR >= 000300 && IR <= 000377) ||
+  	    (IR >= 005000 && IR <= 007777) ||
+  	    (IR >=0105000 && IR <=0107777) ||
+  	    (IR >= 000200 && IR <= 000207) ||       /* single register */
+  	    (IR >= 000230 && IR <= 000237)) {
+	        if (dstspec != 027 && dstspec != 037 &&
+                    dstspec != 067 && dstspec != 077)
+                        fprintf (sim_deb, "\t\t%s=%06o",
+                            rname[dstspec & 07], R[dstspec & 07]);
+            }
+        else
+  	if ((IR >= 010000 && IR <= 067777) ||       /* double operand */
+  	    (IR >=0110000 && IR <=0167777) ||
+  	    (IR >= 004000 && IR <= 004777) ||       /* register + operand */
+  	    (IR >= 070000 && IR <= 077777)) {
+	        if (srcspec != 027 && srcspec != 037 &&
+                    srcspec != 067 && srcspec != 077) {
+                    fprintf (sim_deb, "\t\t%s=%06o",
+                        rname[srcspec & 07], R[srcspec & 07]);
+                    if (dstspec != 027 && dstspec != 037 &&
+                        dstspec != 067 && dstspec != 077)
+                            fprintf (sim_deb, ", %s=%06o",
+                                rname[dstspec & 07], R[dstspec & 07]);
+                    }
+                else
+                if (dstspec != 027 && dstspec != 037 &&
+                    dstspec != 067 && dstspec != 077)
+                        fprintf (sim_deb, "\t\t%s=%06o",
+                            rname[dstspec & 07], R[dstspec & 07]);
+            }
 	fprintf (sim_deb, "\n");
         }
     PC = (PC + 2) & 0177777;                            /* incr PC, mod 65k */

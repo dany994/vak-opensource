@@ -458,7 +458,7 @@ if ((c == SCPE_STOP) || (sim_con_tmxr.master == 0))     /* ^E or not Telnet? */
 if (sim_con_ldsc.conn == 0)                              /* no Telnet conn? */
     return SCPE_LOST;
 tmxr_poll_rx (&sim_con_tmxr);                           /* poll for input */
-if (c = tmxr_getc_ln (&sim_con_ldsc))                   /* any char? */ 
+if (c = tmxr_getc_ln (&sim_con_ldsc))                   /* any char? */
     return (c & (SCPE_BREAK | 0377)) | SCPE_KFLAG;
 return SCPE_OK;
 }
@@ -669,7 +669,7 @@ return SCPE_OK;
 #define RAW_MODE 0
 static HANDLE std_input;
 static DWORD saved_mode;
- 
+
 t_stat sim_ttinit (void)
 {
 std_input = GetStdHandle (STD_INPUT_HANDLE);
@@ -678,7 +678,7 @@ if ((std_input == INVALID_HANDLE_VALUE) ||
     return SCPE_TTYERR;
 return SCPE_OK;
 }
- 
+
 t_stat sim_ttrun (void)
 {
 if (!GetConsoleMode(std_input, &saved_mode) ||
@@ -1131,7 +1131,8 @@ if (tcsetattr (0, TCSAFLUSH, &runtty) < 0)
     return SCPE_TTIERR;
 if (prior_norm) {                                       /* at normal pri? */
     errno =     0;
-    nice (10);                                          /* try to lower pri */
+    if (nice (10) < 0)                                   /* try to lower pri */
+        /*ignore*/;
     prior_norm = errno;                                 /* if no error, done */
     }
 return SCPE_OK;
@@ -1143,7 +1144,8 @@ if (!isatty (fileno (stdin)))                           /* skip if !tty */
     return SCPE_OK;
 if (!prior_norm) {                                      /* priority down? */
     errno =     0;
-    nice (-10);                                         /* try to raise pri */
+    if (nice (-10) < 0)                                 /* try to raise pri */
+        /*ignore*/;
     prior_norm = (errno == 0);                          /* if no error, done */
     }
 if (tcsetattr (0, TCSAFLUSH, &cmdtty) < 0)
@@ -1173,7 +1175,8 @@ t_stat sim_os_putchar (int32 out)
 char c;
 
 c = out;
-write (1, &c, 1);
+if (write (1, &c, 1) != 1)
+    /*ignore*/;
 return SCPE_OK;
 }
 
