@@ -213,7 +213,7 @@ struct rqpkt {
 /* The RQDX3 supports multiple disk drive types (x = not implemented):
 
    type sec     surf    cyl     tpg     gpc     RCT     LBNs
-        
+
    RX50 10      1       80      5       16      -       800
    RX33 15      2       80      2       1       -       2400
    RD51 18      4       306     4       1       36*4    21600
@@ -231,7 +231,7 @@ x  RD33 17      7       1170    ?       ?       ?       138565
 x  RA70 33(+1)  11      1507+   11      1       ?       547041
    RA81 51(+1)  14      1258    14      1       2856    891072
    RA82 57(+1)  15      1435    15      1       3420    1216665
-   RA71 51(+1)  14      1921    14      1       1428    1367310         
+   RA71 51(+1)  14      1921    14      1       1428    1367310
    RA72 51(+1)  20      1921    20      1       2040    1953300
    RA90 69(+1)  13      2656    13      1       1794    2376153
    RA92 73(+1)  13      3101    13      1       949     2940951
@@ -1187,8 +1187,8 @@ if (cp->csta < CST_UP) {                                /* still init? */
             cp->perr = 0;
 			}
         break;
-        }                                               /* end switch */  
-                      
+        }                                               /* end switch */
+
     return SCPE_OK;
     }                                                   /* end if */
 
@@ -1260,7 +1260,7 @@ for (i = 0; i < RQ_NUMDR; i++) {                        /* poll */
     nuptr->flags = nuptr->flags & ~UNIT_ATP;
     }
 if ((cp->hat > 0) && (--cp->hat == 0))                  /* host timeout? */
-    rq_fatal (cp, PE_HAT);                              /* fatal err */ 
+    rq_fatal (cp, PE_HAT);                              /* fatal err */
 return SCPE_OK;
 }
 
@@ -1517,7 +1517,7 @@ else {
 rq_putr (cp, pkt, cmd | OP_END, 0, sts, SCC_LNT, UQ_TYP_SEQ);
 return rq_putpkt (cp, pkt, TRUE);
 }
-    
+
 /* Set unit characteristics - defer if q'd commands */
 
 t_bool rq_suc (MSC *cp, int32 pkt, t_bool q)
@@ -1718,7 +1718,7 @@ else if (cmd == OP_WR) {                                /* write? */
         PUTP32 (pkt, RW_WBCL, bc - abc);                /* adj bc */
         PUTP32 (pkt, RW_WBAL, ba + abc);                /* adj ba */
         if (rq_hbe (cp, uptr))                          /* post err log */
-            rq_rw_end (cp, uptr, EF_LOG, ST_HST | SB_HST_NXM);  
+            rq_rw_end (cp, uptr, EF_LOG, ST_HST | SB_HST_NXM);
         return SCPE_OK;                                 /* end else wr */
         }
     }
@@ -1736,7 +1736,7 @@ else {
             PUTP32 (pkt, RW_WBCL, bc - (tbc - t));      /* adj bc */
             PUTP32 (pkt, RW_WBAL, ba + (tbc - t));      /* adj ba */
             if (rq_hbe (cp, uptr))                      /* post err log */
-                rq_rw_end (cp, uptr, EF_LOG, ST_HST | SB_HST_NXM);      
+                rq_rw_end (cp, uptr, EF_LOG, ST_HST | SB_HST_NXM);
             return SCPE_OK;
             }
         }
@@ -2330,7 +2330,7 @@ if (r != SCPE_OK)
 uptr->flags = uptr->flags & ~(UNIT_ONL | UNIT_ATP);     /* clr onl, atn pend */
 uptr->uf = 0;                                           /* clr unit flgs */
 return SCPE_OK;
-} 
+}
 
 /* Device reset */
 
