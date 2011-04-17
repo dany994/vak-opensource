@@ -14,12 +14,15 @@
  */
 #include "pdp11_defs.h"
 
+extern uint16 *M;
+
 #define KMD_SIZE        (800*1024)  /* disk size, bytes */
 
 /*
  * CR register
  */
 #define CR_GO           0000001     /* run command (write only) */
+#define CR_CMD_MASK     0000036     /* command mask */
 #define CR_CMD_RD       0000000     /* read */
 #define CR_CMD_WR       0000002     /* write */
 #define CR_CMD_RDM      0000004     /* read with mark */
@@ -121,6 +124,8 @@ void kmd_debug (const char *fmt, ...)
  */
 t_stat kmd_reset (DEVICE *dptr)
 {
+    if (kmd_dev.dctrl)
+        kmd_debug ("### KMD reset");
     kmd_cr = CR_DONE;
     kmd_dr = 0;
     sim_cancel (&kmd_unit[0]);
@@ -165,6 +170,64 @@ t_stat kmd_boot (int32 unitno, DEVICE *dptr)
     return SCPE_OK;
 }
 
+void kmd_io ()
+{
+    static const char *opname[16] = {
+        "read", "write", "read mark", "write mark",
+        "read track", "read id", "format track", "seek",
+        "set parameters", "read error status", "op24", "op26",
+        "op30", "op32", "op34", "boot" };
+
+    uint16 *param = M + (kmd_dr >> 1) + ((kmd_cr & 037400) << 7);
+    int32 addr = param[1] | (param[0] & 0xff00) << 8;
+    int diskno = param[0] & 3;
+    int head = param[0] >> 2 & 1;
+    int sector = param[2] & 0xff;
+    int cyl = param[2] >> 8 & 0xff;
+    int nbytes = param[3] << 1;
+    UNIT *u = &kmd_unit [diskno];
+
+    if (kmd_dev.dctrl) {
+        //kmd_debug ("### KMD %s, CR %06o, DR %06o, params %06o %06o %06o %06o",
+        //    opname [kmd_cr >> 1 & 15], kmd_cr, kmd_dr,
+        //    param[0], param[1], param[2], param[3]);
+        kmd_debug ("### KMD%d %s chs=%d/%d/%d, addr %06o, %d bytes",
+            diskno, opname [kmd_cr >> 1 & 15],
+            cyl, head, sector, addr, nbytes);
+    }
+
+    unsigned long seek = ((cyl * 2 + head) * 10 + sector - 1) * 512L;
+    switch (kmd_cr & CR_CMD_MASK) {
+    case CR_CMD_RD:             /* read */
+        fseek (u->fileref, seek, SEEK_SET);
+        if (sim_fread (&M[addr>>1], 1, nbytes, u->fileref) != nbytes) {
+            /* Reading uninitialized media. */
+            kmd_cr |= CR_ERR;
+            return;
+        }
+        break;
+    case CR_CMD_WR:             /* write */
+        fseek (u->fileref, seek, SEEK_SET);
+        sim_fwrite (&M[addr>>1], 1, nbytes, u->fileref);
+        break;
+    case CR_CMD_RDM:            /* read with mark */
+    case CR_CMD_WRM:            /* write with mark */
+    case CR_CMD_RDTR:           /* read track */
+    case CR_CMD_RDID:           /* read identifier */
+    case CR_CMD_FORMAT:         /* format track */
+    case CR_CMD_SEEK:           /* select track */
+    case CR_CMD_SET:            /* set parameters */
+    case CR_CMD_RDERR:          /* read error status */
+    case CR_CMD_LOAD:           /* boot */
+        kmd_debug ("### KMD%d %s: operation not implemented",
+            diskno, opname [kmd_cr >> 1 & 15]);
+        return;
+    }
+    if (ferror (u->fileref))
+        kmd_debug ("### KMD%d %s: i/o error",
+            diskno, opname [kmd_cr >> 1 & 15]);
+}
+
 /*
  * I/O dispatch routines, I/O addresses 172140 - 172142
  *
@@ -173,64 +236,50 @@ t_stat kmd_boot (int32 unitno, DEVICE *dptr)
  */
 t_stat kmd_rd (int32 *data, int32 PA, int32 access)
 {
-    //if (kmd_dev.dctrl)
-        kmd_debug ("### KMD read %06o", PA);
-#if 0
-    int32 cidx = kmd_map_pa ((uint32) PA);
-    MSC *cp = kmd_ctxmap[cidx];
-    DEVICE *dptr = kmd_devmap[cidx];
-
-    if (cidx < 0)
-        return SCPE_IERR;
-    switch ((PA >> 1) & 01) {                           /* decode PA<1> */
-    case 0:                                             /* IP */
-        *data = 0;                                      /* reads zero */
-        if (cp->csta == CST_S3_PPB)                     /* waiting for poll? */
-            kmd_step4 (cp);
-        else if (cp->csta == CST_UP) {                  /* if up */
-            if (DEBUG_PRD (dptr))
-                fprintf (sim_deb, ">>KMD%c: poll started, PC=%X\n",
-                         'A' + cp->cnum, OLDPC);
-            cp->pip = 1;                                /* poll host */
-            sim_activate (dptr->units + KMD_QUEUE, kmd_qtime);
-        }
-        break;
-    case 1:                                             /* SA */
-        *data = cp->sa;
-        break;
+    if (PA & 2) {
+        /* Data register. */
+        *data = kmd_dr;
+        //if (kmd_dev.dctrl)
+        //    kmd_debug ("### KMD DR -> %06o", kmd_dr);
+    } else {
+        /* Control register. */
+        *data = kmd_cr;
+        //if (kmd_dev.dctrl)
+        //    kmd_debug ("### KMD CR -> %06o", kmd_cr);
     }
-#endif
     return SCPE_OK;
 }
 
 t_stat kmd_wr (int32 data, int32 PA, int32 access)
 {
-    //if (kmd_dev.dctrl)
-        kmd_debug ("### KMD write %06o := %06o", PA, data);
-#if 0
-    int32 cidx = kmd_map_pa ((uint32) PA);
-    MSC *cp = kmd_ctxmap[cidx];
-    DEVICE *dptr = kmd_devmap[cidx];
+    if (PA & 2) {
+        /* Data register. */
+        //if (kmd_dev.dctrl)
+        //    kmd_debug ("### KMD DR := %06o", data);
+        kmd_dr = data;
+        if (kmd_cr & CR_TR) {
+            /* Do real read/write. */
+            kmd_cr &= ~CR_TR;
+            kmd_io ();
+            kmd_cr |= CR_DONE;
+        }
+    } else {
+        /* Control register. */
+        //if (kmd_dev.dctrl)
+        //    kmd_debug ("### KMD CR := %06o", data);
+        kmd_cr = (kmd_cr & (CR_DONE | CR_TR | CR_ERR)) |
+            data & ~(CR_GO | CR_DONE | CR_TR | CR_INIT | CR_ERR);
 
-    if (cidx < 0)
-        return SCPE_IERR;
-    switch ((PA >> 1) & 01) {                           /* decode PA<1> */
-    case 0:                                             /* IP */
-        kmd_reset (kmd_devmap[cidx]);                   /* init device */
-        if (DEBUG_PRD (dptr))
-            fprintf (sim_deb, ">>KMD%c: initialization started\n",
-                     'A' + cp->cnum);
-        break;
+        if (data & CR_INIT) {
+            /* Reset comntroller. */
+            kmd_reset (&kmd_dev);
 
-    case 1:                                             /* SA */
-        cp->saw = data;
-        if (cp->csta < CST_S4)                          /* stages 1-3 */
-            sim_activate (dptr->units + KMD_QUEUE, kmd_itime);
-        else if (cp->csta == CST_S4)                    /* stage 4 (fast) */
-            sim_activate (dptr->units + KMD_QUEUE, kmd_itime4);
-        break;
+        } else if (data & CR_GO) {
+            /* Start new transaction. */
+            kmd_cr &= ~(CR_DONE | CR_ERR);
+            kmd_cr |= CR_TR;
+        }
     }
-#endif
     return SCPE_OK;
 }
 
