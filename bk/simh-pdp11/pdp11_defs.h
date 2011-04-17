@@ -528,6 +528,8 @@ typedef struct pdp_dib DIB;
 #define IOLN_UBM        (UBM_LNT_LW * sizeof (int32))
 #define	IOBA_KG         (IOPAGEBASE + 010700)           /* KG11-A */
 #define	IOLN_KG         006
+#define IOBA_KMD        (IOPAGEBASE + 012140)           /* KMD MY */
+#define IOLN_KMD        004
 #define IOBA_RQ         (IOPAGEBASE + 012150)           /* RQDX3 */
 #define IOLN_RQ         004
 #define IOBA_SUP        (IOPAGEBASE + 012200)           /* supervisor APR's */
@@ -653,6 +655,7 @@ typedef struct pdp_dib DIB;
 #define INT_V_RF        15
 #define INT_V_RC        16
 #define INT_V_PIR5      17
+#define INT_V_KMD       18
 
 #define INT_V_TTI       0                               /* BR4 */
 #define INT_V_TTO       1
@@ -660,7 +663,7 @@ typedef struct pdp_dib DIB;
 #define INT_V_PTP       3
 #define INT_V_LPT       4
 #define INT_V_VHRX      5
-#define INT_V_VHTX      6  
+#define INT_V_VHTX      6
 #define INT_V_CR        7
 #define INT_V_DLI       8
 #define INT_V_DLO       9
@@ -725,6 +728,7 @@ typedef struct pdp_dib DIB;
 #define IPL_TS          5
 #define IPL_HK          5
 #define IPL_RQ          5
+#define IPL_KMD         5
 #define IPL_DZRX        5
 #define IPL_DZTX        5
 #define IPL_TQ          5
@@ -769,6 +773,7 @@ typedef struct pdp_dib DIB;
 #define VEC_XU          0120
 #define VEC_RQ          0154
 #define VEC_RL          0160
+#define VEC_KMD         0170
 #define VEC_LPT         0200
 #define VEC_RF          0204
 #define VEC_HK          0210

@@ -849,8 +849,13 @@ while (reason == 0)  {
         static const char *rname [] = {
             "R0", "R1", "R2", "R3", "R4", "R5", "SP", "PC"
         };
+	t_value mem[3];
+	int32 pa = relocR ((PC + 2) | isenable);
+	mem[0] = IR;
+	mem[1] = M[pa>>1];
+	mem[2] = M[1 + (pa>>1)];
 	fprintf (sim_deb, "*** %06o: (%03o) %06o  ", PC, get_PSW (), IR);
-        fprint_sym (sim_deb, PC, &IR, &cpu_unit, SWMASK ('M'));
+        fprint_sym (sim_deb, PC, mem, &cpu_unit, SWMASK ('M'));
         if ((IR >= 000100 && IR <= 000177) ||       /* single operand */
   	    (IR >= 000300 && IR <= 000377) ||
   	    (IR >= 005000 && IR <= 007777) ||
@@ -859,7 +864,7 @@ while (reason == 0)  {
   	    (IR >= 000230 && IR <= 000237)) {
 	        if (dstspec != 027 && dstspec != 037 &&
                     dstspec != 067 && dstspec != 077)
-                        fprintf (sim_deb, "\t\t%s=%06o",
+                        fprintf (sim_deb, "\t\t%s:%06o",
                             rname[dstspec & 07], R[dstspec & 07]);
             }
         else
@@ -869,17 +874,17 @@ while (reason == 0)  {
   	    (IR >= 070000 && IR <= 077777)) {
 	        if (srcspec != 027 && srcspec != 037 &&
                     srcspec != 067 && srcspec != 077) {
-                    fprintf (sim_deb, "\t\t%s=%06o",
+                    fprintf (sim_deb, "\t\t%s:%06o",
                         rname[srcspec & 07], R[srcspec & 07]);
                     if (dstspec != 027 && dstspec != 037 &&
                         dstspec != 067 && dstspec != 077)
-                            fprintf (sim_deb, ", %s=%06o",
+                            fprintf (sim_deb, ", %s:%06o",
                                 rname[dstspec & 07], R[dstspec & 07]);
                     }
                 else
                 if (dstspec != 027 && dstspec != 037 &&
                     dstspec != 067 && dstspec != 077)
-                        fprintf (sim_deb, "\t\t%s=%06o",
+                        fprintf (sim_deb, "\t\t%s:%06o",
                             rname[dstspec & 07], R[dstspec & 07]);
             }
 	fprintf (sim_deb, "\n");

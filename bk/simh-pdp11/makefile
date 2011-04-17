@@ -49,7 +49,8 @@ PDP11 = ${PDP11D}/pdp11_fp.o ${PDP11D}/pdp11_cpu.o ${PDP11D}/pdp11_dz.o \
 	${PDP11D}/pdp11_rh.o ${PDP11D}/pdp11_tu.o ${PDP11D}/pdp11_cpumod.o \
 	${PDP11D}/pdp11_cr.o ${PDP11D}/pdp11_rf.o ${PDP11D}/pdp11_dl.o \
 	${PDP11D}/pdp11_ta.o ${PDP11D}/pdp11_rc.o ${PDP11D}/pdp11_kg.o \
-	${PDP11D}/pdp11_ke.o ${PDP11D}/pdp11_dc.o ${PDP11D}/pdp11_io_lib.o
+	${PDP11D}/pdp11_ke.o ${PDP11D}/pdp11_dc.o ${PDP11D}/pdp11_io_lib.o \
+	${PDP11D}/pdp11_kmd.o
 CFLAGS += -O -DVM_PDP11 -I${PDP11D} ${NETWORK_OPT}
 
 #
