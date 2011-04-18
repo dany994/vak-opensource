@@ -2442,6 +2442,9 @@ if ((va & 1) && CPUT (HAS_ODD)) {                       /* odd address? */
     }
 pa = relocW (va);                                       /* relocate */
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
+    extern DEVICE sys_dev;
+    if (sim_log && sys_dev.dctrl)
+        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
     M[pa >> 1] = data;
     return;
     }
@@ -2462,9 +2465,13 @@ int32 pa;
 
 pa = relocW (va);                                       /* relocate */
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
+    extern DEVICE sys_dev;
     if (va & 1)
-        M[pa >> 1] = (M[pa >> 1] & 0377) | (data << 8);
-    else M[pa >> 1] = (M[pa >> 1] & ~0377) | data;
+        data = (M[pa >> 1] & 0377) | (data << 8);
+    else data = (M[pa >> 1] & ~0377) | data;
+    if (sim_log && sys_dev.dctrl)
+        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
+    M[pa >> 1] = data;
     return;
     }
 if (pa < IOPAGEBASE) {                                  /* not I/O address? */
@@ -2481,6 +2488,9 @@ return;
 void PWriteW (int32 data, int32 pa)
 {
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
+    extern DEVICE sys_dev;
+    if (sim_log && sys_dev.dctrl)
+        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
     M[pa >> 1] = data;
     return;
     }
@@ -2498,9 +2508,13 @@ return;
 void PWriteB (int32 data, int32 pa)
 {
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
+    extern DEVICE sys_dev;
     if (pa & 1)
-        M[pa >> 1] = (M[pa >> 1] & 0377) | (data << 8);
-    else M[pa >> 1] = (M[pa >> 1] & ~0377) | data;
+        data = (M[pa >> 1] & 0377) | (data << 8);
+    else data = (M[pa >> 1] & ~0377) | data;
+    if (sim_log && sys_dev.dctrl)
+        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
+    M[pa >> 1] = data;
     return;
     }
 if (pa < IOPAGEBASE) {                                  /* not I/O address? */

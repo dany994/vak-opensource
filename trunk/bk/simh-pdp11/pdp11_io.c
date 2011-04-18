@@ -79,6 +79,28 @@ static const int32 pirq_bit[7] = {
     INT_V_PIR5, INT_V_PIR6, INT_V_PIR7
     };
 
+static const char *devnam (uint32 pa)
+{
+    switch (pa & 07776) {
+    case 02140 ... 02142: return "KMD";
+    case 02300 ... 02316: return "KIPDR";
+    case 02320 ... 02336: return "KDPDR";
+    case 02340 ... 02356: return "KIPAR";
+    case 02360 ... 02376: return "KDPAR";
+    case 04400 ... 04410: return "RL11";
+    case 07560 ... 07562: return "DL11 rcv";
+    case 07564 ... 07566: return "DL11 xmt";
+    case 07570:           return "SR";
+    case 07572 ... 07576: return "MMR";
+    case 07600 ... 07616: return "UIPDR";
+    case 07620 ... 07636: return "UDPDR";
+    case 07640 ... 07656: return "UIPAR";
+    case 07660 ... 07676: return "UDPAR";
+    case 07776:           return "PSW";
+    }
+    return "???";
+}
+
 /* I/O page lookup and linkage routines
 
    Inputs:
@@ -97,7 +119,14 @@ t_stat stat;
 
 idx = (pa & IOPAGEMASK) >> 1;
 if (iodispR[idx]) {
+    extern FILE *sim_deb;
+    extern DEVICE sys_dev;
+    extern int32 R[];
     stat = iodispR[idx] (data, pa, access);
+    if (sim_deb && sys_dev.dctrl && (pa & 0170000) == 0170000) {
+	fprintf (sim_deb, "--- %06o: read %s:%04o -> %06o\n",
+            PC, devnam(pa), pa & 07777, *data);
+    }
     trap_req = calc_ints (ipl, trap_req);
     return stat;
     }
@@ -111,6 +140,13 @@ t_stat stat;
 
 idx = (pa & IOPAGEMASK) >> 1;
 if (iodispW[idx]) {
+    extern FILE *sim_deb;
+    extern DEVICE sys_dev;
+    extern int32 R[];
+    if (sim_deb && sys_dev.dctrl && (pa & 0170000) == 0170000) {
+	fprintf (sim_deb, "--- %06o: write %s:%04o := %06o\n",
+            PC, devnam(pa), pa & 07777, data);
+    }
     stat = iodispW[idx] (data, pa, access);
     trap_req = calc_ints (ipl, trap_req);
     return stat;
