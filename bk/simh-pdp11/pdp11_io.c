@@ -57,6 +57,7 @@ extern int32 cpu_log;
 extern int32 autcon_enb;
 extern int32 uba_last;
 extern FILE *sim_log;
+extern FILE *sim_deb;
 extern DEVICE *sim_devices[], cpu_dev;
 extern t_addr cpu_memsize;
 
@@ -87,7 +88,8 @@ static const char *devnam (uint32 pa)
     case 02320 ... 02336: return "KDPDR";
     case 02340 ... 02356: return "KIPAR";
     case 02360 ... 02376: return "KDPAR";
-    case 04400 ... 04410: return "RL11";
+    case 02516:           return "MMR3";
+    //case 04400 ... 04410: return "RL11";
     case 07560 ... 07562: return "DL11 rcv";
     case 07564 ... 07566: return "DL11 xmt";
     case 07570:           return "SR";
@@ -98,7 +100,7 @@ static const char *devnam (uint32 pa)
     case 07660 ... 07676: return "UDPAR";
     case 07776:           return "PSW";
     }
-    return "???";
+    return 0;
 }
 
 /* I/O page lookup and linkage routines
@@ -119,17 +121,24 @@ t_stat stat;
 
 idx = (pa & IOPAGEMASK) >> 1;
 if (iodispR[idx]) {
-    extern FILE *sim_deb;
     extern DEVICE sys_dev;
     extern int32 R[];
     stat = iodispR[idx] (data, pa, access);
     if (sim_deb && sys_dev.dctrl && (pa & 0170000) == 0170000) {
-	fprintf (sim_deb, "--- %06o: read %s:%04o -> %06o\n",
-            PC, devnam(pa), pa & 07777, *data);
+        const char *name = devnam(pa);
+        if (! name)
+            fprintf (sim_deb, "    read *%04o -> %06o\n",
+                pa & 07777, *data);
+#ifdef SYS_DEBUG
+        else
+            fprintf (sim_deb, "    read %s:%04o -> %06o\n",
+                name, pa & 07777, *data);
+#endif
     }
     trap_req = calc_ints (ipl, trap_req);
     return stat;
     }
+fprintf (sim_deb, ">>> read *%04o -> TRAP\n", pa & 07777);
 return SCPE_NXM;
 }
 
@@ -140,17 +149,24 @@ t_stat stat;
 
 idx = (pa & IOPAGEMASK) >> 1;
 if (iodispW[idx]) {
-    extern FILE *sim_deb;
     extern DEVICE sys_dev;
     extern int32 R[];
     if (sim_deb && sys_dev.dctrl && (pa & 0170000) == 0170000) {
-	fprintf (sim_deb, "--- %06o: write %s:%04o := %06o\n",
-            PC, devnam(pa), pa & 07777, data);
+        const char *name = devnam(pa);
+        if (name)
+            fprintf (sim_deb, "    write *%04o := %06o\n",
+                pa & 07777, data);
+#ifdef SYS_DEBUG
+        else
+            fprintf (sim_deb, "    write %s:%04o := %06o\n",
+                name, pa & 07777, data);
+#endif
     }
     stat = iodispW[idx] (data, pa, access);
     trap_req = calc_ints (ipl, trap_req);
     return stat;
     }
+fprintf (sim_deb, ">>> write *%04o -> TRAP\n", pa & 07777);
 return SCPE_NXM;
 }
 

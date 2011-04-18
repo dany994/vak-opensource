@@ -775,6 +775,7 @@ while (reason == 0)  {
             }
         src = ReadW (trapea | calc_ds (MD_KER));        /* new PC */
         src2 = ReadW ((trapea + 2) | calc_ds (MD_KER)); /* new PSW */
+//fprintf (sim_deb, "*** %08o: trap %03o, PC=%06o, PSW=%06o\n", relocR (PC | isenable), trapea, src, src2);
         t = (src2 >> PSW_V_CM) & 03;                    /* new cm */
         trapea = ~t;                                    /* flag pushes */
         WriteW (PSW, ((STACKFILE[t] - 2) & 0177777) | calc_ds (t));
@@ -854,7 +855,7 @@ while (reason == 0)  {
 	mem[0] = IR;
 	mem[1] = M[pa>>1];
 	mem[2] = M[1 + (pa>>1)];
-	fprintf (sim_deb, "*** %06o: (%03o) %06o  ", PC, get_PSW (), IR);
+	fprintf (sim_deb, "*** %08o: (%03o) %06o  ", pa, get_PSW (), IR);
         fprint_sym (sim_deb, PC, mem, &cpu_unit, SWMASK ('M'));
         if ((IR >= 000100 && IR <= 000177) ||       /* single operand */
   	    (IR >= 000300 && IR <= 000377) ||
@@ -2442,9 +2443,11 @@ if ((va & 1) && CPUT (HAS_ODD)) {                       /* odd address? */
     }
 pa = relocW (va);                                       /* relocate */
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
+#ifdef SYS_DEBUG
     extern DEVICE sys_dev;
     if (sim_log && sys_dev.dctrl)
-        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
+        fprintf (sim_log, "    write %06o := %06o\n", pa, data);
+#endif
     M[pa >> 1] = data;
     return;
     }
@@ -2465,12 +2468,14 @@ int32 pa;
 
 pa = relocW (va);                                       /* relocate */
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
-    extern DEVICE sys_dev;
     if (va & 1)
         data = (M[pa >> 1] & 0377) | (data << 8);
     else data = (M[pa >> 1] & ~0377) | data;
+#ifdef SYS_DEBUG
+    extern DEVICE sys_dev;
     if (sim_log && sys_dev.dctrl)
-        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
+        fprintf (sim_log, "    write %06o := %06o\n", pa, data);
+#endif
     M[pa >> 1] = data;
     return;
     }
@@ -2488,9 +2493,11 @@ return;
 void PWriteW (int32 data, int32 pa)
 {
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
+#ifdef SYS_DEBUG
     extern DEVICE sys_dev;
     if (sim_log && sys_dev.dctrl)
-        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
+        fprintf (sim_log, "    write %06o := %06o\n", pa, data);
+#endif
     M[pa >> 1] = data;
     return;
     }
@@ -2508,12 +2515,14 @@ return;
 void PWriteB (int32 data, int32 pa)
 {
 if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
-    extern DEVICE sys_dev;
     if (pa & 1)
         data = (M[pa >> 1] & 0377) | (data << 8);
     else data = (M[pa >> 1] & ~0377) | data;
+#ifdef SYS_DEBUG
+    extern DEVICE sys_dev;
     if (sim_log && sys_dev.dctrl)
-        fprintf (sim_log, "--- write %06o := %06o\n", pa, data);
+        fprintf (sim_log, "    write %06o := %06o\n", pa, data);
+#endif
     M[pa >> 1] = data;
     return;
     }
