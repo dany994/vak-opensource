@@ -5,6 +5,8 @@ CC = gcc -std=c99 -g
 CFLAGS = -U__STRICT_ANSI__
 LDFLAGS = -lm
 
+CFLAGS += -DSYS_DEBUG
+
 ifeq ($(WIN32),)
   #Unix Environments
   CFLAGS += -D_GNU_SOURCE
