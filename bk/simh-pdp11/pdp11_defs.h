@@ -715,6 +715,7 @@ typedef struct pdp_dib DIB;
 #define INT_PIR3        (1u << INT_V_PIR3)
 #define INT_PIR2        (1u << INT_V_PIR2)
 #define INT_PIR1        (1u << INT_V_PIR1)
+#define INT_KMD         (1u << INT_V_KMD)
 
 #define IPL_CLK         6                               /* int pri levels */
 #define IPL_PCLK        6
