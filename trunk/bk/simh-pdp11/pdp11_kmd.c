@@ -16,6 +16,7 @@
 
 extern uint16 *M;
 extern int32 R[];
+extern int32 int_req[];
 
 #define KMD_SIZE        (800*1024)  /* disk size, bytes */
 
@@ -83,7 +84,7 @@ MTAB kmd_mod[] = {
 
 DIB kmd_dib = {
     IOBA_KMD, IOLN_KMD, &kmd_rd, &kmd_wr,
-    1, IVCL (KMD), 0, { &kmd_inta }
+    1, IVCL (KMD), VEC_KMD, { &kmd_inta }
 };
 
 DEVICE kmd_dev = {
@@ -259,21 +260,14 @@ t_stat kmd_wr (int32 data, int32 PA, int32 access)
 {
     if (PA & 2) {
         /* Data register. */
-        //extern int32 relocR (int32 va);
-        //extern int32 dsenable;
-        //int32 paddr = relocR (data | dsenable);
-//if (data == 0140) paddr += 0140000;
-        //uint32 pa = relocR (kmd_dr + ((kmd_cr & 037400) << 8) + VA_DS);
-
-        //if (kmd_dev.dctrl)
-        //    kmd_debug ("### KMD DR := %06o %06o", data, paddr);
-        //kmd_dr = paddr;
         kmd_dr = data;
         if (kmd_cr & CR_TR) {
             /* Do real read/write. */
             kmd_cr &= ~CR_TR;
             kmd_io ();
             kmd_cr |= CR_DONE;
+            if (kmd_cr & CR_IE)
+                SET_INT (KMD);
         }
     } else {
         /* Control register. */
@@ -290,6 +284,10 @@ t_stat kmd_wr (int32 data, int32 PA, int32 access)
             kmd_cr &= ~(CR_DONE | CR_ERR);
             kmd_cr |= CR_TR;
         }
+        if ((kmd_cr & CR_IE) && (kmd_cr & CR_DONE))
+            SET_INT (KMD);
+        else
+            CLR_INT (KMD);
     }
     return SCPE_OK;
 }
@@ -299,23 +297,16 @@ t_stat kmd_wr (int32 data, int32 PA, int32 access)
  */
 int32 kmd_inta (void)
 {
-#if 0
-    int32 i;
-    MSC *ncp;
-    DEVICE *dptr;
-    DIB *dibp;
-
-    for (i = 0; i < KMD_NUMCT; i++) {                        /* loop thru ctrl */
-        ncp = kmd_ctxmap[i];                                /* get context */
-        if (ncp->irq) {                                     /* ctrl int set? */
-            dptr = kmd_devmap[i];                           /* get device */
-            dibp = (DIB *) dptr->ctxt;                      /* get DIB */
-            kmd_clrint (ncp);                               /* clear int req */
-            return dibp->vec;                               /* return vector */
-            }
-        }
-#endif
-    return 0;                                               /* no intr req */
+    if ((kmd_cr & CR_IE) && (kmd_cr & CR_DONE)) {
+        /* return vector */
+        if (kmd_dev.dctrl)
+            kmd_debug ("### KMD inta vector %06o", kmd_dib.vec);
+        return kmd_dib.vec;
+    }
+    /* no intr req */
+    if (kmd_dev.dctrl)
+        kmd_debug ("### KMD inta no IRQ");
+    return 0;
 }
 
 /*
