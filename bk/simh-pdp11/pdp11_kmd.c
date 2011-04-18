@@ -15,6 +15,7 @@
 #include "pdp11_defs.h"
 
 extern uint16 *M;
+extern int32 R[];
 
 #define KMD_SIZE        (800*1024)  /* disk size, bytes */
 
@@ -152,21 +153,24 @@ t_stat kmd_detach (UNIT *u)
     return detach_unit (u);
 }
 
+/*
+ * Boot from given unit.
+ */
 t_stat kmd_boot (int32 unitno, DEVICE *dptr)
 {
-#if 0
-    int32 i;
+    UNIT *u = &kmd_unit [unitno];
     extern int32 saved_PC;
-    extern uint16 *M;
 
-    DIB *dibp = (DIB*) dptr->ctxt;
+    /* Read 1 sector to address 0. */
+    fseek (u->fileref, 0, SEEK_SET);
+    if (sim_fread (&M[0], 1, 512, u->fileref) != 512)
+        return SCPE_IOERR;
 
-    for (i = 0; i < BOOT_LEN; i++)
-        M [(BOOT_START >> 1) + i] = boot_rom[i];
-    M [BOOT_UNIT >> 1] = unitno & 3;
-    M [BOOT_CSR >> 1] = dibp->ba & DMASK;
-    saved_PC = BOOT_ENTRY;
-#endif
+    /* R0 contains a unit number. */
+    R [0] = unitno & 3;
+
+    /* Jump to 0. */
+    saved_PC = 0;
     return SCPE_OK;
 }
 
@@ -178,7 +182,8 @@ void kmd_io ()
         "set parameters", "read error status", "op24", "op26",
         "op30", "op32", "op34", "boot" };
 
-    uint16 *param = M + (kmd_dr >> 1) + ((kmd_cr & 037400) << 7);
+    uint32 pa = kmd_dr + ((kmd_cr & 037400) << 8);
+    uint16 *param = M + (pa >> 1);
     int32 addr = param[1] | (param[0] & 0xff00) << 8;
     int diskno = param[0] & 3;
     int head = param[0] >> 2 & 1;
@@ -188,9 +193,9 @@ void kmd_io ()
     UNIT *u = &kmd_unit [diskno];
 
     if (kmd_dev.dctrl) {
-        //kmd_debug ("### KMD %s, CR %06o, DR %06o, params %06o %06o %06o %06o",
-        //    opname [kmd_cr >> 1 & 15], kmd_cr, kmd_dr,
-        //    param[0], param[1], param[2], param[3]);
+        kmd_debug ("### KMD %s, CR %06o, DR %06o, params %06o %06o %06o %06o",
+            opname [kmd_cr >> 1 & 15], kmd_cr, pa,
+            param[0], param[1], param[2], param[3]);
         kmd_debug ("### KMD%d %s chs=%d/%d/%d, addr %06o, %d bytes",
             diskno, opname [kmd_cr >> 1 & 15],
             cyl, head, sector, addr, nbytes);
@@ -239,13 +244,13 @@ t_stat kmd_rd (int32 *data, int32 PA, int32 access)
     if (PA & 2) {
         /* Data register. */
         *data = kmd_dr;
-        //if (kmd_dev.dctrl)
-        //    kmd_debug ("### KMD DR -> %06o", kmd_dr);
+        if (kmd_dev.dctrl)
+            kmd_debug ("### KMD DR -> %06o", kmd_dr);
     } else {
         /* Control register. */
         *data = kmd_cr;
-        //if (kmd_dev.dctrl)
-        //    kmd_debug ("### KMD CR -> %06o", kmd_cr);
+        if (kmd_dev.dctrl)
+            kmd_debug ("### KMD CR -> %06o", kmd_cr);
     }
     return SCPE_OK;
 }
@@ -254,8 +259,15 @@ t_stat kmd_wr (int32 data, int32 PA, int32 access)
 {
     if (PA & 2) {
         /* Data register. */
+        //extern int32 relocR (int32 va);
+        //extern int32 dsenable;
+        //int32 paddr = relocR (data | dsenable);
+//if (data == 0140) paddr += 0140000;
+        //uint32 pa = relocR (kmd_dr + ((kmd_cr & 037400) << 8) + VA_DS);
+
         //if (kmd_dev.dctrl)
-        //    kmd_debug ("### KMD DR := %06o", data);
+        //    kmd_debug ("### KMD DR := %06o %06o", data, paddr);
+        //kmd_dr = paddr;
         kmd_dr = data;
         if (kmd_cr & CR_TR) {
             /* Do real read/write. */
@@ -265,11 +277,10 @@ t_stat kmd_wr (int32 data, int32 PA, int32 access)
         }
     } else {
         /* Control register. */
-        //if (kmd_dev.dctrl)
-        //    kmd_debug ("### KMD CR := %06o", data);
+        if (kmd_dev.dctrl)
+            kmd_debug ("### KMD CR := %06o", data);
         kmd_cr = (kmd_cr & (CR_DONE | CR_TR | CR_ERR)) |
             data & ~(CR_GO | CR_DONE | CR_TR | CR_INIT | CR_ERR);
-
         if (data & CR_INIT) {
             /* Reset comntroller. */
             kmd_reset (&kmd_dev);
