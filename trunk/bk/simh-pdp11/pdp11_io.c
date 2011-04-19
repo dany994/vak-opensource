@@ -122,7 +122,6 @@ t_stat stat;
 idx = (pa & IOPAGEMASK) >> 1;
 if (iodispR[idx]) {
     extern DEVICE sys_dev;
-    extern int32 R[];
     stat = iodispR[idx] (data, pa, access);
     if (sim_deb && sys_dev.dctrl && (pa & 0170000) == 0170000) {
         const char *name = devnam(pa);
@@ -138,7 +137,7 @@ if (iodispR[idx]) {
     trap_req = calc_ints (ipl, trap_req);
     return stat;
     }
-fprintf (sim_deb, ">>> read *%04o -> TRAP\n", pa & 07777);
+printf (">>> read *%04o -> TRAP\r\n", pa & 07777);
 return SCPE_NXM;
 }
 
@@ -150,7 +149,6 @@ t_stat stat;
 idx = (pa & IOPAGEMASK) >> 1;
 if (iodispW[idx]) {
     extern DEVICE sys_dev;
-    extern int32 R[];
     if (sim_deb && sys_dev.dctrl && (pa & 0170000) == 0170000) {
         const char *name = devnam(pa);
         if (name)
@@ -166,7 +164,7 @@ if (iodispW[idx]) {
     trap_req = calc_ints (ipl, trap_req);
     return stat;
     }
-fprintf (sim_deb, ">>> write *%04o -> TRAP\n", pa & 07777);
+printf (">>> write *%04o -> TRAP\r\n", pa & 07777);
 return SCPE_NXM;
 }
 
