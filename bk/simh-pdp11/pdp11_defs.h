@@ -554,6 +554,8 @@ typedef struct pdp_dib DIB;
 #define IOLN_PCLK       006
 #define IOBA_DC         (IOPAGEBASE + 014000)           /* DC11 */
 #define IOLN_DC         (DCX_LINES * 010)
+#define IOBA_KGD        (IOPAGEBASE + 014000)           /* KGD DW */
+#define IOLN_KGD        022
 #define IOBA_RL         (IOPAGEBASE + 014400)           /* RL11 */
 #define IOLN_RL         012
 #define IOBA_XQ         (IOPAGEBASE + 014440)           /* DEQNA/DELQA */
@@ -656,6 +658,7 @@ typedef struct pdp_dib DIB;
 #define INT_V_RC        16
 #define INT_V_PIR5      17
 #define INT_V_KMD       18
+#define INT_V_KGD       19
 
 #define INT_V_TTI       0                               /* BR4 */
 #define INT_V_TTO       1
@@ -716,6 +719,7 @@ typedef struct pdp_dib DIB;
 #define INT_PIR2        (1u << INT_V_PIR2)
 #define INT_PIR1        (1u << INT_V_PIR1)
 #define INT_KMD         (1u << INT_V_KMD)
+#define INT_KGD         (1u << INT_V_KGD)
 
 #define IPL_CLK         6                               /* int pri levels */
 #define IPL_PCLK        6
@@ -730,6 +734,7 @@ typedef struct pdp_dib DIB;
 #define IPL_HK          5
 #define IPL_RQ          5
 #define IPL_KMD         5
+#define IPL_KGD         5
 #define IPL_DZRX        5
 #define IPL_DZTX        5
 #define IPL_TQ          5
@@ -790,6 +795,7 @@ typedef struct pdp_dib DIB;
 #define VEC_TA          0260
 #define VEC_RX          0264
 #define VEC_RY          0264
+#define VEC_KGD         0300
 #define VEC_DLI         0300
 #define VEC_DLO         0304
 #define VEC_DCI         0300

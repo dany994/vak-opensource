@@ -52,7 +52,7 @@ PDP11 = ${PDP11D}/pdp11_fp.o ${PDP11D}/pdp11_cpu.o ${PDP11D}/pdp11_dz.o \
 	${PDP11D}/pdp11_cr.o ${PDP11D}/pdp11_rf.o ${PDP11D}/pdp11_dl.o \
 	${PDP11D}/pdp11_ta.o ${PDP11D}/pdp11_rc.o ${PDP11D}/pdp11_kg.o \
 	${PDP11D}/pdp11_ke.o ${PDP11D}/pdp11_dc.o ${PDP11D}/pdp11_io_lib.o \
-	${PDP11D}/pdp11_kmd.o
+	${PDP11D}/pdp11_kmd.o ${PDP11D}/pdp11_kgd.o
 CFLAGS += -O -DVM_PDP11 -I${PDP11D} ${NETWORK_OPT}
 
 #
@@ -62,7 +62,7 @@ all : ${BIN}pdp11${EXE}
 
 clean :
 ifeq ($(WIN32),)
-	${RM} ${BIN}pdp11${EXE} *.o
+	${RM} ${BIN}pdp11${EXE} *.o *~ ../demos-dvk/*~
 else
 	if exist BIN\*.exe del /q BIN\*.exe
 endif
@@ -102,6 +102,8 @@ pdp11_ke.o: pdp11_ke.c pdp11_defs.h sim_defs.h scp.h sim_console.h \
 pdp11_kg.o: pdp11_kg.c pdp11_defs.h sim_defs.h scp.h sim_console.h \
   sim_timer.h sim_fio.h pdp11_io_lib.h
 pdp11_kmd.o: pdp11_kmd.c pdp11_defs.h sim_defs.h scp.h sim_console.h \
+  sim_timer.h sim_fio.h pdp11_io_lib.h
+pdp11_kgd.o: pdp11_kmd.c pdp11_defs.h sim_defs.h scp.h sim_console.h \
   sim_timer.h sim_fio.h pdp11_io_lib.h
 pdp11_lp.o: pdp11_lp.c pdp11_defs.h sim_defs.h scp.h sim_console.h \
   sim_timer.h sim_fio.h pdp11_io_lib.h
