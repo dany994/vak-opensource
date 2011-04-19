@@ -189,78 +189,13 @@ t_stat kgd_boot (int32 unitno, DEVICE *dptr)
     extern int32 saved_PC;
 
     /* Read 1 sector to address 0. */
-    fseek (u->fileref, 0, SEEK_SET);
+    fseek (u->fileref, 512, SEEK_SET);
     if (sim_fread (&M[0], 1, 512, u->fileref) != 512)
         return SCPE_IOERR;
 
     /* Jump to 0. */
     saved_PC = 0;
     return SCPE_OK;
-}
-
-void kgd_io (int write_op)
-{
-    UNIT *u = &kgd_unit [0];
-
-    if (kgd_dev.dctrl)
-        kgd_debug ("+++ DW %s chs=%d/%d/%d",
-            write_op ? "write" : "read", kgd_cyl, kgd_head, kgd_sector);
-    kgd_count = 0;
-#if 0
-    static const char *opname[16] = {
-        "read", "write", "read mark", "write mark",
-        "read track", "read id", "format track", "seek",
-        "set parameters", "read error status", "op24", "op26",
-        "op30", "op32", "op34", "boot" };
-
-    uint32 pa = kgd_dr + ((kgd_cr & 037400) << 8);
-    uint16 *param = M + (pa >> 1);
-    int32 addr = param[1] | (param[0] & 0xff00) << 8;
-    int head = param[0] >> 2 & 1;
-    int sector = param[2] & 0xff;
-    int cyl = param[2] >> 8 & 0xff;
-    int nbytes = param[3] << 1;
-
-    if (kgd_dev.dctrl) {
-        kgd_debug ("+++ DW %s, CR %06o, DR %06o, params %06o %06o %06o %06o",
-            opname [kgd_cr >> 1 & 15], kgd_cr, pa,
-            param[0], param[1], param[2], param[3]);
-        kgd_debug ("+++ DW %s chs=%d/%d/%d, addr %06o, %d bytes",
-            opname [kgd_cr >> 1 & 15],
-            cyl, head, sector, addr, nbytes);
-    }
-
-    unsigned long seek = ((cyl * 2 + head) * 10 + sector - 1) * 512L;
-    switch (kgd_cr & CR_CMD_MASK) {
-    case CR_CMD_RD:             /* read */
-        fseek (u->fileref, seek, SEEK_SET);
-        if (sim_fread (&M[addr>>1], 1, nbytes, u->fileref) != nbytes) {
-            /* Reading uninitialized media. */
-            kgd_cr |= CR_ERR;
-            return;
-        }
-        break;
-    case CR_CMD_WR:             /* write */
-        fseek (u->fileref, seek, SEEK_SET);
-        sim_fwrite (&M[addr>>1], 1, nbytes, u->fileref);
-        break;
-    case CR_CMD_RDM:            /* read with mark */
-    case CR_CMD_WRM:            /* write with mark */
-    case CR_CMD_RDTR:           /* read track */
-    case CR_CMD_RDID:           /* read identifier */
-    case CR_CMD_FORMAT:         /* format track */
-    case CR_CMD_SEEK:           /* select track */
-    case CR_CMD_SET:            /* set parameters */
-    case CR_CMD_RDERR:          /* read error status */
-    case CR_CMD_LOAD:           /* boot */
-        kgd_debug ("+++ DW %s: operation not implemented",
-            opname [kgd_cr >> 1 & 15]);
-        return;
-    }
-#endif
-    if (ferror (u->fileref))
-        kgd_debug ("+++ DW %s: i/o error",
-            write_op ? "write" : "read");
 }
 
 static const char *regname (int a)
@@ -301,7 +236,16 @@ t_stat kgd_rd (int32 *data, int32 PA, int32 access)
         kgd_si &= ~SI_DONE;
         break;
     case 010:                   /* Data register */
-        //*data = kgd_???;
+        if ((kgd_cs & CS_CMD_MASK) != CS_CMD_RD)
+            break;
+        if (kgd_count < 256) {
+            *data = kgd_buf [kgd_count++];
+        }
+        if (kgd_count == 256) {
+            kgd_si |= SI_DONE;
+            kgd_si &= ~SI_DR1;
+            kgd_cs &= ~CS_DR2;
+        }
         break;
     case 012:                   /* CYL */
         *data = kgd_cyl;
@@ -324,6 +268,8 @@ t_stat kgd_rd (int32 *data, int32 PA, int32 access)
 
 t_stat kgd_wr (int32 data, int32 PA, int32 access)
 {
+    unsigned long seek;
+
     //if (kgd_dev.dctrl)
     //    kgd_debug ("+++ DW %s := %06o", regname (PA), data);
     switch (PA & 036) {
@@ -338,15 +284,22 @@ t_stat kgd_wr (int32 data, int32 PA, int32 access)
         kgd_si &= ~SI_DONE;
         break;
     case 010:                   /* Data register */
+        if ((kgd_cs & CS_CMD_MASK) != CS_CMD_WR)
+            break;
         if (kgd_count < 256) {
             kgd_buf [kgd_count++] = data;
         }
-        if (kgd_count = 256) {
+        if (kgd_count == 256) {
+            seek = ((kgd_cyl * NHEAD + kgd_head) * NSECT + kgd_sector) * 512L;
+            fseek (kgd_unit[0].fileref, seek, SEEK_SET);
+            sim_fwrite (kgd_buf, 1, 512, kgd_unit[0].fileref);
+            if (ferror (kgd_unit[0].fileref))
+                printf ("+++ DW write error, chs=%d/%d/%d\n",
+                    kgd_cyl, kgd_head, kgd_sector);
             kgd_si |= SI_DONE;
             kgd_si &= ~SI_DR1;
             kgd_cs &= ~CS_DR2;
         }
-        //kgd_dr = data;
         break;
     case 012:                   /* CYL */
         kgd_cyl = data & 1023;
@@ -357,12 +310,36 @@ t_stat kgd_wr (int32 data, int32 PA, int32 access)
     case 016:                   /* CS */
         kgd_cs = (kgd_cs & ~CS_CMD_MASK) | (data & CS_CMD_MASK);
         kgd_si &= ~SI_DONE;
-        switch (data & CS_CMD_MASK) {
+        kgd_err = 0;
+        switch (kgd_cs & CS_CMD_MASK) {
         case CS_CMD_RD:
-            kgd_io (0);
+            if (kgd_dev.dctrl)
+                kgd_debug ("+++ DW read chs=%d/%d/%d",
+                    kgd_cyl, kgd_head, kgd_sector);
+            seek = ((kgd_cyl * NHEAD + kgd_head) * NSECT + kgd_sector) * 512L;
+            fseek (kgd_unit[0].fileref, seek, SEEK_SET);
+            if (sim_fread (kgd_buf, 1, 512, kgd_unit[0].fileref) != 512) {
+                /* Reading uninitialized media. */
+                kgd_cs |= CS_ERR;
+                kgd_err |= ERR_ADDR;
+            }
+            if (ferror (kgd_unit[0].fileref))
+                printf ("+++ DW read error, chs=%d/%d/%d\n",
+                    kgd_cyl, kgd_head, kgd_sector);
+            kgd_count = 0;
+            kgd_si |= SI_DR1;
+            kgd_cs |= CS_DR2;
             break;
         case CS_CMD_WR:
-            kgd_io (1);
+            if (kgd_dev.dctrl)
+                kgd_debug ("+++ DW write chs=%d/%d/%d",
+                    kgd_cyl, kgd_head, kgd_sector);
+            kgd_count = 0;
+            break;
+        default:
+            if (kgd_dev.dctrl)
+                kgd_debug ("+++ DW cmd %03o not implemented",
+                    kgd_cs & CS_CMD_MASK);
             break;
         }
         break;
@@ -389,8 +366,8 @@ int32 kgd_inta (void)
 {
     if ((kgd_si & SI_INTE) && (kgd_si & (SI_DONE | SI_DR1))) {
         /* return vector */
-        if (kgd_dev.dctrl)
-            kgd_debug ("+++ DW inta vector %06o", kgd_dib.vec);
+        //if (kgd_dev.dctrl)
+        //    kgd_debug ("+++ DW inta vector %06o", kgd_dib.vec);
         return kgd_dib.vec;
     }
     /* no intr req */

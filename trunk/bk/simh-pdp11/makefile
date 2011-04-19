@@ -1,7 +1,7 @@
 #
 # CC Command
 #
-CC = gcc -std=c99 -g
+CC = gcc -std=c99 -g -Wall
 CFLAGS = -U__STRICT_ANSI__
 LDFLAGS = -lm
 
