@@ -52,7 +52,7 @@ extern int32 int_req[];
  */
 #define SI_DONE         0x0001      /* command done */
 #define SI_RESET        0x0008      /* reset device */
-#define SI_DINT         0x0040      /* disable interrupt */
+#define SI_INTE         0x0040      /* enable interrupt */
 #define SI_DR1          0x0080      /* data request 1 */
 #define SI_SLOW         0x0100      /* slow seek */
 #define SI_BUSY         0x8000      /* device busy */
@@ -67,6 +67,8 @@ int kgd_cyl;            /* Cylinder 0..611 */
 int kgd_head;           /* Head 0..3 */
 int kgd_cs;             /* Command and status */
 int kgd_si;             /* Status and init */
+int kgd_count;
+uint16 kgd_buf [256];
 
 t_stat kgd_event (UNIT *u);
 t_stat kgd_rd (int32 *data, int32 PA, int32 access);
@@ -156,7 +158,7 @@ t_stat kgd_reset (DEVICE *dptr)
     kgd_cyl = 0;                    /* Cylinder 0..611 */
     kgd_head = 0;                   /* Head 0..3 */
     kgd_cs = CS_INIT | CS_READY;    /* Command and status */
-    kgd_si = SI_DONE | SI_DINT;     /* Status and init */
+    kgd_si = SI_DONE | SI_INTE;     /* Status and init */
     sim_cancel (&kgd_unit[0]);
     return SCPE_OK;
 }
@@ -203,6 +205,7 @@ void kgd_io (int write_op)
     if (kgd_dev.dctrl)
         kgd_debug ("+++ DW %s chs=%d/%d/%d",
             write_op ? "write" : "read", kgd_cyl, kgd_head, kgd_sector);
+    kgd_count = 0;
 #if 0
     static const char *opname[16] = {
         "read", "write", "read mark", "write mark",
@@ -285,7 +288,7 @@ static const char *regname (int a)
  */
 t_stat kgd_rd (int32 *data, int32 PA, int32 access)
 {
-    switch (PA & 026) {
+    switch (PA & 036) {
     case 000:                   /* ID */
         *data = kgd_id;
         kgd_si &= ~SI_DR1;
@@ -314,16 +317,16 @@ t_stat kgd_rd (int32 *data, int32 PA, int32 access)
         *data = kgd_si;
         break;
     }
-    if (kgd_dev.dctrl)
-        kgd_debug ("+++ DW %s -> %06o", regname (PA), *data);
+    //if (kgd_dev.dctrl)
+    //    kgd_debug ("+++ DW %s -> %06o", regname (PA), *data);
     return SCPE_OK;
 }
 
 t_stat kgd_wr (int32 data, int32 PA, int32 access)
 {
-    if (kgd_dev.dctrl)
-        kgd_debug ("+++ DW %s := %06o", regname (PA), data);
-    switch (PA & 026) {
+    //if (kgd_dev.dctrl)
+    //    kgd_debug ("+++ DW %s := %06o", regname (PA), data);
+    switch (PA & 036) {
     case 000:                   /* ID */
         kgd_si &= ~SI_DR1;
         break;
@@ -335,18 +338,26 @@ t_stat kgd_wr (int32 data, int32 PA, int32 access)
         kgd_si &= ~SI_DONE;
         break;
     case 010:                   /* Data register */
+        if (kgd_count < 256) {
+            kgd_buf [kgd_count++] = data;
+        }
+        if (kgd_count = 256) {
+            kgd_si |= SI_DONE;
+            kgd_si &= ~SI_DR1;
+            kgd_cs &= ~CS_DR2;
+        }
         //kgd_dr = data;
         break;
     case 012:                   /* CYL */
         kgd_cyl = data & 1023;
         break;
     case 014:                   /* HEAD */
-        kgd_cyl = data & 7;
+        kgd_head = data & 7;
         break;
     case 016:                   /* CS */
         kgd_cs = (kgd_cs & ~CS_CMD_MASK) | (data & CS_CMD_MASK);
         kgd_si &= ~SI_DONE;
-        switch (kgd_cs & CS_CMD_MASK) {
+        switch (data & CS_CMD_MASK) {
         case CS_CMD_RD:
             kgd_io (0);
             break;
@@ -357,14 +368,14 @@ t_stat kgd_wr (int32 data, int32 PA, int32 access)
         break;
     case 020:                   /* SI */
         kgd_si = (kgd_si & (SI_DONE | SI_DR1 | SI_BUSY)) |
-            (data & (SI_DINT | SI_SLOW));
+            (data & (SI_INTE | SI_SLOW));
         if (data & SI_RESET) {
             /* Reset comntroller. */
             kgd_reset (&kgd_dev);
         }
         break;
     }
-    if (! (kgd_si & SI_DINT) && (kgd_si & (SI_DONE | SI_DR1)))
+    if ((kgd_si & SI_INTE) && (kgd_si & (SI_DONE | SI_DR1)))
         SET_INT (KGD);
     else
         CLR_INT (KGD);
@@ -376,7 +387,7 @@ t_stat kgd_wr (int32 data, int32 PA, int32 access)
  */
 int32 kgd_inta (void)
 {
-    if (! (kgd_si & SI_DINT) && (kgd_si & (SI_DONE | SI_DR1))) {
+    if ((kgd_si & SI_INTE) && (kgd_si & (SI_DONE | SI_DR1))) {
         /* return vector */
         if (kgd_dev.dctrl)
             kgd_debug ("+++ DW inta vector %06o", kgd_dib.vec);
