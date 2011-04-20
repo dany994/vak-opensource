@@ -201,6 +201,10 @@ void kmd_io ()
             diskno, opname [kmd_cr >> 1 & 15],
             cyl, head, sector, addr, nbytes);
     }
+    if (! u->fileref) {
+        kmd_cr |= CR_ERR;
+        return;
+    }
 
     unsigned long seek = ((cyl * 2 + head) * 10 + sector - 1) * 512L;
     switch (kmd_cr & CR_CMD_MASK) {
@@ -274,7 +278,7 @@ t_stat kmd_wr (int32 data, int32 PA, int32 access)
         if (kmd_dev.dctrl)
             kmd_debug ("### KMD CR := %06o", data);
         kmd_cr = (kmd_cr & (CR_DONE | CR_TR | CR_ERR)) |
-            data & ~(CR_GO | CR_DONE | CR_TR | CR_INIT | CR_ERR);
+            (data & ~(CR_GO | CR_DONE | CR_TR | CR_INIT | CR_ERR));
         if (data & CR_INIT) {
             /* Reset comntroller. */
             kmd_reset (&kmd_dev);
