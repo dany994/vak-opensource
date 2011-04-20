@@ -467,7 +467,7 @@ return SCPE_OK;
 
 t_stat sim_putchar (int32 c)
 {
-if (sim_log)                                            /* log file? */
+if (sim_log && c != '\r')                               /* log file? */
     fputc (c, sim_log);
 if (sim_con_tmxr.master == 0)                           /* not Telnet? */
     return sim_os_putchar (c);                          /* in-window version */
@@ -482,7 +482,8 @@ t_stat sim_putchar_s (int32 c)
 {
 t_stat r;
 
-if (sim_log) fputc (c, sim_log);                        /* log file? */
+if (sim_log && c != '\r')                               /* log file? */
+    fputc (c, sim_log);
 if (sim_con_tmxr.master == 0)                           /* not Telnet? */
     return sim_os_putchar (c);                          /* in-window version */
 if (sim_con_ldsc.conn == 0)                             /* no Telnet conn? */
@@ -726,8 +727,10 @@ return c | SCPE_KFLAG;
 
 t_stat sim_os_putchar (int32 c)
 {
-if (c != 0177)
-    _putch (c);
+if (c != 0177) {
+    putchar (c);
+    fflush (stdout);
+}
 return SCPE_OK;
 }
 
