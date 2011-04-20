@@ -2,7 +2,7 @@
 # CC Command
 #
 CC = gcc -std=c99 -g -Wall
-CFLAGS = -U__STRICT_ANSI__
+CFLAGS = -U__STRICT_ANSI__ -DCYR_CTLN_CTLO
 LDFLAGS = -lm
 
 CFLAGS += -DSYS_DEBUG
