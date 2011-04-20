@@ -360,103 +360,74 @@ return SCPE_NXM;
 
 t_stat tto_svc (UNIT *uptr)
 {
-int32 c;
-t_stat r;
+int32 c = uptr->buf;
 
 #ifdef CYR_CTLN_CTLO
-c = uptr->buf & 0177;
-if (c == ('N' & 037))
+c &= 0177;
+if (c == ('N' & 037)) {
     tto_charconv = 1;
-else if (c == ('O' & 037))
+    c = -1;
+} else if (c == ('O' & 037)) {
     tto_charconv = 0;
-else if (tto_charconv && c >= '@') {
-    char *str;
-    switch (c) {
-    default:
-    case '@': str = "ю"; break;
-    case 'A': str = "а"; break;
-    case 'B': str = "б"; break;
-    case 'C': str = "ц"; break;
-    case 'D': str = "д"; break;
-    case 'E': str = "е"; break;
-    case 'F': str = "ф"; break;
-    case 'G': str = "г"; break;
-    case 'H': str = "х"; break;
-    case 'I': str = "и"; break;
-    case 'J': str = "й"; break;
-    case 'K': str = "к"; break;
-    case 'L': str = "л"; break;
-    case 'M': str = "м"; break;
-    case 'N': str = "н"; break;
-    case 'O': str = "о"; break;
-    case 'P': str = "п"; break;
-    case 'Q': str = "я"; break;
-    case 'R': str = "р"; break;
-    case 'S': str = "с"; break;
-    case 'T': str = "т"; break;
-    case 'U': str = "у"; break;
-    case 'V': str = "ж"; break;
-    case 'W': str = "в"; break;
-    case 'X': str = "ь"; break;
-    case 'Y': str = "ы"; break;
-    case 'Z': str = "з"; break;
-    case '[': str = "ш"; break;
-    case '\\':str = "э"; break;
-    case ']': str = "щ"; break;
-    case '^': str = "ч"; break;
-    case '_': str = "ъ"; break;
-    case '`': str = "Ю"; break;
-    case 'a': str = "А"; break;
-    case 'b': str = "Б"; break;
-    case 'c': str = "Ц"; break;
-    case 'd': str = "Д"; break;
-    case 'e': str = "Е"; break;
-    case 'f': str = "Ф"; break;
-    case 'g': str = "Г"; break;
-    case 'h': str = "Х"; break;
-    case 'i': str = "И"; break;
-    case 'j': str = "Й"; break;
-    case 'k': str = "К"; break;
-    case 'l': str = "Л"; break;
-    case 'm': str = "М"; break;
-    case 'n': str = "Н"; break;
-    case 'o': str = "О"; break;
-    case 'p': str = "П"; break;
-    case 'q': str = "Я"; break;
-    case 'r': str = "Р"; break;
-    case 's': str = "С"; break;
-    case 't': str = "Т"; break;
-    case 'u': str = "У"; break;
-    case 'v': str = "Ж"; break;
-    case 'w': str = "В"; break;
-    case 'x': str = "Ь"; break;
-    case 'y': str = "Ы"; break;
-    case 'z': str = "З"; break;
-    case '{': str = "Ш"; break;
-    case '|': str = "Э"; break;
-    case '}': str = "Щ"; break;
-    case '~': str = "Ч"; break;
-    case 0177:str = "Ъ"; break;
-    }
-    r = sim_putchar_s (str[0]);
+    c = -1;
+} else if (tto_charconv && c >= '@') {
+#ifdef _WIN32
+    static uint8 tab[0100] = {
+#if 0
+        /* Codepage 1251 */
+        0376, 0340, 0341, 0366, 0344, 0345, 0364, 0343, /* @ABCDEFG */
+        0365, 0350, 0351, 0352, 0353, 0354, 0355, 0356, /* HIJKLMNO */
+        0357, 0377, 0360, 0361, 0362, 0363, 0346, 0342, /* PQRSTUVW */
+        0374, 0373, 0347, 0370, 0375, 0371, 0367, 0372, /* XYZ[\]^_ */
+        0336, 0300, 0301, 0326, 0304, 0305, 0324, 0303, /* `abcdefg */
+        0325, 0310, 0311, 0312, 0313, 0314, 0315, 0316, /* hijklmno */
+        0317, 0337, 0320, 0321, 0322, 0323, 0306, 0302, /* pqrstuvw */
+        0334, 0333, 0307, 0330, 0335, 0331, 0327, 0332, /* xyz{|}~  */
+#else
+        /* Codepage 866 */
+        0356, 0240, 0241, 0346, 0244, 0245, 0344, 0243, /* @ABCDEFG */
+        0345, 0250, 0251, 0252, 0253, 0254, 0255, 0256, /* HIJKLMNO */
+        0257, 0357, 0340, 0341, 0342, 0343, 0246, 0242, /* PQRSTUVW */
+        0354, 0353, 0247, 0350, 0355, 0351, 0347, 0352, /* XYZ[\]^_ */
+        0236, 0200, 0201, 0226, 0204, 0205, 0224, 0203, /* `abcdefg */
+        0225, 0210, 0211, 0212, 0213, 0214, 0215, 0216, /* hijklmno */
+        0217, 0237, 0220, 0221, 0222, 0223, 0206, 0202, /* pqrstuvw */
+        0234, 0233, 0207, 0230, 0235, 0231, 0227, 0232, /* xyz{|}~  */
+#endif
+        };
+    c = tab [c - '@'];
+#else /* _WIN32 */
+    /* UTF-8 */
+    static const char *tab[0100] = {
+        "ю", "а", "б", "ц", "д", "е", "ф", "г",         /* @ABCDEFG */
+        "х", "и", "й", "к", "л", "м", "н", "о",         /* HIJKLMNO */
+        "п", "я", "р", "с", "т", "у", "ж", "в",         /* PQRSTUVW */
+        "ь", "ы", "з", "ш", "э", "щ", "ч", "ъ",         /* XYZ[\]^_ */
+        "Ю", "А", "Б", "Ц", "Д", "Е", "Ф", "Г",         /* `abcdefg */
+        "Х", "И", "Й", "К", "Л", "М", "Н", "О",         /* hijklmno */
+        "П", "Я", "Р", "С", "Т", "У", "Ж", "В",         /* pqrstuvw */
+        "Ь", "Ы", "З", "Ш", "Э", "Щ", "Ч", "Ъ",         /* xyz{|}~  */
+        };
+    const char *str = tab[c-'@'];
+    t_stat r = sim_putchar_s (str[0]);
     if (r != SCPE_OK) {                             /* output; error? */
         sim_activate (uptr, uptr->wait);            /* try again */
         return ((r == SCPE_STALL)? SCPE_OK: r);     /* !stall? report */
         }
     for (c=1; str[c]; c++)
         sim_putchar (str[c]);
+    c = -1;
+#endif /* _WIN32 */
     }
-else
-#else
-c = sim_tt_outcvt (uptr->buf, TT_GET_MODE (uptr->flags));
-#endif
-{
-    if (c >= 0) {
-        r = sim_putchar_s (c);
-        if (r != SCPE_OK) {                             /* output; error? */
-            sim_activate (uptr, uptr->wait);            /* try again */
-            return ((r == SCPE_STALL)? SCPE_OK: r);     /* !stall? report */
-            }
+#else /* CYR_CTLN_CTLO */
+c = sim_tt_outcvt (c, TT_GET_MODE (uptr->flags));
+#endif /* CYR_CTLN_CTLO */
+
+if (c >= 0) {
+    t_stat r = sim_putchar_s (c);
+    if (r != SCPE_OK) {                             /* output; error? */
+        sim_activate (uptr, uptr->wait);            /* try again */
+        return ((r == SCPE_STALL)? SCPE_OK: r);     /* !stall? report */
         }
     }
 tto_csr = tto_csr | CSR_DONE;

@@ -670,6 +670,7 @@ else if (*argv[0]) {                                    /* sim name arg? */
 
 while (stat != SCPE_EXIT) {                             /* in case exit */
     printf ("sim> ");                                   /* prompt */
+    fflush (stdout);
     if (cptr = sim_brk_getact (cbuf, CBUFSIZE))         /* pending action? */
         printf ("%s\n", cptr);                          /* echo */
     else if (sim_vm_read != NULL)                       /* sim routine? */

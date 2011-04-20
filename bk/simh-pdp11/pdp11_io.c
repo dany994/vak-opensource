@@ -137,7 +137,7 @@ if (iodispR[idx]) {
     trap_req = calc_ints (ipl, trap_req);
     return stat;
     }
-printf (">>> read *%04o -> TRAP\r\n", pa & 07777);
+//printf (">>> read *%04o -> TRAP\r\n", pa & 07777);
 return SCPE_NXM;
 }
 
@@ -164,7 +164,7 @@ if (iodispW[idx]) {
     trap_req = calc_ints (ipl, trap_req);
     return stat;
     }
-printf (">>> write *%04o -> TRAP\r\n", pa & 07777);
+//printf (">>> write *%04o -> TRAP\r\n", pa & 07777);
 return SCPE_NXM;
 }
 

@@ -3,12 +3,13 @@
 #
 vpath %.c ..
 CC = i586-mingw32msvc-gcc -std=c99 -g -Wall
-CFLAGS = -U__STRICT_ANSI__ -D_WIN32 -DSYS_DEBUG
+CFLAGS = -U__STRICT_ANSI__ -D_WIN32 -DCYR_CTLN_CTLO
 LDFLAGS = -lm -lwsock32 -lwinmm
 EXE = .exe
-ifneq ($(USE_NETWORK),)
-    NETWORK_OPT = -DUSE_NETWORK -lwpcap -lpacket
-endif
+
+# Add network support
+#CFLAGS += -DUSE_NETWORK
+#LDFLAGS += -lwpcap -lpacket
 
 #
 # Common Libraries
@@ -34,7 +35,7 @@ PDP11 = ${PDP11D}/pdp11_fp.o ${PDP11D}/pdp11_cpu.o ${PDP11D}/pdp11_dz.o \
 	${PDP11D}/pdp11_ta.o ${PDP11D}/pdp11_rc.o ${PDP11D}/pdp11_kg.o \
 	${PDP11D}/pdp11_ke.o ${PDP11D}/pdp11_dc.o ${PDP11D}/pdp11_io_lib.o \
 	${PDP11D}/pdp11_kmd.o ${PDP11D}/pdp11_kgd.o
-CFLAGS += -O -DVM_PDP11 -I${PDP11D} ${NETWORK_OPT}
+CFLAGS += -O -DVM_PDP11 -I${PDP11D}
 
 #
 # Build everything
