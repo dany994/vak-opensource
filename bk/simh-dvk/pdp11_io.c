@@ -82,24 +82,24 @@ static const int32 pirq_bit[7] = {
 
 static const char *devnam (uint32 pa)
 {
-    switch (pa & 07776) {
-    case 02140 ... 02142: return "KMD";
-    case 02300 ... 02316: return "KIPDR";
-    case 02320 ... 02336: return "KDPDR";
-    case 02340 ... 02356: return "KIPAR";
-    case 02360 ... 02376: return "KDPAR";
-    case 02516:           return "MMR3";
-    //case 04400 ... 04410: return "RL11";
-    case 07560 ... 07562: return "DL11 rcv";
-    case 07564 ... 07566: return "DL11 xmt";
-    case 07570:           return "SR";
-    case 07572 ... 07576: return "MMR";
-    case 07600 ... 07616: return "UIPDR";
-    case 07620 ... 07636: return "UDPDR";
-    case 07640 ... 07656: return "UIPAR";
-    case 07660 ... 07676: return "UDPAR";
-    case 07776:           return "PSW";
-    }
+    pa &= 07776;
+
+    if (pa >= 02140 && pa <= 02142) return "KMD";
+    if (pa >= 02300 && pa <= 02316) return "KIPDR";
+    if (pa >= 02320 && pa <= 02336) return "KDPDR";
+    if (pa >= 02340 && pa <= 02356) return "KIPAR";
+    if (pa >= 02360 && pa <= 02376) return "KDPAR";
+    if (pa >= 02516) return "MMR3";
+    //if (pa >= 04400 && pa <= 04410) return "RL11";
+    if (pa >= 07560 && pa <= 07562) return "DL11 rcv";
+    if (pa >= 07564 && pa <= 07566) return "DL11 xmt";
+    if (pa >= 07570) return "SR";
+    if (pa >= 07572 && pa <= 07576) return "MMR";
+    if (pa >= 07600 && pa <= 07616) return "UIPDR";
+    if (pa >= 07620 && pa <= 07636) return "UDPDR";
+    if (pa >= 07640 && pa <= 07656) return "UIPAR";
+    if (pa >= 07660 && pa <= 07676) return "UDPAR";
+    if (pa == 07776) return "PSW";
     return 0;
 }
 
