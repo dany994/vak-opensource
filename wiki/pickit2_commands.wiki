@@ -49,6 +49,17 @@ VDDLim = (Vfault / 5) * 255
 }}}
 where Vdd < VFault is error.
 
+= Set VPP =
+CCPR2L = duty cycle.  Generally = 0x40.
+{{{
+VPPADC = Vpp * 18.61
+}}}
+where Vpp is desired voltage.
+{{{
+VPPlim = Vfault * 18.61
+}}}
+where Vdd < VFault is error.
+
 = Status =
 
 || *Bit* || *Mask* || *Description*     ||
