@@ -1,0 +1,59 @@
+#summary Pickit2 commands.
+
+= Pickit 2 adapter =
+{http://www.voti.nl/pickit2faq/files/pickit2.jpg}
+
+The PICkit 2 is an USB in-circuit programmer manufactured by [Microchip | http://www.voti.nl/pickit2faq/index.html].
+
+= Commands =
+
+|| *Command*              || *Encoding* || *Response*              || *Action*   ||
+|| No Operation           || 0x5A       || --                      || Do nothing ||
+|| Get Version            || 0x76       || <major> <minor> <dot>   || Get firmware version ||
+|| Boot Mode              || 0x42       || --                      || Enter Bootloader mode ||
+|| Set VDD                || 0xA0 <CCPL> <CCPH> <VDDLim> || --     ||  ||
+|| Set VPP                || 0xA1 <CCPR2L> <VPPADC> <VPPLim> || -- ||  ||
+|| Read Status            || 0xA2       || <StsL> <StsH>           ||  ||
+|| Read Voltages          || 0xA3       || <VddL> <VddH> <VppL> <VppH> ||  ||
+|| Download Script        || 0xA4 <Script#> <ScriptLengthN> <Script1> <Script2> ... <ScriptN> || -- || Store a script in the Script Buffer ||
+|| Run Script             || 0xA5 <Script#> <iterations> || --     || Run a script from the script buffer ||
+|| Execute Script         || 0xA6 <ScriptLengthN> <Script1> <Script2> ... <ScriptN> || Immediately execute the included script ||
+|| Clear Download Buffer  || 0xA7       || --                      || Empty the download buffer ||
+|| Download Data          || 0xA8 <DataLength> <Data1> <Data2> ... <DataN> || -- || Add data to download buffer ||
+|| Clear Upload Buffer    || 0xA9       || --                      || Empty the upload buffer ||
+|| Upload Data            || 0xAA       || <DataLengthN> <data1> <data2> ... <dataN> || Read data from upload buffer ||
+|| Clear Script Buffer    || 0xAB       || --                      ||  ||
+|| Upload Data Nolen      || 0xAC       || <Data1> <Data2> ... <DataN> || Read data from upload buffer ||
+|| End Of Buffer          || 0xAD       || --                      || Skip the rest of commands ||
+|| Reset                  || 0xAE       || --                      || Reset ||
+|| Script Buffer Checksum || 0xAF       || <LenSumL> <LenSumH> <BufSumL> <BufSumH> || Calculate checksums of the Script Buffer ||
+|| Set Voltage Calibrations || 0xB0 <adc_calfactorL> <adc_calfactorH> <vdd_offset> <calfactor> || -- ||  ||
+|| Write Internal EEPROM  || 0xB1 <address> <datalength> <data1> <data2> ... <dataN> || -- || Write data to PIC18F2550 EEPROM ||
+|| Read Internal EEPROM   || 0xB2 <address> <datalength> || <data1> <data2> ... <dataN> || Read bytes from PIC18F2550 EEPROM ||
+|| Enter UART Mode        || 0xB3       || --                      ||  ||
+|| Exit UART Mode         || 0xB4       || --                      || Exits the firmware from UART Mode ||
+|| Enter Learn Mode       || 0xB5 <0x50> <0x4B> <0x32> <EEsize> || -- || Puts the firmware in PK2GO Learn Mode ||
+|| Exit Learn Mode        || 0xB6       || --                      || Ignore ||
+|| Enable Pk2go Mode      || 0xB7 <0x50> <0x4B> <0x32> <EEsize> || -- || Puts the firmware in PK2GO Mode ||
+|| Logic Analyzer Go      || 0xB8 <EdgeRising> <TrigMask> <TrigStates> <EdgeMask> <TrigCount> <PostTrigCountL> <PostTrigCountH> <SampleRateFactor> || <TrigLocL><TrigLocH> ||  ||
+|| Copy RAM Upload        || 0xB9 <StartAddrL> <StartAddrH> || -- ||  ||
+
+= Status =
+
+|| *Bit* || *Mask* || *Description*     ||
+|| 0     || 0x0001 || Vdd GND On        ||
+|| 1     || 0x0001 || Vdd On            ||
+|| 2     || 0x0001 || Vpp GND On        ||
+|| 3     || 0x0001 || Vpp On            ||
+|| 4     || 0x0001 || Vdd Error         ||
+|| 5     || 0x0001 || Vpp Error         ||
+|| 6     || 0x0001 || Button Pressed    ||
+|| 7     || 0x0001 ||                   ||
+|| 8     || 0x0001 || Reset             ||
+|| 9     || 0x0001 || UART Mode         ||
+|| 10    || 0x0001 || ICD TimeOut       ||
+|| 11    || 0x0001 || Upload Full       ||
+|| 12    || 0x0001 || Download Empty    ||
+|| 13    || 0x0001 || Empty Script      ||
+|| 14    || 0x0001 || Script Buffer Overflow ||
+|| 15    || 0x0001 || Download Overflow ||
