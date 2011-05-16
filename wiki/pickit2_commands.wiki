@@ -80,7 +80,74 @@ where Vdd < VFault is error.
 || 14    || 0x4000 || Script Buffer Overflow ||
 || 15    || 0x8000 || Download Overflow ||
 
-= Scripts =
+= Scripts for PIC32 =
+
+Enter programming mode, 39 bytes.
+|| fa           ||   VPP_OFF ||
+|| f7           ||   MCLR_GND_ON ||
+|| f9           ||   VPP_PWM_ON ||
+|| f5           ||   BUSY_LED_ON ||
+|| f3 00        ||   SET_ICSP_PINS ||
+|| e8 14        ||   DELAY_LONG ||
+|| f6           ||   MCLR_GND_OFF ||
+|| fb           ||   VPP_ON ||
+|| e7 17        ||   DELAY_SHORT ||
+|| fa           ||   VPP_OFF ||
+|| f7           ||   MCLR_GND_ON ||
+|| e7 2f        ||   DELAY_SHORT ||
+|| f2 b2        ||   WRITE_BYTE_LITERAL ||
+|| f2 c2        ||   WRITE_BYTE_LITERAL ||
+|| f2 12        ||   WRITE_BYTE_LITERAL ||
+|| f2 0a        ||   WRITE_BYTE_LITERAL ||
+|| f6           ||   MCLR_GND_OFF ||
+|| fb           ||   VPP_ON ||
+|| e7 eb        ||   DELAY_SHORT ||
+|| f3 02        ||   SET_ICSP_PINS ||
+|| bc 06 1f     ||   JT2_SETMODE ||
+|| bb 04        ||   JT2_SENDCMD ||
+|| bb 07        ||   JT2_SENDCMD ||
+|| ba 00        ||   JT2_XFERDATA8_LIT ||
+
+Exit programming mode, 15 bytes.
+|| bc 05 1f     ||   JT2_SETMODE ||
+|| fa           ||   VPP_OFF ||
+|| f7           ||   MCLR_GND_ON ||
+|| f8           ||   VPP_PWM_OFF ||
+|| f3 06        ||   SET_ICSP_PINS ||
+|| f3 02        ||   SET_ICSP_PINS ||
+|| f3 03        ||   SET_ICSP_PINS ||
+|| e8 0a        ||   DELAY_LONG ||
+|| f4           ||   BUSY_LED_OFF ||
+
+Read device id, 9 bytes.
+|| bb 04          || JT2_SENDCMD ||
+|| bb 01          || JT2_SENDCMD ||
+|| b9 00 00 00 00 || JT2_XFERDATA32_LIT ||
+
+Read program memory, 13 bytes.
+|| bb 0e          || JT2_SENDCMD ||
+|| b8 20 00 01 00 || JT2_XFRFASTDAT_LIT ||
+|| b7             || JT2_XFRFASTDAT_BUF ||
+|| b4             || JT2_WAIT_PE_RESP ||
+|| b5             || JT2_GET_PE_RESP ||
+|| e9 01 1f       || LOOP ||
+
+Prepare writing program memory, 6 bytes.
+|| bb 0e          || JT2_SENDCMD ||
+|| b7             || JT2_XFRFASTDAT_BUF ||
+|| e9 01 3f       || LOOP ||
+
+Write program memory, 5 bytes.
+|| b7             || JT2_XFRFASTDAT_BUF ||
+|| e9 01 3f       || LOOP ||
+|| b3             || JT2_PE_PROG_RESP ||
+
+Erase chip, 6 bytes.
+|| bb 07          || JT2_SENDCMD ||
+|| ba fc          || JT2_XFERDATA8_LIT ||
+|| e8 4a          || DELAY_LONG ||
+
+= Script instructions =
 
 ||*Code*||*Used*||*Params*||*Name*||
 || 0xB3 || + ||   || JT2_PE_PROG_RESP   ||
