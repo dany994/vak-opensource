@@ -1,7 +1,7 @@
 #summary Pickit2 commands.
 
 = Pickit 2 adapter =
-{http://www.voti.nl/pickit2faq/files/pickit2.jpg}
+[http://www.voti.nl/pickit2faq/files/pickit2.jpg]
 
 The PICkit 2 is an USB in-circuit programmer manufactured by [Microchip | http://www.voti.nl/pickit2faq/index.html].
 
