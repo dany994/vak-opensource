@@ -64,18 +64,18 @@ where Vdd < VFault is error.
 
 || *Bit* || *Mask* || *Description*     ||
 || 0     || 0x0001 || Vdd GND On        ||
-|| 1     || 0x0001 || Vdd On            ||
-|| 2     || 0x0001 || Vpp GND On        ||
-|| 3     || 0x0001 || Vpp On            ||
-|| 4     || 0x0001 || Vdd Error         ||
-|| 5     || 0x0001 || Vpp Error         ||
-|| 6     || 0x0001 || Button Pressed    ||
-|| 7     || 0x0001 ||                   ||
-|| 8     || 0x0001 || Reset             ||
-|| 9     || 0x0001 || UART Mode         ||
-|| 10    || 0x0001 || ICD TimeOut       ||
-|| 11    || 0x0001 || Upload Full       ||
-|| 12    || 0x0001 || Download Empty    ||
-|| 13    || 0x0001 || Empty Script      ||
-|| 14    || 0x0001 || Script Buffer Overflow ||
-|| 15    || 0x0001 || Download Overflow ||
+|| 1     || 0x0002 || Vdd On            ||
+|| 2     || 0x0004 || Vpp GND On        ||
+|| 3     || 0x0008 || Vpp On            ||
+|| 4     || 0x0010 || Vdd Error         ||
+|| 5     || 0x0020 || Vpp Error         ||
+|| 6     || 0x0040 || Button Pressed    ||
+|| 7     || 0x0080 ||                   ||
+|| 8     || 0x0100 || Reset             ||
+|| 9     || 0x0200 || UART Mode         ||
+|| 10    || 0x0400 || ICD TimeOut       ||
+|| 11    || 0x0800 || Upload Full       ||
+|| 12    || 0x1000 || Download Empty    ||
+|| 13    || 0x2000 || Empty Script      ||
+|| 14    || 0x4000 || Script Buffer Overflow ||
+|| 15    || 0x8000 || Download Overflow ||
