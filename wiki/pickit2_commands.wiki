@@ -38,6 +38,17 @@ The PICkit 2 is an USB in-circuit programmer manufactured by [Microchip | http:/
 || Logic Analyzer Go      || 0xB8 {EdgeRising} {TrigMask} {TrigStates} {EdgeMask} {TrigCount} {PostTrigCountL} {PostTrigCountH} {SampleRateFactor} || {TrigLocL}{TrigLocH} ||  ||
 || Copy RAM Upload        || 0xB9 {StartAddrL} {StartAddrH} || -- ||  ||
 
+= Set VDD =
+{{{
+CCPH:CCPL = ((Vdd * 32) + 10.5) << 6
+}}
+where Vdd is desired voltage.
+
+{{{
+VDDLim = (Vfault / 5) * 255             
+}}}
+where Vdd < VFault is error.
+
 = Status =
 
 || *Bit* || *Mask* || *Description*     ||
