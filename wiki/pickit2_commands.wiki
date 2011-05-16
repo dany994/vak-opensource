@@ -45,7 +45,7 @@ CCPH:CCPL = ((Vdd * 32) + 10.5) << 6
 where Vdd is desired voltage.
 
 {{{
-VDDLim = (Vfault / 5) * 255             
+VDDLim = (Vfault / 5) * 255
 }}}
 where Vdd < VFault is error.
 
@@ -79,3 +79,84 @@ where Vdd < VFault is error.
 || 13    || 0x2000 || Empty Script      ||
 || 14    || 0x4000 || Script Buffer Overflow ||
 || 15    || 0x8000 || Download Overflow ||
+
+= Scripts =
+
+||*Code*||*Used*||*Params*||*Name*||
+|| 0xB3 || + ||   || JT2_PE_PROG_RESP   ||
+|| 0xB4 || + ||   || JT2_WAIT_PE_RESP   ||
+|| 0xB5 || + ||   || JT2_GET_PE_RESP    ||
+|| 0xB6 ||   ||   || JT2_XFERINST_BUF   ||
+|| 0xB7 || + ||   || JT2_XFRFASTDAT_BUF ||
+|| 0xB8 || + || 4 || JT2_XFRFASTDAT_LIT ||
+|| 0xB9 || + || 4 || JT2_XFERDATA32_LIT ||
+|| 0xBA || + || 1 || JT2_XFERDATA8_LIT  ||
+|| 0xBB || + || 1 || JT2_SENDCMD        ||
+|| 0xBC || + || 2 || JT2_SETMODE        ||
+|| 0xBD ||   ||   || UNIO_TX_RX         ||
+|| 0xBE ||   ||   || UNIO_TX            ||
+|| 0xBF ||   ||   || MEASURE_PULSE      ||
+|| 0xC0 ||   ||   || ICDSLAVE_TX_BUF_BL ||
+|| 0xC1 ||   ||   || ICDSLAVE_TX_LIT_BL ||
+|| 0xC2 ||   ||   || ICDSLAVE_RX_BL     ||
+|| 0xC3 ||   ||   || SPI_RDWR_BYTE_BUF  ||
+|| 0xC4 ||   ||   || SPI_RDWR_BYTE_LIT  ||
+|| 0xC5 ||   ||   || SPI_RD_BYTE_BUF    ||
+|| 0xC6 ||   ||   || SPI_WR_BYTE_BUF    ||
+|| 0xC7 ||   ||   || SPI_WR_BYTE_LIT    ||
+|| 0xC8 ||   ||   || I2C_RD_BYTE_NACK   ||
+|| 0xC9 ||   ||   || I2C_RD_BYTE_ACK    ||
+|| 0xCA ||   ||   || I2C_WR_BYTE_BUF    ||
+|| 0xCB ||   ||   || I2C_WR_BYTE_LIT    ||
+|| 0xCC ||   ||   || I2C_STOP           ||
+|| 0xCD ||   ||   || I2C_START          ||
+|| 0xCE ||   ||   || AUX_STATE_BUFFER   ||
+|| 0xCF ||   ||   || SET_AUX            ||
+|| 0xD0 ||   ||   || WRITE_BITS_BUF_HLD ||
+|| 0xD1 ||   ||   || WRITE_BITS_LIT_HLD ||
+|| 0xD2 ||   ||   || CONST_WRITE_DL     ||
+|| 0xD3 ||   ||   || WRITE_BUFBYTE_W    ||
+|| 0xD4 ||   ||   || WRITE_BUFWORD_W    ||
+|| 0xD5 ||   ||   || RD2_BITS_BUFFER    ||
+|| 0xD6 ||   ||   || RD2_BYTE_BUFFER    ||
+|| 0xD7 ||   ||   || VISI24             ||
+|| 0xD8 ||   ||   || NOP24              ||
+|| 0xD9 ||   ||   || COREINST24         ||
+|| 0xDA ||   ||   || COREINST18         ||
+|| 0xDB ||   ||   || POP_DOWNLOAD       ||
+|| 0xDC ||   ||   || ICSP_STATES_BUFFER ||
+|| 0xDD ||   ||   || LOOPBUFFER         ||
+|| 0xDE ||   ||   || ICDSLAVE_TX_BUF    ||
+|| 0xDF ||   ||   || ICDSLAVE_TX_LIT    ||
+|| 0xE0 ||   ||   || ICDSLAVE_RX        ||
+|| 0xE1 ||   ||   || POKE_SFR           ||
+|| 0xE2 ||   ||   || PEEK_SFR           ||
+|| 0xE3 ||   ||   || EXIT_SCRIPT        ||
+|| 0xE4 ||   ||   || GOTO_INDEX         ||
+|| 0xE5 ||   ||   || IF_GT_GOTO         ||
+|| 0xE6 ||   ||   || IF_EQ_GOTO         ||
+|| 0xE7 || + || 1 || DELAY_SHORT        ||
+|| 0xE8 || + || 1 || DELAY_LONG         ||
+|| 0xE9 || + || 2 || LOOP               ||
+|| 0xEA || + || 1 || SET_ICSP_SPEED     ||
+|| 0xEB ||   ||   || READ_BITS          ||
+|| 0xEC ||   ||   || READ_BITS_BUFFER   ||
+|| 0xED ||   ||   || WRITE_BITS_BUFFER  ||
+|| 0xEE ||   ||   || WRITE_BITS_LITERAL ||
+|| 0xEF ||   ||   || READ_BYTE          ||
+|| 0xF0 ||   ||   || READ_BYTE_BUFFER   ||
+|| 0xF1 ||   ||   || WRITE_BYTE_BUFFER  ||
+|| 0xF2 || + || 1 || WRITE_BYTE_LITERAL ||
+|| 0xF3 || + || 1 || SET_ICSP_PINS      ||
+|| 0xF4 || + ||   || BUSY_LED_OFF       ||
+|| 0xF5 || + ||   || BUSY_LED_ON        ||
+|| 0xF6 || + ||   || MCLR_GND_OFF       ||
+|| 0xF7 || + ||   || MCLR_GND_ON        ||
+|| 0xF8 || + ||   || VPP_PWM_OFF        ||
+|| 0xF9 || + ||   || VPP_PWM_ON         ||
+|| 0xFA || + ||   || VPP_OFF            ||
+|| 0xFB || + ||   || VPP_ON             ||
+|| 0xFC || + ||   || VDD_GND_OFF        ||
+|| 0xFD || + ||   || VDD_GND_ON         ||
+|| 0xFE || + ||   || VDD_OFF            ||
+|| 0xFF || + ||   || VDD_ON             ||
