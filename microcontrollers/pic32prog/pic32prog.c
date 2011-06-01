@@ -29,7 +29,7 @@
 #include "target.h"
 #include "localize.h"
 
-#define VERSION         "1.1"
+#define VERSION         "1.0"
 #define BLOCKSZ         1024
 #define DEFAULT_ADDR    0x08000000
 
