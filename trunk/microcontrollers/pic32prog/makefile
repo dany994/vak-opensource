@@ -1,20 +1,20 @@
-CC		= gcc
+CC              = gcc
 
-CFLAGS		= -Wall -g -I/opt/local/include -O
-LDFLAGS		= -g
-LIBS		= -L/opt/local/lib -lusb
+CFLAGS          = -Wall -g -I/opt/local/include -O
+LDFLAGS         = -g
+LIBS            = -L/opt/local/lib -lusb
 
 COMMON_OBJS     = target.o
-COMMON_OBJS	+= adapter-pickit2.o
+COMMON_OBJS     += adapter-pickit2.o
 
-PROG_OBJS	= pic32prog.o $(COMMON_OBJS)
+PROG_OBJS       = pic32prog.o $(COMMON_OBJS)
 
-all:		pic32prog
+all:            pic32prog
 
 load:           demo1986ve91.srec
 		pic32prog $<
 
-pic32prog:	$(PROG_OBJS)
+pic32prog:      $(PROG_OBJS)
 		$(CC) $(LDFLAGS) -o $@ $(PROG_OBJS) $(LIBS)
 
 adapter-mpsse:	adapter-mpsse.c
@@ -23,7 +23,7 @@ adapter-mpsse:	adapter-mpsse.c
 pic32prog.po:	*.c
 		xgettext --from-code=utf-8 --keyword=_ pic32prog.c target.c adapter-lpt.c -o $@
 
-pic32prog-ru.mo:	pic32prog-ru.po
+pic32prog-ru.mo: pic32prog-ru.po
 		msgfmt -c -o $@ $<
 
 pic32prog-ru-cp866.mo ru/LC_MESSAGES/pic32prog.mo: pic32prog-ru.po
@@ -37,6 +37,6 @@ install:	pic32prog #pic32prog-ru.mo
 		install -c -s pic32prog /usr/local/bin/pic32prog
 #		install -c -m 444 pic32prog-ru.mo /usr/local/share/locale/ru/LC_MESSAGES/pic32prog.mo
 ###
-adapter-mpsse.o: adapter-mpsse.c adapter.h arm-jtag.h
+adapter-mpsse.o: adapter-mpsse.c adapter.h
 pic32prog.o: pic32prog.c target.h localize.h
-target.o: target.c target.h adapter.h arm-jtag.h localize.h
+target.o: target.c target.h adapter.h localize.h
