@@ -260,7 +260,7 @@ failed: usb_release_interface (a->usbdev, IFACE);
     pickit2_send (a, 4, CMD_SET_VPP, 0x40, vpp, vpp_limit);
 
     /* Setup serial speed. */
-    unsigned divisor = 16;
+    unsigned divisor = 10;
     pickit2_send (a, 4, CMD_EXECUTE_SCRIPT, 2,
         SCRIPT_SET_ICSP_SPEED, divisor);
 
@@ -272,8 +272,9 @@ failed: usb_release_interface (a->usbdev, IFACE);
     pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
     pickit2_recv (a);
     unsigned status = a->reply[0] | a->reply[1] << 8;
-fprintf (stderr, "PICkit2: status %04x\n", status);
-    if (status != (STATUS_VDD_GND_ON | STATUS_VPP_GND_ON)) {
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: status %04x\n", status);
+    if ((status & ~STATUS_RESET) != (STATUS_VDD_GND_ON | STATUS_VPP_GND_ON)) {
         fprintf (stderr, "PICkit2: invalid status = %04x\n", status);
         goto failed;
     }
@@ -287,8 +288,9 @@ fprintf (stderr, "PICkit2: status %04x\n", status);
     pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
     pickit2_recv (a);
     status = a->reply[0] | a->reply[1] << 8;
-fprintf (stderr, "PICkit2: status %04x\n", status);
-    if (status != (STATUS_VDD_ON | STATUS_VPP_GND_ON)) {
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: status %04x\n", status);
+    if ((status & ~STATUS_RESET) != (STATUS_VDD_ON | STATUS_VPP_GND_ON)) {
         fprintf (stderr, "PICkit2: invalid status = %04x.\n", status);
         goto failed;
     }
@@ -313,7 +315,8 @@ fprintf (stderr, "PICkit2: status %04x\n", status);
         SCRIPT_WRITE_BYTE_LITERAL, 0x0a,
         SCRIPT_MCLR_GND_OFF,
         SCRIPT_VPP_ON,
-        SCRIPT_DELAY_SHORT, 235,
+//        SCRIPT_DELAY_SHORT, 235,
+        SCRIPT_DELAY_LONG, 1,
         SCRIPT_SET_ICSP_PINS, 2,
         SCRIPT_JT2_SETMODE, 6, 0x1f,
         SCRIPT_JT2_SENDCMD, 4,
