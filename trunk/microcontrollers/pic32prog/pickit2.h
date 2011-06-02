@@ -1,17 +1,10 @@
 /*
- * Обобщённый JTAG-адаптер. Программный интерфейс нижнего уровня.
- * Автор: С.Вакуленко.
- *
- * Этот файл распространяется в надежде, что он окажется полезным, но
- * БЕЗ КАКИХ БЫ ТО НИ БЫЛО ГАРАНТИЙНЫХ ОБЯЗАТЕЛЬСТВ; в том числе без косвенных
- * гарантийных обязательств, связанных с ПОТРЕБИТЕЛЬСКИМИ СВОЙСТВАМИ и
- * ПРИГОДНОСТЬЮ ДЛЯ ОПРЕДЕЛЕННЫХ ЦЕЛЕЙ.
- *
- * Вы вправе распространять и/или изменять этот файл в соответствии
- * с условиями Генеральной Общественной Лицензии GNU (GPL) в том виде,
- * как она была опубликована Фондом Свободного ПО; либо версии 2 Лицензии
- * либо (по вашему желанию) любой более поздней версии. Подробности
- * смотрите в прилагаемом файле 'COPYING.txt'.
+ * Microchip PICkit 2 USB adapter.
+ * Low-level interface.
+ */
+
+/*
+ * PICkit2 Commands.
  */
 #define CMD_NO_OPERATION           0x5A     // Do nothing
 #define CMD_GET_VERSION            0x76     // {major} {minor} {dot}
@@ -56,3 +49,103 @@
 #define CMD_LOGIC_ANALYZER_GO      0xB8     // {EdgeRising} {TrigMask} {TrigStates} {EdgeMask} {TrigCount} {PostTrigCountL} {PostTrigCountH} {SampleRateFactor}
                                             // {TrigLocL} {TrigLocH}
 #define CMD_COPY_RAM_UPLOAD        0xB9     // {StartAddrL} {StartAddrH}
+
+/*
+ * Status bits.
+ */
+#define STATUS_VDD_GND_ON          0x0001   // Vdd GND On
+#define STATUS_VDD_ON              0x0002   // Vdd On
+#define STATUS_VPP_GND_ON          0x0004   // Vpp GND On
+#define STATUS_VPP_ON              0x0008   // Vpp On
+#define STATUS_VDD_ERROR           0x0010   // Vdd Error
+#define STATUS_VPP_ERROR           0x0020   // Vpp Error
+#define STATUS_BUTTON_PRESSED      0x0040   // Button Pressed
+#define STATUS_RESET               0x0100   // Reset
+#define STATUS_UART_MODE           0x0200   // UART Mode
+#define STATUS_ICD_TIMEOUT         0x0400   // ICD TimeOut
+#define STATUS_UPLOAD_FULL         0x0800   // Upload Full
+#define STATUS_DOWNLOAD_EMPTY      0x1000   // Download Empty
+#define STATUS_EMPTY_SCRIPT        0x2000   // Empty Script
+#define STATUS_SCRIPT_BUF_OVFL     0x4000   // Script Buffer Overflow
+#define STATUS_DOWNLOAD_OVFL       0x8000   // Download Overflow
+
+/*
+ * Script instructions.
+ */
+#define SCRIPT_JT2_PE_PROG_RESP    0xB3     // +
+#define SCRIPT_JT2_WAIT_PE_RESP    0xB4     // +
+#define SCRIPT_JT2_GET_PE_RESP     0xB5     // +
+#define SCRIPT_JT2_XFERINST_BUF    0xB6     //
+#define SCRIPT_JT2_XFRFASTDAT_BUF  0xB7     // +
+#define SCRIPT_JT2_XFRFASTDAT_LIT  0xB8     // + 4
+#define SCRIPT_JT2_XFERDATA32_LIT  0xB9     // + 4
+#define SCRIPT_JT2_XFERDATA8_LIT   0xBA     // + 1
+#define SCRIPT_JT2_SENDCMD         0xBB     // + 1
+#define SCRIPT_JT2_SETMODE         0xBC     // + 2
+#define SCRIPT_UNIO_TX_RX          0xBD     //
+#define SCRIPT_UNIO_TX             0xBE     //
+#define SCRIPT_MEASURE_PULSE       0xBF     //
+#define SCRIPT_ICDSLAVE_TX_BUF_BL  0xC0     //
+#define SCRIPT_ICDSLAVE_TX_LIT_BL  0xC1     //
+#define SCRIPT_ICDSLAVE_RX_BL      0xC2     //
+#define SCRIPT_SPI_RDWR_BYTE_BUF   0xC3     //
+#define SCRIPT_SPI_RDWR_BYTE_LIT   0xC4     //
+#define SCRIPT_SPI_RD_BYTE_BUF     0xC5     //
+#define SCRIPT_SPI_WR_BYTE_BUF     0xC6     //
+#define SCRIPT_SPI_WR_BYTE_LIT     0xC7     //
+#define SCRIPT_I2C_RD_BYTE_NACK    0xC8     //
+#define SCRIPT_I2C_RD_BYTE_ACK     0xC9     //
+#define SCRIPT_I2C_WR_BYTE_BUF     0xCA     //
+#define SCRIPT_I2C_WR_BYTE_LIT     0xCB     //
+#define SCRIPT_I2C_STOP            0xCC     //
+#define SCRIPT_I2C_START           0xCD     //
+#define SCRIPT_AUX_STATE_BUFFER    0xCE     //
+#define SCRIPT_SET_AUX             0xCF     //
+#define SCRIPT_WRITE_BITS_BUF_HLD  0xD0     //
+#define SCRIPT_WRITE_BITS_LIT_HLD  0xD1     //
+#define SCRIPT_CONST_WRITE_DL      0xD2     //
+#define SCRIPT_WRITE_BUFBYTE_W     0xD3     //
+#define SCRIPT_WRITE_BUFWORD_W     0xD4     //
+#define SCRIPT_RD2_BITS_BUFFER     0xD5     //
+#define SCRIPT_RD2_BYTE_BUFFER     0xD6     //
+#define SCRIPT_VISI24              0xD7     //
+#define SCRIPT_NOP24               0xD8     //
+#define SCRIPT_COREINST24          0xD9     //
+#define SCRIPT_COREINST18          0xDA     //
+#define SCRIPT_POP_DOWNLOAD        0xDB     //
+#define SCRIPT_ICSP_STATES_BUFFER  0xDC     //
+#define SCRIPT_LOOPBUFFER          0xDD     //
+#define SCRIPT_ICDSLAVE_TX_BUF     0xDE     //
+#define SCRIPT_ICDSLAVE_TX_LIT     0xDF     //
+#define SCRIPT_ICDSLAVE_RX         0xE0     //
+#define SCRIPT_POKE_SFR            0xE1     //
+#define SCRIPT_PEEK_SFR            0xE2     //
+#define SCRIPT_EXIT_SCRIPT         0xE3     //
+#define SCRIPT_GOTO_INDEX          0xE4     //
+#define SCRIPT_IF_GT_GOTO          0xE5     //
+#define SCRIPT_IF_EQ_GOTO          0xE6     //
+#define SCRIPT_DELAY_SHORT         0xE7     // + 1
+#define SCRIPT_DELAY_LONG          0xE8     // + 1
+#define SCRIPT_LOOP                0xE9     // + 2
+#define SCRIPT_SET_ICSP_SPEED      0xEA     // + 1
+#define SCRIPT_READ_BITS           0xEB     //
+#define SCRIPT_READ_BITS_BUFFER    0xEC     //
+#define SCRIPT_WRITE_BITS_BUFFER   0xED     //
+#define SCRIPT_WRITE_BITS_LITERAL  0xEE     //
+#define SCRIPT_READ_BYTE           0xEF     //
+#define SCRIPT_READ_BYTE_BUFFER    0xF0     //
+#define SCRIPT_WRITE_BYTE_BUFFER   0xF1     //
+#define SCRIPT_WRITE_BYTE_LITERAL  0xF2     // + 1
+#define SCRIPT_SET_ICSP_PINS       0xF3     // + 1
+#define SCRIPT_BUSY_LED_OFF        0xF4     // +
+#define SCRIPT_BUSY_LED_ON         0xF5     // +
+#define SCRIPT_MCLR_GND_OFF        0xF6     // +
+#define SCRIPT_MCLR_GND_ON         0xF7     // +
+#define SCRIPT_VPP_PWM_OFF         0xF8     // +
+#define SCRIPT_VPP_PWM_ON          0xF9     // +
+#define SCRIPT_VPP_OFF             0xFA     // +
+#define SCRIPT_VPP_ON              0xFB     // +
+#define SCRIPT_VDD_GND_OFF         0xFC     // +
+#define SCRIPT_VDD_GND_ON          0xFD     // +
+#define SCRIPT_VDD_OFF             0xFE     // +
+#define SCRIPT_VDD_ON              0xFF     // +
