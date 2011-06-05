@@ -6,6 +6,7 @@ LIBS            = -L/opt/local/lib -lusb
 
 COMMON_OBJS     = target.o
 COMMON_OBJS     += adapter-pickit2.o
+COMMON_OBJS     += adapter-mpsse.o
 
 PROG_OBJS       = pic32prog.o $(COMMON_OBJS)
 

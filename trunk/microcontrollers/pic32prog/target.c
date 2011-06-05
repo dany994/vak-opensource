@@ -95,14 +95,17 @@ target_t *target_open (int need_reset)
 
     /* Ищем адаптер. */
     t->adapter = adapter_open_pickit2 ();
+    if (! t->adapter)
+        t->adapter = adapter_open_mpsse ();
     if (! t->adapter) {
         fprintf (stderr, _("No JTAG adapter found.\n"));
         exit (-1);
     }
+
 #if 0
     /* Проверяем идентификатор процессора. */
     unsigned idcode = t->adapter->get_idcode (t->adapter);
-    if (debug_level)
+//    if (debug_level)
         fprintf (stderr, "idcode %08X\n", idcode);
 
     /* Проверяем идентификатор ARM Debug Interface v5. */
