@@ -23,7 +23,6 @@
 #include <usb.h>
 
 #include "adapter.h"
-#include "arm-jtag.h"
 
 typedef struct {
     /* Общая часть */
@@ -92,12 +91,6 @@ typedef struct {
 #define SIO_WRITE_EEPROM        0x91
 #define SIO_ERASE_EEPROM        0x92
 
-/* Биты регистра IRd */
-#define IRd_RUN                 0x20    /* 0 - step mode, 1 - run continuosly */
-#define IRd_READ                0x40    /* 0 - write, 1 - read registers */
-#define IRd_FLUSH_PIPE          0x40    /* for EnGO: instruction pipe changed */
-#define IRd_STEP_1CLK           0x80    /* for step mode: run for 1 clock only */
-
 /* Команды MPSSE. */
 #define CLKWNEG                 0x01
 #define BITMODE                 0x02
@@ -106,6 +99,20 @@ typedef struct {
 #define WTDI                    0x10
 #define RTDO                    0x20
 #define WTMS                    0x40
+
+/* Microchip TAP instructions (5-bit). */
+#define MTAP_IDCODE             0x01    /* Select chip identification register */
+#define MTAP_SW_MTAP            0x04    /* Switch to MCHP TAP controller */
+#define MTAP_SW_ETAP            0x05    /* Switch to EJTAG TAP controller */
+#define MTAP_COMMAND            0x07    /* Connect to MCHP Command Register */
+
+/* Microchip DR commands (32-bit). */
+#define MCHP_STATUS             0x00    /* No action, read status */
+#define MCHP_ASSERT_RST         0xd1    /* Assert device reset */
+#define MCHP_DEASSERT_RST       0xd0    /* Deassert device reset */
+#define MCHP_ERASE              0xfc    /* Flash chip erase */
+#define MCHP_FLASH_ENABLE       0xfe    /* Enable access to flash from cpu */
+#define MCHP_FLASH_DISABLE      0xfd    /* Disable access to flash from cpu */
 
 /*
  * Посылка пакета данных USB-устройству.
@@ -195,11 +202,11 @@ static void mpsse_send (mpsse_adapter_t *a,
     if (tdi_nbits > 0) {
         /* Если есть данные, добавляем:
          * стандартный пролог TMS 1-0-0,
-         * стандартный эпилог TMS 1. */
+         * стандартный эпилог TMS 1-0. */
         tms_prolog |= 1 << tms_prolog_nbits;
         tms_prolog_nbits += 3;
         tms_epilog = 1;
-        tms_epilog_nbits = 1;
+        tms_epilog_nbits = 2;
     }
     /* Проверяем, есть ли место в выходном буфере.
      * Максимальный размер одного пакета - 23 байта (6+8+3+3+3). */
@@ -402,6 +409,7 @@ static unsigned mpsse_get_idcode (adapter_t *adapter)
     return idcode;
 }
 
+#if 0
 /*
  * Запись регистра DP.
  */
@@ -503,6 +511,23 @@ static unsigned mpsse_mem_ap_read (adapter_t *adapter, int reg)
 }
 
 /*
+ * Аппаратный сброс процессора.
+ */
+static void mpsse_reset_cpu (adapter_t *adapter)
+{
+    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
+
+    /* Забываем невыполненную транзакцию. */
+    a->bytes_to_write = 0;
+    a->bytes_to_read = 0;
+
+    /* Активируем /SYSRST на несколько микросекунд. */
+    mpsse_reset (a, 0, 1, 1);
+    mpsse_reset (a, 0, 0, 1);
+}
+#endif
+
+/*
  * Чтение блока памяти.
  * Предварительно в регистр DP_SELECT должен быть занесён 0.
  * Количество слов не больше 10, иначе переполняется буфер USB.
@@ -510,6 +535,7 @@ static unsigned mpsse_mem_ap_read (adapter_t *adapter, int reg)
 static void mpsse_read_data (adapter_t *adapter,
     unsigned addr, unsigned nwords, unsigned *data)
 {
+#if 0
     mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
 
     /* Пишем адрес в регистр TAR. */
@@ -520,7 +546,7 @@ static void mpsse_read_data (adapter_t *adapter,
     mpsse_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
     mpsse_send (a, 0, 0, 32 + 3, (MEM_AP_DRW >> 1 & 6) | 1, 0);
     unsigned i;
-    for (i=0; i<nwords; i++) {
+0    for (i=0; i<nwords; i++) {
         mpsse_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
         mpsse_send (a, 0, 0, 32 + 3, (MEM_AP_DRW >> 1 & 6) | 1, 1);
     }
@@ -535,22 +561,7 @@ static void mpsse_read_data (adapter_t *adapter,
         adapter->stalled = ((unsigned) reply & 7) != 2;
         data[i] = reply >> 3;
     }
-}
-
-/*
- * Аппаратный сброс процессора.
- */
-static void mpsse_reset_cpu (adapter_t *adapter)
-{
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    /* Забываем невыполненную транзакцию. */
-    a->bytes_to_write = 0;
-    a->bytes_to_read = 0;
-
-    /* Активируем /SYSRST на несколько микросекунд. */
-    mpsse_reset (a, 0, 1, 1);
-    mpsse_reset (a, 0, 0, 1);
+#endif
 }
 
 /*
@@ -619,8 +630,8 @@ failed: usb_release_interface (a->usbdev, 0);
 
     /* Ровно 500 нсек между выдачами. */
     //  Was: divisor = 3, latency_timer = 1
-    unsigned divisor = 1;
-    unsigned char latency_timer = 1;
+    unsigned divisor = 3000;
+    unsigned char latency_timer = 100;
 
     if (usb_control_msg (a->usbdev,
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
@@ -650,20 +661,59 @@ failed: usb_release_interface (a->usbdev, 0);
     unsigned char enable_loopback[] = "\x85";
     bulk_write (a, enable_loopback, 1);
 
-    mpsse_reset (a, 1, 1, 1);
-    mpsse_reset (a, 0, 0, 1);
+    /* Активируем /SYSRST. */
+    mpsse_reset (a, 0, 1, 1);
+    usleep (10000);
 
     /* Reset the JTAG TAP controller. */
-    mpsse_send (a, 6, 31, 0, 0, 0);         /* TMS 1-1-1-1-1-0 */
 
+#if 1
+    mpsse_send (a, 6, 31, 0, 0, 0);             /* TMS 1-1-1-1-1-0 */
+#else
+    /* Reset the JTAG TAP controller: TMS 1-1-1-1-1-0.
+     * After reset, the IDCODE register is always selected.
+     * Read out 32 bits of data. */
+    mpsse_send (a, 6, 31, 32, 0, 1);
+    unsigned idcode = mpsse_recv (a);
+fprintf (stderr, "Idcode = %08x\n", idcode);
+
+    mpsse_send (a, 1, 1, 5, MTAP_IDCODE, 0);    /* Send command. */
+    mpsse_send (a, 0, 0, 32, MCHP_STATUS, 1);   /* Xfer data. */
+    idcode = mpsse_recv (a);
+fprintf (stderr, "Idcode = %08x\n", idcode);
+#endif
+
+
+
+    mpsse_send (a, 1, 1, 5, MTAP_SW_MTAP, 0);   /* Send command. */
+    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);   /* Send command. */
+
+    mpsse_send (a, 0, 0, 32, MCHP_STATUS, 1);   /* Xfer data. */
+    unsigned status = mpsse_recv (a);
+fprintf (stderr, "Status = %08x\n", status);
+
+    mpsse_send (a, 0, 0, 32, MCHP_STATUS, 1);   /* Xfer data. */
+    status = mpsse_recv (a);
+fprintf (stderr, "Status = %08x\n", status);
+
+
+
+#if 0
+    mpsse_send (a, 1, 1, 5, MTAP_SW_MTAP, 0);   /* Send command. */
+    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);   /* Send command. */
+
+    mpsse_send (a, 0, 0, 32, MCHP_ERASE, 0);   /* Xfer data. */
+    mpsse_send (a, 0, 0, 32, MCHP_STATUS, 1);   /* Xfer data. */
+    status = mpsse_recv (a);
+fprintf (stderr, "Status = %08x\n", status);
+    usleep (1000000);
+    mpsse_send (a, 0, 0, 32, MCHP_STATUS, 1);   /* Xfer data. */
+    status = mpsse_recv (a);
+fprintf (stderr, "Status = %08x\n", status);
+#endif
     /* Обязательные функции. */
     a->adapter.close = mpsse_close;
     a->adapter.get_idcode = mpsse_get_idcode;
-    a->adapter.reset_cpu = mpsse_reset_cpu;
-    a->adapter.dp_read = mpsse_dp_read;
-    a->adapter.dp_write = mpsse_dp_write;
-    a->adapter.mem_ap_read = mpsse_mem_ap_read;
-    a->adapter.mem_ap_write = mpsse_mem_ap_write;
     a->adapter.read_data = mpsse_read_data;
     return &a->adapter;
 }
