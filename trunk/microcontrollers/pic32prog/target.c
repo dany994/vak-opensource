@@ -23,7 +23,6 @@
 
 #include "target.h"
 #include "adapter.h"
-//#include "arm-jtag.h"
 #include "localize.h"
 
 struct _target_t {
@@ -32,6 +31,71 @@ struct _target_t {
     unsigned    cpuid;
     unsigned    flash_addr;
     unsigned    flash_bytes;
+};
+
+static const struct {
+    unsigned devid;
+    const char *name;
+    unsigned bytes;
+} pic32mx_dev[] = {
+    {0x04A07053, "110F016B",  16*1024},
+    {0x04A09053, "110F016C",  16*1024},
+    {0x04A0B053, "110F016D",  16*1024},
+    {0x04A06053, "120F032B",  32*1024},
+    {0x04A08053, "120F032C",  32*1024},
+    {0x04A0A053, "120F032D",  32*1024},
+    {0x04A01053, "210F016B",  16*1024},
+    {0x04A03053, "210F016C",  16*1024},
+    {0x04A05053, "210F016D",  16*1024},
+    {0x04A00053, "220F032B",  32*1024},
+    {0x04A02053, "220F032C",  32*1024},
+    {0x04A04053, "220F032D",  32*1024},
+    {0x00938053, "360F512L", 512*1024},
+    {0x00934053, "360F256L", 256*1024},
+    {0x0092D053, "340F128L", 128*1024},
+    {0x0092A053, "320F128L", 128*1024},
+    {0x00916053, "340F512H", 512*1024},
+    {0x00912053, "340F256H", 256*1024},
+    {0x0090D053, "340F128H", 128*1024},
+    {0x0090A053, "320F128H", 128*1024},
+    {0x00906053, "320F064H",  64*1024},
+    {0x00902053, "320F032H",  32*1024},
+    {0x00978053, "460F512L", 512*1024},
+    {0x00974053, "460F256L", 256*1024},
+    {0x0096D053, "440F128L", 128*1024},
+    {0x00952053, "440F256H", 256*1024},
+    {0x00956053, "440F512H", 512*1024},
+    {0x0094D053, "440F128H", 128*1024},
+    {0x00942053, "420F032H",  32*1024},
+    {0x04307053, "795F512L", 512*1024},
+    {0x0430E053, "795F512H", 512*1024},
+    {0x04306053, "775F512L", 512*1024},
+    {0x0430D053, "775F512H", 512*1024},
+    {0x04312053, "775F256L", 256*1024},
+    {0x04303053, "775F256H", 256*1024},
+    {0x04417053, "764F128L", 128*1024},
+    {0x0440B053, "764F128H", 128*1024},
+    {0x04341053, "695F512L", 512*1024},
+    {0x04325053, "695F512H", 512*1024},
+    {0x04311053, "675F512L", 512*1024},
+    {0x0430C053, "675F512H", 512*1024},
+    {0x04305053, "675F256L", 256*1024},
+    {0x0430B053, "675F256H", 256*1024},
+    {0x04413053, "664F128L", 128*1024},
+    {0x04407053, "664F128H", 128*1024},
+    {0x04411053, "664F064L",  64*1024},
+    {0x04405053, "664F064H",  64*1024},
+    {0x0430F053, "575F512L", 512*1024},
+    {0x04309053, "575F512H", 512*1024},
+    {0x04333053, "575F256L", 256*1024},
+    {0x04317053, "575F256H", 256*1024},
+    {0x0440F053, "564F128L", 128*1024},
+    {0x04403053, "564F128H", 128*1024},
+    {0x0440D053, "564F064L",  64*1024},
+    {0x04401053, "564F064H",  64*1024},
+    {0x04400053, "534F064H",  64*1024},
+    {0x0440C053, "534F064L",  64*1024},
+    {0}
 };
 
 #if defined (__CYGWIN32__) || defined (MINGW32)
@@ -102,46 +166,20 @@ target_t *target_open (int need_reset)
         exit (-1);
     }
 
-#if 0
     /* Проверяем идентификатор процессора. */
-    unsigned idcode = t->adapter->get_idcode (t->adapter);
-//    if (debug_level)
-        fprintf (stderr, "idcode %08X\n", idcode);
-
-    /* Проверяем идентификатор ARM Debug Interface v5. */
-    if (idcode != 0x4ba00477) {
-        /* Device not detected. */
-        if (idcode == 0xffffffff || idcode == 0)
-            fprintf (stderr, _("No response from device -- check power is on!\n"));
-        else
-            fprintf (stderr, _("No response from device -- unknown idcode 0x%08X!\n"),
-                idcode);
-        t->adapter->close (t->adapter);
-        exit (1);
+    t->cpuid = t->adapter->get_idcode (t->adapter);
+    unsigned i;
+    for (i=0; t->cpuid != pic32mx_dev[i].devid; i++) {
+        if (pic32mx_dev[i].devid == 0) {
+            /* Device not detected. */
+            fprintf (stderr, _("Unknown CPUID=%08x.\n"), t->cpuid);
+            t->adapter->close (t->adapter);
+            exit (1);
+        }
     }
-    t->adapter->reset_cpu (t->adapter);
-
-    /* Проверяем идентификатор процессора. */
-    t->cpuid = target_read_word (t, CPUID);
-    switch (t->cpuid) {
-    case 0x412fc230:    /* Миландр 1986ВМ91Т */
-        t->cpu_name = _("Microchip PIC32");
-        t->flash_addr = 0x08000000;
-        t->flash_bytes = 128*1024;
-        break;
-    default:
-        /* Device not detected. */
-        fprintf (stderr, _("Unknown CPUID=%08x.\n"), t->cpuid);
-        t->adapter->close (t->adapter);
-        exit (1);
-    }
-
-    /* Подача тактовой частоты на периферийные блоки. */
-    target_write_word (t, PER_CLOCK, 0xFFFFFFFF);
-
-    /* Запрет прерываний. */
-    target_write_word (t, ICER0, 0xFFFFFFFF);
-#endif
+    t->cpu_name = pic32mx_dev[i].name;
+    t->flash_addr = 0x1d000000;
+    t->flash_bytes = pic32mx_dev[i].bytes;
     return t;
 }
 
@@ -150,17 +188,6 @@ target_t *target_open (int need_reset)
  */
 void target_close (target_t *t)
 {
-#if 0
-    t->adapter->reset_cpu (t->adapter);
-
-    /* Пускаем процессор. */
-    target_write_word (t, DCB_DHCSR, DBGKEY);
-    t->adapter->dp_read (t->adapter, DP_CTRL_STAT);
-    t->adapter->mem_ap_write (t->adapter, MEM_AP_CSW, 0);
-    t->adapter->dp_read (t->adapter, DP_CTRL_STAT);
-
-    t->adapter->reset_cpu (t->adapter);
-#endif
     t->adapter->close (t->adapter);
 }
 
