@@ -129,7 +129,7 @@ static void pickit2_close (adapter_t *adapter)
     /* Read board status. */
     pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
     pickit2_recv (a);
-fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
+//fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
 
 //fprintf (stderr, "PICkit2: close\n");
     usb_release_interface (a->usbdev, IFACE);
@@ -142,12 +142,20 @@ fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
  */
 static unsigned pickit2_get_idcode (adapter_t *adapter)
 {
-    //pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
-    unsigned idcode = 0;
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+    unsigned idcode;
 
-    //TODO
-    //pickit2_send (a, 6, 31, 32, 0, 1);
-    //idcode = pickit2_recv (a);
+    /* Read device id. */
+    pickit2_send (a, 12, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 9,
+        SCRIPT_JT2_SENDCMD, 4,
+        SCRIPT_JT2_SENDCMD, 1,
+        SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0);
+    pickit2_send (a, 1, CMD_UPLOAD_DATA);
+    pickit2_recv (a);
+//fprintf (stderr, "PICkit2: read id, %d bytes: %02x %02x %02x %02x\n", a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
+    if (a->reply[0] != 4)
+        return 0;
+    idcode = a->reply[1] | a->reply[2] << 8 | a->reply[3] << 16 | a->reply[4] << 24;
     return idcode;
 }
 
@@ -290,7 +298,7 @@ failed: usb_release_interface (a->usbdev, IFACE);
     status = a->reply[0] | a->reply[1] << 8;
     if (debug_level > 0)
         fprintf (stderr, "PICkit2: status %04x\n", status);
-    if ((status & ~STATUS_RESET) != (STATUS_VDD_ON | STATUS_VPP_GND_ON)) {
+    if (status != (STATUS_VDD_ON | STATUS_VPP_GND_ON)) {
         fprintf (stderr, "PICkit2: invalid status = %04x.\n", status);
         goto failed;
     }
@@ -322,16 +330,6 @@ failed: usb_release_interface (a->usbdev, IFACE);
         SCRIPT_JT2_SENDCMD, 4,
         SCRIPT_JT2_SENDCMD, 7,
         SCRIPT_JT2_XFERDATA8_LIT, 0);
-
-    /* Read device id. */
-    pickit2_send (a, 12, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 9,
-        SCRIPT_JT2_SENDCMD, 4,
-        SCRIPT_JT2_SENDCMD, 1,
-        SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0);
-    pickit2_send (a, 1, CMD_UPLOAD_DATA);
-    pickit2_recv (a);
-    fprintf (stderr, "PICkit2: read id, %d bytes: %02x %02x %02x %02x\n",
-        a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
 
     /* User functions. */
     a->adapter.close = pickit2_close;
