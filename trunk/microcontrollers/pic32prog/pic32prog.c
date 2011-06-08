@@ -31,13 +31,13 @@
 
 #define VERSION         "1.0"
 #define BLOCKSZ         1024
-#define DEFAULT_ADDR    0x08000000
+#define DEFAULT_ADDR    0x1fc00000
 
 /* Macros for converting between hex and binary. */
 #define NIBBLE(x)       (isdigit(x) ? (x)-'0' : tolower(x)+10-'a')
 #define HEX(buffer)     ((NIBBLE((buffer)[0])<<4) + NIBBLE((buffer)[1]))
 
-unsigned char memory_data [0x20000];   /* Code - up to 128 kbytes */
+unsigned char memory_data [512*1024];   /* Code - up to 512 kbytes */
 int memory_len;
 unsigned memory_base;
 unsigned progress_count, progress_step;
@@ -323,7 +323,7 @@ void do_probe ()
 {
     /* Open and detect the device. */
     atexit (quit);
-    target = target_open (1);
+    target = target_open ();
     if (! target) {
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
@@ -384,7 +384,7 @@ void do_program (char *filename)
 
     /* Open and detect the device. */
     atexit (quit);
-    target = target_open (1);
+    target = target_open ();
     if (! target) {
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
@@ -423,7 +423,7 @@ void do_program (char *filename)
     target_close (target);
     free (target);
 
-    target = target_open (1);
+    target = target_open ();
     if (! target) {
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
@@ -459,7 +459,7 @@ void do_write ()
 
     /* Open and detect the device. */
     atexit (quit);
-    target = target_open (1);
+    target = target_open ();
     if (! target) {
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
@@ -493,7 +493,7 @@ void do_write ()
     target_close (target);
     free (target);
 
-    target = target_open (1);
+    target = target_open ();
     if (! target) {
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
@@ -533,7 +533,7 @@ void do_read (char *filename)
 
     /* Open and detect the device. */
     atexit (quit);
-    target = target_open (1);
+    target = target_open ();
     if (! target) {
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
@@ -571,7 +571,7 @@ void do_read (char *filename)
 
 void do_erase_block (unsigned addr)
 {
-    target = target_open (1);
+    target = target_open ();
     if (! target) {
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
@@ -642,15 +642,15 @@ int main (int argc, char **argv)
     setlocale (LC_ALL, "");
 #if defined (__CYGWIN32__) || defined (MINGW32)
     /* Files with localized messages should be placed in
-     * the current directory or in c:/Program Files/milprog. */
-    if (access ("./ru/LC_MESSAGES/milprog.mo", R_OK) == 0)
-        bindtextdomain ("milprog", ".");
+     * the current directory or in c:/Program Files/pic32prog. */
+    if (access ("./ru/LC_MESSAGES/pic32prog.mo", R_OK) == 0)
+        bindtextdomain ("pic32prog", ".");
     else
-        bindtextdomain ("milprog", "c:/Program Files/milprog");
+        bindtextdomain ("pic32prog", "c:/Program Files/pic32prog");
 #else
-    bindtextdomain ("milprog", "/usr/local/share/locale");
+    bindtextdomain ("pic32prog", "/usr/local/share/locale");
 #endif
-    textdomain ("milprog");
+    textdomain ("pic32prog");
 
     setvbuf (stdout, (char *)NULL, _IOLBF, 0);
     setvbuf (stderr, (char *)NULL, _IOLBF, 0);
@@ -696,25 +696,25 @@ int main (int argc, char **argv)
         }
 usage:
         printf ("%s.\n\n", copyright);
-        printf ("MILprog comes with ABSOLUTELY NO WARRANTY; for details\n");
+        printf ("PIC32prog comes with ABSOLUTELY NO WARRANTY; for details\n");
         printf ("use `--warranty' option. This is Open Source software. You are\n");
         printf ("welcome to redistribute it under certain conditions. Use the\n");
         printf ("'--copying' option for details.\n\n");
         printf ("Probe:\n");
-        printf ("       milprog\n");
+        printf ("       pic32prog\n");
         printf ("\nWrite flash memory:\n");
-        printf ("       milprog [-v] file.srec\n");
-        printf ("       milprog [-v] file.hex\n");
-        printf ("       milprog [-v] file.bin [address]\n");
+        printf ("       pic32prog [-v] file.srec\n");
+        printf ("       pic32prog [-v] file.hex\n");
+        printf ("       pic32prog [-v] file.bin [address]\n");
         printf ("\nWrite static memory:\n");
-        printf ("       milprog -w [-v] file.srec\n");
-        printf ("       milprog -w [-v] file.hex\n");
-        printf ("       milprog -w [-v] file.bin [address]\n");
+        printf ("       pic32prog -w [-v] file.srec\n");
+        printf ("       pic32prog -w [-v] file.hex\n");
+        printf ("       pic32prog -w [-v] file.bin [address]\n");
         printf ("\nRead memory:\n");
-        printf ("       milprog -r file.bin address length\n");
+        printf ("       pic32prog -r file.bin address length\n");
         printf ("\nArgs:\n");
         printf ("       file.srec           Code file in SREC format\n");
-        printf ("       file.hex            Code file in HEX format\n");
+        printf ("       file.hex            Code file in Intel HEX format\n");
         printf ("       file.bin            Code file in binary format\n");
         printf ("       address             Address of flash memory, default 0x%08X\n",
             DEFAULT_ADDR);
