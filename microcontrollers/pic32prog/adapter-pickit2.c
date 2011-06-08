@@ -49,23 +49,14 @@ typedef struct {
 #define IN_EP                   0x81
 
 #define IFACE                   0
-#define TIMO_MSEC               1500
+#define TIMO_MSEC               1000
 
-static void pickit2_send (pickit2_adapter_t *a, unsigned argc, ...)
+static void pickit2_send_buf (pickit2_adapter_t *a, unsigned char *buf, unsigned nbytes)
 {
-    va_list ap;
-    unsigned i;
-    unsigned char buf [64];
-
-    memset (buf, CMD_END_OF_BUFFER, 64);
-    va_start (ap, argc);
-    for (i=0; i<argc; ++i)
-        buf[i] = va_arg (ap, int);
-    va_end (ap);
     if (debug_level > 0) {
         int k;
         fprintf (stderr, "---Send");
-        for (k=0; k<i; ++k) {
+        for (k=0; k<nbytes; ++k) {
             if (k != 0 && (k & 15) == 0)
                 fprintf (stderr, "\n       ");
             fprintf (stderr, " %02x", buf[k]);
@@ -78,6 +69,20 @@ static void pickit2_send (pickit2_adapter_t *a, unsigned argc, ...)
         usb_close (a->usbdev);
         exit (-1);
     }
+}
+
+static void pickit2_send (pickit2_adapter_t *a, unsigned argc, ...)
+{
+    va_list ap;
+    unsigned i;
+    unsigned char buf [64];
+
+    memset (buf, CMD_END_OF_BUFFER, 64);
+    va_start (ap, argc);
+    for (i=0; i<argc; ++i)
+        buf[i] = va_arg (ap, int);
+    va_end (ap);
+    pickit2_send_buf (a, buf, i);
 }
 
 static void pickit2_recv (pickit2_adapter_t *a)
@@ -104,6 +109,7 @@ static void pickit2_recv (pickit2_adapter_t *a)
 static void pickit2_close (adapter_t *adapter)
 {
     pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+//fprintf (stderr, "PICkit2: close\n");
 
     /* Exit programming mode. */
     pickit2_send (a, 18, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 15,
@@ -131,7 +137,6 @@ static void pickit2_close (adapter_t *adapter)
     pickit2_recv (a);
 //fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
 
-//fprintf (stderr, "PICkit2: close\n");
     usb_release_interface (a->usbdev, IFACE);
     usb_close (a->usbdev);
     free (a);
@@ -160,39 +165,57 @@ static unsigned pickit2_get_idcode (adapter_t *adapter)
 }
 
 /*
- * Чтение блока памяти.
- * Предварительно в регистр DP_SELECT должен быть занесён 0.
- * Количество слов не больше 10, иначе переполняется буфер USB.
+ * Чтение блока памяти размером, кратным 1 килобайту.
  */
 static void pickit2_read_data (adapter_t *adapter,
     unsigned addr, unsigned nwords, unsigned *data)
 {
-    //pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+    unsigned char buf [64];
+    unsigned words_read;
+fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
+    for (words_read = 0; words_read < nwords; ) {
+        /* Download addresses for 8 script runs. */
+        unsigned i, k = 0;
+        memset (buf, CMD_END_OF_BUFFER, 64);
+        buf[k++] = CMD_CLEAR_DOWNLOAD_BUFFER;
+        buf[k++] = CMD_DOWNLOAD_DATA;
+//#define N 8
+#define N 1
+        buf[k++] = N * 4;
+        for (i = 0; i < N; i++) {
+            unsigned address = addr + words_read*4 + i*32*4;
+            buf[k++] = address;
+            buf[k++] = address >> 8;
+            buf[k++] = address >> 16;
+            buf[k++] = address >> 24;
+        }
+        pickit2_send_buf (a, buf, k);
+
+        for (k = 0; k < N; k++) {
+            /* Read progmem. */
+            pickit2_send (a, 17, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 13,
+                SCRIPT_JT2_SENDCMD, 0x0e,
+                SCRIPT_JT2_XFRFASTDAT_LIT, 0x20, 0, 1, 0,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_WAIT_PE_RESP,
+                SCRIPT_JT2_GET_PE_RESP,
+                SCRIPT_LOOP, 1, 15, //31,
+                CMD_UPLOAD_DATA_NOLEN);
+            pickit2_recv (a);
+            memcpy (data, a->reply, 64);
+            data += 64/4;
+            words_read += 64/4;
 #if 0
-    /* Пишем адрес в регистр TAR. */
-    pickit2_mem_ap_write (adapter, MEM_AP_TAR, addr);
-
-    /* Запрашиваем данные через регистр DRW.
-     * Первое чтение не выдаёт значения. */
-    pickit2_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
-    pickit2_send (a, 0, 0, 32 + 3, (MEM_AP_DRW >> 1 & 6) | 1, 0);
-    unsigned i;
-    for (i=0; i<nwords; i++) {
-        pickit2_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
-        pickit2_send (a, 0, 0, 32 + 3, (MEM_AP_DRW >> 1 & 6) | 1, 1);
-    }
-    /* Шлём пакет. */
-    pickit2_flush_output (a);
-
-    /* Извлекаем и обрабатываем данные. */
-    for (i=0; i<nwords; i++) {
-        unsigned long long reply;
-        memcpy (&reply, a->input + i*a->bytes_per_word, sizeof (reply));
-        reply = pickit2_fix_data (a, reply);
-        adapter->stalled = ((unsigned) reply & 7) != 2;
-        data[i] = reply >> 3;
-    }
+            /* Get second half of upload buffer. */
+            pickit2_send (a, 1, CMD_UPLOAD_DATA_NOLEN);
+            pickit2_recv (a);
+            memcpy (data, a->reply, 64);
+            data += 64/4;
+            words_read += 64/4;
 #endif
+        }
+    }
 }
 
 /*

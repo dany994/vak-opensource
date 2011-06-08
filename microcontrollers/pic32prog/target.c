@@ -146,7 +146,7 @@ void target_write_word (target_t *t, unsigned address, unsigned data)
 /*
  * Устанавливаем соединение с адаптером JTAG.
  */
-target_t *target_open (int need_reset)
+target_t *target_open ()
 {
     target_t *t;
 
@@ -238,22 +238,15 @@ int target_erase_block (target_t *t, unsigned addr)
 void target_read_block (target_t *t, unsigned addr,
     unsigned nwords, unsigned *data)
 {
-//fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
-    while (nwords > 0) {
-        unsigned n = 10;
-        if (n > nwords)
-            n = nwords;
+fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
+    while (nwords >= 256) {
+        unsigned n = 256;
         t->adapter->read_data (t->adapter, addr, n, data);
-        if (t->adapter->stalled) {
-            if (debug_level > 1)
-                fprintf (stderr, "MEM-AP read data <<<WAIT>>>\n");
-            continue;
-        }
         addr += n<<2;
         data += n;
         nwords -= n;
     }
-//fprintf (stderr, "    done (addr = %x)\n", addr);
+fprintf (stderr, "    done (addr = %x)\n", addr);
 }
 
 void target_write_block (target_t *t, unsigned addr,

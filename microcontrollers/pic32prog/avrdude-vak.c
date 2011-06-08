@@ -463,7 +463,7 @@ int  pickit2_paged_load(struct programmer_t * pgm, AVRPART * p, AVRMEM * mem,
             fprintf(stderr, "Failed @ pgm->spi()\n");
             pgm->err_led(pgm, ON);
             return -1;
-        }
+§        }
 
 //        fprintf(stderr, "\npaged_load @ %X, wrote: %d, read: %d bytes\n", addr_base, blockSize*4, bytes_read);
 
