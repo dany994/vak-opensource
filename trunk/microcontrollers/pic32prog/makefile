@@ -4,11 +4,9 @@ CFLAGS          = -Wall -g -I/opt/local/include -O
 LDFLAGS         = -g
 LIBS            = -L/opt/local/lib -lusb
 
-COMMON_OBJS     = target.o
-COMMON_OBJS     += adapter-pickit2.o
-COMMON_OBJS     += adapter-mpsse.o
 
-PROG_OBJS       = pic32prog.o $(COMMON_OBJS)
+PROG_OBJS       = pic32prog.o target.o executive.o \
+                  adapter-pickit2.o adapter-mpsse.o
 
 all:            pic32prog
 
