@@ -663,7 +663,7 @@ failed: usb_release_interface (a->usbdev, 0);
 
     /* Активируем /SYSRST. */
     mpsse_reset (a, 0, 1, 1);
-    usleep (10000);
+    mdelay (10);
 
     /* Reset the JTAG TAP controller. */
 
@@ -706,7 +706,7 @@ fprintf (stderr, "Status = %08x\n", status);
     mpsse_send (a, 0, 0, 32, MCHP_STATUS, 1);   /* Xfer data. */
     status = mpsse_recv (a);
 fprintf (stderr, "Status = %08x\n", status);
-    usleep (1000000);
+    mdelay (1000);
     mpsse_send (a, 0, 0, 32, MCHP_STATUS, 1);   /* Xfer data. */
     status = mpsse_recv (a);
 fprintf (stderr, "Status = %08x\n", status);

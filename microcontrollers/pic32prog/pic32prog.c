@@ -394,7 +394,7 @@ void do_program (char *filename)
 
     if (! verify_only) {
         /* Erase flash. */
-        target_erase (target, memory_base);
+        target_erase (target);
     }
     for (progress_step=1; ; progress_step<<=1) {
         progress_len = 1 + memory_len / progress_step / BLOCKSZ;
@@ -538,6 +538,7 @@ void do_read (char *filename)
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
     }
+    //target_use_executable (target);
     for (progress_step=1; ; progress_step<<=1) {
         len = 1 + memory_len / progress_step / BLOCKSZ;
         if (len < 64)

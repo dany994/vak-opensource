@@ -118,31 +118,6 @@ void mdelay (unsigned msec)
 }
 #endif
 
-unsigned target_read_word (target_t *t, unsigned address)
-{
-    unsigned value = 0;
-
-//    t->adapter->mem_ap_write (t->adapter, MEM_AP_TAR, address);
-//    value = t->adapter->mem_ap_read (t->adapter, MEM_AP_DRW);
-    if (debug_level) {
-        fprintf (stderr, "word read %08x from %08x\n",
-            value, address);
-    }
-    return value;
-}
-
-/*
- * Запись слова в память.
- */
-void target_write_word (target_t *t, unsigned address, unsigned data)
-{
-    if (debug_level) {
-        fprintf (stderr, _("word write %08x to %08x\n"), data, address);
-    }
-//    t->adapter->mem_ap_write (t->adapter, MEM_AP_TAR, address);
-//    t->adapter->mem_ap_write (t->adapter, MEM_AP_DRW, data);
-}
-
 /*
  * Устанавливаем соединение с адаптером JTAG.
  */
@@ -207,11 +182,20 @@ unsigned target_flash_bytes (target_t *t)
 }
 
 /*
- * Стирание всей flash-памяти.
+ * Use PE for reading/writing/erasing memory.
  */
-int target_erase (target_t *t, unsigned addr)
+void target_use_executable (target_t *t)
 {
-    printf (_("Erase: %08X..."), t->flash_addr);
+    if (t->adapter->load_executable != 0)
+        t->adapter->load_executable (t->adapter);
+}
+
+/*
+ * Erase all Flash memory.
+ */
+int target_erase (target_t *t)
+{
+    printf (_("Erase..."));
     fflush (stdout);
 
     // TODO
