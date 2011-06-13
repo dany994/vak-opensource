@@ -124,8 +124,8 @@
 #define SCRIPT_GOTO_INDEX          0xE4     //
 #define SCRIPT_IF_GT_GOTO          0xE5     //
 #define SCRIPT_IF_EQ_GOTO          0xE6     //
-#define SCRIPT_DELAY_SHORT         0xE7     // + 1
-#define SCRIPT_DELAY_LONG          0xE8     // + 1
+#define SCRIPT_DELAY_SHORT         0xE7     // + 1 increments of 42.7us
+#define SCRIPT_DELAY_LONG          0xE8     // + 1 increments of 5.46ms
 #define SCRIPT_LOOP                0xE9     // + 2
 #define SCRIPT_SET_ICSP_SPEED      0xEA     // + 1
 #define SCRIPT_READ_BITS           0xEB     //

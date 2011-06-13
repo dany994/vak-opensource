@@ -32,6 +32,7 @@ struct _adapter_t {
     unsigned (*get_idcode) (adapter_t *a);
     void (*load_executable) (adapter_t *a);
     void (*read_data) (adapter_t *a, unsigned addr, unsigned nwords, unsigned *data);
+    unsigned (*read_word) (adapter_t *a, unsigned addr);
 };
 
 adapter_t *adapter_open_pickit2 (void);

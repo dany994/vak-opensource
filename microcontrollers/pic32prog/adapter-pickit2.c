@@ -24,7 +24,7 @@
 #include "adapter.h"
 #include "pickit2.h"
 #include "executive.h"
-#include "pic32-jtag.h"
+#include "pic32.h"
 
 typedef struct {
     /* Общая часть */
@@ -133,7 +133,8 @@ static void serial_execution (pickit2_adapter_t *a)
     a->serial_execution_mode = 1;
 
     // Enter serial execution.
-fprintf (stderr, "PICkit2: enter serial execution\n");
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: enter serial execution\n");
     pickit2_send (a, 29, CMD_EXECUTE_SCRIPT, 27,
         SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
         SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
@@ -386,7 +387,7 @@ static void pickit2_close (adapter_t *adapter)
         SCRIPT_SET_ICSP_PINS, 6,
         SCRIPT_SET_ICSP_PINS, 2,
         SCRIPT_SET_ICSP_PINS, 3,
-        SCRIPT_DELAY_LONG, 10,
+        SCRIPT_DELAY_LONG, 10,                  // 50 msec
         SCRIPT_BUSY_LED_OFF);
 
     /* Detach power from the board. */
@@ -492,7 +493,7 @@ static void pickit2_read_data (adapter_t *adapter,
     unsigned char buf [64];
     unsigned words_read;
 
-fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
+//fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
     if (! a->use_executable) {
         /* Without PE. */
         for (; nwords > 0; nwords--) {
@@ -509,10 +510,8 @@ fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
         memset (buf, CMD_END_OF_BUFFER, 64);
         buf[k++] = CMD_CLEAR_DOWNLOAD_BUFFER;
         buf[k++] = CMD_DOWNLOAD_DATA;
-#define N 8
-//#define N 1
-        buf[k++] = N * 4;
-        for (i = 0; i < N; i++) {
+        buf[k++] = 8 * 4;
+        for (i = 0; i < 8; i++) {
             unsigned address = addr + words_read*4 + i*32*4;
             buf[k++] = address;
             buf[k++] = address >> 8;
@@ -521,7 +520,7 @@ fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
         }
         pickit2_send_buf (a, buf, k);
 
-        for (k = 0; k < N; k++) {
+        for (k = 0; k < 8; k++) {
             /* Read progmem. */
             pickit2_send (a, 17, CMD_CLEAR_UPLOAD_BUFFER,
                 CMD_EXECUTE_SCRIPT, 13,
@@ -536,14 +535,13 @@ fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
             memcpy (data, a->reply, 64);
             data += 64/4;
             words_read += 64/4;
-#if N > 4
+
             /* Get second half of upload buffer. */
             pickit2_send (a, 1, CMD_UPLOAD_DATA_NOLEN);
             pickit2_recv (a);
             memcpy (data, a->reply, 64);
             data += 64/4;
             words_read += 64/4;
-#endif
         }
     }
 }
@@ -602,7 +600,7 @@ failed: usb_release_interface (a->usbdev, IFACE);
     /* Read version of adapter. */
     pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_GET_VERSION);
     pickit2_recv (a);
-    fprintf (stderr, "PICkit2: Version %d.%d.%d\n",
+    printf ("PICkit2: Version %d.%d.%d\n",
         a->reply[0], a->reply[1], a->reply[2]);
 
     /* Detach power from the board. */
@@ -663,21 +661,20 @@ failed: usb_release_interface (a->usbdev, IFACE);
         SCRIPT_VPP_PWM_ON,
         SCRIPT_BUSY_LED_ON,
         SCRIPT_SET_ICSP_PINS, 0,
-        SCRIPT_DELAY_LONG, 20,
+        SCRIPT_DELAY_LONG, 20,                  // 100 msec
         SCRIPT_MCLR_GND_OFF,
         SCRIPT_VPP_ON,
-        SCRIPT_DELAY_SHORT, 23,
+        SCRIPT_DELAY_SHORT, 23,                 // 1 msec
         SCRIPT_VPP_OFF,
         SCRIPT_MCLR_GND_ON,
-        SCRIPT_DELAY_SHORT, 47,
+        SCRIPT_DELAY_SHORT, 47,                 // 2 msec
         SCRIPT_WRITE_BYTE_LITERAL, 0xb2,
         SCRIPT_WRITE_BYTE_LITERAL, 0xc2,
         SCRIPT_WRITE_BYTE_LITERAL, 0x12,
         SCRIPT_WRITE_BYTE_LITERAL, 0x0a,
         SCRIPT_MCLR_GND_OFF,
         SCRIPT_VPP_ON,
-//        SCRIPT_DELAY_SHORT, 235,
-        SCRIPT_DELAY_LONG, 1,
+        SCRIPT_DELAY_LONG, 2,                   // 10 msec
         SCRIPT_SET_ICSP_PINS, 2,
         SCRIPT_JT2_SETMODE, 6, 0x1f,
         SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
@@ -699,7 +696,7 @@ failed: usb_release_interface (a->usbdev, IFACE);
             SCRIPT_SET_ICSP_PINS, 6,
             SCRIPT_SET_ICSP_PINS, 2,
             SCRIPT_SET_ICSP_PINS, 3,
-            SCRIPT_DELAY_LONG, 10,
+            SCRIPT_DELAY_LONG, 10,              // 50 msec
             SCRIPT_BUSY_LED_OFF);
         goto failed;
     }
@@ -708,6 +705,7 @@ failed: usb_release_interface (a->usbdev, IFACE);
     a->adapter.close = pickit2_close;
     a->adapter.get_idcode = pickit2_get_idcode;
     a->adapter.load_executable = pickit2_load_executable;
+    a->adapter.read_word = pickit2_read_word;
     a->adapter.read_data = pickit2_read_data;
     return &a->adapter;
 }
