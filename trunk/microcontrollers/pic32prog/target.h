@@ -19,21 +19,20 @@ typedef struct _target_t target_t;
 
 target_t *target_open (void);
 void target_close (target_t *mc);
+void target_use_executable (target_t *t);
 
 unsigned target_idcode (target_t *mc);
 const char *target_cpu_name (target_t *mc);
 unsigned target_flash_width (target_t *mc);
 unsigned target_flash_bytes (target_t *mc);
 
-int target_erase (target_t *mc, unsigned addr);
+int target_erase (target_t *mc);
 int target_erase_block (target_t *t, unsigned addr);
 void target_program_block (target_t *mc, unsigned addr,
 	unsigned nwords, unsigned *data);
 
-unsigned target_read_word (target_t *mc, unsigned addr);
 void target_read_block (target_t *mc, unsigned addr,
 	unsigned nwords, unsigned *data);
 
-void target_write_word (target_t *mc, unsigned addr, unsigned word);
 void target_write_block (target_t *mc, unsigned addr,
 	unsigned nwords, unsigned *data);

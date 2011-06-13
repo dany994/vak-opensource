@@ -13,7 +13,6 @@
  * либо (по вашему желанию) любой более поздней версии. Подробности
  * смотрите в прилагаемом файле 'COPYING.txt'.
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -25,6 +24,7 @@
 #include "adapter.h"
 #include "pickit2.h"
 #include "executive.h"
+#include "pic32-jtag.h"
 
 typedef struct {
     /* Общая часть */
@@ -34,7 +34,8 @@ typedef struct {
     usb_dev_handle *usbdev;
 
     unsigned char reply [64];
-    unsigned pe_downloaded;
+    unsigned use_executable;
+    unsigned serial_execution_mode;
 
 } pickit2_adapter_t;
 
@@ -122,24 +123,43 @@ static void check_timeout (pickit2_adapter_t *a, const char *message)
     }
 }
 
-static void download_pe (pickit2_adapter_t *a)
+/*
+ * Put device to serial execution mode.
+ */
+static void serial_execution (pickit2_adapter_t *a)
 {
+    if (a->serial_execution_mode)
+        return;
+    a->serial_execution_mode = 1;
+
     // Enter serial execution.
 fprintf (stderr, "PICkit2: enter serial execution\n");
     pickit2_send (a, 29, CMD_EXECUTE_SCRIPT, 27,
-        SCRIPT_JT2_SENDCMD, 0x04,               // MTAP_SW_MTAP
-        SCRIPT_JT2_SENDCMD, 0x07,               // MTAP_COMMAND
-        SCRIPT_JT2_XFERDATA8_LIT, 0x00,         // MCHP_STATUS
-        SCRIPT_JT2_SENDCMD, 0x04,               // MTAP_SW_MTAP
-        SCRIPT_JT2_SENDCMD, 0x07,               // MTAP_COMMAND
-        SCRIPT_JT2_XFERDATA8_LIT, 0xD1,         // MCHP_ASSERT_RST
-        SCRIPT_JT2_SENDCMD, 0x05,               // MTAP_SW_ETAP
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_STATUS,
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_ASSERT_RST,
+        SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
         SCRIPT_JT2_SETMODE, 6, 0x1F,
-        SCRIPT_JT2_SENDCMD, 0x0C,               // ETAP_EJTAGBOOT
-        SCRIPT_JT2_SENDCMD, 0x04,               // MTAP_SW_MTAP
-        SCRIPT_JT2_SENDCMD, 0x07,               // MTAP_COMMAND
-        SCRIPT_JT2_XFERDATA8_LIT, 0xD0,         // MCHP_DE_ASSERT_RST
-        SCRIPT_JT2_XFERDATA8_LIT, 0xFE);        // MCHP_EN_FLASH
+        SCRIPT_JT2_SENDCMD, ETAP_EJTAGBOOT,
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_FLASH_ENABLE);
+}
+
+/*
+ * Download programming executable (PE).
+ */
+static void pickit2_load_executable (adapter_t *adapter)
+{
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+
+//fprintf (stderr, "PICkit2: load_executable\n");
+    a->use_executable = 1;
+    serial_execution (a);
 
 #define INSTRUCTION(w)  (unsigned char) (w), \
                         (unsigned char) ((w) >> 8), \
@@ -147,76 +167,80 @@ fprintf (stderr, "PICkit2: enter serial execution\n");
                         (unsigned char) ((w) >> 24)
 
 fprintf (stderr, "PICkit2: download PE loader\n");
-    pickit2_send (a, 45, CMD_CLEAR_DOWNLOAD_BUFFER, CMD_DOWNLOAD_DATA, 28,
-        INSTRUCTION (0x3c04bf88),               // step 1
-        INSTRUCTION (0x34842000),
-        INSTRUCTION (0x3c05001f),
-        INSTRUCTION (0x34a50040),
-        INSTRUCTION (0xac850000),
-        INSTRUCTION (0x34050800),               // step 2
-        INSTRUCTION (0xac850010),
+    pickit2_send (a, 45, CMD_CLEAR_DOWNLOAD_BUFFER,
+        CMD_DOWNLOAD_DATA, 28,
+            INSTRUCTION (0x3c04bf88),           // step 1
+            INSTRUCTION (0x34842000),
+            INSTRUCTION (0x3c05001f),
+            INSTRUCTION (0x34a50040),
+            INSTRUCTION (0xac850000),
+            INSTRUCTION (0x34050800),           // step 2
+            INSTRUCTION (0xac850010),
         CMD_EXECUTE_SCRIPT, 12,                 // execute
-        SCRIPT_JT2_SENDCMD, 0x05,               // MTAP_SW_ETAP
-        SCRIPT_JT2_SETMODE, 6, 0x1F,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF);
-    check_timeout (a, "1");                      // Any timeouts?
+            SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
+            SCRIPT_JT2_SETMODE, 6, 0x1F,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF);
+    check_timeout (a, "1");                     // Any timeouts?
 
-    pickit2_send (a, 30, CMD_CLEAR_DOWNLOAD_BUFFER, CMD_DOWNLOAD_DATA, 20,
-        INSTRUCTION (0x34058000),               // step 3
-        INSTRUCTION (0xac850020),
-        INSTRUCTION (0xac850030),
-        INSTRUCTION (0x3c04a000),               // step 4
-        INSTRUCTION (0x34840800),
+    pickit2_send (a, 30, CMD_CLEAR_DOWNLOAD_BUFFER,
+        CMD_DOWNLOAD_DATA, 20,
+            INSTRUCTION (0x34058000),           // step 3
+            INSTRUCTION (0xac850020),
+            INSTRUCTION (0xac850030),
+            INSTRUCTION (0x3c04a000),           // step 4
+            INSTRUCTION (0x34840800),
         CMD_EXECUTE_SCRIPT, 5,                  // execute
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF);
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF);
     check_timeout (a, "2");                      // Any timeouts?
 
     // Download the PE loader
     int i;
     for (i=0; i<PIC32_PE_LOADER_LEN; i+=2) {
-        pickit2_send (a, 25, CMD_CLEAR_DOWNLOAD_BUFFER, CMD_DOWNLOAD_DATA, 16,
-            INSTRUCTION ((0x3c060000 | pic32_pe_loader[i])),    // step 5
-            INSTRUCTION ((0x34c60000 | pic32_pe_loader[i+1])),
-            INSTRUCTION (0xac860000),
-            INSTRUCTION (0x24840004),
+        pickit2_send (a, 25, CMD_CLEAR_DOWNLOAD_BUFFER,
+            CMD_DOWNLOAD_DATA, 16,
+                INSTRUCTION ((0x3c060000 | pic32_pe_loader[i])),    // step 5
+                INSTRUCTION ((0x34c60000 | pic32_pe_loader[i+1])),
+                INSTRUCTION (0xac860000),
+                INSTRUCTION (0x24840004),
             CMD_EXECUTE_SCRIPT, 4,              // execute
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF);
-        check_timeout (a, "3");                  // Any timeouts?
+                SCRIPT_JT2_XFERINST_BUF,
+                SCRIPT_JT2_XFERINST_BUF,
+                SCRIPT_JT2_XFERINST_BUF,
+                SCRIPT_JT2_XFERINST_BUF);
+        check_timeout (a, "3");                 // Any timeouts?
     }
 
     // Jump to PE loader
-    pickit2_send (a, 42, CMD_CLEAR_DOWNLOAD_BUFFER, CMD_DOWNLOAD_DATA, 16,
-        INSTRUCTION (0x3c19a000),               // step 6
-        INSTRUCTION (0x37390800),
-        INSTRUCTION (0x03200008),
-        INSTRUCTION (0x00000000),
+    pickit2_send (a, 42, CMD_CLEAR_DOWNLOAD_BUFFER,
+        CMD_DOWNLOAD_DATA, 16,
+            INSTRUCTION (0x3c19a000),           // step 6
+            INSTRUCTION (0x37390800),
+            INSTRUCTION (0x03200008),
+            INSTRUCTION (0x00000000),
         CMD_EXECUTE_SCRIPT, 21,                 // execute
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_XFERINST_BUF,
-        SCRIPT_JT2_SENDCMD, 0x05,               // step 7-A: MTAP_SW_ETAP
-        SCRIPT_JT2_SETMODE, 6, 0x1F,
-        SCRIPT_JT2_SENDCMD, 0x0E,               // ETAP_FASTDATA
-        SCRIPT_JT2_XFRFASTDAT_LIT,
-            0, 9, 0, 0xA0,                      // PE_ADDRESS = 0xA000_0900
-        SCRIPT_JT2_XFRFASTDAT_LIT,
-            (unsigned char) PIC32_PE_LEN,       // PE_SIZE
-            (unsigned char) (PIC32_PE_LEN >> 8),
-            0, 0);
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
+            SCRIPT_JT2_SETMODE, 6, 0x1F,
+            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                0, 9, 0, 0xA0,                  // PE_ADDRESS = 0xA000_0900
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                (unsigned char) PIC32_PE_LEN,   // PE_SIZE
+                (unsigned char) (PIC32_PE_LEN >> 8),
+                0, 0);
     check_timeout (a, "4");                     // Any timeouts?
 
     // Download the PE itself (step 7-B)
@@ -224,48 +248,51 @@ fprintf (stderr, "PICkit2: download PE\n");
     int nloops = (PIC32_PE_LEN + 9) / 10;
     for (i=0; i<nloops; i++) {                  // download 10 at a time
         int j = i * 10;
-        pickit2_send (a, 55, CMD_CLEAR_DOWNLOAD_BUFFER, CMD_DOWNLOAD_DATA, 40,
-            INSTRUCTION (pic32_pe[j]),
-            INSTRUCTION (pic32_pe[j+1]),
-            INSTRUCTION (pic32_pe[j+2]),
-            INSTRUCTION (pic32_pe[j+3]),
-            INSTRUCTION (pic32_pe[j+4]),
-            INSTRUCTION (pic32_pe[j+5]),
-            INSTRUCTION (pic32_pe[j+6]),
-            INSTRUCTION (pic32_pe[j+7]),
-            INSTRUCTION (pic32_pe[j+8]),
-            INSTRUCTION (pic32_pe[j+9]),
+        pickit2_send (a, 55, CMD_CLEAR_DOWNLOAD_BUFFER,
+            CMD_DOWNLOAD_DATA, 40,
+                INSTRUCTION (pic32_pe[j]),
+                INSTRUCTION (pic32_pe[j+1]),
+                INSTRUCTION (pic32_pe[j+2]),
+                INSTRUCTION (pic32_pe[j+3]),
+                INSTRUCTION (pic32_pe[j+4]),
+                INSTRUCTION (pic32_pe[j+5]),
+                INSTRUCTION (pic32_pe[j+6]),
+                INSTRUCTION (pic32_pe[j+7]),
+                INSTRUCTION (pic32_pe[j+8]),
+                INSTRUCTION (pic32_pe[j+9]),
             CMD_EXECUTE_SCRIPT, 10,             // execute
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_JT2_XFRFASTDAT_BUF);
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_JT2_XFRFASTDAT_BUF);
         check_timeout (a, "5");                 // Any timeouts?
     }
-    usleep (100000);
+    mdelay (100);
 
     // Download the PE instructions
-    pickit2_send (a, 15, CMD_CLEAR_DOWNLOAD_BUFFER, CMD_DOWNLOAD_DATA, 8,
-        INSTRUCTION (0x00000000),               // step 8 - jump to PE
-        INSTRUCTION (0xDEAD0000),
+    pickit2_send (a, 15, CMD_CLEAR_DOWNLOAD_BUFFER,
+        CMD_DOWNLOAD_DATA, 8,
+            INSTRUCTION (0x00000000),           // step 8 - jump to PE
+            INSTRUCTION (0xDEAD0000),
         CMD_EXECUTE_SCRIPT, 2,                  // execute
-        SCRIPT_JT2_XFRFASTDAT_BUF,
-        SCRIPT_JT2_XFRFASTDAT_BUF);
+            SCRIPT_JT2_XFRFASTDAT_BUF,
+            SCRIPT_JT2_XFRFASTDAT_BUF);
     check_timeout (a, "6");                     // Any timeouts?
-    usleep (100000);
+    mdelay (100);
 
-    pickit2_send (a, 11, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 8,
-        SCRIPT_JT2_SENDCMD, 0x0E,               // ETAP_FASTDATA
-        SCRIPT_JT2_XFRFASTDAT_LIT,
-            0x00, 0x00,                         // length = 0
-            0x07, 0x00,                         // EXEC_VERSION
-        SCRIPT_JT2_GET_PE_RESP);
+    pickit2_send (a, 11, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 8,
+            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                0x00, 0x00,                     // length = 0
+                0x07, 0x00,                     // EXEC_VERSION
+            SCRIPT_JT2_GET_PE_RESP);
     check_timeout (a, "7");                     // Any timeouts?
     pickit2_send (a, 1, CMD_UPLOAD_DATA);
     pickit2_recv (a);
@@ -284,11 +311,12 @@ fprintf (stderr, "PICkit2: download PE\n");
 fprintf (stderr, "PICkit2: PE version = %04x\n", version);
 }
 
+#if 0
 int pe_blank_check (pickit2_adapter_t *a,
     unsigned int start, unsigned int nbytes)
 {
     pickit2_send (a, 21, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 18,
-        SCRIPT_JT2_SENDCMD, 0x0E,               // ETAP_FASTDATA
+        SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
         SCRIPT_JT2_XFRFASTDAT_LIT,
             0x00, 0x00,
             0x06, 0x00,                         // BLANK_CHECK
@@ -316,7 +344,7 @@ int pe_get_crc (pickit2_adapter_t *a,
     unsigned int start, unsigned int nbytes)
 {
     pickit2_send (a, 22, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 19,
-        SCRIPT_JT2_SENDCMD, 0x0E,               // ETAP_FASTDATA
+        SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
         SCRIPT_JT2_XFRFASTDAT_LIT,
             0x00, 0x00,
             0x08, 0x00,                         // GET_CRC
@@ -342,6 +370,7 @@ int pe_get_crc (pickit2_adapter_t *a,
     int crc = a->reply[5] | (a->reply[6] << 8);
     return crc;
 }
+#endif
 
 static void pickit2_close (adapter_t *adapter)
 {
@@ -389,8 +418,8 @@ static unsigned pickit2_get_idcode (adapter_t *adapter)
 
     /* Read device id. */
     pickit2_send (a, 12, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 9,
-        SCRIPT_JT2_SENDCMD, 4,
-        SCRIPT_JT2_SENDCMD, 1,
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_IDCODE,
         SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0);
     pickit2_send (a, 1, CMD_UPLOAD_DATA);
     pickit2_recv (a);
@@ -402,21 +431,78 @@ static unsigned pickit2_get_idcode (adapter_t *adapter)
 }
 
 /*
+ * Read a word from memory (without PE).
+ */
+static unsigned pickit2_read_word (adapter_t *adapter, unsigned addr)
+{
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+    serial_execution (a);
+
+    unsigned addr_lo = addr & 0xFFFF;
+    unsigned addr_hi = (addr >> 16) & 0xFFFF;
+    pickit2_send (a, 64, CMD_CLEAR_DOWNLOAD_BUFFER,
+        CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_DOWNLOAD_DATA, 28,
+            INSTRUCTION (0x3c04bf80),               // lui s3, 0xFF20
+            INSTRUCTION (0x3c080000 | addr_hi),     // lui t0, addr_hi
+            INSTRUCTION (0x35080000 | addr_lo),     // ori t0, addr_lo
+            INSTRUCTION (0x8d090000),               // lw t1, 0(t0)
+            INSTRUCTION (0xae690000),               // sw t1, 0(s3)
+            INSTRUCTION (0x00094842),               // srl t1, 1
+            INSTRUCTION (0xae690004),               // sw t1, 4(s3)
+        CMD_EXECUTE_SCRIPT, 29,
+            SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
+            SCRIPT_JT2_SETMODE, 6, 0x1F,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,      // read FastData
+            SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0,
+            SCRIPT_JT2_SETMODE, 6, 0x1F,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_XFERINST_BUF,
+            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,      // read FastData
+            SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0,
+        CMD_UPLOAD_DATA);
+    pickit2_recv (a);
+    if (a->reply[0] != 8) {
+        fprintf (stderr, "PICkit2: read word %08x: bad reply length=%u\n",
+            addr, a->reply[0]);
+        exit (-1);
+    }
+    unsigned value = a->reply[1] | (a->reply[2] << 8) |
+           (a->reply[3] << 16) | (a->reply[4] << 24);
+    unsigned value2 = a->reply[5] | (a->reply[6] << 8) |
+           (a->reply[7] << 16) | (a->reply[8] << 24);
+//fprintf (stderr, "    %08x -> %08x %08x\n", addr, value, value2);
+    value >>= 1;
+    value |= value2 & 0x80000000;
+    return value;
+}
+
+/*
  * Чтение блока памяти размером, кратным 1 килобайту.
  */
 static void pickit2_read_data (adapter_t *adapter,
     unsigned addr, unsigned nwords, unsigned *data)
 {
     pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
-    unsigned char buf [128];
+    unsigned char buf [64];
     unsigned words_read;
 
 fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
-    if (! a->pe_downloaded) {
-        download_pe (a);
-        a->pe_downloaded = 1;
+    if (! a->use_executable) {
+        /* Without PE. */
+        for (; nwords > 0; nwords--) {
+            *data++ = pickit2_read_word (adapter, addr);
+            addr += 4;
+        }
+        return;
     }
 
+    /* Use PE to read memory. */
     for (words_read = 0; words_read < nwords; ) {
         /* Download addresses for 8 script runs. */
         unsigned i, k = 0;
@@ -437,13 +523,20 @@ fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
 
         for (k = 0; k < N; k++) {
             /* Read progmem. */
-            pickit2_send (a, 5, CMD_CLEAR_UPLOAD_BUFFER, CMD_RUN_SCRIPT, 3, 1,
+            pickit2_send (a, 17, CMD_CLEAR_UPLOAD_BUFFER,
+                CMD_EXECUTE_SCRIPT, 13,
+                    SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
+                    SCRIPT_JT2_XFRFASTDAT_LIT, 0x20, 0, 1, 0,
+                    SCRIPT_JT2_XFRFASTDAT_BUF,
+                    SCRIPT_JT2_WAIT_PE_RESP,
+                    SCRIPT_JT2_GET_PE_RESP,
+                    SCRIPT_LOOP, 1, 31,
                 CMD_UPLOAD_DATA_NOLEN);
             pickit2_recv (a);
             memcpy (data, a->reply, 64);
             data += 64/4;
             words_read += 64/4;
-#if 1
+#if N > 4
             /* Get second half of upload buffer. */
             pickit2_send (a, 1, CMD_UPLOAD_DATA_NOLEN);
             pickit2_recv (a);
@@ -587,14 +680,14 @@ failed: usb_release_interface (a->usbdev, IFACE);
         SCRIPT_DELAY_LONG, 1,
         SCRIPT_SET_ICSP_PINS, 2,
         SCRIPT_JT2_SETMODE, 6, 0x1f,
-        SCRIPT_JT2_SENDCMD, 4,
-        SCRIPT_JT2_SENDCMD, 7,
-        SCRIPT_JT2_XFERDATA8_LIT, 0);
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_STATUS);
     pickit2_send (a, 1, CMD_UPLOAD_DATA);
     pickit2_recv (a);
-    if (debug_level > 0)
+    if (debug_level > 1)
         fprintf (stderr, "PICkit2: got %02x-%02x\n", a->reply[0], a->reply[1]);
-    if (! (a->reply[1] & 0x80)) {
+    if (a->reply[0] != 1 || ! (a->reply[1] & 0x80)) {
         fprintf (stderr, "Device is code protected and must be erased first.\n");
 
         /* Exit programming mode. */
@@ -610,19 +703,11 @@ failed: usb_release_interface (a->usbdev, IFACE);
             SCRIPT_BUSY_LED_OFF);
         goto failed;
     }
-#if 1
-    /* Download Script #3 - PROGMEM_RD. */
-    pickit2_send (a, 16, CMD_DOWNLOAD_SCRIPT, 3, 13,
-        SCRIPT_JT2_SENDCMD, 0x0e,
-        SCRIPT_JT2_XFRFASTDAT_LIT, 0x20, 0, 1, 0,
-        SCRIPT_JT2_XFRFASTDAT_BUF,
-        SCRIPT_JT2_WAIT_PE_RESP,
-        SCRIPT_JT2_GET_PE_RESP,
-        SCRIPT_LOOP, 1, 31);
-#endif
+
     /* User functions. */
     a->adapter.close = pickit2_close;
     a->adapter.get_idcode = pickit2_get_idcode;
+    a->adapter.load_executable = pickit2_load_executable;
     a->adapter.read_data = pickit2_read_data;
     return &a->adapter;
 }
