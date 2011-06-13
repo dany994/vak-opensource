@@ -24,6 +24,7 @@
 #include "target.h"
 #include "adapter.h"
 #include "localize.h"
+#include "pic32.h"
 
 struct _target_t {
     adapter_t   *adapter;
@@ -188,6 +189,144 @@ void target_use_executable (target_t *t)
 {
     if (t->adapter->load_executable != 0)
         t->adapter->load_executable (t->adapter);
+}
+
+void target_print_devcfg (target_t *t)
+{
+    unsigned devcfg0 = t->adapter->read_word (t->adapter, DEVCFG0_ADDR);
+    unsigned devcfg1 = t->adapter->read_word (t->adapter, DEVCFG1_ADDR);
+    unsigned devcfg2 = t->adapter->read_word (t->adapter, DEVCFG2_ADDR);
+    unsigned devcfg3 = t->adapter->read_word (t->adapter, DEVCFG3_ADDR);
+    printf (_("Configuration bits:\n"));
+
+    /*--------------------------------------
+     * Configuration register 0
+     */
+    printf ("    DEVCFG0 = %08x\n", devcfg0);
+    switch (~devcfg0 & DEVCFG0_DEBUG_MASK) {
+    case DEVCFG0_DEBUG_DISABLED:
+        printf ("                     %u Debugger disabled\n",
+            ~DEVCFG0_DEBUG_DISABLED & DEVCFG0_DEBUG_MASK);
+        break;
+    case DEVCFG0_DEBUG_ENABLED:
+        printf ("                     %u Debugger disabled\n",
+            ~DEVCFG0_DEBUG_ENABLED & DEVCFG0_DEBUG_MASK);
+        break;
+    default:
+        printf ("                     %u UNKNOWN\n",
+            ~devcfg0 & DEVCFG0_DEBUG_MASK);
+        break;
+    }
+    if (~devcfg0 & DEVCFG0_ICESEL)
+        printf ("                     %u Use PGC1/PGD1\n",
+            ~DEVCFG0_ICESEL & DEVCFG0_DEBUG_MASK);
+    else
+        printf ("                       Use PGC2/PGD2\n");
+
+    if (~devcfg0 & DEVCFG0_PWP_MASK)
+        printf ("                 %05x Program flash write protect\n",
+            ~devcfg0 & DEVCFG0_PWP_MASK);
+
+    if (~devcfg0 & DEVCFG0_BWP)
+        printf ("                       Boot flash write protect\n");
+    if (~devcfg0 & DEVCFG0_CP)
+        printf ("                       Code protect\n");
+
+    /*--------------------------------------
+     * Configuration register 1
+     */
+    printf ("    DEVCFG1 = %08x\n", devcfg1);
+    switch (devcfg1 & DEVCFG1_FNOSC_MASK) {
+    case DEVCFG1_FNOSC_FRC:
+        printf ("                     %u Fast RC oscillator\n", DEVCFG1_FNOSC_FRC);
+        break;
+    case DEVCFG1_FNOSC_FRCDIVPLL:
+        printf ("                     %u Fast RC oscillator with divide-by-N and PLL\n", DEVCFG1_FNOSC_FRCDIVPLL);
+        break;
+    case DEVCFG1_FNOSC_PRI:
+        printf ("                     %u Primary oscillator\n", DEVCFG1_FNOSC_PRI);
+        break;
+    case DEVCFG1_FNOSC_PRIPLL:
+        printf ("                     %u Primary oscillator with PLL\n", DEVCFG1_FNOSC_PRIPLL);
+        break;
+    case DEVCFG1_FNOSC_SEC:
+        printf ("                     %u Secondary oscillator\n", DEVCFG1_FNOSC_SEC);
+        break;
+    case DEVCFG1_FNOSC_LPRC:
+        printf ("                     %u Low-power RC oscillator\n", DEVCFG1_FNOSC_LPRC);
+        break;
+    case DEVCFG1_FNOSC_FRCDIV:
+        printf ("                     %u Fast RC oscillator with divide-by-N\n", DEVCFG1_FNOSC_FRCDIV);
+        break;
+    default:
+        printf ("                     %u UNKNOWN\n", devcfg1 & DEVCFG1_FNOSC_MASK);
+        break;
+    }
+    if (devcfg1 & DEVCFG1_FSOSCEN)
+        printf ("                    %u  Secondary oscillator enable\n",
+            DEVCFG1_FSOSCEN >> 4);
+    if (devcfg1 & DEVCFG1_IESO)
+        printf ("                    %u  Internal-external switch over enable\n",
+            DEVCFG1_IESO >> 4);
+
+    switch (devcfg1 & DEVCFG1_POSCMOD_MASK) {
+    case DEVCFG1_POSCMOD_EXT:
+        printf ("                   %u   Primary oscillator: External\n", DEVCFG1_POSCMOD_EXT >> 8);
+        break;
+    case DEVCFG1_POSCMOD_XT:
+        printf ("                   %u   Primary oscillator: XT\n", DEVCFG1_POSCMOD_XT >> 8);
+        break;
+    case DEVCFG1_POSCMOD_HS:
+        printf ("                   %u   Primary oscillator: HS\n", DEVCFG1_POSCMOD_HS >> 8);
+        break;
+    case DEVCFG1_POSCMOD_DISABLE:
+        printf ("                   %u   Primary oscillator: disabled\n", DEVCFG1_POSCMOD_DISABLE >> 8);
+        break;
+    }
+    if (devcfg1 & DEVCFG1_OSCIOFNC)
+        printf ("                    %u  CLKO output active\n",
+            DEVCFG1_OSCIOFNC >> 8);
+
+#define DEVCFG1_FPBDIV_MASK     0x00003000 /* Peripheral bus clock divisor */
+#define DEVCFG1_FPBDIV_1        0x00000000 /* SYSCLK / 1 */
+#define DEVCFG1_FPBDIV_2        0x00001000 /* SYSCLK / 2 */
+#define DEVCFG1_FPBDIV_4        0x00002000 /* SYSCLK / 4 */
+#define DEVCFG1_FPBDIV_8        0x00003000 /* SYSCLK / 8 */
+#define DEVCFG1_FCKM_DISABLE    0x00004000 /* Fail-safe clock monitor disable */
+#define DEVCFG1_FCKS_DISABLE    0x00008000 /* Clock switching disable */
+#define DEVCFG1_WDTPS_MASK      0x001f0000 /* Watchdog postscale */
+#define DEVCFG1_WDTPS_1         0x00000000 /* 1:1 */
+#define DEVCFG1_WDTPS_2         0x00010000 /* 1:2 */
+#define DEVCFG1_WDTPS_4         0x00020000 /* 1:4 */
+#define DEVCFG1_WDTPS_8         0x00030000 /* 1:8 */
+#define DEVCFG1_WDTPS_16        0x00040000 /* 1:16 */
+#define DEVCFG1_WDTPS_32        0x00050000 /* 1:32 */
+#define DEVCFG1_WDTPS_64        0x00060000 /* 1:64 */
+#define DEVCFG1_WDTPS_128       0x00070000 /* 1:128 */
+#define DEVCFG1_WDTPS_256       0x00080000 /* 1:256 */
+#define DEVCFG1_WDTPS_512       0x00090000 /* 1:512 */
+#define DEVCFG1_WDTPS_1024      0x000a0000 /* 1:1024 */
+#define DEVCFG1_WDTPS_2048      0x000b0000 /* 1:2048 */
+#define DEVCFG1_WDTPS_4096      0x000c0000 /* 1:4096 */
+#define DEVCFG1_WDTPS_8192      0x000d0000 /* 1:8192 */
+#define DEVCFG1_WDTPS_16384     0x000e0000 /* 1:16384 */
+#define DEVCFG1_WDTPS_32768     0x000f0000 /* 1:32768 */
+#define DEVCFG1_WDTPS_65536     0x00100000 /* 1:65536 */
+#define DEVCFG1_WDTPS_131072    0x00110000 /* 1:131072 */
+#define DEVCFG1_WDTPS_262144    0x00120000 /* 1:262144 */
+#define DEVCFG1_WDTPS_524288    0x00130000 /* 1:524288 */
+#define DEVCFG1_WDTPS_1048576   0x00140000 /* 1:1048576 */
+#define DEVCFG1_FWDTEN          0x00800000 /* Watchdog enable */
+
+    /*--------------------------------------
+     * Configuration register 2
+     */
+    printf ("    DEVCFG2 = %08x\n", devcfg2);
+
+    /*--------------------------------------
+     * Configuration register 3
+     */
+    printf ("    DEVCFG3 = %08x\n", devcfg3);
 }
 
 /*

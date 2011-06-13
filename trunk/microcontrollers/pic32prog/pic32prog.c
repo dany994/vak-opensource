@@ -331,6 +331,7 @@ void do_probe ()
     printf (_("Processor: %s (id %08X)\n"), target_cpu_name (target),
         target_idcode (target));
     printf (_("Flash memory: %d kbytes\n"), target_flash_bytes (target) / 1024);
+    target_print_devcfg (target);
 }
 
 void program_block (target_t *mc, unsigned addr, int len)
@@ -538,7 +539,7 @@ void do_read (char *filename)
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
     }
-    //target_use_executable (target);
+    target_use_executable (target);
     for (progress_step=1; ; progress_step<<=1) {
         len = 1 + memory_len / progress_step / BLOCKSZ;
         if (len < 64)
