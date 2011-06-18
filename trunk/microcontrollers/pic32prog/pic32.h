@@ -116,13 +116,13 @@
 #define DEVCFG2_FPLLIDIV_12     0x00000007 /* 12x */
 #define DEVCFG2_FPLLMUL_MASK    0x00000070 /* PLL multiplier */
 #define DEVCFG2_FPLLMUL_15      0x00000000 /* 15x */
-#define DEVCFG2_FPLLMUL_16      0x00000010 /* 15x */
-#define DEVCFG2_FPLLMUL_17      0x00000020 /* 15x */
-#define DEVCFG2_FPLLMUL_18      0x00000030 /* 15x */
-#define DEVCFG2_FPLLMUL_19      0x00000040 /* 15x */
-#define DEVCFG2_FPLLMUL_20      0x00000050 /* 15x */
-#define DEVCFG2_FPLLMUL_21      0x00000060 /* 15x */
-#define DEVCFG2_FPLLMUL_24      0x00000070 /* 15x */
+#define DEVCFG2_FPLLMUL_16      0x00000010 /* 16x */
+#define DEVCFG2_FPLLMUL_17      0x00000020 /* 17x */
+#define DEVCFG2_FPLLMUL_18      0x00000030 /* 18x */
+#define DEVCFG2_FPLLMUL_19      0x00000040 /* 19x */
+#define DEVCFG2_FPLLMUL_20      0x00000050 /* 20x */
+#define DEVCFG2_FPLLMUL_21      0x00000060 /* 21x */
+#define DEVCFG2_FPLLMUL_24      0x00000070 /* 24x */
 #define DEVCFG2_UPLLIDIV_MASK   0x00000700 /* USB PLL input divider */
 #define DEVCFG2_UPLLIDIV_1      0x00000000 /* 1x */
 #define DEVCFG2_UPLLIDIV_2      0x00000100 /* 2x */
@@ -148,7 +148,7 @@
  */
 #define DEVCFG3_USERID_MASK     0x0000ffff /* User-defined ID */
 #define DEVCFG3_FSRSSEL_MASK    0x00070000 /* SRS select */
-#define DEVCFG3_FSRSSEL_ALL     0x00000000 /* All irq prio's assigned to shadow set */
+#define DEVCFG3_FSRSSEL_ALL     0x00000000 /* All irqs assigned to shadow set */
 #define DEVCFG3_FSRSSEL_1       0x00010000 /* Assign irq priority 1 to shadow set */
 #define DEVCFG3_FSRSSEL_2       0x00020000 /* Assign irq priority 2 to shadow set */
 #define DEVCFG3_FSRSSEL_3       0x00030000 /* Assign irq priority 3 to shadow set */
@@ -156,8 +156,8 @@
 #define DEVCFG3_FSRSSEL_5       0x00050000 /* Assign irq priority 5 to shadow set */
 #define DEVCFG3_FSRSSEL_6       0x00060000 /* Assign irq priority 6 to shadow set */
 #define DEVCFG3_FSRSSEL_7       0x00070000 /* Assign irq priority 7 to shadow set */
-#define DEVCFG3_FMIIEN          0x01000000 /* Etnernet MII enable */
-#define DEVCFG3_FETHIO          0x02000000 /* Etnernet pins default */
+#define DEVCFG3_FMIIEN          0x01000000 /* Ethernet MII enable */
+#define DEVCFG3_FETHIO          0x02000000 /* Ethernet pins default */
 #define DEVCFG3_FCANIO          0x04000000 /* CAN pins default */
 #define DEVCFG3_FUSBIDIO        0x40000000 /* USBID pin: controlled by USB */
 #define DEVCFG3_FVBUSONIO       0x80000000 /* VBuson pin: controlled by USB */
