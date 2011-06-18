@@ -556,38 +556,12 @@ void target_print_devcfg (target_t *t)
 }
 
 /*
- * Erase all Flash memory.
- */
-int target_erase (target_t *t)
-{
-    printf (_("Erase..."));
-    fflush (stdout);
-
-    // TODO
-    printf (_(" done\n"));
-    return 1;
-}
-
-/*
- * Стирание одного блока памяти
- */
-int target_erase_block (target_t *t, unsigned addr)
-{
-    printf (_("Erase block: %08X..."), addr);
-    fflush (stdout);
-
-    // TODO
-    printf (_(" done\n"));
-    return 1;
-}
-
-/*
  * Чтение данных из памяти.
  */
 void target_read_block (target_t *t, unsigned addr,
     unsigned nwords, unsigned *data)
 {
-fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
+    //fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
     while (nwords >= 256) {
         unsigned n = 256;
         t->adapter->read_data (t->adapter, addr, n, data);
@@ -595,23 +569,19 @@ fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
         data += n;
         nwords -= n;
     }
-fprintf (stderr, "    done (addr = %x)\n", addr);
+    //fprintf (stderr, "    done (addr = %x)\n", addr);
 }
 
-void target_write_block (target_t *t, unsigned addr,
-    unsigned nwords, unsigned *data)
+/*
+ * Erase all Flash memory.
+ */
+int target_erase (target_t *t)
 {
-#if 0
-    unsigned i;
-
-    t->adapter->mem_ap_write (t->adapter, MEM_AP_TAR, addr);
-    for (i=0; i<nwords; i++, addr+=4, data++) {
-        if (debug_level) {
-            fprintf (stderr, _("block write %08x to %08x\n"), *data, addr);
-        }
-        t->adapter->mem_ap_write (t->adapter, MEM_AP_DRW, *data);
-    }
-#endif
+    printf (_("Erase..."));
+    fflush (stdout);
+    t->adapter->erase_chip (t->adapter);
+    printf (_(" done\n"));
+    return 1;
 }
 
 /*

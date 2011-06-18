@@ -341,13 +341,6 @@ void program_block (target_t *mc, unsigned addr, int len)
         (len + 3) / 4, (unsigned*) (memory_data + addr));
 }
 
-void write_block (target_t *mc, unsigned addr, int len)
-{
-    /* Write static memory. */
-    target_write_block (mc, memory_base + addr,
-        (len + 3) / 4, (unsigned*) (memory_data + addr));
-}
-
 int verify_block (target_t *mc, unsigned addr, int len)
 {
     int i;
@@ -448,76 +441,6 @@ void do_program (char *filename)
         memory_len * 1000L / mseconds_elapsed (t0));
 }
 
-void do_write ()
-{
-    unsigned addr;
-    int len;
-    int progress_len;
-    void *t0;
-
-    printf (_("Memory: %08X-%08X, total %d bytes\n"), memory_base,
-        memory_base + memory_len, memory_len);
-
-    /* Open and detect the device. */
-    atexit (quit);
-    target = target_open ();
-    if (! target) {
-        fprintf (stderr, _("Error detecting device -- check cable!\n"));
-        exit (1);
-    }
-    printf (_("Processor: %s\n"), target_cpu_name (target));
-
-    for (progress_step=1; ; progress_step<<=1) {
-        progress_len = 1 + memory_len / progress_step / BLOCKSZ;
-        if (progress_len < 64)
-            break;
-    }
-
-    progress_count = 0;
-    t0 = fix_time ();
-    if (! verify_only) {
-	printf (_("Write:   "));
-        print_symbols ('.', progress_len);
-        print_symbols ('\b', progress_len);
-        fflush (stdout);
-        for (addr=0; (int)addr<memory_len; addr+=BLOCKSZ) {
-            len = BLOCKSZ;
-            if (memory_len - addr < len)
-                len = memory_len - addr;
-            if (! verify_only)
-                program_block (target, addr, len);
-            progress ();
-        }
-        printf (_("# done\n"));
-    }
-
-    target_close (target);
-    free (target);
-
-    target = target_open ();
-    if (! target) {
-        fprintf (stderr, _("Error detecting device -- check cable!\n"));
-        exit (1);
-    }
-
-    printf (_("Verify:  "));
-    print_symbols ('.', progress_len);
-    print_symbols ('\b', progress_len);
-    fflush (stdout);
-
-    for (addr=0; (int)addr<memory_len; addr+=BLOCKSZ) {
-        len = BLOCKSZ;
-        if (memory_len - addr < len)
-            len = memory_len - addr;
-        progress ();
-        if (! verify_block (target, addr, len))
-            exit (0);
-    }
-    printf (_("# done\n"));
-    printf (_("Rate: %ld bytes per second\n"),
-        memory_len * 1000L / mseconds_elapsed (t0));
-}
-
 void do_read (char *filename)
 {
     FILE *fd;
@@ -571,17 +494,6 @@ void do_read (char *filename)
     fclose (fd);
 }
 
-void do_erase_block (unsigned addr)
-{
-    target = target_open ();
-    if (! target) {
-        fprintf (stderr, _("Error detecting device -- check cable!\n"));
-        exit (1);
-    }
-
-    target_erase_block (target, addr);
-}
-
 /*
  * Print copying part of license
  */
@@ -630,8 +542,7 @@ static void gpl_show_warranty (void)
 
 int main (int argc, char **argv)
 {
-    int ch, read_mode = 0, memory_write_mode = 0, erase_mode = 0;
-    unsigned erase_addr = 0;
+    int ch, read_mode = 0;
     static const struct option long_options[] = {
         { "help",        0, 0, 'h' },
         { "warranty",    0, 0, 'W' },
@@ -665,7 +576,7 @@ int main (int argc, char **argv)
 #endif
     signal (SIGTERM, interrupted);
 
-    while ((ch = getopt_long (argc, argv, "vDhrwe:CVW",
+    while ((ch = getopt_long (argc, argv, "vDhrCVW",
       long_options, 0)) != -1) {
         switch (ch) {
         case 'v':
@@ -676,13 +587,6 @@ int main (int argc, char **argv)
             continue;
         case 'r':
             ++read_mode;
-            continue;
-        case 'w':
-            ++memory_write_mode;
-            continue;
-        case 'e':
-            ++erase_mode;
-            erase_addr = strtoul (optarg, 0, 0);
             continue;
         case 'h':
             break;
@@ -708,10 +612,6 @@ usage:
         printf ("       pic32prog [-v] file.srec\n");
         printf ("       pic32prog [-v] file.hex\n");
         printf ("       pic32prog [-v] file.bin [address]\n");
-        printf ("\nWrite static memory:\n");
-        printf ("       pic32prog -w [-v] file.srec\n");
-        printf ("       pic32prog -w [-v] file.hex\n");
-        printf ("       pic32prog -w [-v] file.bin [address]\n");
         printf ("\nRead memory:\n");
         printf ("       pic32prog -r file.bin address length\n");
         printf ("\nArgs:\n");
@@ -721,7 +621,6 @@ usage:
         printf ("       address             Address of flash memory, default 0x%08X\n",
             DEFAULT_ADDR);
         printf ("       -v                  Verify only\n");
-        printf ("       -w                  Memory write mode\n");
         printf ("       -r                  Read mode\n");
         printf ("       -D                  Debug mode\n");
         printf ("       -h, --help          Print this help message\n");
@@ -737,12 +636,7 @@ usage:
 
     switch (argc) {
     case 0:
-        if (erase_mode) {
-            do_erase_block (erase_addr);
-            break;
-        } else {
-            do_probe ();
-        }
+        do_probe ();
         break;
     case 1:
         memory_len = read_srec (argv[0], memory_data);
@@ -753,18 +647,12 @@ usage:
                 memory_len = read_bin (argv[0], memory_data);
             }
         }
-        if (memory_write_mode)
-            do_write ();
-        else
-            do_program (argv[0]);
+        do_program (argv[0]);
         break;
     case 2:
         memory_base = strtoul (argv[1], 0, 0);
         memory_len = read_bin (argv[0], memory_data);
-        if (memory_write_mode)
-            do_write ();
-        else
-            do_program (argv[0]);
+        do_program (argv[0]);
         break;
     case 3:
         if (! read_mode)
