@@ -284,49 +284,275 @@ void target_print_devcfg (target_t *t)
         break;
     }
     if (devcfg1 & DEVCFG1_OSCIOFNC)
-        printf ("                    %u  CLKO output active\n",
+        printf ("                   %u   CLKO output active\n",
             DEVCFG1_OSCIOFNC >> 8);
 
-#define DEVCFG1_FPBDIV_MASK     0x00003000 /* Peripheral bus clock divisor */
-#define DEVCFG1_FPBDIV_1        0x00000000 /* SYSCLK / 1 */
-#define DEVCFG1_FPBDIV_2        0x00001000 /* SYSCLK / 2 */
-#define DEVCFG1_FPBDIV_4        0x00002000 /* SYSCLK / 4 */
-#define DEVCFG1_FPBDIV_8        0x00003000 /* SYSCLK / 8 */
-#define DEVCFG1_FCKM_DISABLE    0x00004000 /* Fail-safe clock monitor disable */
-#define DEVCFG1_FCKS_DISABLE    0x00008000 /* Clock switching disable */
-#define DEVCFG1_WDTPS_MASK      0x001f0000 /* Watchdog postscale */
-#define DEVCFG1_WDTPS_1         0x00000000 /* 1:1 */
-#define DEVCFG1_WDTPS_2         0x00010000 /* 1:2 */
-#define DEVCFG1_WDTPS_4         0x00020000 /* 1:4 */
-#define DEVCFG1_WDTPS_8         0x00030000 /* 1:8 */
-#define DEVCFG1_WDTPS_16        0x00040000 /* 1:16 */
-#define DEVCFG1_WDTPS_32        0x00050000 /* 1:32 */
-#define DEVCFG1_WDTPS_64        0x00060000 /* 1:64 */
-#define DEVCFG1_WDTPS_128       0x00070000 /* 1:128 */
-#define DEVCFG1_WDTPS_256       0x00080000 /* 1:256 */
-#define DEVCFG1_WDTPS_512       0x00090000 /* 1:512 */
-#define DEVCFG1_WDTPS_1024      0x000a0000 /* 1:1024 */
-#define DEVCFG1_WDTPS_2048      0x000b0000 /* 1:2048 */
-#define DEVCFG1_WDTPS_4096      0x000c0000 /* 1:4096 */
-#define DEVCFG1_WDTPS_8192      0x000d0000 /* 1:8192 */
-#define DEVCFG1_WDTPS_16384     0x000e0000 /* 1:16384 */
-#define DEVCFG1_WDTPS_32768     0x000f0000 /* 1:32768 */
-#define DEVCFG1_WDTPS_65536     0x00100000 /* 1:65536 */
-#define DEVCFG1_WDTPS_131072    0x00110000 /* 1:131072 */
-#define DEVCFG1_WDTPS_262144    0x00120000 /* 1:262144 */
-#define DEVCFG1_WDTPS_524288    0x00130000 /* 1:524288 */
-#define DEVCFG1_WDTPS_1048576   0x00140000 /* 1:1048576 */
-#define DEVCFG1_FWDTEN          0x00800000 /* Watchdog enable */
+    switch (devcfg1 & DEVCFG1_FPBDIV_MASK) {
+    case DEVCFG1_FPBDIV_1:
+        printf ("                  %u    Peripheral bus clock: SYSCLK / 1\n", DEVCFG1_FPBDIV_1 >> 12);
+        break;
+    case DEVCFG1_FPBDIV_2:
+        printf ("                  %u    Peripheral bus clock: SYSCLK / 2\n", DEVCFG1_FPBDIV_2 >> 12);
+        break;
+    case DEVCFG1_FPBDIV_4:
+        printf ("                  %u    Peripheral bus clock: SYSCLK / 4\n", DEVCFG1_FPBDIV_4 >> 12);
+        break;
+    case DEVCFG1_FPBDIV_8:
+        printf ("                  %u    Peripheral bus clock: SYSCLK / 8\n", DEVCFG1_FPBDIV_8 >> 12);
+        break;
+    }
+    if (devcfg1 & DEVCFG1_FCKM_DISABLE)
+        printf ("                  %u    Fail-safe clock monitor disable\n",
+            DEVCFG1_FCKM_DISABLE >> 12);
+    if (devcfg1 & DEVCFG1_FCKS_DISABLE)
+        printf ("                  %u    Clock switching disable\n",
+            DEVCFG1_FCKS_DISABLE >> 12);
+
+    switch (devcfg1 & DEVCFG1_WDTPS_MASK) {
+    case DEVCFG1_WDTPS_1:
+        printf ("                %2x     Watchdog postscale: 1/1\n", DEVCFG1_WDTPS_1 >> 16);
+        break;
+    case DEVCFG1_WDTPS_2:
+        printf ("                %2x     Watchdog postscale: 1/2\n", DEVCFG1_WDTPS_2 >> 16);
+        break;
+    case DEVCFG1_WDTPS_4:
+        printf ("                %2x     Watchdog postscale: 1/4\n", DEVCFG1_WDTPS_4 >> 16);
+        break;
+    case DEVCFG1_WDTPS_8:
+        printf ("                %2x     Watchdog postscale: 1/8\n", DEVCFG1_WDTPS_8 >> 16);
+        break;
+    case DEVCFG1_WDTPS_16:
+        printf ("                %2x     Watchdog postscale: 1/16\n", DEVCFG1_WDTPS_16 >> 16);
+        break;
+    case DEVCFG1_WDTPS_32:
+        printf ("                %2x     Watchdog postscale: 1/32\n", DEVCFG1_WDTPS_32 >> 16);
+        break;
+    case DEVCFG1_WDTPS_64:
+        printf ("                %2x     Watchdog postscale: 1/64\n", DEVCFG1_WDTPS_64 >> 16);
+        break;
+    case DEVCFG1_WDTPS_128:
+        printf ("                %2x     Watchdog postscale: 1/128\n", DEVCFG1_WDTPS_128 >> 16);
+        break;
+    case DEVCFG1_WDTPS_256:
+        printf ("                %2x     Watchdog postscale: 1/256\n", DEVCFG1_WDTPS_256 >> 16);
+        break;
+    case DEVCFG1_WDTPS_512:
+        printf ("                %2x     Watchdog postscale: 1/512\n", DEVCFG1_WDTPS_512 >> 16);
+        break;
+    case DEVCFG1_WDTPS_1024:
+        printf ("                %2x     Watchdog postscale: 1/1024\n", DEVCFG1_WDTPS_1024 >> 16);
+        break;
+    case DEVCFG1_WDTPS_2048:
+        printf ("                %2x     Watchdog postscale: 1/2048\n", DEVCFG1_WDTPS_2048 >> 16);
+        break;
+    case DEVCFG1_WDTPS_4096:
+        printf ("                %2x     Watchdog postscale: 1/4096\n", DEVCFG1_WDTPS_4096 >> 16);
+        break;
+    case DEVCFG1_WDTPS_8192:
+        printf ("                %2x     Watchdog postscale: 1/8192\n", DEVCFG1_WDTPS_8192 >> 16);
+        break;
+    case DEVCFG1_WDTPS_16384:
+        printf ("                %2x     Watchdog postscale: 1/16384\n", DEVCFG1_WDTPS_16384 >> 16);
+        break;
+    case DEVCFG1_WDTPS_32768:
+        printf ("                %2x     Watchdog postscale: 1/32768\n", DEVCFG1_WDTPS_32768 >> 16);
+        break;
+    case DEVCFG1_WDTPS_65536:
+        printf ("                %2x     Watchdog postscale: 1/65536\n", DEVCFG1_WDTPS_65536 >> 16);
+        break;
+    case DEVCFG1_WDTPS_131072:
+        printf ("                %2x     Watchdog postscale: 1/131072\n", DEVCFG1_WDTPS_131072 >> 16);
+        break;
+    case DEVCFG1_WDTPS_262144:
+        printf ("                %2x     Watchdog postscale: 1/262144\n", DEVCFG1_WDTPS_262144 >> 16);
+        break;
+    case DEVCFG1_WDTPS_524288:
+        printf ("                %2x     Watchdog postscale: 1/524288\n", DEVCFG1_WDTPS_524288 >> 16);
+        break;
+    case DEVCFG1_WDTPS_1048576:
+        printf ("                %2x     Watchdog postscale: 1/1048576\n", DEVCFG1_WDTPS_1048576 >> 16);
+        break;
+    }
+    if (devcfg1 & DEVCFG1_FWDTEN)
+        printf ("                %u      Watchdog enable\n",
+            DEVCFG1_FWDTEN >> 20);
 
     /*--------------------------------------
      * Configuration register 2
      */
     printf ("    DEVCFG2 = %08x\n", devcfg2);
+    switch (devcfg2 & DEVCFG2_FPLLIDIV_MASK) {
+    case DEVCFG2_FPLLIDIV_1:
+        printf ("                     %u PLL divider: 1/1\n", DEVCFG2_FPLLIDIV_1);
+        break;
+    case DEVCFG2_FPLLIDIV_2:
+        printf ("                     %u PLL divider: 1/2\n", DEVCFG2_FPLLIDIV_2);
+        break;
+    case DEVCFG2_FPLLIDIV_3:
+        printf ("                     %u PLL divider: 1/3\n", DEVCFG2_FPLLIDIV_3);
+        break;
+    case DEVCFG2_FPLLIDIV_4:
+        printf ("                     %u PLL divider: 1/4\n", DEVCFG2_FPLLIDIV_4);
+        break;
+    case DEVCFG2_FPLLIDIV_5:
+        printf ("                     %u PLL divider: 1/5\n", DEVCFG2_FPLLIDIV_5);
+        break;
+    case DEVCFG2_FPLLIDIV_6:
+        printf ("                     %u PLL divider: 1/6\n", DEVCFG2_FPLLIDIV_6);
+        break;
+    case DEVCFG2_FPLLIDIV_10:
+        printf ("                     %u PLL divider: 1/10\n", DEVCFG2_FPLLIDIV_10);
+        break;
+    case DEVCFG2_FPLLIDIV_12:
+        printf ("                     %u PLL divider: 1/12\n", DEVCFG2_FPLLIDIV_12);
+        break;
+    }
+    switch (devcfg2 & DEVCFG2_FPLLMUL_MASK) {
+    case DEVCFG2_FPLLMUL_15:
+        printf ("                    %u  PLL multiplier: 15x\n", DEVCFG2_FPLLMUL_15 >> 4);
+        break;
+    case DEVCFG2_FPLLMUL_16:
+        printf ("                    %u  PLL multiplier: 16x\n", DEVCFG2_FPLLMUL_16 >> 4);
+        break;
+    case DEVCFG2_FPLLMUL_17:
+        printf ("                    %u  PLL multiplier: 17x\n", DEVCFG2_FPLLMUL_17 >> 4);
+        break;
+    case DEVCFG2_FPLLMUL_18:
+        printf ("                    %u  PLL multiplier: 18x\n", DEVCFG2_FPLLMUL_18 >> 4);
+        break;
+    case DEVCFG2_FPLLMUL_19:
+        printf ("                    %u  PLL multiplier: 19x\n", DEVCFG2_FPLLMUL_19 >> 4);
+        break;
+    case DEVCFG2_FPLLMUL_20:
+        printf ("                    %u  PLL multiplier: 20x\n", DEVCFG2_FPLLMUL_20 >> 4);
+        break;
+    case DEVCFG2_FPLLMUL_21:
+        printf ("                    %u  PLL multiplier: 21x\n", DEVCFG2_FPLLMUL_21 >> 4);
+        break;
+    case DEVCFG2_FPLLMUL_24:
+        printf ("                    %u  PLL multiplier: 24x\n", DEVCFG2_FPLLMUL_24 >> 4);
+        break;
+    }
+    switch (devcfg2 & DEVCFG2_UPLLIDIV_MASK) {
+    case DEVCFG2_UPLLIDIV_1:
+        printf ("                   %u   USB PLL divider: 1/1\n", DEVCFG2_UPLLIDIV_1 >> 8);
+        break;
+    case DEVCFG2_UPLLIDIV_2:
+        printf ("                   %u   USB PLL divider: 1/2\n", DEVCFG2_UPLLIDIV_2 >> 8);
+        break;
+    case DEVCFG2_UPLLIDIV_3:
+        printf ("                   %u   USB PLL divider: 1/3\n", DEVCFG2_UPLLIDIV_3 >> 8);
+        break;
+    case DEVCFG2_UPLLIDIV_4:
+        printf ("                   %u   USB PLL divider: 1/4\n", DEVCFG2_UPLLIDIV_4 >> 8);
+        break;
+    case DEVCFG2_UPLLIDIV_5:
+        printf ("                   %u   USB PLL divider: 1/5\n", DEVCFG2_UPLLIDIV_5 >> 8);
+        break;
+    case DEVCFG2_UPLLIDIV_6:
+        printf ("                   %u   USB PLL divider: 1/6\n", DEVCFG2_UPLLIDIV_6 >> 8);
+        break;
+    case DEVCFG2_UPLLIDIV_10:
+        printf ("                   %u   USB PLL divider: 1/10\n", DEVCFG2_UPLLIDIV_10 >> 8);
+        break;
+    case DEVCFG2_UPLLIDIV_12:
+        printf ("                   %u   USB PLL divider: 1/12\n", DEVCFG2_UPLLIDIV_12 >> 8);
+        break;
+    }
+    if (devcfg2 & DEVCFG2_UPLLEN)
+        printf ("                  %u    Enable USB PLL\n",
+            DEVCFG2_UPLLEN >> 12);
+
+    switch (devcfg2 & DEVCFG2_FPLLODIV_MASK) {
+    case DEVCFG2_FPLLODIV_1:
+        printf ("                 %u     PLL postscaler: 1/1\n", DEVCFG2_FPLLODIV_1 >> 16);
+        break;
+    case DEVCFG2_FPLLODIV_2:
+        printf ("                 %u     PLL postscaler: 1/2\n", DEVCFG2_FPLLODIV_2 >> 16);
+        break;
+    case DEVCFG2_FPLLODIV_4:
+        printf ("                 %u     PLL postscaler: 1/4\n", DEVCFG2_FPLLODIV_4 >> 16);
+        break;
+    case DEVCFG2_FPLLODIV_8:
+        printf ("                 %u     PLL postscaler: 1/8\n", DEVCFG2_FPLLODIV_8 >> 16);
+        break;
+    case DEVCFG2_FPLLODIV_16:
+        printf ("                 %u     PLL postscaler: 1/16\n", DEVCFG2_FPLLODIV_16 >> 16);
+        break;
+    case DEVCFG2_FPLLODIV_32:
+        printf ("                 %u     PLL postscaler: 1/32\n", DEVCFG2_FPLLODIV_32 >> 16);
+        break;
+    case DEVCFG2_FPLLODIV_64:
+        printf ("                 %u     PLL postscaler: 1/64\n", DEVCFG2_FPLLODIV_64 >> 16);
+        break;
+    case DEVCFG2_FPLLODIV_256:
+        printf ("                 %u     PLL postscaler: 1/128\n", DEVCFG2_FPLLODIV_256 >> 16);
+        break;
+    }
 
     /*--------------------------------------
      * Configuration register 3
      */
     printf ("    DEVCFG3 = %08x\n", devcfg3);
+    if (~devcfg3 & DEVCFG3_USERID_MASK)
+        printf ("                  %04x User-defined ID\n",
+            devcfg3 & DEVCFG3_USERID_MASK);
+
+    switch (devcfg3 & DEVCFG3_FSRSSEL_MASK) {
+    case DEVCFG3_FSRSSEL_ALL:
+        printf ("                 %u     All irqs assigned to shadow set\n", DEVCFG3_FSRSSEL_ALL >> 16);
+        break;
+    case DEVCFG3_FSRSSEL_1:
+        printf ("                 %u     Assign irq priority 1 to shadow set\n", DEVCFG3_FSRSSEL_1 >> 16);
+        break;
+    case DEVCFG3_FSRSSEL_2:
+        printf ("                 %u     Assign irq priority 2 to shadow set\n", DEVCFG3_FSRSSEL_2 >> 16);
+        break;
+    case DEVCFG3_FSRSSEL_3:
+        printf ("                 %u     Assign irq priority 3 to shadow set\n", DEVCFG3_FSRSSEL_3 >> 16);
+        break;
+    case DEVCFG3_FSRSSEL_4:
+        printf ("                 %u     Assign irq priority 4 to shadow set\n", DEVCFG3_FSRSSEL_4 >> 16);
+        break;
+    case DEVCFG3_FSRSSEL_5:
+        printf ("                 %u     Assign irq priority 5 to shadow set\n", DEVCFG3_FSRSSEL_5 >> 16);
+        break;
+    case DEVCFG3_FSRSSEL_6:
+        printf ("                 %u     Assign irq priority 6 to shadow set\n", DEVCFG3_FSRSSEL_6 >> 16);
+        break;
+    case DEVCFG3_FSRSSEL_7:
+        printf ("                 %u     Assign irq priority 7 to shadow set\n", DEVCFG3_FSRSSEL_7 >> 16);
+        break;
+    }
+    if (devcfg3 & DEVCFG3_FMIIEN)
+        printf ("               %u       Ethernet MII enabled\n",
+            DEVCFG3_FMIIEN >> 24);
+    else
+        printf ("                       Ethernet RMII enabled\n");
+
+    if (devcfg3 & DEVCFG3_FETHIO)
+        printf ("               %u       Default Ethernet i/o pins\n",
+            DEVCFG3_FETHIO >> 24);
+    else
+        printf ("                       Alternate Ethernet i/o pins\n");
+
+    if (devcfg3 & DEVCFG3_FCANIO)
+        printf ("               %u       Default CAN i/o pins\n",
+            DEVCFG3_FCANIO >> 24);
+    else
+        printf ("                       Alternate CAN i/o pins\n");
+
+    if (devcfg3 & DEVCFG3_FUSBIDIO)
+        printf ("              %u        USBID pin: controlled by USB\n",
+            DEVCFG3_FUSBIDIO >> 28);
+    else
+        printf ("                       USBID pin: controlled by port\n");
+
+    if (devcfg3 & DEVCFG3_FVBUSONIO)
+        printf ("              %u        VBuson pin: controlled by USB\n",
+            DEVCFG3_FVBUSONIO >> 28);
+    else
+        printf ("                       VBuson pin: controlled by port\n");
 }
 
 /*
