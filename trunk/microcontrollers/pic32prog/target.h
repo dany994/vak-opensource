@@ -27,13 +27,9 @@ unsigned target_flash_width (target_t *t);
 unsigned target_flash_bytes (target_t *t);
 void target_print_devcfg (target_t *t);
 
-int target_erase (target_t *t);
-int target_erase_block (target_t *t, unsigned addr);
-void target_program_block (target_t *t, unsigned addr,
-	unsigned nwords, unsigned *data);
-
 void target_read_block (target_t *t, unsigned addr,
 	unsigned nwords, unsigned *data);
 
-void target_write_block (target_t *t, unsigned addr,
+int target_erase (target_t *t);
+void target_program_block (target_t *t, unsigned addr,
 	unsigned nwords, unsigned *data);

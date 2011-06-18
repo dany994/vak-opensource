@@ -547,6 +547,22 @@ static void pickit2_read_data (adapter_t *adapter,
 }
 
 /*
+ * Erase all flash memory.
+ */
+static void pickit2_erase_chip (adapter_t *adapter)
+{
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+
+    //fprintf (stderr, "PICkit2: erase chip\n");
+    pickit2_send (a, 11, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 8,
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_ERASE,
+        SCRIPT_DELAY_LONG, 74);                 // 400 msec
+    check_timeout (a, "7");                     // Any timeouts?
+}
+
+/*
  * Инициализация адаптера F2232.
  * Возвращаем указатель на структуру данных, выделяемую динамически.
  * Если адаптер не обнаружен, возвращаем 0.
@@ -707,5 +723,6 @@ failed: usb_release_interface (a->usbdev, IFACE);
     a->adapter.load_executable = pickit2_load_executable;
     a->adapter.read_word = pickit2_read_word;
     a->adapter.read_data = pickit2_read_data;
+    a->adapter.erase_chip = pickit2_erase_chip;
     return &a->adapter;
 }
