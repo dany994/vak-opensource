@@ -162,21 +162,21 @@ static void pickit2_load_executable (adapter_t *adapter)
     a->use_executable = 1;
     serial_execution (a);
 
-#define INSTRUCTION(w)  (unsigned char) (w), \
-                        (unsigned char) ((w) >> 8), \
-                        (unsigned char) ((w) >> 16), \
-                        (unsigned char) ((w) >> 24)
+#define WORD_AS_BYTES(w)  (unsigned char) (w), \
+                          (unsigned char) ((w) >> 8), \
+                          (unsigned char) ((w) >> 16), \
+                          (unsigned char) ((w) >> 24)
 
 fprintf (stderr, "PICkit2: download PE loader\n");
     pickit2_send (a, 45, CMD_CLEAR_DOWNLOAD_BUFFER,
         CMD_DOWNLOAD_DATA, 28,
-            INSTRUCTION (0x3c04bf88),           // step 1
-            INSTRUCTION (0x34842000),
-            INSTRUCTION (0x3c05001f),
-            INSTRUCTION (0x34a50040),
-            INSTRUCTION (0xac850000),
-            INSTRUCTION (0x34050800),           // step 2
-            INSTRUCTION (0xac850010),
+            WORD_AS_BYTES (0x3c04bf88),         // step 1
+            WORD_AS_BYTES (0x34842000),
+            WORD_AS_BYTES (0x3c05001f),
+            WORD_AS_BYTES (0x34a50040),
+            WORD_AS_BYTES (0xac850000),
+            WORD_AS_BYTES (0x34050800),         // step 2
+            WORD_AS_BYTES (0xac850010),
         CMD_EXECUTE_SCRIPT, 12,                 // execute
             SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
             SCRIPT_JT2_SETMODE, 6, 0x1F,
@@ -191,11 +191,11 @@ fprintf (stderr, "PICkit2: download PE loader\n");
 
     pickit2_send (a, 30, CMD_CLEAR_DOWNLOAD_BUFFER,
         CMD_DOWNLOAD_DATA, 20,
-            INSTRUCTION (0x34058000),           // step 3
-            INSTRUCTION (0xac850020),
-            INSTRUCTION (0xac850030),
-            INSTRUCTION (0x3c04a000),           // step 4
-            INSTRUCTION (0x34840800),
+            WORD_AS_BYTES (0x34058000),         // step 3
+            WORD_AS_BYTES (0xac850020),
+            WORD_AS_BYTES (0xac850030),
+            WORD_AS_BYTES (0x3c04a000),         // step 4
+            WORD_AS_BYTES (0x34840800),
         CMD_EXECUTE_SCRIPT, 5,                  // execute
             SCRIPT_JT2_XFERINST_BUF,
             SCRIPT_JT2_XFERINST_BUF,
@@ -209,10 +209,10 @@ fprintf (stderr, "PICkit2: download PE loader\n");
     for (i=0; i<PIC32_PE_LOADER_LEN; i+=2) {
         pickit2_send (a, 25, CMD_CLEAR_DOWNLOAD_BUFFER,
             CMD_DOWNLOAD_DATA, 16,
-                INSTRUCTION ((0x3c060000 | pic32_pe_loader[i])),    // step 5
-                INSTRUCTION ((0x34c60000 | pic32_pe_loader[i+1])),
-                INSTRUCTION (0xac860000),
-                INSTRUCTION (0x24840004),
+                WORD_AS_BYTES ((0x3c060000 | pic32_pe_loader[i])),  // step 5
+                WORD_AS_BYTES ((0x34c60000 | pic32_pe_loader[i+1])),
+                WORD_AS_BYTES (0xac860000),
+                WORD_AS_BYTES (0x24840004),
             CMD_EXECUTE_SCRIPT, 4,              // execute
                 SCRIPT_JT2_XFERINST_BUF,
                 SCRIPT_JT2_XFERINST_BUF,
@@ -224,10 +224,10 @@ fprintf (stderr, "PICkit2: download PE loader\n");
     // Jump to PE loader
     pickit2_send (a, 42, CMD_CLEAR_DOWNLOAD_BUFFER,
         CMD_DOWNLOAD_DATA, 16,
-            INSTRUCTION (0x3c19a000),           // step 6
-            INSTRUCTION (0x37390800),
-            INSTRUCTION (0x03200008),
-            INSTRUCTION (0x00000000),
+            WORD_AS_BYTES (0x3c19a000),         // step 6
+            WORD_AS_BYTES (0x37390800),
+            WORD_AS_BYTES (0x03200008),
+            WORD_AS_BYTES (0x00000000),
         CMD_EXECUTE_SCRIPT, 21,                 // execute
             SCRIPT_JT2_XFERINST_BUF,
             SCRIPT_JT2_XFERINST_BUF,
@@ -251,16 +251,16 @@ fprintf (stderr, "PICkit2: download PE\n");
         int j = i * 10;
         pickit2_send (a, 55, CMD_CLEAR_DOWNLOAD_BUFFER,
             CMD_DOWNLOAD_DATA, 40,
-                INSTRUCTION (pic32_pe[j]),
-                INSTRUCTION (pic32_pe[j+1]),
-                INSTRUCTION (pic32_pe[j+2]),
-                INSTRUCTION (pic32_pe[j+3]),
-                INSTRUCTION (pic32_pe[j+4]),
-                INSTRUCTION (pic32_pe[j+5]),
-                INSTRUCTION (pic32_pe[j+6]),
-                INSTRUCTION (pic32_pe[j+7]),
-                INSTRUCTION (pic32_pe[j+8]),
-                INSTRUCTION (pic32_pe[j+9]),
+                WORD_AS_BYTES (pic32_pe[j]),
+                WORD_AS_BYTES (pic32_pe[j+1]),
+                WORD_AS_BYTES (pic32_pe[j+2]),
+                WORD_AS_BYTES (pic32_pe[j+3]),
+                WORD_AS_BYTES (pic32_pe[j+4]),
+                WORD_AS_BYTES (pic32_pe[j+5]),
+                WORD_AS_BYTES (pic32_pe[j+6]),
+                WORD_AS_BYTES (pic32_pe[j+7]),
+                WORD_AS_BYTES (pic32_pe[j+8]),
+                WORD_AS_BYTES (pic32_pe[j+9]),
             CMD_EXECUTE_SCRIPT, 10,             // execute
                 SCRIPT_JT2_XFRFASTDAT_BUF,
                 SCRIPT_JT2_XFRFASTDAT_BUF,
@@ -279,8 +279,8 @@ fprintf (stderr, "PICkit2: download PE\n");
     // Download the PE instructions
     pickit2_send (a, 15, CMD_CLEAR_DOWNLOAD_BUFFER,
         CMD_DOWNLOAD_DATA, 8,
-            INSTRUCTION (0x00000000),           // step 8 - jump to PE
-            INSTRUCTION (0xDEAD0000),
+            WORD_AS_BYTES (0x00000000),         // step 8 - jump to PE
+            WORD_AS_BYTES (0xDEAD0000),
         CMD_EXECUTE_SCRIPT, 2,                  // execute
             SCRIPT_JT2_XFRFASTDAT_BUF,
             SCRIPT_JT2_XFRFASTDAT_BUF);
@@ -444,13 +444,13 @@ static unsigned pickit2_read_word (adapter_t *adapter, unsigned addr)
     pickit2_send (a, 64, CMD_CLEAR_DOWNLOAD_BUFFER,
         CMD_CLEAR_UPLOAD_BUFFER,
         CMD_DOWNLOAD_DATA, 28,
-            INSTRUCTION (0x3c04bf80),               // lui s3, 0xFF20
-            INSTRUCTION (0x3c080000 | addr_hi),     // lui t0, addr_hi
-            INSTRUCTION (0x35080000 | addr_lo),     // ori t0, addr_lo
-            INSTRUCTION (0x8d090000),               // lw t1, 0(t0)
-            INSTRUCTION (0xae690000),               // sw t1, 0(s3)
-            INSTRUCTION (0x00094842),               // srl t1, 1
-            INSTRUCTION (0xae690004),               // sw t1, 4(s3)
+            WORD_AS_BYTES (0x3c04bf80),             // lui s3, 0xFF20
+            WORD_AS_BYTES (0x3c080000 | addr_hi),   // lui t0, addr_hi
+            WORD_AS_BYTES (0x35080000 | addr_lo),   // ori t0, addr_lo
+            WORD_AS_BYTES (0x8d090000),             // lw t1, 0(t0)
+            WORD_AS_BYTES (0xae690000),             // sw t1, 0(s3)
+            WORD_AS_BYTES (0x00094842),             // srl t1, 1
+            WORD_AS_BYTES (0xae690004),             // sw t1, 4(s3)
         CMD_EXECUTE_SCRIPT, 29,
             SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
             SCRIPT_JT2_SETMODE, 6, 0x1F,
@@ -525,7 +525,8 @@ static void pickit2_read_data (adapter_t *adapter,
             pickit2_send (a, 17, CMD_CLEAR_UPLOAD_BUFFER,
                 CMD_EXECUTE_SCRIPT, 13,
                     SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
-                    SCRIPT_JT2_XFRFASTDAT_LIT, 0x20, 0, 1, 0,
+                    SCRIPT_JT2_XFRFASTDAT_LIT,
+                        0x20, 0, 1, 0,          // READ
                     SCRIPT_JT2_XFRFASTDAT_BUF,
                     SCRIPT_JT2_WAIT_PE_RESP,
                     SCRIPT_JT2_GET_PE_RESP,
@@ -543,6 +544,102 @@ static void pickit2_read_data (adapter_t *adapter,
             data += 64/4;
             words_read += 64/4;
         }
+    }
+}
+
+/*
+ * Put data to download buffer.
+ * Max 15 words (60 bytes).
+ */
+static void download_data (pickit2_adapter_t *a,
+    unsigned *data, unsigned nwords, int clear_flag)
+{
+    unsigned char buf [64];
+    unsigned i, k = 0;
+
+    memset (buf, CMD_END_OF_BUFFER, 64);
+    if (clear_flag)
+        buf[k++] = CMD_CLEAR_DOWNLOAD_BUFFER;
+    buf[k++] = CMD_DOWNLOAD_DATA;
+    buf[k++] = nwords * 4;
+    for (i=0; i<nwords; i++) {
+        unsigned word = *data++;
+        buf[k++] = word;
+        buf[k++] = word >> 8;
+        buf[k++] = word >> 16;
+        buf[k++] = word >> 24;
+    }
+    pickit2_send_buf (a, buf, k);
+}
+
+/*
+ * Flash write, 1-kbyte blocks.
+ */
+static void pickit2_program_data (adapter_t *adapter,
+    unsigned addr, unsigned nwords, unsigned *data)
+{
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+    unsigned words_written;
+
+fprintf (stderr, "PICkit2: program %d bytes at %08x\n", nwords*4, addr);
+    if (! a->use_executable) {
+        /* Without PE. */
+        fprintf (stderr, "PICkit2: slow flash write not implemented yet.\n");
+        exit (-1);
+    }
+    /* Use PE to write flash memory. */
+    unsigned nbytes = nwords * 4;
+    pickit2_send (a, 20, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 17,
+            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                0, 0, 2, 0,                     // PROGRAM
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                (unsigned char) addr,
+                (unsigned char) (addr >> 8),
+                (unsigned char) (addr >> 16),
+                (unsigned char) (addr >> 24),
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                (unsigned char) nbytes,
+                (unsigned char) (nbytes >> 8),
+                (unsigned char) (nbytes >> 16),
+                (unsigned char) (nbytes >> 24));
+
+    for (words_written = 0; words_written < nwords; ) {
+        /* Download 256 bytes of data. */
+        download_data (a, data, 15, 1);
+        download_data (a, data+15, 15, 0);
+        download_data (a, data+30, 15, 0);
+        download_data (a, data+45, 15, 0);
+
+        pickit2_send (a, 26,
+            CMD_DOWNLOAD_DATA, 4*4,
+                WORD_AS_BYTES (data[60]),
+                WORD_AS_BYTES (data[61]),
+                WORD_AS_BYTES (data[62]),
+                WORD_AS_BYTES (data[63]),
+            CMD_EXECUTE_SCRIPT, 6,              // execute
+                SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
+                SCRIPT_JT2_XFRFASTDAT_BUF,
+                SCRIPT_LOOP, 1, 63);
+
+        data += 256/4;
+        words_written += 256/4;
+    }
+    //check_timeout (a, "9");                   // Any timeouts?
+
+    pickit2_send (a, 6, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 2,
+            SCRIPT_JT2_GET_PE_RESP,
+            SCRIPT_JT2_GET_PE_RESP,
+        CMD_UPLOAD_DATA);
+    pickit2_recv (a);
+    //fprintf (stderr, "PICkit2: program PE response %u bytes: %02x...\n",
+    //  a->reply[0], a->reply[1]);
+    if (a->reply[0] != 8 || a->reply[1] != 0) { // response code 0 = success
+        fprintf (stderr, "PICkit2: failed to program flash memory at %08x\n",
+            addr);
+        exit (-1);
     }
 }
 
@@ -724,5 +821,6 @@ failed: usb_release_interface (a->usbdev, IFACE);
     a->adapter.read_word = pickit2_read_word;
     a->adapter.read_data = pickit2_read_data;
     a->adapter.erase_chip = pickit2_erase_chip;
+    a->adapter.program_data = pickit2_program_data;
     return &a->adapter;
 }

@@ -561,15 +561,17 @@ void target_print_devcfg (target_t *t)
 void target_read_block (target_t *t, unsigned addr,
     unsigned nwords, unsigned *data)
 {
-    //fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
-    while (nwords >= 256) {
-        unsigned n = 256;
-        t->adapter->read_data (t->adapter, addr, n, data);
+    fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
+    while (nwords > 0) {
+        unsigned n = nwords;
+        if (n > 256)
+            n = 256;
+        t->adapter->read_data (t->adapter, addr, 256, data);
         addr += n<<2;
         data += n;
         nwords -= n;
     }
-    //fprintf (stderr, "    done (addr = %x)\n", addr);
+    fprintf (stderr, "    done (addr = %x)\n", addr);
 }
 
 /*
@@ -585,11 +587,20 @@ int target_erase (target_t *t)
 }
 
 /*
- * Программирование одной страницы памяти (до 256 слов).
- * Страница должна быть предварительно стёрта.
+ * Write to flash memory.
  */
-void target_program_block (target_t *t, unsigned pageaddr,
+void target_program_block (target_t *t, unsigned addr,
     unsigned nwords, unsigned *data)
 {
     // TODO
+fprintf (stderr, "target_program_block (addr = %x, nwords = %d)\n", addr, nwords);
+    while (nwords > 0) {
+        unsigned n = nwords;
+        if (n > 256)
+            n = 256;
+        t->adapter->program_data (t->adapter, addr, 256, data);
+        addr += n<<2;
+        data += n;
+        nwords -= n;
+    }
 }

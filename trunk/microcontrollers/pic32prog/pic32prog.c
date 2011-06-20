@@ -346,17 +346,10 @@ int verify_block (target_t *mc, unsigned addr, int len)
     int i;
     unsigned word, expected, block [BLOCKSZ/4];
 
-//printf("memory_base+addr=0x%x;(len+3)/4=%d\n",memory_base+addr,(len+3)/4);
     target_read_block (mc, memory_base + addr, (len+3)/4, block);
-//printf("block[0]=%x\n",block[0]);
     for (i=0; i<len; i+=4) {
         expected = *(unsigned*) (memory_data + addr + i);
-//      if (expected == 0xffffffff)
-//          continue;
         word = block [i/4];
-        if (debug_level > 1)
-            printf (_("read word %08X at address %08X\n"),
-                word, addr + i + memory_base);
         if (word != expected) {
             printf (_("\nerror at address %08X: file=%08X, mem=%08X\n"),
                 addr + i + memory_base, expected, word);
@@ -390,6 +383,7 @@ void do_program (char *filename)
         /* Erase flash. */
         target_erase (target);
     }
+    target_use_executable (target);
     for (progress_step=1; ; progress_step<<=1) {
         progress_len = 1 + memory_len / progress_step / BLOCKSZ;
         if (progress_len < 64)
@@ -413,16 +407,7 @@ void do_program (char *filename)
         }
         printf (_("# done\n"));
     }
-
-    target_close (target);
-    free (target);
-
-    target = target_open ();
-    if (! target) {
-        fprintf (stderr, _("Error detecting device -- check cable!\n"));
-        exit (1);
-    }
-
+#if 1
     printf (_("Verify:  "));
     print_symbols ('.', progress_len);
     print_symbols ('\b', progress_len);
@@ -437,6 +422,7 @@ void do_program (char *filename)
             exit (0);
     }
     printf (_("# done\n"));
+#endif
     printf (_("Rate: %ld bytes per second\n"),
         memory_len * 1000L / mseconds_elapsed (t0));
 }
