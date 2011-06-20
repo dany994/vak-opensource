@@ -158,7 +158,7 @@ static void pickit2_load_executable (adapter_t *adapter)
 {
     pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
 
-//fprintf (stderr, "PICkit2: load_executable\n");
+    //fprintf (stderr, "PICkit2: load_executable\n");
     a->use_executable = 1;
     serial_execution (a);
 
@@ -167,7 +167,8 @@ static void pickit2_load_executable (adapter_t *adapter)
                           (unsigned char) ((w) >> 16), \
                           (unsigned char) ((w) >> 24)
 
-fprintf (stderr, "PICkit2: download PE loader\n");
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: download PE loader\n");
     pickit2_send (a, 45, CMD_CLEAR_DOWNLOAD_BUFFER,
         CMD_DOWNLOAD_DATA, 28,
             WORD_AS_BYTES (0x3c04bf88),         // step 1
@@ -245,7 +246,8 @@ fprintf (stderr, "PICkit2: download PE loader\n");
     check_timeout (a, "4");                     // Any timeouts?
 
     // Download the PE itself (step 7-B)
-fprintf (stderr, "PICkit2: download PE\n");
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: download PE\n");
     int nloops = (PIC32_PE_LEN + 9) / 10;
     for (i=0; i<nloops; i++) {                  // download 10 at a time
         int j = i * 10;
@@ -309,7 +311,8 @@ fprintf (stderr, "PICkit2: download PE\n");
             version, PIC32_PE_VERSION);
         exit (-1);
     }
-fprintf (stderr, "PICkit2: PE version = %04x\n", version);
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: PE version = %04x\n", version);
 }
 
 #if 0
@@ -376,7 +379,7 @@ int pe_get_crc (pickit2_adapter_t *a,
 static void pickit2_close (adapter_t *adapter)
 {
     pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
-//fprintf (stderr, "PICkit2: close\n");
+    //fprintf (stderr, "PICkit2: close\n");
 
     /* Exit programming mode. */
     pickit2_send (a, 18, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 15,
@@ -402,7 +405,7 @@ static void pickit2_close (adapter_t *adapter)
     /* Read board status. */
     pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
     pickit2_recv (a);
-//fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
+    //fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
 
     usb_release_interface (a->usbdev, IFACE);
     usb_close (a->usbdev);
@@ -424,7 +427,8 @@ static unsigned pickit2_get_idcode (adapter_t *adapter)
         SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0);
     pickit2_send (a, 1, CMD_UPLOAD_DATA);
     pickit2_recv (a);
-//fprintf (stderr, "PICkit2: read id, %d bytes: %02x %02x %02x %02x\n", a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
+    //fprintf (stderr, "PICkit2: read id, %d bytes: %02x %02x %02x %02x\n",
+    //  a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
     if (a->reply[0] != 4)
         return 0;
     idcode = a->reply[1] | a->reply[2] << 8 | a->reply[3] << 16 | a->reply[4] << 24;
@@ -493,7 +497,7 @@ static void pickit2_read_data (adapter_t *adapter,
     unsigned char buf [64];
     unsigned words_read;
 
-//fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
+    //fprintf (stderr, "PICkit2: read %d bytes from %08x\n", nwords*4, addr);
     if (! a->use_executable) {
         /* Without PE. */
         for (; nwords > 0; nwords--) {
@@ -581,7 +585,8 @@ static void pickit2_program_data (adapter_t *adapter,
     pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
     unsigned words_written;
 
-fprintf (stderr, "PICkit2: program %d bytes at %08x\n", nwords*4, addr);
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: program %d bytes at %08x\n", nwords*4, addr);
     if (! a->use_executable) {
         /* Without PE. */
         fprintf (stderr, "PICkit2: slow flash write not implemented yet.\n");
@@ -630,13 +635,13 @@ fprintf (stderr, "PICkit2: program %d bytes at %08x\n", nwords*4, addr);
 
     pickit2_send (a, 6, CMD_CLEAR_UPLOAD_BUFFER,
         CMD_EXECUTE_SCRIPT, 2,
-            SCRIPT_JT2_GET_PE_RESP,
+            SCRIPT_JT2_PE_PROG_RESP,
             SCRIPT_JT2_GET_PE_RESP,
         CMD_UPLOAD_DATA);
     pickit2_recv (a);
     //fprintf (stderr, "PICkit2: program PE response %u bytes: %02x...\n",
     //  a->reply[0], a->reply[1]);
-    if (a->reply[0] != 8 || a->reply[1] != 0) { // response code 0 = success
+    if (a->reply[0] != 4 || a->reply[1] != 0) { // response code 0 = success
         fprintf (stderr, "PICkit2: failed to program flash memory at %08x\n",
             addr);
         exit (-1);
