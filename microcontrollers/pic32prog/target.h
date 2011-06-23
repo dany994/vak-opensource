@@ -33,3 +33,4 @@ void target_read_block (target_t *t, unsigned addr,
 int target_erase (target_t *t);
 void target_program_block (target_t *t, unsigned addr,
 	unsigned nwords, unsigned *data);
+void target_program_word (target_t *t, unsigned addr, unsigned data);
