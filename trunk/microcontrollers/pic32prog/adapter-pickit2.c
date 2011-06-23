@@ -577,12 +577,22 @@ static void download_data (pickit2_adapter_t *a,
 }
 
 /*
+ * Flash write, one word.
+ */
+static void pickit2_program_word (adapter_t *adapter,
+    unsigned addr, unsigned word)
+{
+    // TODO
+}
+
+/*
  * Flash write, 1-kbyte blocks.
  */
-static void pickit2_program_data (adapter_t *adapter,
-    unsigned addr, unsigned nwords, unsigned *data)
+static void pickit2_program_block (adapter_t *adapter,
+    unsigned addr, unsigned *data)
 {
     pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+    unsigned nwords = 256;
     unsigned words_written;
 
     if (debug_level > 0)
@@ -826,6 +836,7 @@ failed: usb_release_interface (a->usbdev, IFACE);
     a->adapter.read_word = pickit2_read_word;
     a->adapter.read_data = pickit2_read_data;
     a->adapter.erase_chip = pickit2_erase_chip;
-    a->adapter.program_data = pickit2_program_data;
+    a->adapter.program_block = pickit2_program_block;
+    a->adapter.program_word = pickit2_program_word;
     return &a->adapter;
 }

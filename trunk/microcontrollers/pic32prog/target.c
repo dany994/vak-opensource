@@ -597,9 +597,18 @@ void target_program_block (target_t *t, unsigned addr,
         unsigned n = nwords;
         if (n > 256)
             n = 256;
-        t->adapter->program_data (t->adapter, addr, 256, data);
+        t->adapter->program_block (t->adapter, addr, data);
         addr += n<<2;
         data += n;
         nwords -= n;
     }
+}
+
+/*
+ * Write one word.
+ */
+void target_program_word (target_t *t, unsigned addr, unsigned word)
+{
+    fprintf (stderr, "target_program_word (%08x) = %08x\n", addr, word);
+    t->adapter->program_word (t->adapter, addr, word);
 }

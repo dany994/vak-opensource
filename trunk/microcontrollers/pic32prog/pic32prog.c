@@ -31,16 +31,26 @@
 
 #define VERSION         "1.0"
 #define BLOCKSZ         1024
-#define DEFAULT_ADDR    0x1fc00000
+#define FLASH_BASE      0x9d000000
+#define BOOT_BASE       0xbfc00000
+#define CONFIG_BASE     0xbfc02ff0
+#define FLASH_KBYTES    512
+#define BOOT_KBYTES     12
+#define FLASH_SIZE      (FLASH_KBYTES * 1024)
+#define BOOT_SIZE       (BOOT_KBYTES * 1024)
 
 /* Macros for converting between hex and binary. */
 #define NIBBLE(x)       (isdigit(x) ? (x)-'0' : tolower(x)+10-'a')
 #define HEX(buffer)     ((NIBBLE((buffer)[0])<<4) + NIBBLE((buffer)[1]))
 
-unsigned char memory_data [512*1024];   /* Code - up to 512 kbytes */
-int memory_len;
-unsigned memory_base;
-unsigned progress_count, progress_step;
+/* Data to write */
+unsigned char boot_data [BOOT_SIZE];
+unsigned char flash_data [FLASH_SIZE];
+unsigned char boot_dirty [BOOT_KBYTES];
+unsigned char flash_dirty [FLASH_KBYTES];
+int total_bytes;
+
+unsigned progress_count;
 int verify_only;
 int debug_level;
 target_t *target;
@@ -68,60 +78,58 @@ unsigned mseconds_elapsed (void *arg)
     return mseconds;
 }
 
-/*
- * Read binary file.
- */
-int read_bin (char *filename, unsigned char *output)
+void store_data (unsigned address, unsigned byte)
 {
-    FILE *fd;
-    int output_len;
+    unsigned offset;
 
-    fd = fopen (filename, "rb");
-    if (! fd) {
-        perror (filename);
+    if (address >= BOOT_BASE && address < BOOT_BASE + BOOT_SIZE) {
+        /* Boot code. */
+        offset = address - BOOT_BASE;
+        boot_data [offset] = byte;
+        if (address < CONFIG_BASE)
+            boot_dirty [offset / 1024] = 1;
+
+    } else if (address >= FLASH_BASE && address < FLASH_BASE + FLASH_SIZE) {
+        /* Main flash memory. */
+        offset = address - FLASH_BASE;
+        flash_data [offset] = byte;
+        flash_dirty [offset / 1024] = 1;
+    } else {
+        fprintf (stderr, _("%08X: address out of flash memory\n"), address);
         exit (1);
     }
-    output_len = fread (output, 1, sizeof (memory_data), fd);
-    fclose (fd);
-    if (output_len < 0) {
-        fprintf (stderr, _("%s: read error\n"), filename);
-        exit (1);
-    }
-    return output_len;
+    total_bytes++;
 }
 
 /*
  * Read the S record file.
  */
-int read_srec (char *filename, unsigned char *output)
+int read_srec (char *filename)
 {
     FILE *fd;
     unsigned char buf [256];
     unsigned char *data;
     unsigned address;
-    int bytes, output_len;
+    int bytes;
 
     fd = fopen (filename, "r");
     if (! fd) {
         perror (filename);
         exit (1);
     }
-    output_len = 0;
     while (fgets ((char*) buf, sizeof(buf), fd)) {
         if (buf[0] == '\n')
             continue;
         if (buf[0] != 'S') {
-            if (output_len == 0)
-                break;
-            fprintf (stderr, _("%s: bad SREC file format\n"), filename);
-            exit (1);
+            fclose (fd);
+            return 0;
         }
         if (buf[1] == '7' || buf[1] == '8' || buf[1] == '9')
             break;
 
         /* Starting an S-record.  */
         if (! isxdigit (buf[2]) || ! isxdigit (buf[3])) {
-            fprintf (stderr, _("%s: bad record: %s\n"), filename, buf);
+            fprintf (stderr, _("%s: bad SREC record: %s\n"), filename, buf);
             exit (1);
         }
         bytes = HEX (buf + 2);
@@ -149,65 +157,45 @@ int read_srec (char *filename, unsigned char *output)
             data += 2;
             bytes -= 2;
 
-            if (! memory_base) {
-                /* Автоматическое определение базового адреса. */
-                memory_base = address;
-            }
-            if (address < memory_base) {
-                fprintf (stderr, _("%s: incorrect address %08X, must be %08X or greater\n"),
-                    filename, address, memory_base);
-                exit (1);
-            }
-            address -= memory_base;
-            if (address+bytes > sizeof (memory_data)) {
-                fprintf (stderr, _("%s: address too large: %08X + %08X\n"),
-                    filename, address + memory_base, bytes);
-                exit (1);
-            }
             while (bytes-- > 0) {
-                output[address++] = HEX (data);
+                store_data (address++, HEX (data));
                 data += 2;
             }
-            if (output_len < (int) address)
-                output_len = address;
             break;
         }
     }
     fclose (fd);
-    return output_len;
+    return 1;
 }
 
 /*
  * Read HEX file.
  */
-int read_hex (char *filename, unsigned char *output)
+int read_hex (char *filename)
 {
     FILE *fd;
     unsigned char buf [256], data[16], record_type, sum;
     unsigned address, high;
-    int bytes, output_len, i;
+    int bytes, i;
 
     fd = fopen (filename, "r");
     if (! fd) {
         perror (filename);
         exit (1);
     }
-    output_len = 0;
     high = 0;
     while (fgets ((char*) buf, sizeof(buf), fd)) {
         if (buf[0] == '\n')
             continue;
         if (buf[0] != ':') {
-            if (output_len == 0)
-                break;
-            fprintf (stderr, _("%s: bad HEX file format\n"), filename);
-            exit (1);
+            fclose (fd);
+            return 0;
         }
         if (! isxdigit (buf[1]) || ! isxdigit (buf[2]) ||
             ! isxdigit (buf[3]) || ! isxdigit (buf[4]) ||
             ! isxdigit (buf[5]) || ! isxdigit (buf[6]) ||
             ! isxdigit (buf[7]) || ! isxdigit (buf[8])) {
-            fprintf (stderr, _("%s: bad record: %s\n"), filename, buf);
+            fprintf (stderr, _("%s: bad HEX record: %s\n"), filename, buf);
             exit (1);
         }
 	record_type = HEX (buf+7);
@@ -242,14 +230,14 @@ int read_hex (char *filename, unsigned char *output)
 	}
 	sum += record_type + bytes + (address & 0xff) + (address >> 8 & 0xff);
 	if (sum != (unsigned char) - HEX (buf+9 + bytes + bytes)) {
-            fprintf (stderr, _("%s: bad hex checksum\n"), filename);
+            fprintf (stderr, _("%s: bad HEX checksum\n"), filename);
             exit (1);
         }
 
 	if (record_type == 4) {
 	    /* Extended address. */
             if (bytes != 2) {
-                fprintf (stderr, _("%s: invalid hex linear address record length\n"),
+                fprintf (stderr, _("%s: invalid HEX linear address record length\n"),
                     filename);
                 exit (1);
             }
@@ -257,35 +245,17 @@ int read_hex (char *filename, unsigned char *output)
 	    continue;
 	}
 	if (record_type != 0) {
-            fprintf (stderr, _("%s: unknown hex record type: %d\n"),
+            fprintf (stderr, _("%s: unknown HEX record type: %d\n"),
                 filename, record_type);
             exit (1);
         }
 
-        /* Data record found. */
-        if (! memory_base) {
-            /* Автоматическое определение базового адреса. */
-            memory_base = address;
-        }
-        if (address < memory_base) {
-            fprintf (stderr, _("%s: incorrect address %08X, must be %08X or greater\n"),
-                filename, address, memory_base);
-            exit (1);
-        }
-        address -= memory_base;
-        if (address+bytes > sizeof (memory_data)) {
-            fprintf (stderr, _("%s: address too large: %08X + %08X\n"),
-                filename, address + memory_base, bytes);
-            exit (1);
-        }
         for (i=0; i<bytes; i++) {
-            output[address++] = data [i];
+            store_data (address++, data [i]);
         }
-        if (output_len < (int) address)
-            output_len = address;
     }
     fclose (fd);
-    return output_len;
+    return 1;
 }
 
 void print_symbols (char symbol, int cnt)
@@ -294,10 +264,10 @@ void print_symbols (char symbol, int cnt)
         putchar (symbol);
 }
 
-void progress ()
+void progress (unsigned step)
 {
     ++progress_count;
-    if (progress_count % progress_step == 0) {
+    if (progress_count % step == 0) {
         putchar ('#');
         fflush (stdout);
     }
@@ -334,25 +304,43 @@ void do_probe ()
     target_print_devcfg (target);
 }
 
-void program_block (target_t *mc, unsigned addr, int len)
+/*
+ * Write flash memory.
+ */
+void program_block (target_t *mc, unsigned addr)
 {
-    /* Write flash memory. */
-    target_program_block (mc, memory_base + addr,
-        (len + 3) / 4, (unsigned*) (memory_data + addr));
+    unsigned char *data = (addr >= BOOT_BASE &&
+        addr < BOOT_BASE + BOOT_SIZE) ? boot_data : flash_data;
+
+    target_program_block (mc, addr, BLOCKSZ/4, (unsigned*) (data + addr));
 }
 
-int verify_block (target_t *mc, unsigned addr, int len)
+/*
+ * Write chip configuration.
+ */
+void program_config (target_t *mc, unsigned devcfg3, unsigned devcfg2,
+    unsigned devcfg1, unsigned devcfg0)
+{
+    target_program_word (mc, BOOT_BASE + BOOT_SIZE - 16, devcfg3);
+    target_program_word (mc, BOOT_BASE + BOOT_SIZE - 12, devcfg2);
+    target_program_word (mc, BOOT_BASE + BOOT_SIZE - 8, devcfg1);
+    target_program_word (mc, BOOT_BASE + BOOT_SIZE - 4, devcfg0);
+}
+
+int verify_block (target_t *mc, unsigned addr)
 {
     int i;
     unsigned word, expected, block [BLOCKSZ/4];
+    unsigned char *data = (addr >= BOOT_BASE &&
+        addr < BOOT_BASE + BOOT_SIZE) ? boot_data : flash_data;
 
-    target_read_block (mc, memory_base + addr, (len+3)/4, block);
-    for (i=0; i<len; i+=4) {
-        expected = *(unsigned*) (memory_data + addr + i);
+    target_read_block (mc, addr, BLOCKSZ/4, block);
+    for (i=0; i<BLOCKSZ; i+=4) {
+        expected = *(unsigned*) (data + addr + i);
         word = block [i/4];
         if (word != expected) {
             printf (_("\nerror at address %08X: file=%08X, mem=%08X\n"),
-                addr + i + memory_base, expected, word);
+                addr + i, expected, word);
             exit (1);
         }
     }
@@ -362,12 +350,10 @@ int verify_block (target_t *mc, unsigned addr, int len)
 void do_program (char *filename)
 {
     unsigned addr;
-    int len;
-    int progress_len;
+    int progress_len, progress_step;
     void *t0;
 
-    printf (_("Memory: %08X-%08X, total %d bytes\n"), memory_base,
-        memory_base + memory_len, memory_len);
+    printf (_("Memory: total %d bytes\n"), total_bytes);
 
     /* Open and detect the device. */
     atexit (quit);
@@ -385,7 +371,7 @@ void do_program (char *filename)
     }
     target_use_executable (target);
     for (progress_step=1; ; progress_step<<=1) {
-        progress_len = 1 + memory_len / progress_step / BLOCKSZ;
+        progress_len = 1 + total_bytes / progress_step / BLOCKSZ;
         if (progress_len < 64)
             break;
     }
@@ -393,44 +379,71 @@ void do_program (char *filename)
     progress_count = 0;
     t0 = fix_time ();
     if (! verify_only) {
-	printf (_("Program: "));
+	printf (_("Program flash: "));
         print_symbols ('.', progress_len);
         print_symbols ('\b', progress_len);
         fflush (stdout);
-        for (addr=0; (int)addr<memory_len; addr+=BLOCKSZ) {
-            len = BLOCKSZ;
-            if (memory_len - addr < len)
-                len = memory_len - addr;
-            if (! verify_only)
-                program_block (target, addr, len);
-            progress ();
+        for (addr=FLASH_BASE; addr-FLASH_BASE<FLASH_SIZE; addr+=BLOCKSZ) {
+            if (flash_dirty [(addr-FLASH_BASE) / 1024]) {
+                program_block (target, addr);
+                progress (progress_step);
+            }
         }
         printf (_("# done\n"));
+	printf (_("Program boot: "));
+        print_symbols ('.', progress_len);
+        print_symbols ('\b', progress_len);
+        fflush (stdout);
+        for (addr=BOOT_BASE; addr-BOOT_BASE<BOOT_SIZE; addr+=BLOCKSZ) {
+            if (boot_dirty [(addr-BOOT_BASE) / 1024]) {
+                program_block (target, addr);
+                progress (1);
+            }
+        }
+        printf (_("# done\n"));
+        if (! boot_dirty [BOOT_KBYTES-1]) {
+            program_config (target,
+                *(unsigned*) (boot_data + BOOT_SIZE - 16),
+                *(unsigned*) (boot_data + BOOT_SIZE - 12),
+                *(unsigned*) (boot_data + BOOT_SIZE - 8),
+                *(unsigned*) (boot_data + BOOT_SIZE - 4));
+            boot_dirty [BOOT_KBYTES-1] = 1;
+        }
     }
 #if 1
-    printf (_("Verify:  "));
+    printf (_("Verify flash:  "));
     print_symbols ('.', progress_len);
     print_symbols ('\b', progress_len);
     fflush (stdout);
-
-    for (addr=0; (int)addr<memory_len; addr+=BLOCKSZ) {
-        len = BLOCKSZ;
-        if (memory_len - addr < len)
-            len = memory_len - addr;
-        progress ();
-        if (! verify_block (target, addr, len))
-            exit (0);
+    for (addr=FLASH_BASE; addr-FLASH_BASE<FLASH_SIZE; addr+=BLOCKSZ) {
+        if (flash_dirty [(addr-FLASH_BASE) / 1024]) {
+            progress (progress_step);
+            if (! verify_block (target, addr))
+                exit (0);
+        }
+    }
+    printf (_("# done\n"));
+    printf (_("Verify boot:  "));
+    print_symbols ('.', progress_len);
+    print_symbols ('\b', progress_len);
+    fflush (stdout);
+    for (addr=BOOT_BASE; addr-BOOT_BASE<BOOT_SIZE; addr+=BLOCKSZ) {
+        if (boot_dirty [(addr-BOOT_BASE) / 1024]) {
+            progress (progress_step);
+            if (! verify_block (target, addr))
+                exit (0);
+        }
     }
     printf (_("# done\n"));
 #endif
     printf (_("Rate: %ld bytes per second\n"),
-        memory_len * 1000L / mseconds_elapsed (t0));
+        total_bytes * 1000L / mseconds_elapsed (t0));
 }
 
-void do_read (char *filename)
+void do_read (char *filename, unsigned base, unsigned nbytes)
 {
     FILE *fd;
-    unsigned len, addr, data [BLOCKSZ/4];
+    unsigned len, addr, data [BLOCKSZ/4], progress_step;
     void *t0;
 
     fd = fopen (filename, "wb");
@@ -438,8 +451,7 @@ void do_read (char *filename)
         perror (filename);
         exit (1);
     }
-    printf (_("Memory: %08X-%08X, total %d bytes\n"), memory_base,
-        memory_base + memory_len, memory_len);
+    printf (_("Memory: total %d bytes\n"), nbytes);
 
     /* Open and detect the device. */
     atexit (quit);
@@ -450,7 +462,7 @@ void do_read (char *filename)
     }
     target_use_executable (target);
     for (progress_step=1; ; progress_step<<=1) {
-        len = 1 + memory_len / progress_step / BLOCKSZ;
+        len = 1 + nbytes / progress_step / BLOCKSZ;
         if (len < 64)
             break;
     }
@@ -461,22 +473,17 @@ void do_read (char *filename)
 
     progress_count = 0;
     t0 = fix_time ();
-    for (addr=0; (int)addr<memory_len; addr+=BLOCKSZ) {
-        len = BLOCKSZ;
-        if (memory_len - addr < len)
-            len = memory_len - addr;
-        progress ();
-
-        target_read_block (target, memory_base + addr,
-            (len + 3) / 4, data);
-        if (fwrite (data, 1, len, fd) != len) {
+    for (addr=base; addr-base<nbytes; addr+=BLOCKSZ) {
+        progress (progress_step);
+        target_read_block (target, addr, BLOCKSZ/4, data);
+        if (fwrite (data, 1, BLOCKSZ, fd) != BLOCKSZ) {
             fprintf (stderr, "%s: write error!\n", filename);
             exit (1);
         }
     }
     printf (_("# done\n"));
     printf (_("Rate: %ld bytes per second\n"),
-        memory_len * 1000L / mseconds_elapsed (t0));
+        nbytes * 1000L / mseconds_elapsed (t0));
     fclose (fd);
 }
 
@@ -529,6 +536,7 @@ static void gpl_show_warranty (void)
 int main (int argc, char **argv)
 {
     int ch, read_mode = 0;
+    unsigned base, nbytes;
     static const struct option long_options[] = {
         { "help",        0, 0, 'h' },
         { "warranty",    0, 0, 'W' },
@@ -597,15 +605,12 @@ usage:
         printf ("\nWrite flash memory:\n");
         printf ("       pic32prog [-v] file.srec\n");
         printf ("       pic32prog [-v] file.hex\n");
-        printf ("       pic32prog [-v] file.bin [address]\n");
         printf ("\nRead memory:\n");
         printf ("       pic32prog -r file.bin address length\n");
         printf ("\nArgs:\n");
         printf ("       file.srec           Code file in SREC format\n");
         printf ("       file.hex            Code file in Intel HEX format\n");
         printf ("       file.bin            Code file in binary format\n");
-        printf ("       address             Address of flash memory, default 0x%08X\n",
-            DEFAULT_ADDR);
         printf ("       -v                  Verify only\n");
         printf ("       -r                  Read mode\n");
         printf ("       -D                  Debug mode\n");
@@ -625,27 +630,19 @@ usage:
         do_probe ();
         break;
     case 1:
-        memory_len = read_srec (argv[0], memory_data);
-        if (memory_len == 0) {
-            memory_len = read_hex (argv[0], memory_data);
-            if (memory_len == 0) {
-                memory_base = DEFAULT_ADDR;
-                memory_len = read_bin (argv[0], memory_data);
-            }
+        if (! read_srec (argv[0]) &&
+            ! read_hex (argv[0])) {
+            fprintf (stderr, _("%s: bad file format\n"), argv[0]);
+            exit (1);
         }
-        do_program (argv[0]);
-        break;
-    case 2:
-        memory_base = strtoul (argv[1], 0, 0);
-        memory_len = read_bin (argv[0], memory_data);
         do_program (argv[0]);
         break;
     case 3:
         if (! read_mode)
             goto usage;
-        memory_base = strtoul (argv[1], 0, 0);
-        memory_len = strtoul (argv[2], 0, 0);
-        do_read (argv[0]);
+        base = strtoul (argv[1], 0, 0);
+        nbytes = strtoul (argv[2], 0, 0);
+        do_read (argv[0], base, nbytes);
         break;
     default:
         goto usage;
