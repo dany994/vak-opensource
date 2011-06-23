@@ -849,7 +849,7 @@
  */
 #define PIC32_DEVCFG(cfg0, cfg1, cfg2, cfg3) \
     asm (".section .config"); \
-    unsigned __DEVCFG0 __attribute__ ((section (".config0"))) = ~(cfg0); \
+    unsigned __DEVCFG0 __attribute__ ((section (".config0"))) = (cfg0) ^ 0x7fffffff; \
     unsigned __DEVCFG1 __attribute__ ((section (".config1"))) = (cfg1) | DEVCFG1_UNUSED; \
     unsigned __DEVCFG2 __attribute__ ((section (".config2"))) = (cfg2) | DEVCFG2_UNUSED; \
     unsigned __DEVCFG3 __attribute__ ((section (".config3"))) = (cfg3) | DEVCFG3_UNUSED
