@@ -6,19 +6,25 @@
 /*
  * Setup chip configuration
  */
-#if 0
-unsigned __at 0x2007 __CONFIG =
-    _FCMEN_OFF &            /* Fail-Safe Clock Monitor disabled */
-    _IESO_OFF &             /* Internal External Switchover disabled */
-    _BOR_OFF &              /* Brown-out Reset disabled */
-    _CPD_OFF &              /* Data memory protection disabled */
-    _CP_OFF &               /* Program memory protection disabled */
-    _MCLRE_ON &             /* MCLR pin function is reset */
-    _PWRTE_ON &             /* Power-up Timer enabled */
-    _WDT_OFF &              /* Watchdog Timer disabled */
-    _INTRC_OSC_NOCLKOUT;    /* Internal RC oscillator,
-                             * I/O function on RA4 pin */
-#endif
+PIC32_DEVCFG (
+    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
+
+    DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
+    DEVCFG1_POSCMOD_XT |        /* XT oscillator */
+    DEVCFG1_OSCIOFNC |          /* CLKO output active */
+    DEVCFG1_FPBDIV_8 |          /* Peripheral bus clock = SYSCLK/8 */
+    DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
+    DEVCFG1_FCKS_DISABLE |      /* Clock switching disable */
+    DEVCFG1_WDTPS_1024,         /* Watchdog postscale = 1/1024 */
+
+    DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
+    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
+    DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
+    DEVCFG2_FPLLODIV_1,         /* PLL postscaler = 1/1 */
+
+    DEVCFG3_USERID(0xffff) |    /* User-defined ID */
+    DEVCFG3_FSRSSEL_7 |         /* Assign irq priority 7 to shadow set */
+    DEVCFG3_FETHIO);            /* Default Ethernet i/o pins */
 
 void mdelay (unsigned msec)
 {
