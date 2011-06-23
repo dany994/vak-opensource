@@ -7,7 +7,7 @@
  * Setup chip configuration
  */
 PIC32_DEVCFG (
-    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
+    DEVCFG0_DEBUG_ENABLED,      /* ICE debugger disabled */
 
     DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
     DEVCFG1_POSCMOD_XT |        /* XT oscillator */
