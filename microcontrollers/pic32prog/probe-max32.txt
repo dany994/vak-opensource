@@ -1,9 +1,9 @@
 Programmer for Mictochip PIC32 microcontrollers, Version 1.0
-Copyright (C) 2011 Serge Vakulenko.
-PICkit2: Version 2.32.0
-Processor: 795F512L (id 04307053)
-Flash memory: 512 kbytes
-Configuration bits:
+    Copyright: (C) 2011 Serge Vakulenko
+      Adapter: PICkit2 Version 2.32.0
+    Processor: 795F512L (id 04307053)
+ Flash memory: 512 kbytes
+Configuration:
     DEVCFG0 = 7fffffff
                      3 Debugger disabled
                        Use PGC2/PGD2

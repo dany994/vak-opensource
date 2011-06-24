@@ -23,7 +23,6 @@
 
 #include "adapter.h"
 #include "pickit2.h"
-#include "executive.h"
 #include "pic32.h"
 
 typedef struct {
@@ -376,11 +375,8 @@ int pe_get_crc (pickit2_adapter_t *a,
 }
 #endif
 
-static void pickit2_close (adapter_t *adapter)
+static void pickit2_finish (pickit2_adapter_t *a)
 {
-    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
-    //fprintf (stderr, "PICkit2: close\n");
-
     /* Exit programming mode. */
     pickit2_send (a, 18, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 15,
         SCRIPT_JT2_SETMODE, 5, 0x1f,
@@ -406,7 +402,14 @@ static void pickit2_close (adapter_t *adapter)
     pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
     pickit2_recv (a);
     //fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
+}
 
+static void pickit2_close (adapter_t *adapter)
+{
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+    //fprintf (stderr, "PICkit2: close\n");
+
+    pickit2_finish (a);
     usb_release_interface (a->usbdev, IFACE);
     usb_close (a->usbdev);
     free (a);
@@ -577,12 +580,46 @@ static void download_data (pickit2_adapter_t *a,
 }
 
 /*
- * Flash write, one word.
+ * Write a word to flash memory.
  */
 static void pickit2_program_word (adapter_t *adapter,
     unsigned addr, unsigned word)
 {
-    // TODO
+    pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
+
+    if (debug_level > 0)
+        fprintf (stderr, "PICkit2: program word at %08x: %08x\n", addr, word);
+    if (! a->use_executable) {
+        /* Without PE. */
+        fprintf (stderr, "PICkit2: slow flash write not implemented yet.\n");
+        exit (-1);
+    }
+    /* Use PE to write flash memory. */
+    pickit2_send (a, 22, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 18,
+            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                2, 0, 3, 0,                     // WORD_PROGRAM
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                (unsigned char) addr,
+                (unsigned char) (addr >> 8),
+                (unsigned char) (addr >> 16),
+                (unsigned char) (addr >> 24),
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                (unsigned char) word,
+                (unsigned char) (word >> 8),
+                (unsigned char) (word >> 16),
+                (unsigned char) (word >> 24),
+            SCRIPT_JT2_GET_PE_RESP,
+        CMD_UPLOAD_DATA);
+    pickit2_recv (a);
+    //fprintf (stderr, "PICkit2: word program PE response %u bytes: %02x...\n",
+    //  a->reply[0], a->reply[1]);
+    if (a->reply[0] != 4 || a->reply[1] != 0) { // response code 0 = success
+        fprintf (stderr, "PICkit2: failed to program word %08x at %08x, reply = %02x-%02x-%02x-%02x-%02x\n",
+            word, addr, a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
+        exit (-1);
+    }
 }
 
 /*
@@ -641,7 +678,7 @@ static void pickit2_program_block (adapter_t *adapter,
         data += 256/4;
         words_written += 256/4;
     }
-    //check_timeout (a, "9");                   // Any timeouts?
+    check_timeout (a, "9");                   // Any timeouts?
 
     pickit2_send (a, 6, CMD_CLEAR_UPLOAD_BUFFER,
         CMD_EXECUTE_SCRIPT, 2,
@@ -652,8 +689,8 @@ static void pickit2_program_block (adapter_t *adapter,
     //fprintf (stderr, "PICkit2: program PE response %u bytes: %02x...\n",
     //  a->reply[0], a->reply[1]);
     if (a->reply[0] != 4 || a->reply[1] != 0) { // response code 0 = success
-        fprintf (stderr, "PICkit2: failed to program flash memory at %08x\n",
-            addr);
+        fprintf (stderr, "PICkit2: failed to program flash memory at %08x, reply = %02x-%02x-%02x-%02x-%02x\n",
+            addr, a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
         exit (-1);
     }
 }
@@ -728,7 +765,7 @@ failed: usb_release_interface (a->usbdev, IFACE);
     /* Read version of adapter. */
     pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_GET_VERSION);
     pickit2_recv (a);
-    printf ("PICkit2: Version %d.%d.%d\n",
+    printf ("      Adapter: PICkit2 Version %d.%d.%d\n",
         a->reply[0], a->reply[1], a->reply[2]);
 
     /* Detach power from the board. */
@@ -812,20 +849,19 @@ failed: usb_release_interface (a->usbdev, IFACE);
     pickit2_recv (a);
     if (debug_level > 1)
         fprintf (stderr, "PICkit2: got %02x-%02x\n", a->reply[0], a->reply[1]);
-    if (a->reply[0] != 1 || ! (a->reply[1] & 0x80)) {
+    if (a->reply[0] != 1) {
+        fprintf (stderr, "PICkit2: cannot get MCHP STATUS\n");
+        pickit2_finish (a);
+        goto failed;
+    }
+    if (! (a->reply[1] & MCHP_STATUS_CFGRDY)) {
+        fprintf (stderr, "No device attached.\n");
+        pickit2_finish (a);
+        goto failed;
+    }
+    if (! (a->reply[1] & MCHP_STATUS_CPS)) {
         fprintf (stderr, "Device is code protected and must be erased first.\n");
-
-        /* Exit programming mode. */
-        pickit2_send (a, 18, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 15,
-            SCRIPT_JT2_SETMODE, 5, 0x1f,
-            SCRIPT_VPP_OFF,
-            SCRIPT_MCLR_GND_ON,
-            SCRIPT_VPP_PWM_OFF,
-            SCRIPT_SET_ICSP_PINS, 6,
-            SCRIPT_SET_ICSP_PINS, 2,
-            SCRIPT_SET_ICSP_PINS, 3,
-            SCRIPT_DELAY_LONG, 10,              // 50 msec
-            SCRIPT_BUSY_LED_OFF);
+        pickit2_finish (a);
         goto failed;
     }
 
