@@ -48,6 +48,7 @@ unsigned char boot_data [BOOT_SIZE];
 unsigned char flash_data [FLASH_SIZE];
 unsigned char boot_dirty [BOOT_KBYTES];
 unsigned char flash_dirty [FLASH_KBYTES];
+unsigned flash_used;
 int total_bytes;
 
 unsigned progress_count;
@@ -94,6 +95,7 @@ void store_data (unsigned address, unsigned byte)
         offset = address - FLASH_BASE;
         flash_data [offset] = byte;
         flash_dirty [offset / 1024] = 1;
+        flash_used = 1;
     } else {
         fprintf (stderr, _("%08X: address out of flash memory\n"), address);
         exit (1);
@@ -298,9 +300,9 @@ void do_probe ()
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
     }
-    printf (_("Processor: %s (id %08X)\n"), target_cpu_name (target),
+    printf (_("    Processor: %s (id %08X)\n"), target_cpu_name (target),
         target_idcode (target));
-    printf (_("Flash memory: %d kbytes\n"), target_flash_bytes (target) / 1024);
+    printf (_(" Flash memory: %d kbytes\n"), target_flash_bytes (target) / 1024);
     target_print_devcfg (target);
 }
 
@@ -309,10 +311,17 @@ void do_probe ()
  */
 void program_block (target_t *mc, unsigned addr)
 {
-    unsigned char *data = (addr >= BOOT_BASE &&
-        addr < BOOT_BASE + BOOT_SIZE) ? boot_data : flash_data;
+    unsigned char *data;
+    unsigned offset;
 
-    target_program_block (mc, addr, BLOCKSZ/4, (unsigned*) (data + addr));
+    if (addr >= BOOT_BASE && addr < BOOT_BASE+BOOT_SIZE) {
+        data = boot_data;
+        offset = addr - BOOT_BASE;
+    } else {
+        data = flash_data;
+        offset = addr - FLASH_BASE;
+    }
+    target_program_block (mc, addr, BLOCKSZ/4, (unsigned*) (data + offset));
 }
 
 /*
@@ -331,12 +340,19 @@ int verify_block (target_t *mc, unsigned addr)
 {
     int i;
     unsigned word, expected, block [BLOCKSZ/4];
-    unsigned char *data = (addr >= BOOT_BASE &&
-        addr < BOOT_BASE + BOOT_SIZE) ? boot_data : flash_data;
+    unsigned char *data;
+    unsigned offset;
 
+    if (addr >= BOOT_BASE && addr < BOOT_BASE+BOOT_SIZE) {
+        data = boot_data;
+        offset = addr - BOOT_BASE;
+    } else {
+        data = flash_data;
+        offset = addr - FLASH_BASE;
+    }
     target_read_block (mc, addr, BLOCKSZ/4, block);
     for (i=0; i<BLOCKSZ; i+=4) {
-        expected = *(unsigned*) (data + addr + i);
+        expected = *(unsigned*) (data + offset + i);
         word = block [i/4];
         if (word != expected) {
             printf (_("\nerror at address %08X: file=%08X, mem=%08X\n"),
@@ -353,8 +369,6 @@ void do_program (char *filename)
     int progress_len, progress_step;
     void *t0;
 
-    printf (_("Memory: total %d bytes\n"), total_bytes);
-
     /* Open and detect the device. */
     atexit (quit);
     target = target_open ();
@@ -362,8 +376,9 @@ void do_program (char *filename)
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
     }
-    printf (_("Processor: %s\n"), target_cpu_name (target));
-    printf (_("Flash memory: %d kbytes\n"), target_flash_bytes (target) / 1024);
+    printf (_("    Processor: %s\n"), target_cpu_name (target));
+    printf (_(" Flash memory: %d kbytes\n"), target_flash_bytes (target) / 1024);
+    printf (_("         Data: %d bytes\n"), total_bytes);
 
     if (! verify_only) {
         /* Erase flash. */
@@ -379,20 +394,20 @@ void do_program (char *filename)
     progress_count = 0;
     t0 = fix_time ();
     if (! verify_only) {
-	printf (_("Program flash: "));
-        print_symbols ('.', progress_len);
-        print_symbols ('\b', progress_len);
-        fflush (stdout);
-        for (addr=FLASH_BASE; addr-FLASH_BASE<FLASH_SIZE; addr+=BLOCKSZ) {
-            if (flash_dirty [(addr-FLASH_BASE) / 1024]) {
-                program_block (target, addr);
-                progress (progress_step);
+        if (flash_used) {
+            printf (_("Program flash: "));
+            print_symbols ('.', progress_len);
+            print_symbols ('\b', progress_len);
+            fflush (stdout);
+            for (addr=FLASH_BASE; addr-FLASH_BASE<FLASH_SIZE; addr+=BLOCKSZ) {
+                if (flash_dirty [(addr-FLASH_BASE) / 1024]) {
+                    program_block (target, addr);
+                    progress (progress_step);
+                }
             }
+            printf (_("# done\n"));
         }
-        printf (_("# done\n"));
-	printf (_("Program boot: "));
-        print_symbols ('.', progress_len);
-        print_symbols ('\b', progress_len);
+	printf (_(" Program boot: ............\b\b\b\b\b\b\b\b\b\b\b\b"));
         fflush (stdout);
         for (addr=BOOT_BASE; addr-BOOT_BASE<BOOT_SIZE; addr+=BLOCKSZ) {
             if (boot_dirty [(addr-BOOT_BASE) / 1024]) {
@@ -411,25 +426,25 @@ void do_program (char *filename)
         }
     }
 #if 1
-    printf (_("Verify flash:  "));
-    print_symbols ('.', progress_len);
-    print_symbols ('\b', progress_len);
-    fflush (stdout);
-    for (addr=FLASH_BASE; addr-FLASH_BASE<FLASH_SIZE; addr+=BLOCKSZ) {
-        if (flash_dirty [(addr-FLASH_BASE) / 1024]) {
-            progress (progress_step);
-            if (! verify_block (target, addr))
-                exit (0);
+    if (flash_used) {
+        printf (_(" Verify flash: "));
+        print_symbols ('.', progress_len);
+        print_symbols ('\b', progress_len);
+        fflush (stdout);
+        for (addr=FLASH_BASE; addr-FLASH_BASE<FLASH_SIZE; addr+=BLOCKSZ) {
+            if (flash_dirty [(addr-FLASH_BASE) / 1024]) {
+                progress (progress_step);
+                if (! verify_block (target, addr))
+                    exit (0);
+            }
         }
+        printf (_("# done\n"));
     }
-    printf (_("# done\n"));
-    printf (_("Verify boot:  "));
-    print_symbols ('.', progress_len);
-    print_symbols ('\b', progress_len);
+    printf (_("  Verify boot: ............\b\b\b\b\b\b\b\b\b\b\b\b"));
     fflush (stdout);
     for (addr=BOOT_BASE; addr-BOOT_BASE<BOOT_SIZE; addr+=BLOCKSZ) {
         if (boot_dirty [(addr-BOOT_BASE) / 1024]) {
-            progress (progress_step);
+            progress (1);
             if (! verify_block (target, addr))
                 exit (0);
         }
@@ -563,7 +578,7 @@ int main (int argc, char **argv)
     setvbuf (stderr, (char *)NULL, _IOLBF, 0);
     printf (_("Programmer for Mictochip PIC32 microcontrollers, Version %s\n"), VERSION);
     progname = argv[0];
-    copyright = _("Copyright (C) 2011 Serge Vakulenko");
+    copyright = _("    Copyright: (C) 2011 Serge Vakulenko");
     signal (SIGINT, interrupted);
 #ifdef __linux__
     signal (SIGHUP, interrupted);
@@ -621,9 +636,12 @@ usage:
         printf ("\n");
         return 0;
     }
-    printf ("%s.\n", copyright);
+    printf ("%s\n", copyright);
     argc -= optind;
     argv += optind;
+
+    memset (boot_data, ~0, BOOT_SIZE);
+    memset (flash_data, ~0, FLASH_SIZE);
 
     switch (argc) {
     case 0:

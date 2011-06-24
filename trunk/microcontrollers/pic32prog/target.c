@@ -138,7 +138,7 @@ target_t *target_open ()
     if (! t->adapter)
         t->adapter = adapter_open_mpsse ();
     if (! t->adapter) {
-        fprintf (stderr, _("No JTAG adapter found.\n"));
+        fprintf (stderr, _("No target found.\n"));
         exit (-1);
     }
 
@@ -197,7 +197,7 @@ void target_print_devcfg (target_t *t)
     unsigned devcfg1 = t->adapter->read_word (t->adapter, DEVCFG1_ADDR);
     unsigned devcfg2 = t->adapter->read_word (t->adapter, DEVCFG2_ADDR);
     unsigned devcfg3 = t->adapter->read_word (t->adapter, DEVCFG3_ADDR);
-    printf (_("Configuration bits:\n"));
+    printf (_("Configuration:\n"));
 
     /*--------------------------------------
      * Configuration register 0
@@ -209,7 +209,7 @@ void target_print_devcfg (target_t *t)
             ~DEVCFG0_DEBUG_DISABLED & DEVCFG0_DEBUG_MASK);
         break;
     case DEVCFG0_DEBUG_ENABLED:
-        printf ("                     %u Debugger disabled\n",
+        printf ("                     %u Debugger enabled\n",
             ~DEVCFG0_DEBUG_ENABLED & DEVCFG0_DEBUG_MASK);
         break;
     default:
@@ -556,11 +556,24 @@ void target_print_devcfg (target_t *t)
 }
 
 /*
+ * Translate virtual to physical address.
+ */
+static unsigned virt_to_phys (unsigned addr)
+{
+    if (addr >= 0x80000000 && addr < 0xA0000000)
+        return addr - 0x80000000;
+    if (addr >= 0xA0000000 && addr < 0xC0000000)
+        return addr - 0xA0000000;
+    return addr;
+}
+
+/*
  * Чтение данных из памяти.
  */
 void target_read_block (target_t *t, unsigned addr,
     unsigned nwords, unsigned *data)
 {
+    addr = virt_to_phys (addr);
     //fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
     while (nwords > 0) {
         unsigned n = nwords;
@@ -579,10 +592,10 @@ void target_read_block (target_t *t, unsigned addr,
  */
 int target_erase (target_t *t)
 {
-    printf (_("Erase..."));
+    printf (_("        Erase: "));
     fflush (stdout);
     t->adapter->erase_chip (t->adapter);
-    printf (_(" done\n"));
+    printf (_("done\n"));
     return 1;
 }
 
@@ -592,6 +605,7 @@ int target_erase (target_t *t)
 void target_program_block (target_t *t, unsigned addr,
     unsigned nwords, unsigned *data)
 {
+    addr = virt_to_phys (addr);
     //fprintf (stderr, "target_program_block (addr = %x, nwords = %d)\n", addr, nwords);
     while (nwords > 0) {
         unsigned n = nwords;
@@ -609,6 +623,7 @@ void target_program_block (target_t *t, unsigned addr,
  */
 void target_program_word (target_t *t, unsigned addr, unsigned word)
 {
+    addr = virt_to_phys (addr);
     fprintf (stderr, "target_program_word (%08x) = %08x\n", addr, word);
     t->adapter->program_word (t->adapter, addr, word);
 }

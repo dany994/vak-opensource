@@ -13,7 +13,7 @@
 // DAMAGES OF ANY KIND ARISING FROM OR RELATED TO THE USE, MODIFICATION OR
 // DISTRIBUTION OF THIS SOFTWARE OR ITS DERIVATIVES.
 //
-#include "executive.h"
+#include "pic32.h"
 
 const unsigned short pic32_pe_loader [PIC32_PE_LOADER_LEN] = {
     0x3C07, 0xDEAD,

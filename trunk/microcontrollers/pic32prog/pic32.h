@@ -3,6 +3,17 @@
  */
 
 /*
+ * Programing executive.
+ * Described in PIC32MX Flash Programming Specification.
+ */
+#define	PIC32_PE_LOADER_LEN 42
+#define PIC32_PE_LEN        1240
+#define PIC32_PE_VERSION    0x0109
+
+extern const unsigned short pic32_pe_loader[];
+extern const unsigned pic32_pe[];
+
+/*
  * TAP instructions.
  */
 #define TAP_SW_MTAP     4       // Switch to MCHP TAP controller
@@ -32,6 +43,16 @@
 #define MCHP_ERASE         0xFC // Flash chip erase
 #define MCHP_FLASH_ENABLE  0xFE // Enable access from CPU to flash
 #define MCHP_FLASH_DISABLE 0xFD // Disable access from CPU to flash
+
+/*
+ * MCHP status value.
+ */
+#define MCHP_STATUS_CPS    0x80 // Device is NOT code-protected
+#define MCHP_STATUS_CFGRDY 0x08 // Configuration has been read and
+                                // Code-Protect State bit is valid
+#define MCHP_STATUS_FCBUSY 0x04 // Flash Controller is Busy (erase is in progress)
+#define MCHP_STATUS_FAEN   0x02 // Flash access is enabled
+#define MCHP_STATUS_DEVRST 0x01 // Device reset is active
 
 /*
  * Configuration registers.
