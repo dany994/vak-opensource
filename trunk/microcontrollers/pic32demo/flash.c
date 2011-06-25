@@ -26,6 +26,7 @@ PIC32_DEVCFG (
     DEVCFG3_FSRSSEL_7 |         /* Assign irq priority 7 to shadow set */
     DEVCFG3_FETHIO);            /* Default Ethernet i/o pins */
 
+#if 0
 void mdelay (unsigned msec)
 {
     unsigned i;
@@ -35,18 +36,22 @@ void mdelay (unsigned msec)
             asm volatile ("nop");
     }
 }
+#endif
 
 int main()
 {
-    TRISA &= ~(1 << 3);
+    TRISACLR = 1 << 3;
     while (1) {
-        PORTA |= (1 << 3);
-            mdelay (250);
-        PORTA &= ~(1 << 3);
-            mdelay (250);
+            LATAINV = 1 << 3;
+//        PORTAINV = 1 << 3;
+//            mdelay (250);
+//        PORTAINV = 1 << 3;
+//            mdelay (250);
     }
 }
 
-asm (".section .exception");
-asm ("_start: j main");
-asm (".text");
+asm ("          .section .exception");
+asm ("_start:   la      $sp, _estack");
+asm ("          la      $gp, _gp");
+asm ("          j       main");
+asm ("          .text");
