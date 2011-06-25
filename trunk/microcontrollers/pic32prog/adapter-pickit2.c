@@ -187,7 +187,7 @@ static void pickit2_load_executable (adapter_t *adapter)
             SCRIPT_JT2_XFERINST_BUF,
             SCRIPT_JT2_XFERINST_BUF,
             SCRIPT_JT2_XFERINST_BUF);
-    check_timeout (a, "1");                     // Any timeouts?
+    check_timeout (a, "step1");
 
     pickit2_send (a, 30, CMD_CLEAR_DOWNLOAD_BUFFER,
         CMD_DOWNLOAD_DATA, 20,
@@ -202,7 +202,7 @@ static void pickit2_load_executable (adapter_t *adapter)
             SCRIPT_JT2_XFERINST_BUF,
             SCRIPT_JT2_XFERINST_BUF,
             SCRIPT_JT2_XFERINST_BUF);
-    check_timeout (a, "2");                      // Any timeouts?
+    check_timeout (a, "step3");
 
     // Download the PE loader
     int i;
@@ -218,7 +218,7 @@ static void pickit2_load_executable (adapter_t *adapter)
                 SCRIPT_JT2_XFERINST_BUF,
                 SCRIPT_JT2_XFERINST_BUF,
                 SCRIPT_JT2_XFERINST_BUF);
-        check_timeout (a, "3");                 // Any timeouts?
+        check_timeout (a, "step5");
     }
 
     // Jump to PE loader
@@ -242,7 +242,7 @@ static void pickit2_load_executable (adapter_t *adapter)
                 (unsigned char) PIC32_PE_LEN,   // PE_SIZE
                 (unsigned char) (PIC32_PE_LEN >> 8),
                 0, 0);
-    check_timeout (a, "4");                     // Any timeouts?
+    check_timeout (a, "step6");
 
     // Download the PE itself (step 7-B)
     if (debug_level > 0)
@@ -273,7 +273,7 @@ static void pickit2_load_executable (adapter_t *adapter)
                 SCRIPT_JT2_XFRFASTDAT_BUF,
                 SCRIPT_JT2_XFRFASTDAT_BUF,
                 SCRIPT_JT2_XFRFASTDAT_BUF);
-        check_timeout (a, "5");                 // Any timeouts?
+        check_timeout (a, "step7");
     }
     mdelay (100);
 
@@ -285,7 +285,7 @@ static void pickit2_load_executable (adapter_t *adapter)
         CMD_EXECUTE_SCRIPT, 2,                  // execute
             SCRIPT_JT2_XFRFASTDAT_BUF,
             SCRIPT_JT2_XFRFASTDAT_BUF);
-    check_timeout (a, "6");                     // Any timeouts?
+    check_timeout (a, "step8");
     mdelay (100);
 
     pickit2_send (a, 11, CMD_CLEAR_UPLOAD_BUFFER,
@@ -295,7 +295,7 @@ static void pickit2_load_executable (adapter_t *adapter)
                 0x00, 0x00,                     // length = 0
                 0x07, 0x00,                     // EXEC_VERSION
             SCRIPT_JT2_GET_PE_RESP);
-    check_timeout (a, "7");                     // Any timeouts?
+    check_timeout (a, "EXEC_VERSION");
     pickit2_send (a, 1, CMD_UPLOAD_DATA);
     pickit2_recv (a);
 
@@ -334,7 +334,7 @@ int pe_blank_check (pickit2_adapter_t *a,
             (unsigned char) (nbytes >> 16),
             (unsigned char) (nbytes >> 24),
         SCRIPT_JT2_GET_PE_RESP);
-    check_timeout (a, "8");                     // Any timeouts?
+    check_timeout (a, "BLANK_CHECK");
     pickit2_send (a, 1, CMD_UPLOAD_DATA);
     pickit2_recv (a);
     if (a->reply[3] != 6 || a->reply[1] != 0) { // response code 0 = success
@@ -363,7 +363,7 @@ int pe_get_crc (pickit2_adapter_t *a,
             (unsigned char) (nbytes >> 24),
         SCRIPT_JT2_GET_PE_RESP,
         SCRIPT_JT2_GET_PE_RESP);
-    check_timeout (a, "9");                     // Any timeouts?
+    check_timeout (a, "GET_CRC");
     pickit2_send (a, 1, CMD_UPLOAD_DATA);
     pickit2_recv (a);
     if (a->reply[3] != 8 || a->reply[1] != 0) { // response code 0 = success
@@ -375,7 +375,7 @@ int pe_get_crc (pickit2_adapter_t *a,
 }
 #endif
 
-static void pickit2_finish (pickit2_adapter_t *a)
+static void pickit2_finish (pickit2_adapter_t *a, int power_on)
 {
     /* Exit programming mode. */
     pickit2_send (a, 18, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 15,
@@ -389,27 +389,27 @@ static void pickit2_finish (pickit2_adapter_t *a)
         SCRIPT_DELAY_LONG, 10,                  // 50 msec
         SCRIPT_BUSY_LED_OFF);
 
-    /* Detach power from the board. */
-    pickit2_send (a, 4, CMD_EXECUTE_SCRIPT, 2,
-        SCRIPT_VDD_OFF,
-        SCRIPT_VDD_GND_ON);
+    if (! power_on) {
+        /* Detach power from the board. */
+        pickit2_send (a, 4, CMD_EXECUTE_SCRIPT, 2,
+            SCRIPT_VDD_OFF,
+            SCRIPT_VDD_GND_ON);
+    }
 
     /* Disable reset. */
     pickit2_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
         SCRIPT_MCLR_GND_OFF);
 
     /* Read board status. */
-    pickit2_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
-    pickit2_recv (a);
-    //fprintf (stderr, "PICkit2: status %02x%02x\n", a->reply[1], a->reply[0]);
+    check_timeout (a, "finish");
 }
 
-static void pickit2_close (adapter_t *adapter)
+static void pickit2_close (adapter_t *adapter, int power_on)
 {
     pickit2_adapter_t *a = (pickit2_adapter_t*) adapter;
     //fprintf (stderr, "PICkit2: close\n");
 
-    pickit2_finish (a);
+    pickit2_finish (a, power_on);
     usb_release_interface (a->usbdev, IFACE);
     usb_close (a->usbdev);
     free (a);
@@ -678,7 +678,7 @@ static void pickit2_program_block (adapter_t *adapter,
         data += 256/4;
         words_written += 256/4;
     }
-    check_timeout (a, "9");                   // Any timeouts?
+    //check_timeout (a, "PROGRAM");
 
     pickit2_send (a, 6, CMD_CLEAR_UPLOAD_BUFFER,
         CMD_EXECUTE_SCRIPT, 2,
@@ -708,7 +708,7 @@ static void pickit2_erase_chip (adapter_t *adapter)
         SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
         SCRIPT_JT2_XFERDATA8_LIT, MCHP_ERASE,
         SCRIPT_DELAY_LONG, 74);                 // 400 msec
-    check_timeout (a, "7");                     // Any timeouts?
+    check_timeout (a, "chip erase");
 }
 
 /*
@@ -851,17 +851,17 @@ failed: usb_release_interface (a->usbdev, IFACE);
         fprintf (stderr, "PICkit2: got %02x-%02x\n", a->reply[0], a->reply[1]);
     if (a->reply[0] != 1) {
         fprintf (stderr, "PICkit2: cannot get MCHP STATUS\n");
-        pickit2_finish (a);
+        pickit2_finish (a, 0);
         goto failed;
     }
     if (! (a->reply[1] & MCHP_STATUS_CFGRDY)) {
         fprintf (stderr, "No device attached.\n");
-        pickit2_finish (a);
+        pickit2_finish (a, 0);
         goto failed;
     }
     if (! (a->reply[1] & MCHP_STATUS_CPS)) {
         fprintf (stderr, "Device is code protected and must be erased first.\n");
-        pickit2_finish (a);
+        pickit2_finish (a, 0);
         goto failed;
     }
 
