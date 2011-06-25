@@ -28,7 +28,7 @@ struct _adapter_t {
     /*
      * Обязательные функции.
      */
-    void (*close) (adapter_t *a);
+    void (*close) (adapter_t *a, int power_on);
     unsigned (*get_idcode) (adapter_t *a);
     void (*load_executable) (adapter_t *a);
     void (*read_data) (adapter_t *a, unsigned addr, unsigned nwords, unsigned *data);

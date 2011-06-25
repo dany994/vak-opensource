@@ -149,7 +149,7 @@ target_t *target_open ()
         if (pic32mx_dev[i].devid == 0) {
             /* Device not detected. */
             fprintf (stderr, _("Unknown CPUID=%08x.\n"), t->cpuid);
-            t->adapter->close (t->adapter);
+            t->adapter->close (t->adapter, 0);
             exit (1);
         }
     }
@@ -162,9 +162,9 @@ target_t *target_open ()
 /*
  * Close the device.
  */
-void target_close (target_t *t)
+void target_close (target_t *t, int power_on)
 {
-    t->adapter->close (t->adapter);
+    t->adapter->close (t->adapter, power_on);
 }
 
 const char *target_cpu_name (target_t *t)
@@ -624,6 +624,6 @@ void target_program_block (target_t *t, unsigned addr,
 void target_program_word (target_t *t, unsigned addr, unsigned word)
 {
     addr = virt_to_phys (addr);
-    fprintf (stderr, "target_program_word (%08x) = %08x\n", addr, word);
+    //fprintf (stderr, "target_program_word (%08x) = %08x\n", addr, word);
     t->adapter->program_word (t->adapter, addr, word);
 }

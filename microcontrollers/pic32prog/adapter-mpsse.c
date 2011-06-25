@@ -382,7 +382,7 @@ static void mpsse_speed (mpsse_adapter_t *a, int divisor)
     bulk_write (a, output, 3);
 }
 
-static void mpsse_close (adapter_t *adapter)
+static void mpsse_close (adapter_t *adapter, int power_on)
 {
     mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
 

@@ -18,7 +18,7 @@
 typedef struct _target_t target_t;
 
 target_t *target_open (void);
-void target_close (target_t *t);
+void target_close (target_t *t, int power_on);
 void target_use_executable (target_t *t);
 
 unsigned target_idcode (target_t *t);

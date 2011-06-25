@@ -54,6 +54,7 @@ int total_bytes;
 unsigned progress_count;
 int verify_only;
 int debug_level;
+int power_on;
 target_t *target;
 char *progname;
 const char *copyright;
@@ -278,7 +279,7 @@ void progress (unsigned step)
 void quit (void)
 {
     if (target != 0) {
-        target_close (target);
+        target_close (target, power_on);
         free (target);
         target = 0;
     }
@@ -330,6 +331,7 @@ void program_block (target_t *mc, unsigned addr)
 void program_config (target_t *mc, unsigned devcfg3, unsigned devcfg2,
     unsigned devcfg1, unsigned devcfg0)
 {
+devcfg3 = 0x2207ffff;
     target_program_word (mc, BOOT_BASE + BOOT_SIZE - 16, devcfg3);
     target_program_word (mc, BOOT_BASE + BOOT_SIZE - 12, devcfg2);
     target_program_word (mc, BOOT_BASE + BOOT_SIZE - 8, devcfg1);
@@ -425,7 +427,6 @@ void do_program (char *filename)
             boot_dirty [BOOT_KBYTES-1] = 1;
         }
     }
-#if 1
     if (flash_used) {
         printf (_(" Verify flash: "));
         print_symbols ('.', progress_len);
@@ -450,7 +451,6 @@ void do_program (char *filename)
         }
     }
     printf (_("# done\n"));
-#endif
     printf (_("Rate: %ld bytes per second\n"),
         total_bytes * 1000L / mseconds_elapsed (t0));
 }
@@ -585,7 +585,7 @@ int main (int argc, char **argv)
 #endif
     signal (SIGTERM, interrupted);
 
-    while ((ch = getopt_long (argc, argv, "vDhrCVW",
+    while ((ch = getopt_long (argc, argv, "vDhrpCVW",
       long_options, 0)) != -1) {
         switch (ch) {
         case 'v':
@@ -596,6 +596,9 @@ int main (int argc, char **argv)
             continue;
         case 'r':
             ++read_mode;
+            continue;
+        case 'p':
+            ++power_on;
             continue;
         case 'h':
             break;
@@ -628,6 +631,7 @@ usage:
         printf ("       file.bin            Code file in binary format\n");
         printf ("       -v                  Verify only\n");
         printf ("       -r                  Read mode\n");
+        printf ("       -p                  Leave board powered on\n");
         printf ("       -D                  Debug mode\n");
         printf ("       -h, --help          Print this help message\n");
         printf ("       -V, --version       Print version\n");
