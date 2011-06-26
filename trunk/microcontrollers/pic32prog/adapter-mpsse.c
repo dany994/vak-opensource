@@ -1,19 +1,12 @@
 /*
- * Интерфейс через адаптер FT2232 к процессору Элвис Мультикор.
- * Автор: С.Вакуленко.
+ * Interface to PIC32 JTAG port using FT2232-based USB adapter.
  *
- * Этот файл распространяется в надежде, что он окажется полезным, но
- * БЕЗ КАКИХ БЫ ТО НИ БЫЛО ГАРАНТИЙНЫХ ОБЯЗАТЕЛЬСТВ; в том числе без косвенных
- * гарантийных обязательств, связанных с ПОТРЕБИТЕЛЬСКИМИ СВОЙСТВАМИ и
- * ПРИГОДНОСТЬЮ ДЛЯ ОПРЕДЕЛЕННЫХ ЦЕЛЕЙ.
+ * Copyright (C) 2011 Serge Vakulenko
  *
- * Вы вправе распространять и/или изменять этот файл в соответствии
- * с условиями Генеральной Общественной Лицензии GNU (GPL) в том виде,
- * как она была опубликована Фондом Свободного ПО; либо версии 2 Лицензии
- * либо (по вашему желанию) любой более поздней версии. Подробности
- * смотрите в прилагаемом файле 'COPYING.txt'.
+ * This file is part of BKUNIX project, which is distributed
+ * under the terms of the GNU General Public License (GPL).
+ * See the accompanying file "COPYING" for more details.
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -565,6 +558,49 @@ static void mpsse_read_data (adapter_t *adapter,
 }
 
 /*
+ * Download programming executable (PE).
+ */
+static void mpsse_load_executable (adapter_t *adapter)
+{
+    // TODO
+}
+
+/*
+ * Read a word from memory (without PE).
+ */
+static unsigned mpsse_read_word (adapter_t *adapter, unsigned addr)
+{
+    // TODO
+    return 0;
+}
+
+/*
+ * Erase all flash memory.
+ */
+static void mpsse_erase_chip (adapter_t *adapter)
+{
+    // TODO
+}
+
+/*
+ * Flash write, 1-kbyte blocks.
+ */
+static void mpsse_program_block (adapter_t *adapter,
+    unsigned addr, unsigned *data)
+{
+    // TODO
+}
+
+/*
+ * Write a word to flash memory.
+ */
+static void mpsse_program_word (adapter_t *adapter,
+    unsigned addr, unsigned word)
+{
+    // TODO
+}
+
+/*
  * Инициализация адаптера F2232.
  * Возвращаем указатель на структуру данных, выделяемую динамически.
  * Если адаптер не обнаружен, возвращаем 0.
@@ -696,8 +732,6 @@ fprintf (stderr, "Status = %08x\n", status);
     status = mpsse_recv (a);
 fprintf (stderr, "Status = %08x\n", status);
 
-
-
 #if 0
     mpsse_send (a, 1, 1, 5, MTAP_SW_MTAP, 0);   /* Send command. */
     mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);   /* Send command. */
@@ -711,9 +745,14 @@ fprintf (stderr, "Status = %08x\n", status);
     status = mpsse_recv (a);
 fprintf (stderr, "Status = %08x\n", status);
 #endif
-    /* Обязательные функции. */
+    /* User functions. */
     a->adapter.close = mpsse_close;
     a->adapter.get_idcode = mpsse_get_idcode;
+    a->adapter.load_executable = mpsse_load_executable;
+    a->adapter.read_word = mpsse_read_word;
     a->adapter.read_data = mpsse_read_data;
+    a->adapter.erase_chip = mpsse_erase_chip;
+    a->adapter.program_block = mpsse_program_block;
+    a->adapter.program_word = mpsse_program_word;
     return &a->adapter;
 }
