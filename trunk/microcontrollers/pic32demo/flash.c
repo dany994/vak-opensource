@@ -4,7 +4,7 @@
 #include "pic32mx.h"
 
 /*
- * Chip configuration
+ * Chip configuration.
  */
 PIC32_DEVCFG (
     DEVCFG0_DEBUG_ENABLED,      /* ICE debugger disabled */
@@ -28,7 +28,7 @@ PIC32_DEVCFG (
     DEVCFG3_FETHIO);            /* Default Ethernet i/o pins */
 
 /*
- * Boot code
+ * Boot code.
  */
 asm ("          .section .exception");
 asm ("          .globl _start");
@@ -41,24 +41,22 @@ asm ("          .text");
 
 int main()
 {
-#if 0
     /* Initialize coprocessor 0. */
-    mtc0 (Count, 0);
-    mtc0 (Compare, -1);
-    mtc0 (EBase, 0x9fc00000);           /* Vector base */
-    mtc0 (Intctl, 1 << 5);              /* Vector spacing 32 bytes */
-    mtc0 (Cause, 1 << 23);              /* Set IV */
-    mtc0 (Status, 0);                   /* Clear BEV */
-#endif
+    mtc0 (C0_COUNT, 0, 0);
+    mtc0 (C0_COMPARE, 0, -1);
+    mtc0 (C0_EBASE, 1, 0x9fc00000);     /* Vector base */
+    mtc0 (C0_INTCTL, 1, 1 << 5);        /* Vector spacing 32 bytes */
+    mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
+    mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
-    /* LED pin as output */
+    /* Use pin PA3 as output: LED control. */
     TRISACLR = 1 << 3;
 
     while (1) {
-        /* Invert LED pin */
+        /* Invert pin PA3. */
         PORTAINV = 1 << 3;
 
-        /* Delay */
+        /* Delay. */
         unsigned i;
         for (i=0; i<1000000; i++)
             asm volatile ("");

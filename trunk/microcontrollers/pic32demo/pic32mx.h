@@ -1,5 +1,5 @@
 /*
- * Hardware register defines for all Microchip PIC32MX microcontrollers.
+ * Hardware register defines for Microchip PIC32MX microcontrollers.
  *
  * Copyright (C) 2010 Serge Vakulenko, <serge@vak.ru>
  *
@@ -27,11 +27,17 @@
 #define C0_COUNT	9	/* Processor cycle count */
 #define C0_COMPARE	11	/* Timer interrupt control */
 #define C0_STATUS	12	/* Processor status and control */
+#define C0_INTCTL	12	/* Select 1: interrupt control */
+#define C0_SRSCTL	12	/* Select 2: shadow register set control */
+#define C0_SRSMAP	12	/* Select 3: shadow register set map */
 #define C0_CAUSE	13	/* Cause of last exception */
 #define C0_EPC		14	/* Program counter at last exception */
 #define C0_PRID		15	/* Processor identification (read only) */
-#define C0_EBASE	15	/* Exception base address (write only) */
+#define C0_EBASE	15	/* Select 1: Exception base address (write only) */
 #define C0_CONFIG	16	/* Configuration */
+#define C0_CONFIG1	16	/* Select 1: Configuration 1 */
+#define C0_CONFIG2	16	/* Select 2: Configuration 2 */
+#define C0_CONFIG3	16	/* Select 3: Configuration 3 */
 #define C0_DEBUG	23	/* Debug control and status */
 #define C0_DEPC		24	/* Program counter at last debug exception */
 #define C0_ERROREPC	30	/* Program counter at last error */
@@ -76,6 +82,22 @@
 #define CA_CPU		(11 << 2)	/* Coprocessor unusable */
 #define CA_Ov		(12 << 2)	/* Arithmetic overflow */
 #define CA_Tr		(13 << 2)	/* Trap */
+
+/*
+ * Read C0 coprocessor register.
+ */
+#define mfc0(reg, sel) ({ int __value;				\
+	asm volatile (						\
+	"mfc0	%0, $%1, %2"					\
+	: "=r" (__value) : "K" (reg), "K" (sel));		\
+	__value; })
+
+/*
+ * Write coprocessor 0 register.
+ */
+#define mtc0(reg, sel, value) asm volatile (                    \
+	"mtc0	%z0, $%1, %2"                                   \
+	: : "r" ((unsigned) (value)), "K" (reg), "K" (sel))
 
 /*--------------------------------------
  * Peripheral registers.
