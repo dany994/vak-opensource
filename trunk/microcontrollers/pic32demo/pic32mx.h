@@ -844,7 +844,34 @@
 #define PIC32_VECT_FCE      44  /* Flash Control Event */
 #define PIC32_VECT_USB      45  /* USB */
 
-/*
+/*--------------------------------------
+ * Memory bus matrix registers.
+ */
+#define BMXCON          PIC32_R (0x82000)       /* Bus Matrix Configuration */
+#define BMXCONCLR	PIC32_R (0x82004)
+#define BMXCONSET	PIC32_R (0x82008)
+#define BMXCONINV	PIC32_R (0x8200C)
+#define BMXDKPBA        PIC32_R (0x82010)       /* Data RAM Kernel Program Base Address */
+#define BMXDKPBACLR	PIC32_R (0x82014)
+#define BMXDKPBASET	PIC32_R (0x82018)
+#define BMXDKPBAINV	PIC32_R (0x8201C)
+#define BMXDUDBA        PIC32_R (0x82020)       /* Data RAM User Data Base Address */
+#define BMXDUDBACLR	PIC32_R (0x82024)
+#define BMXDUDBASET	PIC32_R (0x82028)
+#define BMXDUDBAINV	PIC32_R (0x8202C)
+#define BMXDUPBA        PIC32_R (0x82030)       /* Data RAM User Program Base Address */
+#define BMXDUPBACLR	PIC32_R (0x82034)
+#define BMXDUPBASET	PIC32_R (0x82038)
+#define BMXDUPBAINV	PIC32_R (0x8203C)
+#define BMXDRMSZ        PIC32_R (0x82040)       /* Data RAM Size */
+#define BMXPUPBA        PIC32_R (0x82050)       /* Program Flash User Program Base Address */
+#define BMXPUPBACLR	PIC32_R (0x82054)
+#define BMXPUPBASET	PIC32_R (0x82058)
+#define BMXPUPBAINV	PIC32_R (0x8205C)
+#define BMXPFMSZ        PIC32_R (0x82060)       /* Program Flash Size */
+#define BMXBOOTSZ       PIC32_R (0x82070)       /* Boot Flash Size */
+
+/*--------------------------------------
  * Configuration registers.
  */
 #define PIC32_DEVCFG(cfg0, cfg1, cfg2, cfg3) \
@@ -859,7 +886,7 @@
  */
 #define DEVCFG0_DEBUG_MASK      0x00000003 /* Debugger enable bits */
 #define DEVCFG0_DEBUG_DISABLED  0x00000000 /* Debugger disabled */
-#define DEVCFG0_DEBUG_ENABLED   0x00000001 /* Debugger enabled */
+#define DEVCFG0_DEBUG_ENABLED   0x00000002 /* Debugger enabled */
 #define DEVCFG0_ICESEL          0x00000008 /* Use PGC1/PGD1 (default PGC2/PGD2) */
 #define DEVCFG0_PWP_MASK        0x000ff000 /* Program flash write protect */
 #define DEVCFG0_BWP             0x01000000 /* Boot flash write protect */
@@ -947,7 +974,7 @@
 #define DEVCFG2_UPLLIDIV_6      0x00000500 /* 6x */
 #define DEVCFG2_UPLLIDIV_10     0x00000600 /* 10x */
 #define DEVCFG2_UPLLIDIV_12     0x00000700 /* 12x */
-#define DEVCFG2_UPLLEN          0x00008000 /* Enable USB PLL */
+#define DEVCFG2_UPLLDIS         0x00008000 /* Disable USB PLL */
 #define DEVCFG2_FPLLODIV_MASK   0x00070000 /* Default postscaler for PLL */
 #define DEVCFG2_FPLLODIV_1      0x00000000 /* 1x */
 #define DEVCFG2_FPLLODIV_2      0x00010000 /* 2x */

@@ -203,29 +203,22 @@ void target_print_devcfg (target_t *t)
      * Configuration register 0
      */
     printf ("    DEVCFG0 = %08x\n", devcfg0);
-    switch (~devcfg0 & DEVCFG0_DEBUG_MASK) {
-    case DEVCFG0_DEBUG_DISABLED:
-        printf ("                     %u Debugger disabled\n",
-            ~DEVCFG0_DEBUG_DISABLED & DEVCFG0_DEBUG_MASK);
-        break;
-    case DEVCFG0_DEBUG_ENABLED:
+    if ((~devcfg0 & DEVCFG0_DEBUG_MASK) == DEVCFG0_DEBUG_ENABLED)
         printf ("                     %u Debugger enabled\n",
-            ~DEVCFG0_DEBUG_ENABLED & DEVCFG0_DEBUG_MASK);
-        break;
-    default:
-        printf ("                     %u UNKNOWN\n",
-            ~devcfg0 & DEVCFG0_DEBUG_MASK);
-        break;
-    }
-    if (~devcfg0 & DEVCFG0_ICESEL)
-        printf ("                     %u Use PGC1/PGD1\n",
-            ~DEVCFG0_ICESEL & DEVCFG0_DEBUG_MASK);
+            devcfg0 & DEVCFG0_DEBUG_MASK);
     else
-        printf ("                       Use PGC2/PGD2\n");
+        printf ("                     %u Debugger disabled\n",
+            devcfg0 & DEVCFG0_DEBUG_MASK);
+
+    if (~devcfg0 & DEVCFG0_ICESEL)
+        printf ("                       Use PGC1/PGD1\n");
+    else
+        printf ("                     %u Use PGC2/PGD2\n",
+            DEVCFG0_ICESEL);
 
     if (~devcfg0 & DEVCFG0_PWP_MASK)
         printf ("                 %05x Program flash write protect\n",
-            ~devcfg0 & DEVCFG0_PWP_MASK);
+            devcfg0 & DEVCFG0_PWP_MASK);
 
     if (~devcfg0 & DEVCFG0_BWP)
         printf ("                       Boot flash write protect\n");
@@ -263,10 +256,10 @@ void target_print_devcfg (target_t *t)
         break;
     }
     if (devcfg1 & DEVCFG1_FSOSCEN)
-        printf ("                    %u  Secondary oscillator enable\n",
+        printf ("                    %u  Secondary oscillator enabled\n",
             DEVCFG1_FSOSCEN >> 4);
     if (devcfg1 & DEVCFG1_IESO)
-        printf ("                    %u  Internal-external switch over enable\n",
+        printf ("                    %u  Internal-external switch over enabled\n",
             DEVCFG1_IESO >> 4);
 
     switch (devcfg1 & DEVCFG1_POSCMOD_MASK) {
@@ -459,9 +452,10 @@ void target_print_devcfg (target_t *t)
         printf ("                   %u   USB PLL divider: 1/12\n", DEVCFG2_UPLLIDIV_12 >> 8);
         break;
     }
-    if (devcfg2 & DEVCFG2_UPLLEN)
-        printf ("                  %u    Enable USB PLL\n",
-            DEVCFG2_UPLLEN >> 12);
+    if (devcfg2 & DEVCFG2_UPLLDIS)
+        printf ("                  %u    Disable USB PLL\n",
+            DEVCFG2_UPLLDIS >> 12);
+        printf ("                       Enable USB PLL\n");
 
     switch (devcfg2 & DEVCFG2_FPLLODIV_MASK) {
     case DEVCFG2_FPLLODIV_1:

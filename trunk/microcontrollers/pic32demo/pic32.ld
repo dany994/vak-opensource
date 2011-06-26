@@ -7,10 +7,10 @@ OUTPUT_ARCH(mips)
 ENTRY(_reset_vector_)
 MEMORY
 {
-  flash  (rx)   : ORIGIN = 0xbfc00000,	LENGTH = 12K-16
-  devcfg (r)    : ORIGIN = 0xbfc02ff0,	LENGTH = 16
+  flash  (rx)   : ORIGIN = 0x9fc00000,	LENGTH = 12K-16
+  devcfg (r)    : ORIGIN = 0x9fc02ff0,	LENGTH = 16
   prog   (rx)   : ORIGIN = 0x9d000000,	LENGTH = 512K
-  ram    (rw!x) : ORIGIN = 0x80000000,	LENGTH = 32K
+  ram    (rw!x) : ORIGIN = 0xa0000000,	LENGTH = 128K
 }
 
 /* higher address of the user mode stack */
