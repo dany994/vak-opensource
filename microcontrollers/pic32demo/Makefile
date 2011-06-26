@@ -16,4 +16,4 @@ load:           flash.srec
 		pic32prog -p flash.srec
 
 clean:
-		rm -f *.o *.lst *~ *.elf *.srec *.dis
+		rm -f *.o *.lst *~ *.elf *.srec #*.dis

@@ -153,7 +153,7 @@ extern const unsigned pic32_pe[];
 #define DEVCFG2_UPLLIDIV_6      0x00000500 /* 6x */
 #define DEVCFG2_UPLLIDIV_10     0x00000600 /* 10x */
 #define DEVCFG2_UPLLIDIV_12     0x00000700 /* 12x */
-#define DEVCFG2_UPLLEN          0x00008000 /* Enable USB PLL */
+#define DEVCFG2_UPLLDIS         0x00008000 /* Disable USB PLL */
 #define DEVCFG2_FPLLODIV_MASK   0x00070000 /* Default postscaler for PLL */
 #define DEVCFG2_FPLLODIV_1      0x00000000 /* 1x */
 #define DEVCFG2_FPLLODIV_2      0x00010000 /* 2x */
