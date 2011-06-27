@@ -12,16 +12,6 @@
 typedef struct _adapter_t adapter_t;
 
 struct _adapter_t {
-    /*
-     * Флаг, указывающий, что предыдущая транзакция AP read/write
-     * не завершилась и требует повтора. Устанавливается и сбрасывается
-     * функциями dp_read() и mem_ap_read().
-     */
-    int stalled;
-
-    /*
-     * Обязательные функции.
-     */
     void (*close) (adapter_t *a, int power_on);
     unsigned (*get_idcode) (adapter_t *a);
     void (*load_executable) (adapter_t *a);

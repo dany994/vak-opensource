@@ -1,5 +1,6 @@
 /*
  * Interface to PIC32 JTAG port using FT2232-based USB adapter.
+ * For example: Olimex ARM-USB-Tiny adapter.
  *
  * Copyright (C) 2011 Serge Vakulenko
  *
@@ -18,17 +19,17 @@
 #include "adapter.h"
 
 typedef struct {
-    /* Общая часть */
+    /* Common part */
     adapter_t adapter;
 
-    /* Доступ к устройству через libusb. */
+    /* Device handle for libusb. */
     usb_dev_handle *usbdev;
 
-    /* Буфер для посылаемого пакета MPSSE. */
+    /* Transmit buffer for MPSSE packet. */
     unsigned char output [256*16];
     int bytes_to_write;
 
-    /* Буфер для принятых данных. */
+    /* Receive buffer. */
     unsigned char input [64];
     int bytes_to_read;
     int bytes_per_word;
@@ -37,22 +38,6 @@ typedef struct {
     unsigned long long high_bit_mask;
     unsigned high_byte_bits;
 } mpsse_adapter_t;
-
-/*
- * Можно использовать готовый адаптер Olimex ARM-USB-Tiny с переходником
- * с разъёма ARM 2x10 на разъём MIPS 2x5:
- *
- * Сигнал   Контакт ARM       Контакт MIPS
- * ------------------------------------
- * /TRST        3               3
- *  TDI         5               7
- *  TMS         7               5
- *  TCK         9               1
- *  TDO         13              9
- * /SYSRST      15              6
- *  GND         4,6,8,10,12,    2,8
- *              14,16,18,20
- */
 
 /*
  * Identifiers of USB adapter.
@@ -84,7 +69,7 @@ typedef struct {
 #define SIO_WRITE_EEPROM        0x91
 #define SIO_ERASE_EEPROM        0x92
 
-/* Команды MPSSE. */
+/* MPSSE commands. */
 #define CLKWNEG                 0x01
 #define BITMODE                 0x02
 #define CLKRNEG                 0x04
@@ -108,7 +93,7 @@ typedef struct {
 #define MCHP_FLASH_DISABLE      0xfd    /* Disable access to flash from cpu */
 
 /*
- * Посылка пакета данных USB-устройству.
+ * Send a packet to USB device.
  */
 static void bulk_write (mpsse_adapter_t *a, unsigned char *output, int nbytes)
 {
@@ -133,8 +118,8 @@ static void bulk_write (mpsse_adapter_t *a, unsigned char *output, int nbytes)
 }
 
 /*
- * Если в выходном буфере есть накопленные данные -
- * отправка их устройству.
+ * If there are any data in transmit buffer -
+ * send them to device.
  */
 static void mpsse_flush_output (mpsse_adapter_t *a)
 {
@@ -149,7 +134,7 @@ static void mpsse_flush_output (mpsse_adapter_t *a)
     if (a->bytes_to_read <= 0)
         return;
 
-    /* Получаем ответ. */
+    /* Get reply. */
     bytes_read = 0;
     while (bytes_read < a->bytes_to_read) {
         n = usb_bulk_read (a->usbdev, OUT_EP, (char*) reply,
@@ -193,22 +178,21 @@ static void mpsse_send (mpsse_adapter_t *a,
     unsigned tms_epilog_nbits = 0, tms_epilog = 0;
 
     if (tdi_nbits > 0) {
-        /* Если есть данные, добавляем:
-         * стандартный пролог TMS 1-0-0,
-         * стандартный эпилог TMS 1-0. */
+        /* We have some data; add generic prologue TMS 1-0-0
+         * and epilogue TMS 1-0. */
         tms_prolog |= 1 << tms_prolog_nbits;
         tms_prolog_nbits += 3;
         tms_epilog = 1;
         tms_epilog_nbits = 2;
     }
-    /* Проверяем, есть ли место в выходном буфере.
-     * Максимальный размер одного пакета - 23 байта (6+8+3+3+3). */
+    /* Check that we have enough space in output buffer.
+     * Max size of one packet is 23 bytes (6+8+3+3+3). */
     if (a->bytes_to_write > sizeof (a->output) - 23)
         mpsse_flush_output (a);
 
-    /* Формируем пакет команд MPSSE. */
+    /* Prepare a packet of MPSSE commands. */
     if (tms_prolog_nbits > 0) {
-        /* Пролог TMS, от 1 до 14 бит.
+        /* Prologue TMS, from 1 to 14 bits.
          * 4b - Clock Data to TMS Pin (no Read) */
         a->output [a->bytes_to_write++] = WTMS + BITMODE + CLKWNEG + LSB;
         if (tms_prolog_nbits < 8) {
@@ -223,9 +207,9 @@ static void mpsse_send (mpsse_adapter_t *a,
         }
     }
     if (tdi_nbits > 0) {
-        /* Данные, от 1 до 64 бит. */
+        /* Data, from 1 to 64 bits. */
         if (tms_epilog_nbits > 0) {
-            /* Последний бит надо сопровождать сигналом TMS=1. */
+            /* Last bit should be accompanied with signal TMS=1. */
             tdi_nbits--;
         }
         unsigned nbytes = tdi_nbits / 8;
@@ -240,7 +224,7 @@ static void mpsse_send (mpsse_adapter_t *a,
             a->bytes_to_read += a->bytes_per_word;
         }
         if (nbytes > 0) {
-            /* Целые байты.
+            /* Whole bytes.
              * 39 - Clock Data Bytes In and Out LSB First
              * 19 - Clock Data Bytes Out LSB First (no Read) */
             a->output [a->bytes_to_write++] = read_flag ?
@@ -254,7 +238,7 @@ static void mpsse_send (mpsse_adapter_t *a,
             }
         }
         if (last_byte_bits) {
-            /* Последний нецелый байт.
+            /* Last partial byte.
              * 3b - Clock Data Bits In and Out LSB First
              * 1b - Clock Data Bits Out LSB First (no Read) */
             a->output [a->bytes_to_write++] = read_flag ?
@@ -266,7 +250,7 @@ static void mpsse_send (mpsse_adapter_t *a,
             a->high_byte_mask = 0xffULL << (a->bytes_per_word - 1) * 8;
         }
         if (tms_epilog_nbits > 0) {
-            /* Последний бит, точнее два.
+            /* Last bit (actually two bits).
              * 6b - Clock Data to TMS Pin with Read
              * 4b - Clock Data to TMS Pin (no Read) */
             tdi_nbits++;
@@ -278,8 +262,8 @@ static void mpsse_send (mpsse_adapter_t *a,
             tms_epilog_nbits--;
             tms_epilog >>= 1;
             if (read_flag) {
-                /* Последний бит придёт в следующем байте.
-                 * Вычисляем маску для коррекции. */
+                /* Last bit wil come in next byte.
+                 * Compute a mask for correction. */
                 a->fix_high_bit = 0x40ULL << (a->bytes_per_word * 8);
                 a->bytes_per_word++;
                 a->bytes_to_read++;
@@ -289,7 +273,7 @@ static void mpsse_send (mpsse_adapter_t *a,
             a->high_bit_mask = 1ULL << (tdi_nbits - 1);
     }
     if (tms_epilog_nbits > 0) {
-        /* Эпилог TMS, от 1 до 7 бит.
+        /* Epiloque TMS, from 1 to 7 bits.
          * 4b - Clock Data to TMS Pin (no Read) */
         a->output [a->bytes_to_write++] = WTMS + BITMODE + CLKWNEG + LSB;
         a->output [a->bytes_to_write++] = tms_epilog_nbits - 1;
@@ -303,7 +287,7 @@ static unsigned long long mpsse_fix_data (mpsse_adapter_t *a, unsigned long long
     //if (debug) fprintf (stderr, "fix (%08llx) high_bit=%08llx\n", word, a->fix_high_bit);
 
     if (a->high_byte_bits) {
-        /* Корректируем старший байт принятых данных. */
+        /* Fix a high byte of received data. */
         unsigned long long high_byte = a->high_byte_mask &
             ((word & a->high_byte_mask) >> (8 - a->high_byte_bits));
         word = (word & ~a->high_byte_mask) | high_byte;
@@ -311,7 +295,7 @@ static unsigned long long mpsse_fix_data (mpsse_adapter_t *a, unsigned long long
     }
     word &= a->high_bit_mask - 1;
     if (fix_high_bit) {
-        /* Корректируем старший бит принятых данных. */
+        /* Fix a high bit of received data. */
         word |= a->high_bit_mask;
         //if (debug) fprintf (stderr, "Corrected bit %08llx -> %08llx\n", a->high_bit_mask, word >> 9);
     }
@@ -322,10 +306,10 @@ static unsigned long long mpsse_recv (mpsse_adapter_t *a)
 {
     unsigned long long word;
 
-    /* Шлём пакет. */
+    /* Send a packet. */
     mpsse_flush_output (a);
 
-    /* Обрабатываем одно слово. */
+    /* Process a reply: one 64-bit word. */
     memcpy (&word, a->input, sizeof (word));
     return mpsse_fix_data (a, word);
 }
@@ -402,159 +386,13 @@ static unsigned mpsse_get_idcode (adapter_t *adapter)
     return idcode;
 }
 
-#if 0
 /*
- * Запись регистра DP.
- */
-static void mpsse_dp_write (adapter_t *adapter, int reg, unsigned value)
-{
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    mpsse_send (a, 1, 1, 4, JTAG_IR_DPACC, 0);
-    mpsse_send (a, 0, 0, 32 + 3, (reg >> 1) |
-        (unsigned long long) value << 3, 0);
-    if (debug_level > 1) {
-        fprintf (stderr, "DP write %08x to %s (%02x)\n", value,
-            DP_REGNAME(reg), reg);
-    }
-}
-
-/*
- * Чтение регистра DP.
- */
-static unsigned mpsse_dp_read (adapter_t *adapter, int reg)
-{
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    /* Читаем содержимое регистра DP. */
-    mpsse_send (a, 1, 1, 4, JTAG_IR_DPACC, 0);
-    mpsse_send (a, 0, 0, 32 + 3, (reg >> 1) | 1, 0);
-    mpsse_send (a, 0, 0, 32 + 3, (DP_RDBUFF >> 1) | 1, 1);
-    unsigned long long reply = mpsse_recv (a);
-
-    /* Предыдущая транзакция MEM-AP могла завершиться неуспешно.
-     * Анализируем ответ WAIT. */
-    adapter->stalled = (((unsigned) reply & 7) != 2) && (((unsigned) reply & 7) != 1);
-    //adapter->stalled = ((unsigned) reply & 7) != 2;
-    if (adapter->stalled) {
-        if (debug_level > 1)
-            fprintf (stderr, "DP read <<<WAIT>>> from %s (%02x)\n",
-                DP_REGNAME(reg), reg);
-        return 0;
-    }
-
-    unsigned value = reply >> 3;
-    if (debug_level > 1) {
-        fprintf (stderr, "DP read %08x from %s (%02x)\n", value,
-            DP_REGNAME(reg), reg);
-    }
-    return value;
-}
-
-/*
- * Запись регистра MEM-AP.
- * Старшие биты адреса должны быть предварительно занесены в регистр DP_SELECT.
- */
-static void mpsse_mem_ap_write (adapter_t *adapter, int reg, unsigned value)
-{
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    /* Пишем в регистр MEM-AP. */
-    mpsse_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
-    mpsse_send (a, 0, 0, 32 + 3, (reg >> 1 & 6) |
-        (unsigned long long) value << 3, 0);
-    if (debug_level > 1) {
-        fprintf (stderr, "MEM-AP write %08x to %s (%02x)\n", value,
-            MEM_AP_REGNAME(reg), reg);
-    }
-}
-
-/*
- * Чтение регистра MEM-AP.
- * Старшие биты адреса должны быть предварительно занесены в регистр DP_SELECT.
- */
-static unsigned mpsse_mem_ap_read (adapter_t *adapter, int reg)
-{
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    /* Читаем содержимое регистра MEM-AP. */
-    mpsse_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
-    mpsse_send (a, 0, 0, 32 + 3, (reg >> 1 & 6) | 1, 0);
-
-    /* Извлекаем прочитанное значение из регистра RDBUFF. */
-    mpsse_send (a, 1, 1, 4, JTAG_IR_DPACC, 0);
-    mpsse_send (a, 0, 0, 32 + 3, (DP_RDBUFF >> 1) | 1, 1);
-    unsigned long long reply = mpsse_recv (a);
-
-    /* Предыдущая транзакция MEM-AP могла завершиться неуспешно.
-     * Анализируем ответ WAIT. */
-    adapter->stalled = ((unsigned) reply & 7) != 2;
-    if (adapter->stalled) {
-        if (debug_level > 1)
-            fprintf (stderr, "MEM-AP read <<<WAIT>>> from %s (%02x)\n",
-                MEM_AP_REGNAME(reg), reg);
-        return 0;
-    }
-    unsigned value = reply >> 3;
-    if (debug_level > 1) {
-        fprintf (stderr, "MEM-AP read %08x from %s (%02x)\n", value,
-            MEM_AP_REGNAME(reg), reg);
-    }
-    return value;
-}
-
-/*
- * Аппаратный сброс процессора.
- */
-static void mpsse_reset_cpu (adapter_t *adapter)
-{
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    /* Забываем невыполненную транзакцию. */
-    a->bytes_to_write = 0;
-    a->bytes_to_read = 0;
-
-    /* Активируем /SYSRST на несколько микросекунд. */
-    mpsse_reset (a, 0, 1, 1);
-    mpsse_reset (a, 0, 0, 1);
-}
-#endif
-
-/*
- * Чтение блока памяти.
- * Предварительно в регистр DP_SELECT должен быть занесён 0.
- * Количество слов не больше 10, иначе переполняется буфер USB.
+ * Read a memory block.
  */
 static void mpsse_read_data (adapter_t *adapter,
     unsigned addr, unsigned nwords, unsigned *data)
 {
-#if 0
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    /* Пишем адрес в регистр TAR. */
-    mpsse_mem_ap_write (adapter, MEM_AP_TAR, addr);
-
-    /* Запрашиваем данные через регистр DRW.
-     * Первое чтение не выдаёт значения. */
-    mpsse_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
-    mpsse_send (a, 0, 0, 32 + 3, (MEM_AP_DRW >> 1 & 6) | 1, 0);
-    unsigned i;
-0    for (i=0; i<nwords; i++) {
-        mpsse_send (a, 1, 1, 4, JTAG_IR_APACC, 0);
-        mpsse_send (a, 0, 0, 32 + 3, (MEM_AP_DRW >> 1 & 6) | 1, 1);
-    }
-    /* Шлём пакет. */
-    mpsse_flush_output (a);
-
-    /* Извлекаем и обрабатываем данные. */
-    for (i=0; i<nwords; i++) {
-        unsigned long long reply;
-        memcpy (&reply, a->input + i*a->bytes_per_word, sizeof (reply));
-        reply = mpsse_fix_data (a, reply);
-        adapter->stalled = ((unsigned) reply & 7) != 2;
-        data[i] = reply >> 3;
-    }
-#endif
+    // TODO
 }
 
 /*
@@ -601,9 +439,9 @@ static void mpsse_program_word (adapter_t *adapter,
 }
 
 /*
- * Инициализация адаптера F2232.
- * Возвращаем указатель на структуру данных, выделяемую динамически.
- * Если адаптер не обнаружен, возвращаем 0.
+ * Initialize adapter F2232.
+ * Return a pointer to a data structure, allocated dynamically.
+ * When adapter not found, return 0.
  */
 adapter_t *adapter_open_mpsse (void)
 {
@@ -664,8 +502,6 @@ failed: usb_release_interface (a->usbdev, 0);
         goto failed;
     }
 
-    /* Ровно 500 нсек между выдачами. */
-    //  Was: divisor = 3, latency_timer = 1
     unsigned divisor = 3000;
     unsigned char latency_timer = 100;
 
@@ -697,7 +533,7 @@ failed: usb_release_interface (a->usbdev, 0);
     unsigned char enable_loopback[] = "\x85";
     bulk_write (a, enable_loopback, 1);
 
-    /* Активируем /SYSRST. */
+    /* Activate /SYSRST. */
     mpsse_reset (a, 0, 1, 1);
     mdelay (10);
 

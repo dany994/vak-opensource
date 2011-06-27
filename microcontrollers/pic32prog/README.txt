@@ -1,61 +1,78 @@
-Утилита MILPROG предназначена для записи программного обеспечения
-в Flash-память микроконтроллеров Миландр с архитектурой ARM
-(1986ВМ91Т, 1986ВМ92УТ, 1986ВМ93У). В качестве программатора
-используется адаптер Olimex ARM-USB-Tiny.
+Pic32prog utility is designed to write a flash memory of Microchip PIC32
+microcontrollers.  Supported adapters:
+ * Microchip PICkit2
+ * Olimex ARM-USB-Tiny (not finished yet)
 
 
-=== Вызов ===
+=== Usage ===
 
-При вызове без параметров утилита MILPROG определяет тип процессора
-и flash-памяти, установленных на плате. Например:
+When called without parameters, pic32prog utility detects a type of microcontroller
+and device configuration.  For example:
 
     % milprog
-    Programmer for Microchip PIC32 microcontrollers, Version 1.0
-    Copyright (C) 2010 Serge Vakulenko.
-    Processor: PIC32MX7 (id ...)
-    Flash memory: 128 kbytes
+    Programmer for Mictochip PIC32 microcontrollers, Version 1.0
+        Copyright: (C) 2011 Serge Vakulenko
+          Adapter: PICkit2 Version 2.32.0
+        Processor: 795F512L (id 04307053)
+     Flash memory: 512 kbytes
+    Configuration:
+        DEVCFG0 = 7ffffffd
+                         1 Debugger enabled
+                         8 Use PGC2/PGD2
+        DEVCFG1 = ff6afd5b
+                         3 Primary oscillator with PLL
+                       1   Primary oscillator: XT
+                       4   CLKO output active
+                      3    Peripheral bus clock: SYSCLK / 8
+                      4    Fail-safe clock monitor disable
+                      8    Clock switching disable
+                     a     Watchdog postscale: 1/1024
+        DEVCFG2 = fff8f9d9
+                         1 PLL divider: 1/2
+                        5  PLL multiplier: 20x
+                       1   USB PLL divider: 1/2
+                      8    Disable USB PLL
+                           Enable USB PLL
+                     0     PLL postscaler: 1/1
+        DEVCFG3 = 3affffff
+                     7     Assign irq priority 7 to shadow set
+                           Ethernet RMII enabled
+                   2       Default Ethernet i/o pins
+                           Alternate CAN i/o pins
+                           USBID pin: controlled by port
+                           VBuson pin: controlled by port
 
-Запись в flash-память:
+Writing to flash memory:
 
     milprog [-v] file.srec
-    milprog [-v] file.bin [address]
+    milprog [-v] file.hex
 
-Запись в статическую память:
-
-    milprog -w [-v] file.sreс
-    milprog -w [-v] file.bin [address]
-
-Чтение памяти в файл:
+Reading memory to file:
 
     milprog -r file.bin address length
 
-Параметры:
+Parameters:
 
-    file.srec   - файл с прошивкой в формате SREC
-    file.bin    - бинарный файл с прошивкой
-    address     - адрес flash-памяти, по умолчанию 0x08000000
-    -v          - без записи, только проверка памяти на совпадение
-    -w          - запись в статическую память
-    -r          - режим чтения
+    file.srec   - file with firmware in SREC format
+    file.srec   - file with firmware in Intel HEX format
+    file.bin    - binary file
+    address     - address in memory
+    -v          - verify only (no write)
+    -r          - read mode
 
-При завершении работы утилита производит аппаратный сброс процессора
-(сигнал /SYSRST).
-
-Входной файл должен иметь простой бинарный формат, или SREC. Формат SREC
-предпочтительнее, так как в нём имеется информация об адресах программы.
-Преобразовать формат ELF или COFF или A.OUT в SREC можно командой objcopy,
-например:
+Input file should have format SREC or Intel HEX.
+You can convert ELF format (also COFF or A.OUT) to SREC using objcopy utility,
+for example:
 
     objcopy -O srec firmware.elf firmware.srec
 
 
-=== Исходные тексты ===
+=== Sources ===
 
-Исходные тексты распространяются на условиях лицензии GPL. Их можно
-скачать через SVN командой:
+Sources are distributed under the terms of GPL.
+You can download sources via SVN:
 
-    svn checkout http://milprog.googlecode.com/svn/trunk/ milprog
-
+    svn checkout http://pic32prog.googlecode.com/svn/trunk/ pic32prog
 ___
-С уважением,
-Сергей Вакуленко
+Regards,
+Serge Vakulenko

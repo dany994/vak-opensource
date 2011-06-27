@@ -95,7 +95,7 @@ static const struct {
 
 #if defined (__CYGWIN32__) || defined (MINGW32)
 /*
- * Задержка в миллисекундах: Windows.
+ * Delay in milliseconds: Windows.
  */
 #include <windows.h>
 
@@ -105,7 +105,7 @@ void mdelay (unsigned msec)
 }
 #else
 /*
- * Задержка в миллисекундах: Unix.
+ * Delay in milliseconds: Unix.
  */
 void mdelay (unsigned msec)
 {
@@ -114,7 +114,7 @@ void mdelay (unsigned msec)
 #endif
 
 /*
- * Устанавливаем соединение с адаптером JTAG.
+ * Connect to JTAG adapter.
  */
 target_t *target_open ()
 {
@@ -127,7 +127,7 @@ target_t *target_open ()
     }
     t->cpu_name = "Unknown";
 
-    /* Ищем адаптер. */
+    /* Find adapter. */
     t->adapter = adapter_open_pickit2 ();
     if (! t->adapter)
         t->adapter = adapter_open_mpsse ();
@@ -136,7 +136,7 @@ target_t *target_open ()
         exit (-1);
     }
 
-    /* Проверяем идентификатор процессора. */
+    /* Check CPU identifier. */
     t->cpuid = t->adapter->get_idcode (t->adapter);
     unsigned i;
     for (i=0; t->cpuid != pic32mx_dev[i].devid; i++) {
@@ -556,7 +556,7 @@ static unsigned virt_to_phys (unsigned addr)
 }
 
 /*
- * Чтение данных из памяти.
+ * Read data from memory.
  */
 void target_read_block (target_t *t, unsigned addr,
     unsigned nwords, unsigned *data)

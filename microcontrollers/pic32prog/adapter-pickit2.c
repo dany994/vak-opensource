@@ -20,10 +20,10 @@
 #include "pic32.h"
 
 typedef struct {
-    /* Общая часть */
+    /* Common part */
     adapter_t adapter;
 
-    /* Доступ к устройству через libusb. */
+    /* Device handle for libusb. */
     usb_dev_handle *usbdev;
 
     unsigned char reply [64];
@@ -485,7 +485,7 @@ static unsigned pickit2_read_word (adapter_t *adapter, unsigned addr)
 }
 
 /*
- * Чтение блока памяти размером, кратным 1 килобайту.
+ * Read a block of memory, multiple of 1 kbyte.
  */
 static void pickit2_read_data (adapter_t *adapter,
     unsigned addr, unsigned nwords, unsigned *data)
@@ -706,9 +706,9 @@ static void pickit2_erase_chip (adapter_t *adapter)
 }
 
 /*
- * Инициализация адаптера F2232.
- * Возвращаем указатель на структуру данных, выделяемую динамически.
- * Если адаптер не обнаружен, возвращаем 0.
+ * Initialize adapter PICkit2.
+ * Return a pointer to a data structure, allocated dynamically.
+ * When adapter not found, return 0.
  */
 adapter_t *adapter_open_pickit2 (void)
 {
