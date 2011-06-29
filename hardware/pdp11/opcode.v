@@ -37,20 +37,20 @@
 //
 // Double-operand instructions.
 //
-`define	MOV		10'o01xx	// d = a
-`define	MOVB		10'o11xx
-`define	CMP		10'o02xx	// d = a - b (no register store)
-`define	CMPB		10'o12xx
-`define	ADD		10'o06xx	// d = a + b
-`define	SUB		10'o16xx	// d = b - a
-`define	ASH		10'o072x	// d = a>0 ? b<<a | b>>(-a)
-`define	ASHC		10'o073x	// TODO
-`define	MUL		10'o070x	// TODO
-`define	DIV		10'o071x	// TODO
-`define	BIT		10'o03xx	// d = a & b (no register store)
-`define	BITB		10'o13xx
-`define	BIC		10'o04xx	// d = ~a & b
-`define	BICB		10'o14xx
-`define	BIS		10'o05xx	// d = a | b
-`define	BISB		10'o15xx
-`define	XOR		10'o074x	// d = a ^ b
+`define	MOV		10'o01??	// d = a
+`define	MOVB		10'o11??
+`define	CMP		10'o02??	// d = a - b (no register store)
+`define	CMPB		10'o12??
+`define	ADD		10'o06??	// d = a + b
+`define	SUB		10'o16??	// d = b - a
+`define	ASH		10'o072?	// d = a>0 ? b<<a | b>>(-a)
+`define	ASHC		10'o073?	// TODO
+`define	MUL		10'o070?	// TODO
+`define	DIV		10'o071?	// TODO
+`define	BIT		10'o03??	// d = a & b (no register store)
+`define	BITB		10'o13??
+`define	BIC		10'o04??	// d = ~a & b
+`define	BICB		10'o14??
+`define	BIS		10'o05??	// d = a | b
+`define	BISB		10'o15??
+`define	XOR		10'o074?	// d = a ^ b
