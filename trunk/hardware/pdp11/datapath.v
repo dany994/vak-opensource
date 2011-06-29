@@ -52,11 +52,11 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_x_we == 1) begin
             x = mem_out;
-            $display ("(%0d-%1d) ", $time, tc, "set X := %h", x);
+            $display ("(%0d-%1d) set X := %h", $time, tc, x);
         end
         if (ctl_y_we == 1) begin
             y = mem_out;
-            $display ("(%0d-%1d) ", $time, tc, "set Y := %h", y);
+            $display ("(%0d-%1d) set Y := %h", $time, tc, y);
         end
     end
 
@@ -72,7 +72,7 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_psw_we == 1) begin
             psw = alu_state;
-            $display ("(%0d-%1d) ", $time, tc, "set PSW := %h", psw);
+            $display ("(%0d-%1d) set PSW := %h", $time, tc, psw);
         end
     end
 
@@ -101,7 +101,7 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_z_we == 1) begin
             z = mem_addr;
-            $display ("(%0d-%1d) ", $time, tc, "set Z := %h", z);
+            $display ("(%0d-%1d) set Z := %h", $time, tc, z);
         end
     end
 
@@ -110,9 +110,9 @@ module datapath (
         .addr	(mem_addr),
         .we	(ctl_mem_we),
         .clk	(clk),
-        .byte	(ctl_mem_byte),
-        .w	(alu_out),
-        .d	(mem_out)
+        .bytew	(ctl_mem_byte),
+        .d_in	(alu_out),
+        .d_out	(mem_out)
     );
 
     // Instruction register.
@@ -120,7 +120,7 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_ir_we == 1) begin
             ir = mem_out;
-            $display ("(%0d-%1d) ", $time, tc, "fetch cmd %h (addr %h)", mem_out, mem_addr);
+            $display ("(%0d-%1d) fetch cmd %h (addr %h)", $time, tc, mem_out, mem_addr);
         end
     end
 
@@ -130,7 +130,7 @@ module datapath (
     wire [2:0] tc_next;
     always @(negedge clk or posedge reset) begin
         tc = reset ? 0 : tc_next;
-        //$display ("(%0d-%1d) ", $time, tc, "set TC := %d", tc);
+        //$display ("(%0d-%1d) set TC := %d", $time, tc, tc);
     end
 
     // Control unit
@@ -155,40 +155,3 @@ module datapath (
     );
 
 endmodule
-
-`ifdef TEST_DATAPATH
-//
-// Register file test bench.
-//
-module datapath_test;
-
-    // Inputs
-    reg reset;
-    reg clk;
-
-    // Instantiate the Unit Under Test (UUT)
-    datapath uut (
-        .clk (clk),
-        .reset (reset)
-    );
-
-    initial begin
-        // Initialize Inputs
-        reset = 1;
-        clk = 0;
-
-        // Wait 100 ns for global reset to finish
-        #50 reset = 0;
-        $display ("(%0d) ", $time, "turn reset off");
-
-        while ($time < 2000) begin
-            $display ("");
-            #50 clk = 1;
-            #50 clk = 0;
-        end
-
-        $finish;
-    end
-
-endmodule
-`endif
