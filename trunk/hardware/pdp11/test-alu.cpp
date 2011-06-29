@@ -94,30 +94,30 @@ static const char *opname (unsigned op)
 }
 
 static void show (unsigned op,	// [9:0] op code
-	unsigned a,		// [15:0] `source' register
-	unsigned b,		// [15:0] `destination' register
-	unsigned ps,		// [7:0] processor state register
-	unsigned d,		// [15:0] result
-	unsigned psr,		// [7:0] processor state result
-	unsigned ok)
+    unsigned a,                 // [15:0] `source' register
+    unsigned b,                 // [15:0] `destination' register
+    unsigned ps,		// [7:0] processor state register
+    unsigned d,                 // [15:0] result
+    unsigned psr,		// [7:0] processor state result
+    unsigned ok)
 {
-	VL_PRINTF ("(%u) %-4s", main_time, opname (op));
-	VL_PRINTF (" %04x, %04x [%u%u%u%u] -> %04x [%u%u%u%u]", a, b,
-            ps >> 3 & 1, ps >> 2 & 1, ps >> 1 & 1, ps & 1, d,
-            psr >> 3 & 1, psr >> 2 & 1, psr >> 1 & 1, psr & 1);
-	if (psr >> 3 & 1)
-		VL_PRINTF (" N");
-	if (psr >> 2 & 1)
-		VL_PRINTF (" Z");
-	if (psr >> 1 & 1)
-		VL_PRINTF (" V");
-	if (psr & 1)
-		VL_PRINTF (" C");
+    VL_PRINTF ("(%u) %-4s", main_time, opname (op));
+    VL_PRINTF (" %04x, %04x [%u%u%u%u] -> %04x [%u%u%u%u]", a, b,
+        ps >> 3 & 1, ps >> 2 & 1, ps >> 1 & 1, ps & 1, d,
+        psr >> 3 & 1, psr >> 2 & 1, psr >> 1 & 1, psr & 1);
+    if (psr >> 3 & 1)
+        VL_PRINTF (" N");
+    if (psr >> 2 & 1)
+        VL_PRINTF (" Z");
+    if (psr >> 1 & 1)
+        VL_PRINTF (" V");
+    if (psr & 1)
+        VL_PRINTF (" C");
 
-	if (ok)
-		VL_PRINTF (" - Ok\n");
-	else
-		VL_PRINTF (" - ERROR\n");
+    if (ok)
+        VL_PRINTF (" - Ok\n");
+    else
+        VL_PRINTF (" - ERROR\n");
 }
 
 struct stimulus {
