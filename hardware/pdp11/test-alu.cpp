@@ -1,124 +1,11 @@
-// DESCRIPTION: Verilator Example: Top level main for invoking model
-//
-// Copyright 2003-2011 by Wilson Snyder. This program is free software; you can
-// redistribute it and/or modify it under the terms of either the GNU
-// Lesser General Public License Version 3 or the Perl Artistic License
-// Version 2.0.
-
 #include <verilated.h>		// Defines common routines
 #include "Valu.h"		// From Verilating "alu.v"
-#include "opcode.h"		// From Verilating "alu.v"
+#include "opcode.h"
 #if VM_TRACE
 # include <verilated_vcd_c.h>	// Trace file format header
 #endif
 
-#define N (1 << 3)
-#define Z (1 << 2)
-#define V (1 << 1)
-#define C (1 << 0)
-
-Valu *alu;			// Instantiation of module
-
-unsigned main_time = 0;         // Current simulation time
-
-double sc_time_stamp ()
-{                               // Called by $time in Verilog
-    return main_time;
-}
-
-static void delay (unsigned n)
-{
-    unsigned t = main_time + n;
-    while (main_time != t && !Verilated::gotFinish()) {
-	alu->eval();		// Evaluate model
-	main_time++;		// Time passes...
-    }
-}
-
-static const char *opname (unsigned op)
-{
-    switch (op & ~077) {
-    case MOV:  return "MOV";
-    case MOVB: return "MOVB";
-    case CMP:  return "CMP";
-    case CMPB: return "CMPB";
-    case ADD:  return "ADD";
-    case SUB:  return "SUB";
-    case BIT:  return "BIT";
-    case BITB: return "BITB";
-    case BIC:  return "BIC";
-    case BICB: return "BICB";
-    case BIS:  return "BIS";
-    case BISB: return "BISB";
-    }
-    switch (op & ~07) {
-    case ASH:  return "ASH";
-    case ASHC: return "ASHC";
-    case MUL:  return "MUL";
-    case DIV:  return "DIV";
-    case XOR:  return "XOR";
-    }
-    switch (op) {
-    case CLR:  return "CLR";
-    case CLRB: return "CLRB";
-    case COM:  return "COM";
-    case COMB: return "COMB";
-    case INC:  return "INC";
-    case INCB: return "INCB";
-    case DEC:  return "DEC";
-    case DECB: return "DECB";
-    case NEG:  return "NEG";
-    case NEGB: return "NEGB";
-    case TST:  return "TST";
-    case TSTB: return "TSTB";
-    case ASR:  return "ASR";
-    case ASRB: return "ASRB";
-    case ASL:  return "ASL";
-    case ASLB: return "ASLB";
-    case ROR:  return "ROR";
-    case RORB: return "RORB";
-    case ROL:  return "ROL";
-    case ROLB: return "ROLB";
-    case SWAB: return "SWAB";
-    case ADC:  return "ADC";
-    case ADCB: return "ADCB";
-    case SBC:  return "SBC";
-    case SBCB: return "SBCB";
-    case SXT:  return "SXT";
-    case MFPS: return "MFPS";
-    case MTPS: return "MTPS";
-    case INC2: return "INC2";
-    case DEC2: return "DEC2";
-    }
-    return "?OP?";
-}
-
-static void show (unsigned op,	// [9:0] op code
-    unsigned a,                 // [15:0] `source' register
-    unsigned b,                 // [15:0] `destination' register
-    unsigned ps,		// [7:0] processor state register
-    unsigned d,                 // [15:0] result
-    unsigned psr,		// [7:0] processor state result
-    unsigned ok)
-{
-    VL_PRINTF ("(%u) %-4s", main_time, opname (op));
-    VL_PRINTF (" %04x, %04x [%u%u%u%u] -> %04x [%u%u%u%u]", a, b,
-        ps >> 3 & 1, ps >> 2 & 1, ps >> 1 & 1, ps & 1, d,
-        psr >> 3 & 1, psr >> 2 & 1, psr >> 1 & 1, psr & 1);
-    if (psr >> 3 & 1)
-        VL_PRINTF (" N");
-    if (psr >> 2 & 1)
-        VL_PRINTF (" Z");
-    if (psr >> 1 & 1)
-        VL_PRINTF (" V");
-    if (psr & 1)
-        VL_PRINTF (" C");
-
-    if (ok)
-        VL_PRINTF (" - Ok\n");
-    else
-        VL_PRINTF (" - ERROR\n");
-}
+Valu *uut;			// Instantiation of module
 
 struct stimulus {
     unsigned op_in;
@@ -130,7 +17,7 @@ struct stimulus {
     unsigned psr_out;
 };
 
-struct stimulus tab[] = {
+const struct stimulus tab[] = {
     { CLR,  0x5555, 0x3333, 0,      5,  0,      Z       },
     { CLRB, 0x5555, 0x3333, 0,      5,  0x3300, Z       },
     { COM,  0x5555, 0x3333, 0,      5,  0xcccc, N+C	},
@@ -181,38 +68,74 @@ struct stimulus tab[] = {
     { BISB, 0x2134, 0x5678, N+Z+V+C,5,  0x567c, C	},
     { XOR,  0x1234, 0x5678, N+Z+V+C,5,  0x444c, C	},
 
-    { 0,    0,      0,      0,      0,  0,      0       },
+    { ~0,   0,      0,      0,      0,  0,      0       },
 };
+
+static void delay (unsigned n)
+{
+    unsigned t = main_time + n;
+    while (main_time != t && !Verilated::gotFinish()) {
+	uut->eval();            // Evaluate model
+	main_time++;		// Time passes...
+    }
+}
+
+static void show (unsigned op,	// [9:0] op code
+    unsigned a,                 // [15:0] `source' register
+    unsigned b,                 // [15:0] `destination' register
+    unsigned ps,		// [7:0] processor state register
+    unsigned d,                 // [15:0] result
+    unsigned psr,		// [7:0] processor state result
+    unsigned ok)
+{
+    VL_PRINTF ("(%u) %-4s", main_time, opname (op));
+    VL_PRINTF (" %04x, %04x [%u%u%u%u] -> %04x [%u%u%u%u]", a, b,
+        ps >> 3 & 1, ps >> 2 & 1, ps >> 1 & 1, ps & 1, d,
+        psr >> 3 & 1, psr >> 2 & 1, psr >> 1 & 1, psr & 1);
+    if (psr >> 3 & 1)
+        VL_PRINTF (" N");
+    if (psr >> 2 & 1)
+        VL_PRINTF (" Z");
+    if (psr >> 1 & 1)
+        VL_PRINTF (" V");
+    if (psr & 1)
+        VL_PRINTF (" C");
+
+    if (ok)
+        VL_PRINTF (" - Ok\n");
+    else
+        VL_PRINTF (" - ERROR\n");
+}
 
 int main (int argc, char **argv)
 {
-    alu = new Valu;		// Create instance of module
+    uut = new Valu;		// Create instance of module
 
     Verilated::commandArgs (argc, argv);
     Verilated::debug (0);
 
-    alu->op = 0,                // Initialize inputs
-    alu->a = 0;
-    alu->b = 0;
-    alu->ps = 0;
+    uut->op = 0;                // Initialize inputs
+    uut->a = 0;
+    uut->b = 0;
+    uut->ps = 0;
 
     // Wait for global reset to finish
     delay (10);
     VL_PRINTF ("(%u) started ALU testing\n", main_time);
 
-    struct stimulus *s;
-    for (s=tab; s->delay != 0; s++) {
-        alu->op = s->op_in;
-        alu->a = s->a_in;
-        alu->b = s->b_in;
-        alu->ps = s->ps_in;
-        delay (s->delay);
-        show (alu->op, alu->a, alu->b, alu->ps, alu->d, alu->psr,
-            (alu->d == s->d_out && alu->psr == s->psr_out));
+    const struct stimulus *s;
+    for (s=tab; s->op_in != ~0U; s++) {
+        uut->op = s->op_in;
+        uut->a = s->a_in;
+        uut->b = s->b_in;
+        uut->ps = s->ps_in;
+        delay (5);
+        show (uut->op, uut->a, uut->b, uut->ps, uut->d, uut->psr,
+            (uut->d == s->d_out && uut->psr == s->psr_out));
     }
     delay (5);
     VL_PRINTF ("(%u) finished ALU testing\n", main_time);
-    alu->final();
+    uut->final();
 
     VL_PRINTF ("All Tests passed\n");
     return 0;

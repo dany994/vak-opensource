@@ -9,24 +9,31 @@
 # Lesser General Public License Version 3 or the Perl Artistic License
 # Version 2.0.
 #
+ALL             = obj-alu/simx obj-regfile/simx
 
-# This must point to the root of the VERILATOR kit
-#VERILATOR_ROOT  := /usr/share/verilator
-#export VERILATOR_ROOT
+all compile:    $(ALL)
 
-all compile:    obj_dir/simx
+run:            $(ALL)
+		obj-alu/simx
+		obj-regfile/simx
 
-run:            obj_dir/simx
-		obj_dir/simx
+#
+# alu
+#
+obj-alu/simx:   obj-alu/Valu.h *.h *.cpp
+		[ -d obj-alu ] && $(MAKE) -C obj-alu -f ../Makefile-alu
 
-config:
-		verilator -V
+obj-alu/Valu.h: alu.v
+		verilator --cc -f verilator.options -Mdir obj-alu alu.v
 
-obj_dir/simx:   obj_dir/Valu.h *.h *.cpp
-		[ -d obj_dir ] && $(MAKE) -C obj_dir -f ../Makefile-verilator
+#
+# regfile
+#
+obj-regfile/simx:   obj-regfile/Vregfile.h *.h *.cpp
+		[ -d obj-regfile ] && $(MAKE) -C obj-regfile -f ../Makefile-regfile
 
-obj_dir/Valu.h: alu.options alu.v
-		verilator --cc -f alu.options -DTEST_ALU alu.v
+obj-regfile/Vregfile.h: regfile.v
+		verilator --cc -f verilator.options -Mdir obj-regfile regfile.v
 
 clean:
-		-rm -rf obj_dir *.log *.dmp *.vpd core *~
+		-rm -rf obj-* *.log *.dmp *.vpd core *~
