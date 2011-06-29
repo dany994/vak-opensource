@@ -9,13 +9,12 @@
 # Lesser General Public License Version 3 or the Perl Artistic License
 # Version 2.0.
 #
-ALL             = obj-alu/simx obj-regfile/simx
+ALL             = obj-alu/simx obj-regfile/simx obj-memory/simx obj-datapath/simx
 
 all compile:    $(ALL)
 
-run:            $(ALL)
-		obj-alu/simx
-		obj-regfile/simx
+clean:
+		-rm -rf obj-* *.log *.dmp *.vpd core *~
 
 #
 # alu
@@ -29,11 +28,26 @@ obj-alu/Valu.h: alu.v
 #
 # regfile
 #
-obj-regfile/simx:   obj-regfile/Vregfile.h *.h *.cpp
+obj-regfile/simx: obj-regfile/Vregfile.h *.h *.cpp
 		[ -d obj-regfile ] && $(MAKE) -C obj-regfile -f ../Makefile-regfile
 
 obj-regfile/Vregfile.h: regfile.v
 		verilator --cc -f verilator.options -Mdir obj-regfile regfile.v
 
-clean:
-		-rm -rf obj-* *.log *.dmp *.vpd core *~
+#
+# memory
+#
+obj-memory/simx: obj-memory/Vmemory.h *.h *.cpp
+		[ -d obj-memory ] && $(MAKE) -C obj-memory -f ../Makefile-memory
+
+obj-memory/Vmemory.h: memory.v
+		verilator --cc -f verilator.options -Mdir obj-memory memory.v
+
+#
+# datapath
+#
+obj-datapath/simx: obj-datapath/Vdatapath.h *.h *.cpp
+		[ -d obj-datapath ] && $(MAKE) -C obj-datapath -f ../Makefile-datapath
+
+obj-datapath/Vdatapath.h: datapath.v
+		verilator --cc -f verilator.options -Mdir obj-datapath datapath.v
