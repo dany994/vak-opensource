@@ -54,3 +54,12 @@
 #define	BIS		00500	// d = a | b
 #define	BISB		01500
 #define	XOR		00740	// d = a ^ b
+
+#define N (1 << 3)
+#define Z (1 << 2)
+#define V (1 << 1)
+#define C (1 << 0)
+
+extern unsigned main_time;      // Current simulation time
+
+const char *opname (unsigned op);
