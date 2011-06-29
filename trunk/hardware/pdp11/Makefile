@@ -9,12 +9,12 @@
 # Lesser General Public License Version 3 or the Perl Artistic License
 # Version 2.0.
 #
-ALL             = obj-alu/simx obj-regfile/simx obj-memory/simx obj-datapath/simx
+ALL             = obj-datapath/simx #obj-alu/simx obj-regfile/simx obj-memory/simx
 
 all compile:    $(ALL)
 
 clean:
-		-rm -rf obj-* *.log *.dmp *.vpd core *~
+		-rm -rf simx obj-* *.log *.dmp *.vpd core *~
 
 #
 # alu
@@ -48,6 +48,7 @@ obj-memory/Vmemory.h: memory.v
 #
 obj-datapath/simx: obj-datapath/Vdatapath.h *.h *.cpp
 		[ -d obj-datapath ] && $(MAKE) -C obj-datapath -f ../Makefile-datapath
+		cp $@ .
 
 obj-datapath/Vdatapath.h: datapath.v
 		verilator --cc -f verilator.options -Mdir obj-datapath datapath.v

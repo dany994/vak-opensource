@@ -52,11 +52,11 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_x_we == 1) begin
             x = mem_out;
-            $display ("(%0d-%1d) set X := %h", $time, tc, x);
+            $display ("(%0d-%1d) set X := %h", $time, cycount, x);
         end
         if (ctl_y_we == 1) begin
             y = mem_out;
-            $display ("(%0d-%1d) set Y := %h", $time, tc, y);
+            $display ("(%0d-%1d) set Y := %h", $time, cycount, y);
         end
     end
 
@@ -72,7 +72,7 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_psw_we == 1) begin
             psw = alu_state;
-            $display ("(%0d-%1d) set PSW := %h", $time, tc, psw);
+            $display ("(%0d-%1d) set PSW := %h", $time, cycount, psw);
         end
     end
 
@@ -101,7 +101,7 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_z_we == 1) begin
             z = mem_addr;
-            $display ("(%0d-%1d) set Z := %h", $time, tc, z);
+            $display ("(%0d-%1d) set Z := %h", $time, cycount, z);
         end
     end
 
@@ -120,24 +120,24 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_ir_we == 1) begin
             ir = mem_out;
-            $display ("(%0d-%1d) fetch cmd %h (addr %h)", $time, tc, mem_out, mem_addr);
+            $display ("(%0d-%1d) fetch cmd %h (addr %h)", $time, cycount, mem_out, mem_addr);
         end
     end
 
     // Cycle counter. Changed on negative clk edge.
     // On reset, TC is cleared.
-    reg [2:0] tc;
-    wire [2:0] tc_next;
+    reg [2:0] cycount;
+    wire [2:0] cycount_next;
     always @(negedge clk or posedge reset) begin
-        tc = reset ? 0 : tc_next;
-        //$display ("(%0d-%1d) set TC := %d", $time, tc, tc);
+        cycount = reset ? 0 : cycount_next;
+        $display ("(%0d-%1d) set cycount := %d", $time, cycount, cycount);
     end
 
     // Control unit
     control control (
         .cmd		(ir),
-        .cycle		(tc),
-        .cnext		(tc_next),
+        .cycle		(cycount),
+        .cnext		(cycount_next),
         .reg_from_mem	(ctl_reg_input),
         .reg_src	(ctl_reg_src),
         .reg_dst	(ctl_reg_dst),
