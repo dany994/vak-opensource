@@ -61,9 +61,9 @@ usage:      fprintf (stderr, "Usage:\n");
     uut->reset = 0;
     VL_PRINTF ("(%u) turn reset off\n", main_time);
 
-    // Start from fixed address.
-    uut->v__DOT__cycount_next = 0;
+    // Initiate instruction fetching.
     uut->v__DOT__reg_input = 0500;
+    uut->v__DOT__cycount_next = 0;
     uut->v__DOT__ctl_ir_we = 0;
 
     while (main_time < 200 && ! Verilated::gotFinish()) {
