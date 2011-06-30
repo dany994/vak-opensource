@@ -17,6 +17,14 @@ static void delay (unsigned n)
     }
 }
 
+void trace_fetch (unsigned cycount, unsigned addr, unsigned opcode)
+{
+    unsigned short *mem = uut->v__DOT__ram__DOT__memory + (addr >> 1);
+
+    printf ("%4u-%1u) fetch %06o: %s\n", main_time, cycount, addr,
+        disasm (addr, opcode, mem[1], mem[2]));
+}
+
 int main (int argc, char **argv)
 {
     for (;;) {

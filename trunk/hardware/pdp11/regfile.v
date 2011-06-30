@@ -26,15 +26,15 @@ module regfile (
         if (reset) begin
             // On reset, PC is cleared.
             r [7] = 0;
-            $display ("(%0d) reset PC", $time);
+            $display ("        PC := 0");
         end else if (we == 1) begin
             r [selb] = w;
             if (selb == 7)
-                $display ("(%0d) set PC := %o", $time, w);
+                $display ("        PC := %o", w);
             else if (selb == 6)
-                $display ("(%0d) set SP := %o", $time, w);
+                $display ("        SP := %o", w);
             else
-                $display ("(%0d) set R%d := %o", $time, selb, w);
+                $display ("        R%d := %o", selb, w);
         end
     end
 

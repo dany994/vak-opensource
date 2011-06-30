@@ -99,7 +99,7 @@ rerr:   fprintf (stderr, "%s: read error\n", name);
             goto rerr;
 
         unsigned val = buf[0] | buf[1] << 8;
-printf ("%06o := %06o\n", addr, val);
+//printf ("%06o := %06o\n", addr, val);
         memory [addr>>1] = val;
         addr += 2;
         tsize -= 2;
