@@ -17,7 +17,7 @@ clean:
 		-rm -rf simx obj-* *.log *.dmp *.vpd core *~
 
 run:
-		./simx tests/test00.out
+		./simx tests/test01.out
 
 #
 # alu

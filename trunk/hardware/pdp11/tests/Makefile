@@ -2,7 +2,7 @@ CC              = pdp11-pcc
 LD              = pdp11-ld
 LDFLAGS         =
 
-all:            test00.out
+all:            test00.out test01.out
 
 clean:
 		rm -f *.o *.out *.dis
