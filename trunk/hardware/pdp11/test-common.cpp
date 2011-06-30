@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <verilated.h>		// Defines common routines
 #include "opcode.h"		// From Verilating "alu.v"
 
@@ -64,4 +67,42 @@ const char *opname (unsigned op)
     case DEC2: return "DEC2";
     }
     return "?OP?";
+}
+
+void load_file (const char *name, unsigned addr, unsigned short memory[])
+{
+    int fd = open (name, 0);
+    if (fd < 0) {
+        perror (name);
+        exit (-1);
+    }
+
+    unsigned char buf [16];
+    int n = read (fd, buf, 16);
+    if (n != 16) {
+rerr:   fprintf (stderr, "%s: read error\n", name);
+        close (fd);
+        exit (-1);
+    }
+
+    unsigned magic = buf[0] | buf[1] << 8;
+    if (magic != 0407) {
+        fprintf (stderr, "%s: invalid magic %04o\n", name, magic);
+        close (fd);
+        exit (-1);
+    }
+
+    unsigned tsize = buf[2] | buf[3] << 8;
+    while (tsize > 0) {
+        n = read (fd, buf, 2);
+        if (n != 2)
+            goto rerr;
+
+        unsigned val = buf[0] | buf[1] << 8;
+printf ("%06o := %06o\n", addr, val);
+        memory [addr>>1] = val;
+        addr += 2;
+        tsize -= 2;
+    }
+    close (fd);
 }

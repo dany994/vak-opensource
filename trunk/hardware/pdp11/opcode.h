@@ -63,3 +63,5 @@
 extern unsigned main_time;      // Current simulation time
 
 const char *opname (unsigned op);
+
+void load_file (const char *name, unsigned addr, unsigned short memory[]);
