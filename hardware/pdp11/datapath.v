@@ -120,7 +120,9 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_ir_we == 1) begin
             ir = mem_out;
-            $display ("(%0d-%1d) fetch cmd %h (addr %h)", $time, cycount, mem_out, mem_addr);
+            $display ("(%0d-%1d) fetch cmd %o (addr %o)", $time, cycount, mem_out, mem_addr);
+            $display ("     reg_src %o - src %o", ctl_reg_src, src);
+            $display ("     reg_dst %o - dst %o", ctl_reg_dst, dst);
         end
     end
 
