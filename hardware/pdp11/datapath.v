@@ -52,11 +52,11 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_x_we == 1) begin
             x = mem_out;
-            $display ("(%0d-%1d) set X := %h", $time, cycount, x);
+            $display ("%4d-%1d) X := %o", $time, cycount, x);
         end
         if (ctl_y_we == 1) begin
             y = mem_out;
-            $display ("(%0d-%1d) set Y := %h", $time, cycount, y);
+            $display ("%4d-%1d) Y := %o", $time, cycount, y);
         end
     end
 
@@ -72,7 +72,7 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_psw_we == 1) begin
             psw = alu_state;
-            $display ("(%0d-%1d) set PSW := %h", $time, cycount, psw);
+            $display ("%4d-%1d) PSW := %02o", $time, cycount, psw);
         end
     end
 
@@ -101,7 +101,7 @@ module datapath (
     always @(posedge clk) begin
         if (ctl_z_we == 1) begin
             z = mem_addr;
-            $display ("(%0d-%1d) set Z := %h", $time, cycount, z);
+            $display ("%4d-%1d) Z := %o", $time, cycount, z);
         end
     end
 
@@ -115,14 +115,16 @@ module datapath (
         .d_out	(mem_out)
     );
 
+
     // Instruction register.
     reg [15:0] ir;
     always @(posedge clk) begin
         if (ctl_ir_we == 1) begin
             ir = mem_out;
-            $display ("(%0d-%1d) fetch cmd %o (addr %o)", $time, cycount, mem_out, mem_addr);
-            $display ("     reg_src %o - src %o", ctl_reg_src, src);
-            $display ("     reg_dst %o - dst %o", ctl_reg_dst, dst);
+            $c ("extern void trace_fetch (unsigned cycount, unsigned mem_addr, unsigned mem_out);");
+            $c ("trace_fetch (", cycount, ",", mem_addr, ",", mem_out, ");");
+            //$display ("        reg_src %o - src %o", ctl_reg_src, src);
+            //$display ("        reg_dst %o - dst %o", ctl_reg_dst, dst);
         end
     end
 
@@ -131,7 +133,7 @@ module datapath (
     reg [2:0] cycount;
     wire [2:0] cycount_next;
     always @(posedge clk) begin
-        $display ("(%0d-%1d) set cycount := %0d", $time, cycount, reset ? 0 : cycount_next);
+        //$display ("%4d-%1d) cycount := %0d", $time, cycount, reset ? 0 : cycount_next);
         cycount = reset ? 0 : cycount_next;
     end
 

@@ -893,6 +893,27 @@ module control (
 //-----------------------------
 // Destination operand.
         //
+        // Double operand, register dst: R
+        // Nsrc + 1 cycle.
+        //
+        { 3'd4, 16'oz1zz0z },		// mov
+        { 3'd4, 16'oz2zz0z },           // cmp
+        { 3'd4, 16'oz3zz0z },           // bit
+        { 3'd4, 16'oz4zz0z },           // bic
+        { 3'd4, 16'oz5zz0z },           // bis
+        { 3'd4, 16'oz6zz0z }:           // add, sub
+        begin `DEFAULT_CONTROL;
+                // Use data from X and Rdst and execute an operation.
+                // Store a result to memory.
+                cnext = 0;		// Next cycle 0
+                reg_dst = cmd[2:0];	// Use Rdst
+                alu_input = `ALU_X_DST;	// ALU from X and Rdst
+                alu_op = cmd[15:6];	// Compute result
+                psw_we = 1;		// New PSW
+                reg_we = 1;		// Write to dst...
+                reg_from_mem = 0;	// ...from ALU
+        end
+        //
         // Double operand, register-deferred dst: M [ R ]
         // Nsrc + 2 cycles.
         //                              // Cycle #4

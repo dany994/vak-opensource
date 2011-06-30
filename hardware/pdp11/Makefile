@@ -49,7 +49,7 @@ obj-memory/Vmemory.h: memory.v
 #
 # datapath
 #
-obj-datapath/simx: obj-datapath/Vdatapath.h *.h *.cpp
+obj-datapath/simx: obj-datapath/Vdatapath.h *.h *.cpp *.c
 		[ -d obj-datapath ] && $(MAKE) -C obj-datapath -f ../Makefile-datapath
 		cp $@ .
 
