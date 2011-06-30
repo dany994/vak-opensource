@@ -67,6 +67,7 @@ usage:      fprintf (stderr, "Usage:\n");
     while (main_time < 200 && ! Verilated::gotFinish()) {
         VL_PRINTF ("\n");
 	uut->eval();                    // Evaluate model
+VL_PRINTF ("(%u) PC := %6o\n", main_time, uut->v__DOT__regfile__DOT__r[7]);
 #if VM_TRACE
 	if (tfp) tfp->dump (main_time);	// Create waveform trace for this timestamp
 #endif

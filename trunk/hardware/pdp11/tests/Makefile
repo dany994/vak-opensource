@@ -1,6 +1,6 @@
 CC              = pdp11-pcc
 LD              = pdp11-ld
-LDFLAGS         = -eentry
+LDFLAGS         =
 
 all:            test00.out
 
