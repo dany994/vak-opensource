@@ -16,6 +16,9 @@ all compile:    $(ALL)
 clean:
 		-rm -rf simx obj-* *.log *.dmp *.vpd core *~
 
+run:
+		./simx tests/test00.out
+
 #
 # alu
 #
@@ -50,5 +53,5 @@ obj-datapath/simx: obj-datapath/Vdatapath.h *.h *.cpp
 		[ -d obj-datapath ] && $(MAKE) -C obj-datapath -f ../Makefile-datapath
 		cp $@ .
 
-obj-datapath/Vdatapath.h: datapath.v
-		verilator --cc -f verilator.options -Mdir obj-datapath datapath.v
+obj-datapath/Vdatapath.h: *.v
+		verilator --trace --cc -f verilator.options -Mdir obj-datapath datapath.v

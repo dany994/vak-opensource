@@ -130,9 +130,9 @@ module datapath (
     // On reset, TC is cleared.
     reg [2:0] cycount;
     wire [2:0] cycount_next;
-    always @(negedge clk or posedge reset) begin
+    always @(posedge clk) begin
+        $display ("(%0d-%1d) set cycount := %0d", $time, cycount, reset ? 0 : cycount_next);
         cycount = reset ? 0 : cycount_next;
-        $display ("(%0d-%1d) set cycount := %d", $time, cycount, cycount);
     end
 
     // Control unit

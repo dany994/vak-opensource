@@ -23,22 +23,18 @@ module regfile (
     // Write value from bus W to R[b].
     // On positive clk, when we is set.
     always @(posedge clk) begin
-        if (we == 1) begin
-            r [selb] = w;
-            if (selb == 7)
-                $display ("(%0d) set PC := %h", $time, w);
-            else if (selb == 6)
-                $display ("(%0d) set SP := %h", $time, w);
-            else
-                $display ("(%0d) set R%d := %h", $time, selb, w);
-        end
-    end
-
-    // On reset, PC is cleared.
-    always @(negedge clk or posedge reset) begin
         if (reset) begin
+            // On reset, PC is cleared.
             r [7] = 0;
             $display ("(%0d) reset PC", $time);
+        end else if (we == 1) begin
+            r [selb] = w;
+            if (selb == 7)
+                $display ("(%0d) set PC := %o", $time, w);
+            else if (selb == 6)
+                $display ("(%0d) set SP := %o", $time, w);
+            else
+                $display ("(%0d) set R%d := %o", $time, selb, w);
         end
     end
 

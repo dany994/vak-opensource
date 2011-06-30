@@ -61,13 +61,15 @@ usage:      fprintf (stderr, "Usage:\n");
     uut->reset = 0;
     VL_PRINTF ("(%u) turn reset off\n", main_time);
 
-    uut->v__DOT__regfile__DOT__r[7] = 0500;
-    VL_PRINTF ("(%u) PC := %6o\n", main_time, uut->v__DOT__regfile__DOT__r[7]);
+    // Start from fixed address.
+    uut->v__DOT__cycount_next = 0;
+    uut->v__DOT__reg_input = 0500;
+    uut->v__DOT__ctl_ir_we = 0;
 
     while (main_time < 200 && ! Verilated::gotFinish()) {
-        VL_PRINTF ("\n");
+        if (uut->clk)
+            VL_PRINTF (uut->v__DOT__cycount == 0 ? "------\n" : "\n");
 	uut->eval();                    // Evaluate model
-VL_PRINTF ("(%u) PC := %6o\n", main_time, uut->v__DOT__regfile__DOT__r[7]);
 #if VM_TRACE
 	if (tfp) tfp->dump (main_time);	// Create waveform trace for this timestamp
 #endif
