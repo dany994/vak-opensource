@@ -1179,27 +1179,25 @@ module control (
         begin `DEFAULT_CONTROL;
                 cnext = 0;		// Next cycle 0
         end
-        { 3'd1, 16'b00000001zzzzzzzz }: // br
+        { 3'd1, 16'b00000001zzzzzzzz }, // br
+	{ 3'd1, 16'b0000001zzzzzzzzz }, // bne, beq
+	{ 3'd1, 16'b000001zzzzzzzzzz }, // bge, blt, bgt, ble
+	{ 3'd1, 16'b10000zzzzzzzzzzz }: // bpl, bmi, bhi, blos, bvc, bvs, bhis, blo
         begin `DEFAULT_CONTROL;
                 // Opcode is latched in X register.
                 // Add it to PC as a word offset.
                 cnext = 0;		// Next cycle 0
                 reg_dst = 7;		// Use R7 (PC)
                 alu_input = `ALU_X_DST; // ALU from X and PC
-                alu_op = `BRANCH;	// Compute PC + (X << 1)
+                alu_op = {cmd[15:8], 2'b0}; // Compute PC + (X << 1)
                 reg_we = 1;		// Write to PC...
                 reg_from_mem = 0;	// ...from ALU
         end
 `ifdef NOTDEF
-        { 3'd1, 16'oz01zzz },
-        { 3'd1, 16'oz02zzz },
-        { 3'd1, 16'oz03zzz },
-        { 3'd1, 16'oz04zzz },
-        { 3'd1, 16'oz000zz },
-        { 3'd1, 16'oz001zz },
-        { 3'd1, 16'oz002zz },
-        { 3'd1, 16'oz004zz }: begin
-        end
+        { 3'd1, 16'oz000zz },           // wait, reset, rti, rtt, bpt, iot
+        { 3'd1, 16'oz001zz },           // jmp
+        { 3'd1, 16'oz002zz },           // rts
+        { 3'd1, 16'oz04zzz },           // jsr, trap, emt
 `endif
         endcase
     end

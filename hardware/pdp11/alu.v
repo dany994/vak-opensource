@@ -8,18 +8,27 @@ module alu (
     input wire [9:0] op,	// op code
     input wire [15:0] a,	// `source' register
     input wire [15:0] b,	// `destination' register
-    input wire [7:0] ps,	// processor state register
+    input wire [7:0] ps_in,	// processor state register
     output reg [15:0] d,	// result
-    output reg [7:0] psr	// processor state result
+    output reg [7:0] ps_out	// processor state result
 );
 
-`define n	psr[3]		// negative result
-`define z	psr[2]		// zero result
-`define v	psr[1]		// overflow result
-`define c	psr[0]		// carry result
+`define n_in	ps_in[3]	// negative
+`define z_in	ps_in[2]	// zero
+`define v_in	ps_in[1]	// overflow
+`define c_in	ps_in[0]	// carry
 
-    always @(op or a or b or ps or d) begin
-        psr = ps;
+`define n_out   ps_out[3]       // negative result
+`define z_out   ps_out[2]       // zero result
+`define v_out   ps_out[1]       // overflow result
+`define c_out   ps_out[0]       // carry result
+
+    // PC offset for branch instructions
+    // PC offset for branch instructions
+    wire [15:0] offset = { a[7], a[7], a[7], a[7], a[7], a[7], a[7], a[7:0], 1'b0 };
+
+    always @(op or a or b or ps_in or d) begin
+        ps_out = ps_in;
         casez (op)
         default: begin
             d = b;
@@ -30,192 +39,213 @@ module alu (
         //
         `CLR: begin		// d = 0
             d = 0;
-            `c = 0;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `c_out = 0;
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `CLRB: begin
             d = { b[15:8], 8'd0 };
-            `c = 0;
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `c_out = 0;
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `COM: begin		// d = ~b
             d = ~b;
-            `c = 1;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `c_out = 1;
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `COMB: begin
             d = { b[15:8], ~b[7:0] };
-            `c = 1;
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `c_out = 1;
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `INC: begin		// d = b + 1
             d = b + 1;
-            `v = (b == 16'h7fff);
-            `n = d[15];
-            `z = (d == 0);
+            `v_out = (b == 16'h7fff);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `INCB: begin
             d = { b[15:8], (b[7:0] + 1'd1) };
-            `v = (b[7:0] == 8'h7f);
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `v_out = (b[7:0] == 8'h7f);
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `INC2: begin		// d = b + 2 (nonstandard)
             d = b + 2;
         end
         `DEC: begin		// d = b - 1
             d = b - 1;
-            `v = (b == 16'h8000);
-            `n = d[15];
-            `z = (d == 0);
+            `v_out = (b == 16'h8000);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `DECB: begin
             d = { b[15:8], (b[7:0] - 1'd1) };
-            `v = (b[7:0] == 8'h80);
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `v_out = (b[7:0] == 8'h80);
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `DEC2: begin		// d = b - 2 (nonstandard)
             d = b - 2;
         end
-        `BRANCH: begin          // d = (a << 1) + b (nonstandard)
-            d = b + { a[7], a[7], a[7], a[7], a[7], a[7], a[7], a[7:0], 1'b0 };
+        `BR: begin              // d = (a << 1) + b (nonstandard)
+            d = b + offset;
+        end
+        `BNE, `BEQ: begin	// z
+            d = b + (`z_in == op[2] ? offset : 0);
+        end
+        `BGE, `BLT: begin	// n^v
+            d = b + ((`n_in ^ `v_in) == op[2] ? offset : 0);
+        end
+        `BGT, `BLE: begin	// z | n^v
+            d = b + ((`z_in | (`n_in ^ `v_in)) == op[2] ? offset : 0);
+        end
+        `BPL, `BMI: begin	// n
+            d = b + (`n_in == op[2] ? offset : 0);
+        end
+        `BHI, `BLOS: begin	// c | z
+            d = b + ((`c_in | `z_in) == op[2] ? offset : 0);
+        end
+        `BVC, `BVS: begin	// v
+            d = b + (`v_in == op[2] ? offset : 0);
+        end
+        `BHIS, `BLO: begin	// c
+            d = b + (`c_in == op[2] ? offset : 0);
         end
         `NEG: begin		// d = 0 - b
             d = - b;
-            `c = (d != 0);
-            `v = (d == 16'h8000);
-            `n = d[15];
-            `z = (d == 0);
+            `c_out = (d != 0);
+            `v_out = (d == 16'h8000);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `NEGB: begin
             d = { b[15:8], -b[7:0] };
-            `c = (d != 0);
-            `v = (d[7:0] == 8'h80);
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `c_out = (d != 0);
+            `v_out = (d[7:0] == 8'h80);
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `TST: begin		// d = b
             d = b;
-            `c = 0;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `c_out = 0;
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `TSTB: begin
             d = b;
-            `c = 0;
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `c_out = 0;
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `ASR: begin		// d|c = b >> 1
-            { d, `c } = { b[15], b };
-            `v = d[15] ^ `c;
-            `n = d[15];
-            `z = (d == 0);
+            { d, `c_out } = { b[15], b };
+            `v_out = d[15] ^ `c_out;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `ASRB: begin
-            { d, `c } = { b[15:8], b[7], b[7:0] };
-            `v = d[7] ^ `c;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            { d, `c_out } = { b[15:8], b[7], b[7:0] };
+            `v_out = d[7] ^ `c_out;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `ASL: begin		// c|d = b << 1
-            { `c, d } = { b, 1'd0 };
-            `v = d[15] ^ `c;
-            `n = d[15];
-            `z = (d == 0);
+            { `c_out, d } = { b, 1'd0 };
+            `v_out = d[15] ^ `c_out;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `ASLB: begin
-            { d[15:8], `c, d[7:0] } = { b, 1'd0 };
-            `v = d[7] ^ `c;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            { d[15:8], `c_out, d[7:0] } = { b, 1'd0 };
+            `v_out = d[7] ^ `c_out;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `ROR: begin		// d|c = c|b
-            { d, `c } = { `c, b };
-            `v = d[15] ^ `c;
-            `n = d[15];
-            `z = (d == 0);
+            { d, `c_out } = { `c_in, b };
+            `v_out = d[15] ^ `c_out;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `RORB: begin
-            { d, `c } = { b[15:8], `c, b[7:0] };
-            `v = d[7] ^ `c;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            { d, `c_out } = { b[15:8], `c_in, b[7:0] };
+            `v_out = d[7] ^ `c_out;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `ROL: begin		// c|d = b|c
-            { `c, d } = { b, `c };
-            `v = d[15] ^ `c;
-            `n = d[15];
-            `z = (d == 0);
+            { `c_out, d } = { b, `c_in };
+            `v_out = d[15] ^ `c_out;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `ROLB: begin
-            { d[15:8], `c, d[7:0] } = { b, `c };
-            `v = d[7] ^ `c;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            { d[15:8], `c_out, d[7:0] } = { b, `c_in };
+            `v_out = d[7] ^ `c_out;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `SWAB: begin		// d = swab (b)
             d = { b[7:0], b[15:8] };
-            `c = 0;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `c_out = 0;
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `ADC: begin		// d = b + c
-            d = b + {15'h0, `c};
-            `c = (b == 16'hffff && ps[0] == 1);
-            `v = (b == 16'h7fff && ps[0] == 1);
-            `n = d[15];
-            `z = (d == 0);
+            d = b + {15'h0, `c_in};
+            `c_out = (b == 16'hffff && `c_in == 1);
+            `v_out = (b == 16'h7fff && `c_in == 1);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `ADCB: begin
-            d = { b[15:8], (b[7:0] + {7'h0, `c}) };
-            `c = (b[7:0] == 8'hff && ps[0] == 1);
-            `v = (b[7:0] == 8'h7f && ps[0] == 1);
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            d = { b[15:8], (b[7:0] + {7'h0, `c_in}) };
+            `c_out = (b[7:0] == 8'hff && `c_in == 1);
+            `v_out = (b[7:0] == 8'h7f && `c_in == 1);
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `SBC: begin		// d = b - c
-            d = b - {15'h0, `c};
-            `c = (b == 0) && (ps[0] != 0);
-            `v = (b == 16'h8000);
-            `n = d[15];
-            `z = (d == 0);
+            d = b - {15'h0, `c_in};
+            `c_out = (b == 0) && (`c_in != 0);
+            `v_out = (b == 16'h8000);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `SBCB: begin
-            d = { b[15:8], (b[7:0] - {7'h0, `c}) };
-            `c = (b[7:0] == 0) && (ps[0] != 0);
-            `v = (b[7:0] == 8'h80);
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            d = { b[15:8], (b[7:0] - {7'h0, `c_in}) };
+            `c_out = (b[7:0] == 0) && (`c_in != 0);
+            `v_out = (b[7:0] == 8'h80);
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `SXT: begin		// d = n ? -1 : 0
-            d = ps[3] ? 16'hffff : 0;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            d = `n_in ? 16'hffff : 0;
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `MFPS: begin		// d = ps
-            d = { ps[7], ps[7], ps[7], ps[7],
-                    ps[7], ps[7], ps[7], ps[7], ps };
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            d = { ps_in[7], ps_in[7], ps_in[7], ps_in[7],
+                    ps_in[7], ps_in[7], ps_in[7], ps_in[7], ps_in };
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `MTPS: begin		// ps = b
             d = b;
-            psr = { b[7:5], ps[4], b[3:0] };
+            ps_out = { b[7:5], ps_in[4], b[3:0] };
         end
 
         //
@@ -223,91 +253,91 @@ module alu (
         //
         `MOV: begin		// d = a
             d = a;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `MOVB: begin
             d = { b[15:8], a[7:0] };
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `CMP: begin		// d = a - b (no register store)
-            { `c, d } = { 1'd1, a } - b;
-            `v = (a[15] != b[15]) && (d[15] == b[15]);
-            `n = d[15];
-            `z = (d == 0);
+            { `c_out, d } = { 1'd1, a } - b;
+            `v_out = (a[15] != b[15]) && (d[15] == b[15]);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `CMPB: begin
-            { d[15:8], `c, d[7:0] } = { b[15:8],
+            { d[15:8], `c_out, d[7:0] } = { b[15:8],
                     ({ 1'd1, a[7:0] } - b[7:0]) };
-            `v = (a[7] != b[7]) && (d[7] == b[7]);
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `v_out = (a[7] != b[7]) && (d[7] == b[7]);
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `ADD: begin		// d = a + b
-            { `c, d } = a + b;
-            `v = (a[15] == b[15]) && (d[15] != a[15]);
-            `n = d[15];
-            `z = (d == 0);
+            { `c_out, d } = a + b;
+            `v_out = (a[15] == b[15]) && (d[15] != a[15]);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `SUB: begin		// d = b - a
-            { `c, d } = {1'd1, b} - a;
-            `v = (a[15] != b[15]) && (d[15] == a[15]);
-            `n = d[15];
-            `z = (d == 0);
+            { `c_out, d } = {1'd1, b} - a;
+            `v_out = (a[15] != b[15]) && (d[15] == a[15]);
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `ASH: begin		// d = a>0 ? b<<a | b>>(-a)
             if (a[5])
-                    { `c, d } = { 1'd0, b } << (5'd1 + ~a[4:0]);
+                    { `c_out, d } = { 1'd0, b } << (5'd1 + ~a[4:0]);
             else
-                    { d, `c } = { b, 1'd0 } >> a[4:0];
-            `v = b[15] ^ d[15];
-            `n = d[15];
-            `z = (d == 0);
+                    { d, `c_out } = { b, 1'd0 } >> a[4:0];
+            `v_out = b[15] ^ d[15];
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `BIT: begin		// d = a & b (no register store)
             d = a & b;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `BITB: begin
             d = { b[15:8], (a[7:0] & b[7:0]) };
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `BIC: begin		// d = ~a & b
             d = ~a & b;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `BICB: begin
             d = { b[15:8], (~a[7:0] & b[7:0]) };
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `BIS: begin		// d = a | b
             d = a | b;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         `BISB: begin
             d = { b[15:8], (a[7:0] | b[7:0]) };
-            `v = 0;
-            `n = d[7];
-            `z = (d[7:0] == 0);
+            `v_out = 0;
+            `n_out = d[7];
+            `z_out = (d[7:0] == 0);
         end
         `XOR: begin		// d = a ^ b
             d = a ^ b;
-            `v = 0;
-            `n = d[15];
-            `z = (d == 0);
+            `v_out = 0;
+            `n_out = d[15];
+            `z_out = (d == 0);
         end
         endcase
     end

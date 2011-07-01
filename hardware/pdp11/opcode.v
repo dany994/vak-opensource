@@ -33,7 +33,6 @@
 // Nonstandard commands, for ALU only.
 `define	INC2		10'o0072	// d = b + 2
 `define	DEC2		10'o0073	// d = b - 2
-`define	BRANCH		10'o0074	// d = (a << 1) + b
 
 //
 // Double-operand instructions.
@@ -55,3 +54,22 @@
 `define	BIS		10'o05??	// d = a | b
 `define	BISB		10'o15??
 `define	XOR		10'o074?	// d = a ^ b
+
+//
+// Branch instructions.
+//
+`define	BR		10'o0004	// d = (a[7:0] << 1) + b
+`define	BNE		10'o0010	// if (z == 0) ...
+`define	BEQ		10'o0014        // if (z == 1)
+`define	BGE		10'o0020        // if (n^v == 0)
+`define	BLT		10'o0024        // if (n^v == 1)
+`define	BGT		10'o0030        // if (z | n^v == 0)
+`define	BLE		10'o0034        // if (z | n^v == 1)
+`define	BPL		10'o1000        // if (n == 0)
+`define	BMI		10'o1004        // if (n == 1)
+`define	BHI		10'o1010        // if (c | z == 0)
+`define	BLOS		10'o1014        // if (c | z == 1)
+`define	BVC		10'o1020        // if (v == 0)
+`define	BVS		10'o1024        // if (v == 1)
+`define	BHIS		10'o1030        // if (c == 0)
+`define	BLO		10'o1034        // if (c == 1)
