@@ -105,7 +105,7 @@ module control (
         //
         default: begin `DEFAULT_CONTROL;
                 cnext = 0;		// Next cycle 0
-                $display ("(%0d) %d-%o - unknown command", $time, cycle, cmd);
+                $display ("%4d-%d) unknown opcode %o", $time, cycle, cmd);
                 $finish;
         end
 

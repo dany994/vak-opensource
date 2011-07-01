@@ -119,7 +119,7 @@ module datapath (
     // Instruction register.
     reg [15:0] ir;
     always @(posedge clk) begin
-        if (ctl_ir_we == 1) begin
+        if (ctl_ir_we == 1 && ! reset) begin
             ir = mem_out;
             $c ("extern void trace_fetch (unsigned cycount, unsigned mem_addr, unsigned mem_out);");
             $c ("trace_fetch (", cycount, ",", mem_addr, ",", mem_out, ");");
