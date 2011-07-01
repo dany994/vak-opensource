@@ -1194,10 +1194,28 @@ module control (
                 reg_from_mem = 0;	// ...from ALU
         end
 `ifdef NOTDEF
-        { 3'd1, 16'oz000zz },           // wait, reset, rti, rtt, bpt, iot
         { 3'd1, 16'oz001zz },           // jmp
-        { 3'd1, 16'oz002zz },           // rts
-        { 3'd1, 16'oz04zzz },           // jsr, trap, emt
+        { 3'd1, 16'o004zzz },           // jsr
+        { 3'd1, 16'oz0020z },           // rts
+
+        { 3'd1, 16'oz00001 },           // wait
+        { 3'd1, 16'oz00002 },           // rti, rtt
+        { 3'd1, 16'oz00003 },           // bpt
+        { 3'd1, 16'oz00004 },           // iot
+        { 3'd1, 16'oz00005 },           // reset
+
+        { 3'd1, 16'oz0023z },           // spl
+        { 3'd1, 16'oz0024z },           // clc, clv, clz
+        { 3'd1, 16'oz0025z },           // cln, ccc
+        { 3'd1, 16'oz0026z },           // sec, sev, sez
+        { 3'd1, 16'oz0027z },           // sen, scc
+
+        { 3'd1, 16'o104zzz },           // trap, emt
+
+        { 3'd1, 16'oz70zzz }:		// mul
+        { 3'd1, 16'oz71zzz }:		// div
+        { 3'd1, 16'oz73zzz }:		// ashc
+        { 3'd1, 16'oz77zzz },           // sob
 `endif
         endcase
     end
