@@ -2,20 +2,10 @@
 #include <verilated.h>		// Defines common routines
 #include "Vdatapath.h"		// From Verilating "datapath.v"
 #include "opcode.h"
-#if VM_TRACE
-# include <verilated_vcd_c.h>	// Trace file format header
-#endif
+#include <verilated_vcd_c.h>	// Trace file format header
 
 Vdatapath *uut;			// Unit under test
-
-static void delay (unsigned n)
-{
-    unsigned t = main_time + n;
-    while (main_time != t && !Verilated::gotFinish()) {
-	uut->eval();                    // Evaluate model
-	main_time++;                    // Time passes...
-    }
-}
+VerilatedVcdC *tfp;             // Trace dump
 
 void trace_fetch (unsigned cycount, unsigned addr, unsigned opcode)
 {
@@ -49,10 +39,11 @@ usage:      fprintf (stderr, "Usage:\n");
 
     Verilated::commandArgs (argc, argv);
     Verilated::debug (0);
+
 #if VM_TRACE                            // If verilator was invoked with --trace
     Verilated::traceEverOn (true);	// Verilator must compute traced signals
     VL_PRINTF ("Enabling waves...\n");
-    VerilatedVcdC* tfp = new VerilatedVcdC;
+    tfp = new VerilatedVcdC;
     uut->trace (tfp, 99);               // Trace 99 levels of hierarchy
     tfp->open ("datapath_dump.vcd");    // Open the dump file
 #endif
@@ -60,14 +51,17 @@ usage:      fprintf (stderr, "Usage:\n");
     if (argc == 1) {                    // Load executable file
         load_file (argv[0], 0500, uut->v__DOT__ram__DOT__memory);
     }
-    uut->reset = 1;                     // Initialize inputs
-    uut->clk = 0;
-    VL_PRINTF ("(%u) started datapath testing\n", main_time);
+    VL_PRINTF ("%4u)\tstarted datapath testing\n", main_time);
 
-    // Wait for global reset to finish
-    delay (5);
-    uut->reset = 0;
-    VL_PRINTF ("(%u) turn reset off\n", main_time);
+    uut->reset = 1;                     // Global reset
+    uut->clk = 0;
+    uut->eval(); main_time++;           // Clock negedge
+    uut->clk = 1;
+    uut->eval(); main_time++;           // Clock posedge
+
+    uut->reset = 0;                     // Clear reset
+    uut->clk = 0;
+    VL_PRINTF ("%4u)\tturn reset off\n", main_time);
 
     // Initiate instruction fetching.
     uut->v__DOT__reg_input = 0500;
@@ -75,19 +69,25 @@ usage:      fprintf (stderr, "Usage:\n");
     uut->v__DOT__ctl_ir_we = 0;
 
     while (main_time < 200 && ! Verilated::gotFinish()) {
-        if (uut->clk)
-            VL_PRINTF (uut->v__DOT__cycount == 0 ? "------\n" : "\n");
-	uut->eval();                    // Evaluate model
-#if VM_TRACE
-	if (tfp) tfp->dump (main_time);	// Create waveform trace for this timestamp
+        uut->clk = 1;
+	uut->eval();                    // Clock posedge
+#if VM_TRACE                            // If verilator was invoked with --trace
+	if (tfp)
+            tfp->dump (main_time);
 #endif
-        uut->clk ^= 1;
+        uut->clk = 0;
+	uut->eval();                    // Clock negedge
+#if VM_TRACE                            // If verilator was invoked with --trace
+	if (tfp)
+            tfp->dump (main_time);
+#endif
 	main_time++;                    // Time passes...
+        VL_PRINTF (uut->v__DOT__cycount == 0 ? "------\n" : "\n");
     }
     uut->final();
 #if VM_TRACE
     if (tfp) tfp->close();
 #endif
-    VL_PRINTF ("(%u) finished datapath testing\n", main_time);
+    VL_PRINTF ("%4u)\tfinished datapath testing\n", main_time);
     return 0;
 }
