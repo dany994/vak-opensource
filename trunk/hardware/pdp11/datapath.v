@@ -81,9 +81,9 @@ module datapath (
         .op	(ctl_alu_op),
         .a	(alu_ina),
         .b	(alu_inb),
-        .ps	(psw),
+        .ps_in	(psw),
         .d	(alu_out),
-        .psr	(alu_state)
+        .ps_out	(alu_state)
     );
 
     // Memory address
