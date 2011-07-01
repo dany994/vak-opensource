@@ -17,6 +17,7 @@ clean:
 		-rm -rf simx obj-* *.log *.dmp *.vpd core *~
 
 run:
+#		./simx tests/test00.out
 		./simx tests/test01.out
 
 #
@@ -54,4 +55,4 @@ obj-datapath/simx: obj-datapath/Vdatapath.h *.h *.cpp *.c
 		cp $@ .
 
 obj-datapath/Vdatapath.h: *.v
-		verilator --trace --cc -f verilator.options -Mdir obj-datapath datapath.v
+		verilator --cc -f verilator.options -Mdir obj-datapath datapath.v
