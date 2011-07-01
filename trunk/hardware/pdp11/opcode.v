@@ -30,9 +30,10 @@
 `define	MFPS		10'o1067	// d = ps
 `define	MTPS		10'o1064	// ps = b
 
-// Nonstandard commands.
+// Nonstandard commands, for ALU only.
 `define	INC2		10'o0072	// d = b + 2
 `define	DEC2		10'o0073	// d = b - 2
+`define	BRANCH		10'o0074	// d = (a << 1) + b
 
 //
 // Double-operand instructions.

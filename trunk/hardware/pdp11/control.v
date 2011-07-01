@@ -94,11 +94,11 @@ module control (
                 reg_dst = 7;		// Use R7 (PC)
                 alu_input = `ALU_SRC_DST; // ALU destination from PC
                 alu_op = `INC2;		// Compute PC+2
-                psw_we = 0;		// Keep PSW
                 reg_we = 1;		// Write to PC...
                 reg_from_mem = 0;	// ...from ALU
                 mem_addr = `MEM_DST;	// Get M[PC]...
                 ir_we = 1;		// ...latch instruction
+                x_we = 1;		// ...write X
         end
         //
         // Unknown instruction.
@@ -1172,10 +1172,23 @@ module control (
 //
         { 3'd1, 16'o000000 }:           // halt
         begin `DEFAULT_CONTROL;
-                // Use data from Rd and execute an operation.
-                // Store a result to Rd.
                 cnext = 0;		// Next cycle 0
                 $finish;
+        end
+        { 3'd1, 16'o000240 }:           // nop
+        begin `DEFAULT_CONTROL;
+                cnext = 0;		// Next cycle 0
+        end
+        { 3'd1, 16'b00000001zzzzzzzz }: // br
+        begin `DEFAULT_CONTROL;
+                // Opcode is latched in X register.
+                // Add it to PC as a word offset.
+                cnext = 0;		// Next cycle 0
+                reg_dst = 7;		// Use R7 (PC)
+                alu_input = `ALU_X_DST; // ALU from X and PC
+                alu_op = `BRANCH;	// Compute PC + (X << 1)
+                reg_we = 1;		// Write to PC...
+                reg_from_mem = 0;	// ...from ALU
         end
 `ifdef NOTDEF
         { 3'd1, 16'oz01zzz },
