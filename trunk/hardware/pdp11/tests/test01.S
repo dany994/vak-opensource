@@ -10,7 +10,12 @@
 loop1:
 	add	(r1)+, r5
 	cmp	r1, r2
-	bne	loop1
+//	bne	loop1
+//jmp loop1           // 00167 177770
+jmp $loop1          // 00127 000530
+//jmp *$loop1         // 000137 000530
+//jmp *loop1          // 000177 177754
+//jmp *(r0)+
 loop2:
 	add	(r3)+, r0
 	cmp	r3, r4
