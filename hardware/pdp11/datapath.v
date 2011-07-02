@@ -51,12 +51,12 @@ module datapath (
     reg [15:0] x, y;
     always @(posedge clk) begin
         if (ctl_x_we == 1) begin
-            x = mem_out;
-            $display ("%4d-%1d) X := %o", $time, cycount, x);
+            x <= mem_out;
+            $display ("%4d-%1d) X := %o", $time, cycount, mem_out);
         end
         if (ctl_y_we == 1) begin
-            y = mem_out;
-            $display ("%4d-%1d) Y := %o", $time, cycount, y);
+            y <= mem_out;
+            $display ("%4d-%1d) Y := %o", $time, cycount, mem_out);
         end
     end
 
@@ -71,8 +71,8 @@ module datapath (
     reg [7:0] psw;
     always @(posedge clk) begin
         if (ctl_psw_we == 1) begin
-            psw = alu_state;
-            $display ("%4d-%1d) PSW := %02o", $time, cycount, psw);
+            psw <= alu_state;
+            $display ("%4d-%1d) PSW := %02o", $time, cycount, alu_state);
         end
     end
 
@@ -100,8 +100,8 @@ module datapath (
     reg [15:0] z;
     always @(posedge clk) begin
         if (ctl_z_we == 1) begin
-            z = mem_addr;
-            $display ("%4d-%1d) Z := %o", $time, cycount, z);
+            z <= mem_addr;
+            $display ("%4d-%1d) Z := %o", $time, cycount, mem_addr);
         end
     end
 
@@ -120,7 +120,7 @@ module datapath (
     reg [15:0] ir;
     always @(posedge clk) begin
         if (ctl_ir_we == 1 && ! reset) begin
-            ir = mem_out;
+            ir <= mem_out;
             $c ("extern void trace_fetch (unsigned cycount, unsigned mem_addr, unsigned mem_out);");
             $c ("trace_fetch (", cycount, ",", mem_addr, ",", mem_out, ");");
             //$display ("        reg_src %o - src %o", ctl_reg_src, src);
@@ -134,7 +134,7 @@ module datapath (
     wire [2:0] cycount_next;
     always @(posedge clk) begin
         //$display ("%4d-%1d) cycount := %0d", $time, cycount, reset ? 0 : cycount_next);
-        cycount = reset ? 0 : cycount_next;
+        cycount <= reset ? 0 : cycount_next;
     end
 
     // Control unit

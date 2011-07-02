@@ -33,6 +33,7 @@
 // Nonstandard commands, for ALU only.
 `define	INC2		10'o0072	// d = b + 2
 `define	DEC2		10'o0073	// d = b - 2
+`define	JMP2            10'o0074	// d = a + b
 
 //
 // Double-operand instructions.
@@ -58,6 +59,7 @@
 //
 // Branch instructions.
 //
+`define	JMP             10'o0001	// d = a
 `define	BR		10'o0004	// d = (a[7:0] << 1) + b
 `define	BNE		10'o0010	// if (z == 0) ...
 `define	BEQ		10'o0014        // if (z == 1)

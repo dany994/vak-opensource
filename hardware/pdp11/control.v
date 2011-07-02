@@ -1193,8 +1193,191 @@ module control (
                 reg_we = 1;		// Write to PC...
                 reg_from_mem = 0;	// ...from ALU
         end
+//-----------------------------
+// JMP instruction.
+//jmp loop1           // 00167 177770
+//jmp $loop1          // 00127 000530
+//jmp *$loop1         // 000137 000530
+//jmp *loop1          // 000177 177754
+//
+        //
+        // Register mode: JMP R
+        // 1 cycle.
+        //
+        { 3'd1, 16'o00010z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Use data from Rs and store it to PC.
+                cnext = 0;		// Next cycle 0
+                reg_src = cmd[2:0];	// Use Rsrc
+                reg_dst = 7;            // Use Rdst
+                alu_input = `ALU_SRC_DST; // ALU destination from dst
+                alu_op = cmd[15:6];	// Compute result
+                reg_we = 1;		// Write to dst from ALU
+        end
+        //
+        // Register-deferred src: JMP (R)
+        // 1 cycle.
+        //
+        { 3'd1, 16'o00011z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Fetch an operand from memory and store it to PC.
+                cnext = 0;		// Next cycle 0
+                reg_src = cmd[2:0];	// Use Rsrc
+                reg_dst = 7;		// Use R7 (PC)
+                mem_addr = `MEM_SRC;	// Get M[src]...
+                reg_we = 1;		// Write to PC...
+                reg_from_mem = 1;	// ...from mem.
+        end
+        //
+        // Autoincrement src: JMP (R)+
+        // 2 cycles.
+        //
+        { 3'd1, 16'o00012z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Fetch an operand from memory and store it in X.
+                // Increment the register value.
+                cnext = 7;		// Next cycle 7
+                reg_dst = cmd[2:0];	// Put Rsrc on dst bus
+                alu_input = `ALU_SRC_DST;
+                alu_op = `INC2;
+                reg_we = 1;		// Write Rsrc back...
+                reg_from_mem = 0;	// ...from alu
+                mem_addr = `MEM_DST;	// Get M[src]...
+                x_we = 1;		// ...write X
+        end
+        { 3'd7, 16'o0001zz }:		// Cycle #7 - common
+        begin `DEFAULT_CONTROL;
+                // Use data from X and store it to PC.
+                cnext = 0;		// Next cycle 0
+                reg_dst = 7;            // Use R7 (PC)
+                alu_input = `ALU_X_DST; // ALU destination from dst
+                alu_op = cmd[15:6];	// Compute result
+                reg_we = 1;		// Write to dst from ALU
+        end
+        //
+        // Autoincrement-deferred src: JMP *(R)+
+        // 2 cycles.
+        //
+        { 3'd1, 16'o00013z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Fetch an address from memory and store it in X.
+                // Increment the register value.
+                cnext = 6;		// Next cycle 6
+                reg_dst = cmd[2:0];	// Put Rsrc on dst bus
+                alu_input = `ALU_SRC_DST;
+                alu_op = `INC2;		// Increment Rsrc by 2
+                reg_we = 1;		// Write Rsrc back...
+                reg_from_mem = 0;	// ...from alu
+                mem_addr = `MEM_DST;	// Get M[src]...
+                x_we = 1;		// ...write X
+        end
+        { 3'd6, 16'o0001zz }:		// Cycle #6 - common
+        begin `DEFAULT_CONTROL;
+                // Fetch an operand from memory[X] and store it to PC.
+                cnext = 0;		// Next cycle 0
+                reg_dst = 7;            // Use R7 (PC)
+                mem_addr = `MEM_X;	// Get M[X]...
+                reg_we = 1;		// Write to dst from ALU
+        end
+        //
+        // Autodecrement src: JMP -(R)
+        // 2 cycles.
+        //
+        { 3'd1, 16'o00014z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Decrement the register value.
+                cnext = 2;		// Next cycle 2
+                reg_dst = cmd[2:0];	// Put Rsrc on dst bus
+                alu_input = `ALU_SRC_DST;
+                alu_op = `DEC2;
+                reg_we = 1;		// Write Rsrc back...
+                reg_from_mem = 0;	// ...from alu
+        end
+        { 3'd2, 16'o00014z }:		// Cycle #2
+        begin `DEFAULT_CONTROL;
+                // Fetch an operand from memory[Rs] and store it to PC.
+                cnext = 0;		// Next cycle 0
+                reg_src = cmd[2:0];	// Use Rsrc
+                reg_dst = 7;            // Use R7 (PC)
+                mem_addr = `MEM_SRC;	// Get M[src]...
+                reg_we = 1;		// Write to dst from ALU
+        end
+        //
+        // Autodecrement-deferred src: JMP *-(R)
+        // 3 cycles.
+        //
+        { 3'd1, 16'o00015z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Decrement the register value.
+                cnext = 2;		// Next cycle 2
+                reg_dst = cmd[2:0];	// Put Rsrc on dst bus
+                alu_input = `ALU_SRC_DST;
+                alu_op = `DEC2;		// Decrement Rsrc 2
+                reg_we = 1;		// Write Rsrc back...
+                reg_from_mem = 0;	// ...from alu
+        end
+        { 3'd2, 16'o00015z }:		// Cycle #2
+        begin `DEFAULT_CONTROL;
+                // Fetch an address from memory and store it in X
+                cnext = 6;		// Next cycle 6
+                reg_dst = cmd[2:0];	// Put Rsrc on dst bus
+                mem_addr = `MEM_DST;	// Get M[src]...
+                x_we = 1;		// ...write X
+        end
+        //
+        // Index src: JMP (R + M [ PC++ ])
+        // 2 cycles.
+        //
+        { 3'd1, 16'o00016z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Fetch an index from memory at PC and store it in X.
+                // Increment the PC register value.
+                cnext = 2;		// Next cycle 2
+                reg_dst = 7;		// Use PC
+                alu_input = `ALU_SRC_DST;
+                alu_op = `INC2;
+                reg_we = 1;		// Write to PC from ALU
+                mem_addr = `MEM_DST;	// Get M[PC]...
+                y_we = 1;		// ...write Y
+        end
+        { 3'd2, 16'o00016z }:		// Cycle #2
+        begin `DEFAULT_CONTROL;
+                // Add Rs and Y, and store result to PC.
+                cnext = 0;		// Next cycle 0
+                reg_src = cmd[2:0];	// Use Rsrc
+                reg_dst = 7;            // Use R7 (PC)
+                alu_input = `ALU_SRC_Y;	// ALU destination from Y
+                alu_op = `JMP2;         // Compute result
+                reg_we = 1;		// Write to PC from ALU
+        end
+        //
+        // Index-deferred src: JMP M [ R + M [ PC++ ] ]
+        // 2 cycles.
+        //
+        { 3'd1, 16'o00017z }:		// jmp
+        begin `DEFAULT_CONTROL;
+                // Fetch an index from memory at PC and store it in Y
+                // Increment the PC register value.
+                cnext = 2;		// Next cycle 2
+                reg_dst = 7;		// Use PC
+                alu_input = `ALU_SRC_DST;
+                alu_op = `INC2;
+                reg_we = 1;		// Write to PC from ALU
+                mem_addr = `MEM_DST;	// Get M[PC]...
+                x_we = 1;		// ...write X
+        end
+        { 3'd2, 16'o00017z }:		// Cycle #2
+        begin `DEFAULT_CONTROL;
+                // Fetch an address from memory[Rs+X] and store it in X.
+                cnext = 0;		// Next cycle 0
+                reg_src = cmd[2:0];	// Use Rsrc
+                reg_dst = 7;            // Use R7 (PC)
+                mem_addr = `MEM_SRC_X;	// Get M[src+X]...
+                reg_we = 1;		// Write to PC...
+                reg_from_mem = 1;	// ...from mem
+        end
+
 `ifdef NOTDEF
-        { 3'd1, 16'oz001zz },           // jmp
         { 3'd1, 16'o004zzz },           // jsr
         { 3'd1, 16'oz0020z },           // rts
 

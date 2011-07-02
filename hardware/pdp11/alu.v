@@ -95,30 +95,6 @@ module alu (
         `DEC2: begin		// d = b - 2 (nonstandard)
             d = b - 2;
         end
-        `BR: begin              // d = (a << 1) + b (nonstandard)
-            d = b + offset;
-        end
-        `BNE, `BEQ: begin	// z
-            d = b + (`z_in == op[2] ? offset : 0);
-        end
-        `BGE, `BLT: begin	// n^v
-            d = b + ((`n_in ^ `v_in) == op[2] ? offset : 0);
-        end
-        `BGT, `BLE: begin	// z | n^v
-            d = b + ((`z_in | (`n_in ^ `v_in)) == op[2] ? offset : 0);
-        end
-        `BPL, `BMI: begin	// n
-            d = b + (`n_in == op[2] ? offset : 0);
-        end
-        `BHI, `BLOS: begin	// c | z
-            d = b + ((`c_in | `z_in) == op[2] ? offset : 0);
-        end
-        `BVC, `BVS: begin	// v
-            d = b + (`v_in == op[2] ? offset : 0);
-        end
-        `BHIS, `BLO: begin	// c
-            d = b + (`c_in == op[2] ? offset : 0);
-        end
         `NEG: begin		// d = 0 - b
             d = - b;
             `c_out = (d != 0);
@@ -338,6 +314,40 @@ module alu (
             `v_out = 0;
             `n_out = d[15];
             `z_out = (d == 0);
+        end
+
+        //
+        // Branch instructions.
+        //
+        `JMP: begin		// d = a
+            d = a;
+        end
+        `JMP2: begin		// d = a + b
+            d = a + b;
+        end
+        `BR: begin              // d = (a << 1) + b (nonstandard)
+            d = b + offset;
+        end
+        `BNE, `BEQ: begin	// z
+            d = b + (`z_in == op[2] ? offset : 0);
+        end
+        `BGE, `BLT: begin	// n^v
+            d = b + ((`n_in ^ `v_in) == op[2] ? offset : 0);
+        end
+        `BGT, `BLE: begin	// z | n^v
+            d = b + ((`z_in | (`n_in ^ `v_in)) == op[2] ? offset : 0);
+        end
+        `BPL, `BMI: begin	// n
+            d = b + (`n_in == op[2] ? offset : 0);
+        end
+        `BHI, `BLOS: begin	// c | z
+            d = b + ((`c_in | `z_in) == op[2] ? offset : 0);
+        end
+        `BVC, `BVS: begin	// v
+            d = b + (`v_in == op[2] ? offset : 0);
+        end
+        `BHIS, `BLO: begin	// c
+            d = b + (`c_in == op[2] ? offset : 0);
         end
         endcase
     end
