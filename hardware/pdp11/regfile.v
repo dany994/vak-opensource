@@ -23,18 +23,14 @@ module regfile (
     // Write value from bus W to R[b].
     // On positive clk, when we is set.
     always @(posedge clk) begin
+        $c ("extern void trace_reg (unsigned cycount, unsigned reg, unsigned val);");
         if (reset) begin
             // On reset, PC is cleared.
             r [7] = 0;
-            $display ("        PC := 0");
+            $c ("trace_reg (", datapath.cycount, ",", 7, ",", 0, ");");
         end else if (we == 1) begin
             r [selb] = w;
-            if (selb == 7)
-                $display ("        PC := %o", w);
-            else if (selb == 6)
-                $display ("        SP := %o", w);
-            else
-                $display ("        R%d := %o", selb, w);
+            $c ("trace_reg (", datapath.cycount, ",", selb, ",", w, ");");
         end
     end
 

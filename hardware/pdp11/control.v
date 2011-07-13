@@ -477,12 +477,12 @@ module control (
         { 3'd1, 16'o072z1z }:		// ash
         begin `DEFAULT_CONTROL;
                 // Fetch an operand from memory and store it in X.
-                cnext = 7;		// Next cycle 7
+                cnext = 5;		// Next cycle 7
                 reg_src = cmd[2:0];	// Use Rsrc
                 mem_addr = `MEM_SRC;	// Get M[src]...
                 x_we = 1;		// ...write X
         end
-        { 3'd7, 16'o072zzz }:		// Cycle #7 - common
+        { 3'd5, 16'o072zzz }:		// Cycle #7 - common
         begin `DEFAULT_CONTROL;
                 // Use data from X and execute an operation.
                 // Store a result to Rd.
@@ -501,7 +501,7 @@ module control (
         begin `DEFAULT_CONTROL;
                 // Fetch an operand from memory and store it in X.
                 // Increment the register value.
-                cnext = 7;		// Next cycle 7
+                cnext = 5;		// Next cycle 5
                 reg_dst = cmd[2:0];	// Put Rsrc on dst bus
                 alu_input = `ALU_SRC_DST;
                 alu_op = `INC2;
@@ -530,7 +530,7 @@ module control (
         { 3'd6, 16'o072zzz }:		// Cycle #6 - common
         begin `DEFAULT_CONTROL;
                 // Fetch an operand from memory and store it in X.
-                cnext = 7;		// Next cycle 7
+                cnext = 5;		// Next cycle 5
                 mem_addr = `MEM_X;	// Get M[X]...
                 x_we = 1;		// ...write X
         end
@@ -551,7 +551,7 @@ module control (
         { 3'd2, 16'o072z4z }:		// Cycle #2
         begin `DEFAULT_CONTROL;
                 // Fetch an operand from memory and store it in X.
-                cnext = 7;		// Next cycle 7
+                cnext = 5;		// Next cycle 5
                 reg_src = cmd[2:0];	// Use Rsrc
                 mem_addr = `MEM_SRC;	// Get M[src]...
                 x_we = 1;		// ...write X
@@ -598,7 +598,7 @@ module control (
         { 3'd2, 16'o072z6z }:		// Cycle #2
         begin `DEFAULT_CONTROL;
                 // Fetch an operand from memory and store it in X.
-                cnext = 7;		// Next cycle 7
+                cnext = 5;		// Next cycle 5
                 reg_src = cmd[2:0];	// Use Rsrc
                 mem_addr = `MEM_SRC_X;	// Get M[src+X]...
                 x_we = 1;		// ...write X
@@ -1236,7 +1236,7 @@ module control (
         begin `DEFAULT_CONTROL;
                 // Fetch an operand from memory and store it in X.
                 // Increment the register value.
-                cnext = 7;		// Next cycle 7
+                cnext = 5;		// Next cycle 5
                 reg_dst = cmd[2:0];	// Put Rsrc on dst bus
                 alu_input = `ALU_SRC_DST;
                 alu_op = `INC2;
@@ -1245,7 +1245,7 @@ module control (
                 mem_addr = `MEM_DST;	// Get M[src]...
                 x_we = 1;		// ...write X
         end
-        { 3'd7, 16'o0001zz }:		// Cycle #7 - common
+        { 3'd5, 16'o0001zz }:		// Cycle #5 - common
         begin `DEFAULT_CONTROL;
                 // Use data from X and store it to PC.
                 cnext = 0;		// Next cycle 0
@@ -1277,7 +1277,8 @@ module control (
                 cnext = 0;		// Next cycle 0
                 reg_dst = 7;            // Use R7 (PC)
                 mem_addr = `MEM_X;	// Get M[X]...
-                reg_we = 1;		// Write to dst from ALU
+                reg_we = 1;		// Write to dst...
+                reg_from_mem = 1;	// ...from mem
         end
         //
         // Autodecrement src: JMP -(R)

@@ -12,9 +12,9 @@ loop1:
 	cmp	r1, r2
 //	bne	loop1
 //jmp loop1           // 00167 177770
-jmp $loop1          // 00127 000530
-//jmp *$loop1         // 000137 000530
-//jmp *loop1          // 000177 177754
+//jmp $loop1          // 00127 000530
+//jmp *ploop1          // 000177 177754
+jmp *$ploop1         // 000137 000530
 //jmp *(r0)+
 loop2:
 	add	(r3)+, r0
@@ -34,3 +34,5 @@ tab2:	0004
 	0006
 	0007
 	0010
+ploop1:
+        .word   loop1
