@@ -11,8 +11,17 @@ void trace_fetch (unsigned cycount, unsigned addr, unsigned opcode)
 {
     unsigned short *mem = uut->v__DOT__ram__DOT__memory + (addr >> 1);
 
-    printf ("%4u-%1u) fetch %06o: %s\n", main_time, cycount, addr,
+    printf ("%4u-%1u) %06o: %s\n", main_time, cycount, addr,
         disasm (addr, opcode, mem[1], mem[2]));
+}
+
+void trace_reg (unsigned cycount, unsigned reg, unsigned val)
+{
+    static const char *regname[8] = {
+        "R0","R1","R2","R3","R4","R5","SP","PC" };
+
+    printf ("%4u-%1u) %s := %06o\n", main_time, cycount,
+        regname [reg], val);
 }
 
 int main (int argc, char **argv)
