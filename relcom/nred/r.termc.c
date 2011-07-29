@@ -10,6 +10,7 @@
 #define MAXHOP  32  /* max number of tc= indirections */
 #define BUFSIZ  1024
 
+#include <string.h>
 #include <sgtty.h>
 #include <ctype.h>
 #define E_TERMCAP "/etc/termcap"
@@ -20,9 +21,9 @@
 
 static char *tbuf;
 static int hopcount;   /* detect infinite loops in termcap, init 0 */
-char    *tskip();
+static char    *tskip();
+static char    *tdecode();
 char    *tgetstr();
-char    *tdecode();
 char    *getenv();
 /* В случае ОС ДЕМОС используется мини-вариант tgetent,так как
  * в  этом случае описание находится в переменной TERMCAP
@@ -65,11 +66,11 @@ char *bp, *name;
             if (cp2==(char *) 0 || strcmp(name,cp2)==0) {
                 strcpy(bp,cp);
                 return(tnchktc());
-            } 
+            }
             else {
                 tf = open(E_TERMCAP, 0);
             }
-        } 
+        }
         else
             tf = open(cp, 0);
     }
@@ -102,7 +103,7 @@ char *bp, *name;
             if (cp >= bp+BUFSIZ) {
                 write(2,"Termcap entry too long\n", 23);
                 break;
-            } 
+            }
             else
                 *cp++ = c;
         }
@@ -305,7 +306,7 @@ char **area;
     register int c;
     register char *dp;
     int i,jdelay=0;
-    while(*str>='0' && *str<='9') { 
+    while(*str>='0' && *str<='9') {
         jdelay=jdelay*10+(*str++ - '0');
     }
     cp = *area;
@@ -334,7 +335,8 @@ nextc:
             break;
         }
         *cp++ = c;
-    }       
+    }
+#if 0
     if ( jdelay )
     { extern ospeed;
       register int i = ospeed;
@@ -342,6 +344,7 @@ nextc:
         jdelay /= 2, i++;
         jdelay++;
     }
+#endif
     if(jdelay>100) jdelay=100;
     while(jdelay--) *cp++='\200';
     *cp++ = 0;
@@ -349,7 +352,7 @@ nextc:
     *area = cp;
     return (str);
 }
-#define CTRL(c) ('c' & 037)
+#define CTL(c) ('c' & 037)
 
 char    *UP;
 char    *BC;
@@ -423,7 +426,7 @@ toohard:
             which %= 100;
             /* fall into... */
         case '2':
-two:    
+two:
             *dp++ = which / 10 | '0';
 one:
             *dp++ = which % 10 | '0';
@@ -467,17 +470,17 @@ casedot:
              * because some terminals use ^I for other things,
              * like nondestructive space.
              */
-            if (UPTC && (which == 0 || which == CTRL(d) || which==CTRL(n) || which == '\t' || which == '\n')) {
+            if (UPTC && (which == 0 || which == CTL(d) || which==CTL(n) || which == '\t' || which == '\n')) {
                 if (oncol || UPTC) /* Assumption: backspace works */
                     /*
                                          * Loop needed because newline happens
                                          * to be the successor of tab.
                                          */
                 do {
-                    strcat(added, oncol ? (BCTC ? BCTC : "\b") : 
+                    strcat(added, oncol ? (BCTC ? BCTC : "\b") :
                     UPTC);
                     which++;
-                } 
+                }
                 while (which == '\n');
             }
             *dp++ = which;

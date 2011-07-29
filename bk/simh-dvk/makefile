@@ -2,32 +2,23 @@
 # CC Command
 #
 CC = gcc -std=c99 -g -Wall
-CFLAGS = -U__STRICT_ANSI__ -DCYR_CTLN_CTLO
+CFLAGS = -U__STRICT_ANSI__ -DCYR_CTLN_CTLO -D_GNU_SOURCE
 LDFLAGS = -lm
 
+# On system debug, print all memory writes and i/o accesses.
 CFLAGS += -DSYS_DEBUG
 
-ifeq ($(WIN32),)
-  #Unix Environments
-  CFLAGS += -D_GNU_SOURCE
-  ifneq (,$(findstring solaris,$(OSTYPE)))
+# Unix Environments
+ifneq (,$(findstring solaris,$(OSTYPE)))
     LDFLAGS += -lsocket -lnsl -lrt -lpthread
-  else
-    ifeq (,$(findstring darwin,$(OSTYPE)))
-      LDFLAGS += -lrt
-    endif
-  endif
-  ifneq ($(USE_NETWORK),)
-    NETWORK_OPT = -DUSE_NETWORK -isystem /usr/local/include /usr/local/lib/libpcap.a
-  endif
 else
-  #Win32 Environments
-  LDFLAGS += -lwsock32 -lwinmm
-  EXE = .exe
-  ifneq ($(USE_NETWORK),)
-    NETWORK_OPT = -DUSE_NETWORK -lwpcap -lpacket
-  endif
+ifeq (,$(findstring darwin,$(OSTYPE)))
+    LDFLAGS += -lrt
 endif
+endif
+
+# Enable network
+#NETWORK_OPT = -DUSE_NETWORK -isystem /usr/local/include /usr/local/lib/libpcap.a
 
 #
 # Common Libraries

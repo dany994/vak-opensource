@@ -37,7 +37,7 @@ int chan;
     register struct fsd *thisfsd, *lastfsd;
     struct fsd *firstfsd;
     register int nby;
-    char *bpt; 
+    char *bpt;
     int c;
     char fby[NBYMAX+1];
     int i,lct,nl,sh,sl,kh,kl;
@@ -48,7 +48,7 @@ int chan;
     c = -2;
     sh = sl = 0;
 #ifdef lint
-    nby = 0; 
+    nby = 0;
     nl = 0;
 #endif
     FOREVER
@@ -161,9 +161,9 @@ int fi,h,l;
  * составления цепи дескрипторов.
  */
 int chars(flg)
-{       
+{
     register char *c,*se;
-    register int ko; 
+    register int ko;
     char *si, *so;
     static char charsbuf[CHARBUFSZ];
     if (charsfi <= 0)
@@ -176,10 +176,10 @@ int chars(flg)
     so=cline;
     ko=(charsi>=charsn? 1 : 2 ) ;
     do
-        { 
+        {
         if (ko==1)
 #ifndef ALIGBUF
-        { 
+        {
             charsn=read(charsfi, charsbuf, CHARBUFSZ);
             charsi=0;
 #else ALIGBUF
@@ -187,20 +187,20 @@ int chars(flg)
             charsi -= charsn;
             charsn=read(charsfi, charsbuf, CHARBUFSZ);
 #endif ALIGBUF
-            if(charsn<0) { 
+            if(charsn<0) {
                 error(DIAG("Read Error","Oшибка чтения"));
                 charsn=0;
             }
             chkl += charsn;
         }
-        if (charsn<=charsi) { 
-            ko=1; 
+        if (charsn<=charsi) {
+            ko=1;
             break;
         }/* read buf empty */
-        si=charsbuf+charsi; 
+        si=charsbuf+charsi;
         se=charsbuf+charsn;
         if ( !flg)
-        { 
+        {
             c=si;
             while ( *c++ !=NEWLINE && c != se);
             charsi=c-charsbuf;
@@ -209,12 +209,12 @@ int chars(flg)
         }
         while (!lcline||(ko=exinss(&si, se, &so, &ncline, lcline))==2)
         {
-            ncline=so-cline; 
-            excline(0); 
+            ncline=so-cline;
+            excline(0);
             so=cline+ncline;
         }
         charsi=si-charsbuf;
-    } 
+    }
     while (ko);
     /* ko=0 - NEWLINE, 1 - end of file */
     chkl=normhl(chkl,&chkh);
@@ -225,8 +225,8 @@ int chars(flg)
         charsfi = 0;
     /* Убрать хвостовые пробелы */
     if (flg)
-    { 
-        *so=' '; 
+    {
+        *so=' ';
         c= so;
         while (*c==' ' && c--!=cline);
         *++c=NEWLINE;
@@ -254,7 +254,7 @@ exinss(si,se,so,no,mo)
 char **si,*se,**so;
 int *no,mo;
 {
-    register char *st, *sf; 
+    register char *st, *sf;
     register unsigned sy;
     int s,s1,n,i;
     char *sft;
@@ -355,7 +355,7 @@ int *no,mo;
                 sf=seit;
                 while ( *sf && *sf++!=sy) sf++;
                 if( *sf) {
-                    *++st = *sf;  
+                    *++st = *sf;
                     st++;
                     n += 2;
                     sf=sft;
@@ -640,7 +640,7 @@ int line, col, number, nl;
     register int i,j;
     for (i=line;i<line+nl;i++)
     {
-        getline(i);
+        getlin(i);
         putbks(col,number);
         fcline = 1;
         putline(0);
@@ -661,7 +661,7 @@ int line,col;
     register char csave;
     if (line >= nlines[curfile]) return;
     nlines[curfile]++;
-    getline(line);
+    getlin(line);
     if (col >= ncline - 1) openlines(line+1,1);
     else
     {
@@ -726,11 +726,11 @@ int line,col;
     register char *temp;
     register int nsave,i;
     if (nlines[curfile] <= line-2) nlines[curfile]--;
-    getline(line+1);
+    getlin(line+1);
     temp = salloc(ncline);
     for (i=0;i<ncline;i++) temp[i] = cline[i];
     nsave = ncline;
-    getline(line);
+    getlin(line);
     if (col+nsave > lcline) excline(col+nsave);
     for (i=ncline-1;i<col;i++) cline[i] = ' ';
     for (i=0;i<nsave;i++) cline[col+i] = temp[i];
@@ -782,23 +782,23 @@ int line, col, number, nl;
 pcspaces(line,col,number,nl,flg)
 int line, col, number, nl, flg;
 {
-    register struct fsd *f1,*f2; 
+    register struct fsd *f1,*f2;
     struct fsd *f0;
     char *linebuf, *bp;
     register int i;
     int j, n,line0,line1;
     if (charsfi == tempfile) charsfi = 0;
     linebuf = salloc(number+1);
-    f0=f2=0; 
+    f0=f2=0;
     line1 = (line0=line) + nl;
     while( nl = (line1 - line0))
     {
         if(nl > FSDMAXL) nl=FSDMAXL;
         f1 = (struct fsd *)salloc(SFSD+(number>127?nl*2:nl));
         if(f2) {
-            f2->fwdptr = f1; 
+            f2->fwdptr = f1;
             f1->backptr = f2;
-        } 
+        }
         else f0= f1;
         bp = &(f1->fsdbytes);
         f1->fsdnlines = nl;
@@ -807,7 +807,7 @@ int line, col, number, nl, flg;
         f1->seeklow = tempfl;
         for (j=line0;j<line0+nl;j++)
         {
-            getline(j);
+            getlin(j);
             if (col+number >= ncline)
             {
                 if (col+number >= lcline) excline(col+number+1);
@@ -826,14 +826,14 @@ int line, col, number, nl, flg;
             tempfl += n;
             tempfl=normhl(tempfl, &tempfh);
         }
-        f2 = f1; 
+        f2 = f1;
         line0 = line0 + nl;
     }
     (f2->fwdptr = (struct fsd *)salloc(SFSD))->backptr = f2;
     nl = line1 - line;
     if (flg) for (j=line;j<line+nl;j++)
     {
-        getline(j);
+        getlin(j);
         if (col+number >= ncline)
         {
             if (col+number >= lcline) excline(col+number+1);
@@ -931,11 +931,11 @@ int line, col;
     for (i=0;i<buf->nrows;i++)
     {
         curwksp = pickwksp;
-        getline(buf->linenum + i);
+        getlin(buf->linenum + i);
         if (ncline-1 < nc) for (j=ncline-1;j<nc;j++) cline[j] = ' ';
         for (j=0;j<nc;j++) linebuf[j] = cline[j];
         curwksp = oldwksp;
-        getline(line+i);
+        getlin(line+i);
         putbks(col,nc);
         for (j=0;j<nc;j++) cline[col+j] = linebuf[j];
         fcline = 1;
@@ -1072,7 +1072,7 @@ int n,reall;
         fn = blanklines(n - w->curlno);
         w->curfsd = fn;
         fn->backptr = ff;
-        if (ff) ff->fwdptr = fn; 
+        if (ff) ff->fwdptr = fn;
         else openfsds[w->wfile] = fn;
         wposit(w,n);
         return (1);
@@ -1099,8 +1099,8 @@ int n,reall;
         lfb0 = c - cc;
         cc = c;
         while (--i >= 0) if (*cc++ < 0) {
-            j++; 
-            cc++; 
+            j++;
+            cc++;
         }
         ff = (struct fsd *)salloc(SFSD + j);
         ff->fsdnlines = jj;
@@ -1117,15 +1117,15 @@ int n,reall;
         if (reall && (jj>4) && (f->backptr))
         {
             ff=(struct fsd *)salloc(SFSD+lfb0);
-            *ff = *f; 
-            c= &(ff->fsdbytes);  
+            *ff = *f;
+            c= &(ff->fsdbytes);
             cc= &(f->fsdbytes);
-            while (lfb0--) { 
-                *c++ = *cc++; 
+            while (lfb0--) {
+                *c++ = *cc++;
             }
             ff->backptr->fwdptr = ff->fwdptr->backptr = ff;
-            free((char *)f); 
-            f=ff; 
+            free((char *)f);
+            f=ff;
             ff=f->fwdptr;
         }
     }
@@ -1176,11 +1176,11 @@ int n;
 }
 
 /*
- * getline(ln) -
+ * getlin(ln) -
  * Дай строку ln из текущего curwksp.
  * строка попадает в cline, длина - в ncline.
  */
-getline(ln)
+getlin(ln)
 int ln;
 {
     fcline = 0;
@@ -1234,7 +1234,7 @@ int n;
     w->curfsd = cl;
     w->curlno = w->curflno = i;
     openwrite[w->wfile] = EDITED;
-    clineno = -1;  
+    clineno = -1;
     catfsd(w);
     redisplay(w,w->wfile,i,i,0);
     DEBUGCHECK;
@@ -1344,7 +1344,7 @@ struct workspace *w;
      *      nl0,nl1 : число строк в fsd */
     f=w->curfsd;
     if ((f0=f->backptr)==0) {
-        openfsds[w->wfile]=f; 
+        openfsds[w->wfile]=f;
         return(0);
     }
     f0->fwdptr = f;
@@ -1417,13 +1417,13 @@ int normhl(ll, hh)
 int ll,*hh;
 {
         register int l=ll,*h=hh;
-        while(l<0) { 
-                l += 512; 
-                (*h)--; 
+        while(l<0) {
+                l += 512;
+                (*h)--;
         }
-        while(l>=512) { 
-                l -= 512; 
-                (*h)++; 
+        while(l>=512) {
+                l -= 512;
+                (*h)++;
         }
         return(l);
 }
@@ -1435,7 +1435,7 @@ int ll,*hh;
  */
 doreplace(line,m,jproc,pipef)
 int line,m,jproc,*pipef;
-{       
+{
     register struct fsd *e,*ee;
     register int l;
     int n;
@@ -1447,16 +1447,16 @@ int line,m,jproc,*pipef;
         if (m == -1) {
             error(DIAG("Can't write on pipe.","Ошибка записи в pipe."));
             kill(jproc,9);
-        }       
+        }
     }
     while (wait(&n) != jproc);          /* wait for completion */
     if ((n & 0177400) == 0157400) {
         error(DIAG("Can't find program to execute.","Не найдена программа"));
-        return; 
+        return;
     }
     if ((n & 0177400) == 0177000 || (n & 0377) != 0) {
         error(DIAG("Abnormal termination of program.","Плохой код конца программы."));
-        return; 
+        return;
     }
     charsfi = -1;                   /* forget old position before fork */
     if (m) closelines(-1-line,m);
@@ -1500,9 +1500,9 @@ struct fsd *f;
     int i;
     register char *c;
     register struct {
-        char *s0; 
-        char *s1; 
-    } 
+        char *s0;
+        char *s1;
+    }
     *cp;
     printf("\n**********");
     while (f) {
@@ -1528,8 +1528,8 @@ checkfsd()
     register struct fsd *f;
     register int nl;
     struct {
-        int s0; 
-        char *s1; 
+        int s0;
+        char *s1;
     };
     register char *g;
     char *gg;
@@ -1539,7 +1539,7 @@ checkfsd()
         if (curwksp->curlno >=nl && curwksp->curlno <
             nl + f->fsdnlines && curwksp->curfsd != f &&
             curwksp->curfsd->backptr ) {
-            fatal("CKFSD CURFSD LOST"); 
+            fatal("CKFSD CURFSD LOST");
         }
         if (f->fwdptr && f->fwdptr->backptr != f) fatal("CKFSD BAD CHAIN");
         nl += f->fsdnlines;
