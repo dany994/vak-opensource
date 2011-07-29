@@ -67,7 +67,8 @@ int fildes;
 getpriv(fildes)
 int fildes;
 {
-        register struct stat buffer,*buf;
+        struct stat buffer;
+        register struct stat *buf;
         buf = &buffer;
         fstat(fildes,buf);
         return (buf->st_mode & 0777);
@@ -77,7 +78,7 @@ int fildes;
  */
 printf1(s) char *s;
 {
-        register int i=0; 
+        register int i=0;
         register char *s1=s;
         while(*s1++) i++;
         if(i) write(1,s,i);
@@ -110,14 +111,14 @@ char *name,*ext;
     int lname;
     register char *c,*d,*newname;
     lname = 0;
-    c = name; 
+    c = name;
     while (*c++) ++lname;
-    c = ext;  
+    c = ext;
     while (*c++) ++lname;
     newname = c = salloc(lname+1);
-    d = name; 
+    d = name;
     while (*d) *c++ = *d++;
-    d = ext; 
+    d = ext;
     while (*c++ = *d++);
     return newname;
 }
@@ -142,8 +143,8 @@ int *i;
         if (c >= '0' && c <= '9') val = 10*val + c - '0';
         else if (c == '-' && lc == 0) sign = -1;
         else {
-            ans = --s; 
-            break; 
+            ans = --s;
+            break;
         }
         lc = c;
     }
@@ -155,12 +156,12 @@ int *i;
 long lseek();
 seek(fd,of,typ)
 int fd,of,typ;
-{ 
-    long i; 
-    i=of; 
-    if(typ>2) { 
-        typ=typ-3; 
-        i=i*512; 
+{
+    long i;
+    i=of;
+    if(typ>2) {
+        typ=typ-3;
+        i=i*512;
     }
     return ( (int)lseek(fd,i,typ) );
 }
@@ -174,7 +175,7 @@ char *getnm(uid)
 int uid;
 {
         register int i,j;
-        i = LNAME; 
+        i = LNAME;
         namewd[LNAME]=0;
         while( i>1 && uid>0) {
                 namewd[--i]= '0' + uid %10;
@@ -189,8 +190,8 @@ int uid;
  */
 int get1w(fd)
 int fd;
-{ 
-        int i; 
+{
+        int i;
         if(read(fd,&i,SWORD)==SWORD) return(i);
         return(-1);
 }
@@ -198,23 +199,23 @@ int fd;
 int get1c(fd)
 int fd;
 {
-        char c; 
-        if(read(fd,&c,1)==1) return(c&0377); 
+        char c;
+        if(read(fd,&c,1)==1) return(c&0377);
         return(-1);
 }
 
 put1w(w,fd)
-int fd,w; 
+int fd,w;
 {
         write(fd,&w,SWORD);
         return;
 }
 
 put1c(c,fd)
-int fd; 
+int fd;
 char c;
 {
-        write(fd,&c,1); 
+        write(fd,&c,1);
         return;
 }
 
@@ -287,13 +288,13 @@ char *aptr;
                 ptr->size += np->size;
                 ptr->next = np->next;
                 np = ptr;
-        } 
+        }
         else
                 ptr->next = np;
         if (cp+cp->size == ptr) {
                 cp->size += ptr->size;
                 cp->next = ptr->next;
-        } 
+        }
         else
                 cp->next = ptr;
 }

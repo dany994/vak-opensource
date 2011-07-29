@@ -2,7 +2,7 @@
 # Win32 Environments
 #
 vpath %.c ..
-CC = i586-mingw32msvc-gcc -std=c99 -g -Wall
+CC = i586-mingw32msvc-gcc -std=c99 -g
 CFLAGS = -U__STRICT_ANSI__ -D_WIN32 -DCYR_CTLN_CTLO
 LDFLAGS = -lm -lwsock32 -lwinmm
 EXE = .exe

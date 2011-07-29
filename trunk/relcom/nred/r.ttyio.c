@@ -82,19 +82,19 @@ ttcleanup()
  */
 pcursor(col,lin)
 int col,lin;
-{ 
+{
     register char *c,sy;
     if ((c=curspos)==NIL) return 0;
     if (agoto) c=(*agoto)(curspos,col,lin);
     if (*c=='O') return(0);
     while ((sy = *c++))
     {
-        if(!agoto&&(sy&0200)){ 
+        if(!agoto&&(sy&0200)){
             if (sy&0100) sy=(sy&077)+col;  /* 300 - col */
             else sy=(sy&077)+lin;
         }                        /* 200 - lin */
         putchb(sy);
-    } 
+    }
     return (1);
 }
 
@@ -212,9 +212,9 @@ new:
     intrflag=0;
     GETSY1;
     /* Если символ не управляющий */
-    lread1=sy1;  
+    lread1=sy1;
     if(lread1==0177) {
-        lread1=CCBACKSPACE; 
+        lread1=CCBACKSPACE;
         goto readycchr;
     }
     lread1 &= 0377;
@@ -229,8 +229,8 @@ new:
         GETSY1;
         switch (sy1)
         {
-        case '\177': 
-            lread1=CCQUIT; 
+        case '\177':
+            lread1=CCQUIT;
             goto readycchr;
         case '+':;
         case ';':
@@ -248,11 +248,11 @@ new:
             lread1=CCENTER;
             goto readycchr;
         case '$':
-rmacname:               
-            GETSY1; 
+rmacname:
+            GETSY1;
             if(sy1&0200) sy1 = STASCII(sy1);
             if(sy1 >= 'a' && sy1 <='z')
-            { 
+            {
                 lread1 = (int)sy1 - 'a' + CCMAC+1;
                 goto readycchr;
             }
@@ -278,7 +278,7 @@ rmacname:
             if (ts==1) goto corrcntr;
             else goto new;
         }
-        lread1=k;  
+        lread1=k;
         if (lread1 == CCMAC) goto rmacname;
         goto readycchr;
     }
@@ -349,7 +349,7 @@ readfc()
             if(inputfile != ttyfile) close (inputfile);
             else  lseek(ttyfile,(long)(-1),1);
             inputfile=0;
-            intrflag=0; 
+            intrflag=0;
             putcha(COBELL);
             dumpcbuf();
             return 0;
@@ -365,7 +365,7 @@ readfc()
  *       опрос, не было ли прерывания.
  */
 intrup()
-{       
+{
     char sy1;
     if( inputfile ){
         if(isy0f == CCINTRUP ){
@@ -421,13 +421,13 @@ read2()
 char kioutf;
 /*VARARGS*/
 findt (fb,fe,sy,ns)
-struct ex_int **fb, **fe; 
-char sy; 
+struct ex_int **fb, **fe;
+char sy;
 int ns;
-{ 
-    char sy1; 
+{
+    char sy1;
     register struct ex_int  *fi;
-    fi=( *fb? *fb:inctab);  
+    fi=( *fb? *fb:inctab);
     *fb=0;
     if (sy==0) return BADF;
     if(kioutf&& (sy&0100)) sy |= 0240; /* Не различаем регистр букв */
@@ -436,16 +436,16 @@ int ns;
         if (!(*fe) && !(fi->excc) ) goto exit;
         sy1=fi->excc[ns];
         if(kioutf&& (sy1&0100)) sy1 |= 0240; /* Не различаем регистр букв */
-        if ( *fb) { 
+        if ( *fb) {
             if (sy!=sy1) goto exit;
         }
-        else { 
-            if (sy==sy1) {  
+        else {
+            if (sy==sy1) {
                 *fb=fi;
             }
         }
     }
-exit: 
+exit:
     *fe=fi; /* for "addkey" */
     if (! *fb) return BADF;
     fi= *fb;
@@ -471,19 +471,19 @@ ex1:   printf(" k= %d is= %d pt %o %o ", k,is,i,j);
  */
 extern int nfinc; /* число свободных мест в таблице */
 addkey(cmd,key)
-int cmd; 
+int cmd;
 char *key;
-{ 
-    struct ex_int *fb,*fe; 
+{
+    struct ex_int *fb,*fe;
     register struct ex_int *fw;
     register int ns,i;
-    ns=0; 
+    ns=0;
     fb = fe = 0;
     while((i=findt(&fb,&fe,key[ns],ns))==CONTF && key[ns++]);
     if(i != BADF)
     {
         telluser(DIAG("key redefined","переопределение"),0);
-        fw = fb; 
+        fw = fb;
         goto retn;
     }
     /* Код новый = нужно расширить таблицу */
@@ -495,13 +495,13 @@ char *key;
     while((fw++)->excc);
     do{
         *fw = *(fw-1);
-    } 
+    }
     while(--fw != fe);
-retn:   
+retn:
 #ifdef TEST
 test("addkey out");
 #endif
-        fw ->excc = key; 
+        fw ->excc = key;
         fw->incc = cmd;
         return(1);
 }

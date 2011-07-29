@@ -73,7 +73,8 @@ mainloop()
             }
             if (openwrite[curfile] == 0) goto nowriterr;
             /* Строки у нас нет? Дай! */
-            if (clineno != (i = curwksp->ulhclno+cursorline)) getline(i);
+            if (clineno != (i = curwksp->ulhclno+cursorline))
+                getlin(i);
             /* исключение символа */
             if (lread1==CCDELCH || (imodesw && lread1==CCBACKSPACE) )
             {
@@ -97,11 +98,11 @@ mainloop()
             }
             /* Проверка на границу окна */
             if (cursorcol > curport->rtext)
-            { 
-                if (fcline) { 
-                    putline(0); 
+            {
+                if (fcline) {
+                    putline(0);
                     movep(defrport);
-                    goto contin; 
+                    goto contin;
                 }
                 else  goto margerr;
             }
@@ -146,7 +147,7 @@ mainloop()
         }
         /* Сдвиг вниз, если последняя строка  */
         if (lread1 == CCRETURN )
-        { 
+        {
             putline(0);
             if ( cursorline == curport->btext)
                 movew(defplline);
@@ -160,9 +161,9 @@ mainloop()
          */
         if (lread1<=BT) {
             movecursor(lread1);
-            if (lread1 <= VMOTCODE ) { 
+            if (lread1 <= VMOTCODE ) {
                 putline(0);
-                if(curspos) goto newnumber; 
+                if(curspos) goto newnumber;
             }
             lread1 = -1;
             goto contin;
@@ -258,16 +259,16 @@ mainloop()
             goto badkeyerr;
         }
         /* Повтор ввода аргумента */
-reparg: 
-        read1(); 
-        if(CTRLCHAR) goto yesarg; 
+reparg:
+        read1();
+        if(CTRLCHAR) goto yesarg;
         else goto noargerr;
         /*
          * Дай аргумент!
          */
 gotarg:
         param(0);
-yesarg:        
+yesarg:
         if (lread1 == CCQUIT )
         {
             if (paraml>0 && (dechars(paramv,paraml),*paramv) == 'a')
@@ -295,7 +296,7 @@ yesarg:
             if (paramtype <=  0)  goto notstrerr;
             if (paramv == 0) goto noargerr;
             if ( use0flg || !inputfile)
-                dechars(paramv,paraml); 
+                dechars(paramv,paraml);
             use0flg=1;
             editfile(paramv,0,0,1,1);
             goto funcdone;
@@ -312,9 +313,9 @@ yesarg:
                 paramc0 + curwksp->ulhccno);
                 goto funcdone;
             }
-            else { 
-                lnfun = openlines; 
-                spfun = openspaces; 
+            else {
+                lnfun = openlines;
+                spfun = openspaces;
                 goto spdir;
             };
         case CCMISRCH:
@@ -333,11 +334,11 @@ yesarg:
             else {
                 if(paramtype > 0 && paramv && paramv[0]=='>')
                 {
-                    msrbuf(deletebuf,paramv+1,0); 
+                    msrbuf(deletebuf,paramv+1,0);
                     goto funcdone;
                 }
                 lnfun = closelines;
-                spfun = closespaces; 
+                spfun = closespaces;
                 goto spdir;
             }
             goto funcdone;
@@ -370,49 +371,49 @@ yesarg:
             if(paramtype <=0|| !paramv) goto notimperr;
             dechars(paramv,paraml);
             switch (paramv[0])
-            { 
+            {
             case '>':
-                msvtag(paramv+1); 
+                msvtag(paramv+1);
                 goto funcdone;
             case '$':
-                if(mdeftag(paramv+1)){ 
-                    lread1= -1; 
+                if(mdeftag(paramv+1)){
+                    lread1= -1;
                     goto reparg;
                 }
                 else goto funcdone;
-            case 'w': 
+            case 'w':
                 if(paramv[1]==' ' && paramv[2]=='+')
                     openwrite[curwksp->wfile]=1;
                 else openwrite[curwksp->wfile]=0;
                 goto funcdone;
-            case 'k': 
-                defkey(); 
+            case 'k':
+                defkey();
                 goto funcdone;
             case 'r':
-                rescreen(-1); 
+                rescreen(-1);
                 goto funcdone; /* Восттановить экран */
-            case 'd': 
+            case 'd':
                 if(paramv[1]==' ') defmac(&paramv[2]);
                 goto funcdone;
             case 'q':
-                lread1=CCQUIT; 
+                lread1=CCQUIT;
                 if(paramv[1]=='a') {
                     gosw=0;
                     return;
                 }
                 goto contin;
-            default: 
+            default:
                 goto noargerr;
             }
         case CCPICK:
             if (paramtype == 0) goto notimperr;
             if (paramtype > 0 && paramv && paramv[0]=='>')
             {
-                msrbuf(pickbuf,paramv+1,0); 
+                msrbuf(pickbuf,paramv+1,0);
                 goto funcdone;
             }
-            lnfun = picklines; 
-            spfun = pickspaces; 
+            lnfun = picklines;
+            spfun = pickspaces;
             goto spdir;
         case CCINSMODE:
             imodesw = 1 - imodesw;  /* Щелкнем!! */
@@ -491,12 +492,12 @@ yesarg:
         default:
             goto badkeyerr;
         }
-spdir: 
+spdir:
         if (paramtype > 0)
         {
             if(paramv[0] == '$')
             {
-                if(mdeftag(paramv+1)) goto spdir; 
+                if(mdeftag(paramv+1)) goto spdir;
                 else goto funcdone;
             }
             if (s2i(paramv,&i)) goto notinterr;
@@ -599,7 +600,7 @@ errclear:
         }
         if (imodesw && clrsw && !errsw)
             telluser(DIAG("     ***** i n s e r t m o d e *****","  * * * * режим вставки * * * * "),0);
-contin:   
+contin:
         ;
     }
 #undef lread1
@@ -629,7 +630,7 @@ int delta;
     if (delta == 1) telluser("+",0);
     else telluser("-",0);
     telluser(DIAG("search: ","поиск: "),1);
-    i=lcasef; 
+    i=lcasef;
 /* --- */
     lcasef=0; /* Внутренняя форма текста: */
     telluser(searchkey,9);
@@ -641,7 +642,7 @@ int delta;
     lkey = 0;
     sk = searchkey;
     while (*sk++) lkey++;
-    getline (ln = lin + curwksp->ulhclno);
+    getlin (ln = lin + curwksp->ulhclno);
     putline(0);
     at = cline + col + curwksp->ulhccno;
     FOREVER
@@ -656,11 +657,11 @@ int delta;
                 putup(lin,lin);
                 poscursor(col,lin);
                 error(i?"Interup.":DIAG("Search key not found.","Текст не найден."));
-                csrsw = 0; 
+                csrsw = 0;
                 symac = 0;
                 return;
             }
-            getline(ln);
+            getlin(ln);
             putline(0);
             at = cline;
             if (delta < 0) at += ncline - lkey;
@@ -730,7 +731,7 @@ int tabcol;
 #define NARGS 20
 callexec()
 {
-    register int i; 
+    register int i;
     char **execargs;
     register char *cp, **e;
     int j,k,m,pipef[2];
@@ -747,8 +748,8 @@ callexec()
     }
     m = -m;           /* По умолчанию - 1 параграф */
     if (*cp == 'l') {
-        cp++; 
-        m = -m; 
+        cp++;
+        m = -m;
     }  /* _nl ==  -_n */
     /*
      * 2. Готовим строку аргументов.

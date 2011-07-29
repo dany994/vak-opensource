@@ -239,10 +239,7 @@ void kmd_io ()
 }
 
 /*
- * I/O dispatch routines, I/O addresses 172140 - 172142
- *
- *  base + 0     CR      read/write
- *  base + 2     DR      read/write
+ * I/O dispatch routines
  */
 t_stat kmd_rd (int32 *data, int32 PA, int32 access)
 {
@@ -314,8 +311,7 @@ int32 kmd_inta (void)
 }
 
 /*
- * Событие: закончен обмен с диском.
- * Устанавливаем флаг прерывания.
+ * Event: delayed i/o finished.
  */
 t_stat kmd_event (UNIT *u)
 {

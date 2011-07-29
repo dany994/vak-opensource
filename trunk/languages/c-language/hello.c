@@ -1,10 +1,10 @@
-#include <stdio.h>
-#include <conio.h>
+//#include <stdio.h>
 
 int main ()
 {
-        write (1, "!", 1);
-	printf ("Hello, World!\n");
-        _getch ();
-	return 0;
+    int i;
+
+    for (i=0; i<20; i++)
+        printf ("Hello, World! %d\n", i);
+    return 0;
 }
