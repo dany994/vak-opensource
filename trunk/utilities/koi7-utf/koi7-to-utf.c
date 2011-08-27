@@ -23,6 +23,16 @@ char *progname;
 int verbose;
 int trace;
 int debug;
+int cyrmode;
+
+void put (int lat, const char *rus)
+{
+	if (cyrmode)
+		fputs (rus, stdout);
+	else
+		fputc (lat, stdout);
+}
+
 
 void decode (char *filename)
 {
@@ -37,39 +47,78 @@ void decode (char *filename)
 			fclose (fd);
 			return;
 		case '\n':
-			fputc ('\n', stdout);
+		case '\t':
+			fputc (c, stdout);
 			break;
-                case '`':	fputs ("Ю", stdout); break;
-                case 'a':       fputs ("А", stdout); break;
-                case 'b':       fputs ("Б", stdout); break;
-                case 'c':       fputs ("Ц", stdout); break;
-                case 'd':       fputs ("Д", stdout); break;
-                case 'e':       fputs ("Е", stdout); break;
-                case 'f':       fputs ("Ф", stdout); break;
-                case 'g':       fputs ("Г", stdout); break;
-                case 'h':       fputs ("Х", stdout); break;
-                case 'i':       fputs ("И", stdout); break;
-                case 'j':       fputs ("Й", stdout); break;
-                case 'k':       fputs ("К", stdout); break;
-                case 'l':       fputs ("Л", stdout); break;
-                case 'm':       fputs ("М", stdout); break;
-                case 'n':       fputs ("Н", stdout); break;
-                case 'o':       fputs ("О", stdout); break;
-                case 'p':       fputs ("П", stdout); break;
-                case 'q':       fputs ("Я", stdout); break;
-                case 'r':       fputs ("Р", stdout); break;
-                case 's':       fputs ("С", stdout); break;
-                case 't':       fputs ("Т", stdout); break;
-                case 'u':       fputs ("У", stdout); break;
-                case 'v':       fputs ("Ж", stdout); break;
-                case 'w':       fputs ("В", stdout); break;
-                case 'x':       fputs ("Ь", stdout); break;
-                case 'y':       fputs ("Ы", stdout); break;
-                case 'z':       fputs ("З", stdout); break;
-                case '{':       fputs ("Ш", stdout); break;
-                case '|':       fputs ("Э", stdout); break;
-                case '}':       fputs ("Щ", stdout); break;
-                case '~':       fputs ("Ч", stdout); break;
+		case 'N' & 037:
+			cyrmode = 1;
+			break;
+		case 'O' & 037:
+			cyrmode = 0;
+			break;
+                case '@':	put (c, "ю"); break;
+                case 'A':       put (c, "а"); break;
+                case 'B':       put (c, "б"); break;
+                case 'C':       put (c, "ц"); break;
+                case 'D':       put (c, "д"); break;
+                case 'E':       put (c, "е"); break;
+                case 'F':       put (c, "ф"); break;
+                case 'G':       put (c, "г"); break;
+                case 'H':       put (c, "х"); break;
+                case 'I':       put (c, "и"); break;
+                case 'J':       put (c, "й"); break;
+                case 'K':       put (c, "к"); break;
+                case 'L':       put (c, "л"); break;
+                case 'M':       put (c, "м"); break;
+                case 'N':       put (c, "н"); break;
+                case 'O':       put (c, "о"); break;
+                case 'P':       put (c, "п"); break;
+                case 'Q':       put (c, "я"); break;
+                case 'R':       put (c, "р"); break;
+                case 'S':       put (c, "с"); break;
+                case 'T':       put (c, "т"); break;
+                case 'U':       put (c, "у"); break;
+                case 'V':       put (c, "ж"); break;
+                case 'W':       put (c, "в"); break;
+                case 'X':       put (c, "ь"); break;
+                case 'Y':       put (c, "ы"); break;
+                case 'Z':       put (c, "з"); break;
+                case '[':       put (c, "ш"); break;
+                case '\\':      put (c, "э"); break;
+                case ']':       put (c, "щ"); break;
+                case '^':       put (c, "ч"); break;
+
+                case '`':	put (c, "Ю"); break;
+                case 'a':       put (c, "А"); break;
+                case 'b':       put (c, "Б"); break;
+                case 'c':       put (c, "Ц"); break;
+                case 'd':       put (c, "Д"); break;
+                case 'e':       put (c, "Е"); break;
+                case 'f':       put (c, "Ф"); break;
+                case 'g':       put (c, "Г"); break;
+                case 'h':       put (c, "Х"); break;
+                case 'i':       put (c, "И"); break;
+                case 'j':       put (c, "Й"); break;
+                case 'k':       put (c, "К"); break;
+                case 'l':       put (c, "Л"); break;
+                case 'm':       put (c, "М"); break;
+                case 'n':       put (c, "Н"); break;
+                case 'o':       put (c, "О"); break;
+                case 'p':       put (c, "П"); break;
+                case 'q':       put (c, "Я"); break;
+                case 'r':       put (c, "Р"); break;
+                case 's':       put (c, "С"); break;
+                case 't':       put (c, "Т"); break;
+                case 'u':       put (c, "У"); break;
+                case 'v':       put (c, "Ж"); break;
+                case 'w':       put (c, "В"); break;
+                case 'x':       put (c, "Ь"); break;
+                case 'y':       put (c, "Ы"); break;
+                case 'z':       put (c, "З"); break;
+                case '{':       put (c, "Ш"); break;
+                case '|':       put (c, "Э"); break;
+                case '}':       put (c, "Щ"); break;
+                case '~':       put (c, "Ч"); break;
 		default:
 			if (c >= ' ' && c <= '_') {
 				/* Символ ASCII. */
