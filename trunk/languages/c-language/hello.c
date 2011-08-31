@@ -1,4 +1,4 @@
-// $Rev$
+// $Rev:$
 #include <stdio.h>
 
 int main ()
