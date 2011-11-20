@@ -7,12 +7,13 @@
  * Chip configuration.
  */
 PIC32_DEVCFG (
-    DEVCFG0_DEBUG_ENABLED,      /* ICE debugger disabled */
+    DEVCFG0_DEBUG_ENABLED |     /* ICE debugger disabled */
+    DEVCFG0_ICESEL,             /* Use PGC1/PGD1 */
 
     DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
     DEVCFG1_POSCMOD_HS |        /* HS oscillator */
     DEVCFG1_OSCIOFNC |          /* CLKO output active */
-    DEVCFG1_FPBDIV_8 |          /* Peripheral bus clock = SYSCLK/8 */
+    DEVCFG1_FPBDIV_1 |          /* Peripheral bus clock = SYSCLK/1 */
     DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
     DEVCFG1_FCKS_DISABLE |      /* Clock switching disable */
     DEVCFG1_WDTPS_1024,         /* Watchdog postscale = 1/1024 */
@@ -20,7 +21,6 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
     DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
     DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
-    DEVCFG2_UPLLDIS |           /* Disable USB PLL */
     DEVCFG2_FPLLODIV_1,         /* PLL postscaler = 1/1 */
 
     DEVCFG3_USERID(0xffff) |    /* User-defined ID */
@@ -60,19 +60,15 @@ int main()
     /* Disable JTAG port, to make all LEDs available. */
     DDPCON = 0;
 
-    /* Use pins PA0-PA7 as output: LED control. */
-    PORTACLR = 0xff;
-    TRISACLR = 0xFF;
+    /* Use pins PE4-PE7 as output: LED control. */
+    PORTECLR = 0xf0;
+    TRISECLR = 0xf0;
 
     while (1) {
-        /* Invert pins PA7-PA0. */
-        PORTAINV = 1 << 7; delay();
-        PORTAINV = 1 << 6; delay();
-        PORTAINV = 1 << 5; delay();
-        PORTAINV = 1 << 4; delay();
-        PORTAINV = 1 << 3; delay();
-        PORTAINV = 1 << 2; delay();
-        PORTAINV = 1 << 1; delay();
-        PORTAINV = 1 << 0; delay();
+        /* Invert pins PE4-PE7. */
+        PORTEINV = 1 << 7; delay();
+        PORTEINV = 1 << 6; delay();
+        PORTEINV = 1 << 5; delay();
+        PORTEINV = 1 << 4; delay();
     }
 }
