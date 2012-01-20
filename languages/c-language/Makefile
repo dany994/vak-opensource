@@ -1,7 +1,7 @@
-PROG            = qsort
+PROG            = float
 CFLAGS		= -O -Wall
 LDFLAGS		=
-CC		= i586-mingw32msvc-gcc
+#CC		= i586-mingw32msvc-gcc
 
 all:		$(PROG)
 
