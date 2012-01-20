@@ -2,7 +2,7 @@
 #include <memory.h>
 #include <string.h>
 
-#include "vscm.h"
+#include "scm.h"
 
 /*
  * Глобальные флаги программы.
@@ -299,7 +299,7 @@ done:
 
 void initmem ()                 /* инициализация списка свободных */
 {
-	register i;
+	register int i;
 
 	firstfree = NIL;
 	for (i=0; i<memsz; ++i) {
@@ -325,7 +325,7 @@ void glabelit (LISP r)
 
 int gcollect ()
 {
-	register i, n;
+	register int i, n;
 
 	firstfree = NIL;
 	for (n=i=0; i<memsz; ++i)
@@ -356,7 +356,7 @@ int gcollect ()
 
 void gc ()			/* сбор мусора */
 {
-	register n;
+	register int n;
 
 	if (trace)
 		fputs ("GC...", stderr);
@@ -580,7 +580,7 @@ void ungetlex ()
 int getlex ()			/* ввод лексемы */
 {
 	/* побочный эффект - заполнение lexval и lexsym */
-	register c, i, radix = 10, neg = 0;
+	register int c, i, radix = 10, neg = 0;
 
 	if (backlexflag) {
 		backlexflag = 0;
@@ -804,7 +804,7 @@ LISP getexpr ()         /* чтение выражения АТОМ | ЧИСЛО
 	case TCHAR:
 		p = character (lexval);
 		if (trace > 2)
-			fprintf (stderr, "#\\\\%03o\n", lexval);
+			fprintf (stderr, "#\\\\%03o\n", (unsigned) lexval);
 		break;
 	case TINTEGER:
 		p = number (lexval);
@@ -1111,7 +1111,8 @@ again:
 			int lambda;
 			if (! istype (expr = cdr (expr), TPAIR))
 				return (NIL);
-			if (lambda = istype (atom = car (expr), TPAIR)) {
+			lambda = istype (atom = car (expr), TPAIR);
+			if (lambda) {
 				/* define, совмещенный с lambda */
 				arg = cdr (atom);
 				atom = car (atom);

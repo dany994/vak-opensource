@@ -1,4 +1,4 @@
-#include "vscm.h"
+#include "scm.h"
 
 #define MAXARG 64       /* максимальное количество аргументов функции map */
 
@@ -41,7 +41,7 @@ static long lcm (long x, long y)
 	return (r<0 ? -r : r);
 }
 
-static long pow (long x, long p)
+static long ipow (long x, long p)
 {
 	long r;
 
@@ -460,7 +460,7 @@ LISP Fmodulo (LISP arg, LISP ctx)
 	    ! istype (car (arg), TINTEGER) || (b = numval (car (arg))) == 0)
 		return (ZERO);
 	r = a - divide (a, b) * b;
-	if (b>0 && r<0 || b<0 && r>0)
+	if ((b>0 && r<0) || (b<0 && r>0))
 		r += b;
 	return (number (r));
 }
@@ -473,7 +473,7 @@ LISP Fexpt (LISP arg, LISP ctx)
 		long a = numval (car (arg));
 		if (istype (arg = cdr (arg), TPAIR) &&
 		    istype (car (arg), TINTEGER))
-			r = pow (a, numval (car (arg)));
+			r = ipow (a, numval (car (arg)));
 	}
 	return (number (r));
 }
@@ -834,115 +834,114 @@ LISP Fstring (LISP arg, LISP ctx)
 
 LISP Fstringlength (LISP arg, LISP ctx)
 {
-	long len = 0;
 	if (! istype (arg, TPAIR) || ! istype (arg = car (arg), TSTRING))
 		return (ZERO);
 	return (number (mem[arg].as.string.length));
 }
 
 functab stdfunc [] = {
-	"car",                  Fcar,
-	"cdr",                  Fcdr,
+	{ "car",                    Fcar		},
+	{ "cdr",                    Fcdr		},
 
-	"caar",                 Fcaar,
-	"cadr",                 Fcadr,
-	"cdar",                 Fcdar,
-	"cddr",                 Fcddr,
+	{ "caar",                   Fcaar		},
+	{ "cadr",                   Fcadr		},
+	{ "cdar",                   Fcdar		},
+	{ "cddr",                   Fcddr		},
 
-	"caaar",                Fcaaar,
-	"caadr",                Fcaadr,
-	"cadar",                Fcadar,
-	"caddr",                Fcaddr,
-	"cdaar",                Fcdaar,
-	"cdadr",                Fcdadr,
-	"cddar",                Fcddar,
-	"cdddr",                Fcdddr,
+	{ "caaar",                  Fcaaar		},
+	{ "caadr",                  Fcaadr		},
+	{ "cadar",                  Fcadar		},
+	{ "caddr",                  Fcaddr		},
+	{ "cdaar",                  Fcdaar		},
+	{ "cdadr",                  Fcdadr		},
+	{ "cddar",                  Fcddar		},
+	{ "cdddr",                  Fcdddr		},
 
-	"caaaar",               Fcaaaar,
-	"caaadr",               Fcaaadr,
-	"caadar",               Fcaadar,
-	"caaddr",               Fcaaddr,
-	"cadaar",               Fcadaar,
-	"cadadr",               Fcadadr,
-	"caddar",               Fcaddar,
-	"cadddr",               Fcadddr,
-	"cdaaar",               Fcdaaar,
-	"cdaadr",               Fcdaadr,
-	"cdadar",               Fcdadar,
-	"cdaddr",               Fcdaddr,
-	"cddaar",               Fcddaar,
-	"cddadr",               Fcddadr,
-	"cdddar",               Fcdddar,
-	"cddddr",               Fcddddr,
+	{ "caaaar",                 Fcaaaar		},
+	{ "caaadr",                 Fcaaadr		},
+	{ "caadar",                 Fcaadar		},
+	{ "caaddr",                 Fcaaddr		},
+	{ "cadaar",                 Fcadaar		},
+	{ "cadadr",                 Fcadadr		},
+	{ "caddar",                 Fcaddar		},
+	{ "cadddr",                 Fcadddr		},
+	{ "cdaaar",                 Fcdaaar		},
+	{ "cdaadr",                 Fcdaadr		},
+	{ "cdadar",                 Fcdadar		},
+	{ "cdaddr",                 Fcdaddr		},
+	{ "cddaar",                 Fcddaar		},
+	{ "cddadr",                 Fcddadr		},
+	{ "cdddar",                 Fcdddar		},
+	{ "cddddr",                 Fcddddr		},
 
-	"cons",                 Fcons,
-	"set-car!",             Fsetcar,
-	"set-cdr!",             Fsetcdr,
-	"not",                  Fnot,
-	"current-environment",  Fcontext,
-	"global-environment",   Fgcontext,
-	"eq?",                  Feqv,
-	"eqv?",                 Feqv,
-	"equal?",               Fequal,
-	"eval",                 Feval,
-	"boolean?",             Fifboolean,
-	"symbol?",              Fifsymbol,
-	"pair?",                Fifpair,
-	"procedure?",           Fifprocedure,
-	"null?",                Fifnull,
-	"list?",                Fiflist,
-	"read",                 Fread,
-	"write",                Fwrite,
-	"display",              Fwrite,
-	"newline",              Fnewline,
+	{ "cons",                   Fcons		},
+	{ "set-car!",               Fsetcar		},
+	{ "set-cdr!",               Fsetcdr		},
+	{ "not",                    Fnot		},
+	{ "current-environment",    Fcontext		},
+	{ "global-environment",     Fgcontext		},
+	{ "eq?",                    Feqv		},
+	{ "eqv?",                   Feqv		},
+	{ "equal?",                 Fequal		},
+	{ "eval",                   Feval		},
+	{ "boolean?",               Fifboolean		},
+	{ "symbol?",                Fifsymbol		},
+	{ "pair?",                  Fifpair		},
+	{ "procedure?",             Fifprocedure	},
+	{ "null?",                  Fifnull		},
+	{ "list?",                  Fiflist		},
+	{ "read",                   Fread		},
+	{ "write",                  Fwrite		},
+	{ "display",                Fwrite		},
+	{ "newline",                Fnewline		},
 
-	"number?",              Fifnumber,
-	"integer?",             Fifnumber,
-	"zero?",                Fifzero,
-	"positive?",            Fifpositive,
-	"negative?",            Fifnegative,
-	"odd?",                 Fifodd,
-	"even?",                Fifeven,
-	"+",                    Fadd,
-	"-",                    Fsub,
-	"*",                    Fmul,
-	"/",                    Fdiv,
-	"<",                    Flt,
-	">",                    Fgt,
-	"<=",                   Fle,
-	">=",                   Fge,
-	"=",                    Feq,
-	"max",                  Fmax,
-	"min",                  Fmin,
-	"abs",                  Fabs,
-	"gcd",                  Fgcd,
-	"lcm",                  Flcm,
-	"quotient",             Fquotient,
-	"remainder",            Fremainder,
-	"modulo",               Fmodulo,
-	"expt",                 Fexpt,
+	{ "number?",                Fifnumber		},
+	{ "integer?",               Fifnumber		},
+	{ "zero?",                  Fifzero		},
+	{ "positive?",              Fifpositive		},
+	{ "negative?",              Fifnegative		},
+	{ "odd?",                   Fifodd		},
+	{ "even?",                  Fifeven		},
+	{ "+",                      Fadd		},
+	{ "-",                      Fsub		},
+	{ "*",                      Fmul		},
+	{ "/",                      Fdiv		},
+	{ "<",                      Flt			},
+	{ ">",                      Fgt			},
+	{ "<=",                     Fle			},
+	{ ">=",                     Fge			},
+	{ "=",                      Feq			},
+	{ "max",                    Fmax		},
+	{ "min",                    Fmin		},
+	{ "abs",                    Fabs		},
+	{ "gcd",                    Fgcd		},
+	{ "lcm",                    Flcm		},
+	{ "quotient",               Fquotient		},
+	{ "remainder",              Fremainder		},
+	{ "modulo",                 Fmodulo		},
+	{ "expt",                   Fexpt		},
 
-	"list",                 Flist,
-	"length",               Flength,
-	"append",               Fappend,
-	"reverse",              Freverse,
-	"list-tail",            Flisttail,
-	"list-ref",             Flistref,
+	{ "list",                   Flist		},
+	{ "length",                 Flength		},
+	{ "append",                 Fappend		},
+	{ "reverse",                Freverse		},
+	{ "list-tail",              Flisttail		},
+	{ "list-ref",               Flistref		},
 
-	"memq",                 Fmemv,
-	"memv",                 Fmemv,
-	"member",               Fmember,
-	"assq",                 Fassv,
-	"assv",                 Fassv,
-	"assoc",                Fassoc,
-	"apply",                Fapply,
-	"for-each",             Fforeach,
-	"map",                  Fmap,
+	{ "memq",                   Fmemv		},
+	{ "memv",                   Fmemv		},
+	{ "member",                 Fmember		},
+	{ "assq",                   Fassv		},
+	{ "assv",                   Fassv		},
+	{ "assoc",                  Fassoc		},
+	{ "apply",                  Fapply		},
+	{ "for-each",               Fforeach		},
+	{ "map",                    Fmap		},
 
-	"string?",              Fifstring,
-	"make-string",          Fmakestring,
-	"string",               Fstring,
-	"string-length",        Fstringlength,
+	{ "string?",                Fifstring		},
+	{ "make-string",            Fmakestring		},
+	{ "string",                 Fstring		},
+	{ "string-length",          Fstringlength	},
 #if 0
 string-ref
 string-set!
@@ -1003,5 +1002,5 @@ char>?
 char?
 integer->char
 #endif
-	0,                      0,
+	{ 0, 0 },
 };
