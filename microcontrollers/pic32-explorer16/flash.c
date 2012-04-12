@@ -38,6 +38,7 @@ asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
 asm ("          jr      $ra");
 asm ("          .text");
+asm ("_estack   = _end + 0x1000");
 
 void delay()
 {
@@ -49,6 +50,9 @@ void delay()
 
 int main()
 {
+    void SoftReset (void);
+    SoftReset();
+
     /* Initialize coprocessor 0. */
     mtc0 (C0_COUNT, 0, 0);
     mtc0 (C0_COMPARE, 0, -1);
