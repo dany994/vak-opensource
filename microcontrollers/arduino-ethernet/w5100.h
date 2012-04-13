@@ -17,7 +17,7 @@
 
 #define MAX_SOCK_NUM 4
 
-typedef uint8_t SOCKET;
+typedef uint8_t socket_t;
 
 #define IDM_OR  0x8000
 #define IDM_AR0 0x8001
@@ -44,7 +44,7 @@ public:
   static const uint8_t SOCK1    = 0x02;
   static const uint8_t SOCK2    = 0x04;
   static const uint8_t SOCK3    = 0x08;
-  static inline uint8_t SOCK(SOCKET ch) { return (0x01 << ch); };
+  static inline uint8_t SOCK(socket_t ch) { return (0x01 << ch); };
 };
 */
 
@@ -143,7 +143,7 @@ public:
   /* Removed unint8_t pointer cast in read_data (2 argument) due to pic32 pointer values are 32 bit and
   pic 32 compiler errors out due to data loss from cast from 32-bit pointer to a 16-bit int. These changes are
   made to this method in sockets.cpp where it is used -LSH */
-  void read_data(SOCKET s, uint16_t src, volatile uint8_t * dst, uint16_t len);
+  void read_data(socket_t s, uint16_t src, volatile uint8_t * dst, uint16_t len);
 
   /**
    * @brief	 This function is being called by send() and sendto() function also.
@@ -151,7 +151,7 @@ public:
    * This function read the Tx write pointer register and after copy the data in buffer update the Tx write pointer
    * register. User should read upper byte first and lower byte later to get proper value.
    */
-  void send_data_processing(SOCKET s, uint8_t *data, uint16_t len);
+  void send_data_processing(socket_t s, uint8_t *data, uint16_t len);
 
   /**
    * @brief	This function is being called by recv() also.
@@ -160,7 +160,7 @@ public:
    * and after copy the data from receive buffer update the Rx write pointer register.
    * User should read upper byte first and lower byte later to get proper value.
    */
-  void recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uint8_t peek = 0);
+  void recv_data_processing(socket_t s, uint8_t *data, uint16_t len, uint8_t peek = 0);
 
 
 
@@ -180,10 +180,10 @@ public:
   inline void setRetransmissionTime(uint16_t timeout);
   inline void setRetransmissionCount(uint8_t _retry);
 
-  void execCmdSn(SOCKET s, SockCMD _cmd);
+  void execCmdSn(socket_t s, SockCMD _cmd);
 
-  uint16_t getTXFreeSize(SOCKET s);
-  uint16_t getRXReceivedSize(SOCKET s);
+  uint16_t getTXFreeSize(socket_t s);
+  uint16_t getRXReceivedSize(socket_t s);
 
 
   // W5100 Registers
@@ -244,36 +244,36 @@ public:
   // W5100 Socket registers
   // ----------------------
 private:
-  static inline uint8_t readSn(SOCKET _s, uint16_t _addr);
-  static inline uint8_t writeSn(SOCKET _s, uint16_t _addr, uint8_t _data);
-  static inline uint16_t readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
-  static inline uint16_t writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
+  static inline uint8_t readSn(socket_t _s, uint16_t _addr);
+  static inline uint8_t writeSn(socket_t _s, uint16_t _addr, uint8_t _data);
+  static inline uint16_t readSn(socket_t _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
+  static inline uint16_t writeSn(socket_t _s, uint16_t _addr, uint8_t *_buf, uint16_t len);
 
   static const uint16_t CH_BASE = 0x0400;
   static const uint16_t CH_SIZE = 0x0100;
 
 #define __SOCKET_REGISTER8(name, address)                    \
-  static inline void write##name(SOCKET _s, uint8_t _data) { \
+  static inline void write##name(socket_t _s, uint8_t _data) { \
     writeSn(_s, address, _data);                             \
   }                                                          \
-  static inline uint8_t read##name(SOCKET _s) {              \
+  static inline uint8_t read##name(socket_t _s) {              \
     return readSn(_s, address);                              \
   }
 #define __SOCKET_REGISTER16(name, address)                   \
-  static void write##name(SOCKET _s, uint16_t _data) {       \
+  static void write##name(socket_t _s, uint16_t _data) {       \
     writeSn(_s, address,   _data >> 8);                      \
     writeSn(_s, address+1, _data & 0xFF);                    \
   }                                                          \
-  static uint16_t read##name(SOCKET _s) {                    \
+  static uint16_t read##name(socket_t _s) {                    \
     uint16_t res = readSn(_s, address);                      \
     res = (res << 8) + readSn(_s, address + 1);              \
     return res;                                              \
   }
 #define __SOCKET_REGISTER_N(name, address, size)             \
-  static uint16_t write##name(SOCKET _s, uint8_t *_buff) {   \
+  static uint16_t write##name(socket_t _s, uint8_t *_buff) {   \
     return writeSn(_s, address, _buff, size);                \
   }                                                          \
-  static uint16_t read##name(SOCKET _s, uint8_t *_buff) {    \
+  static uint16_t read##name(socket_t _s, uint8_t *_buff) {    \
     return readSn(_s, address, _buff, size);                 \
   }
 
@@ -333,19 +333,19 @@ private:
 
 extern W5100Class W5100;
 
-uint8_t W5100Class::readSn(SOCKET _s, uint16_t _addr) {
+uint8_t W5100Class::readSn(socket_t _s, uint16_t _addr) {
   return read(CH_BASE + _s * CH_SIZE + _addr);
 }
 
-uint8_t W5100Class::writeSn(SOCKET _s, uint16_t _addr, uint8_t _data) {
+uint8_t W5100Class::writeSn(socket_t _s, uint16_t _addr, uint8_t _data) {
   return write(CH_BASE + _s * CH_SIZE + _addr, _data);
 }
 
-uint16_t W5100Class::readSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
+uint16_t W5100Class::readSn(socket_t _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
   return read(CH_BASE + _s * CH_SIZE + _addr, _buf, _len);
 }
 
-uint16_t W5100Class::writeSn(SOCKET _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
+uint16_t W5100Class::writeSn(socket_t _s, uint16_t _addr, uint8_t *_buf, uint16_t _len) {
   return write(CH_BASE + _s * CH_SIZE + _addr, _buf, _len);
 }
 

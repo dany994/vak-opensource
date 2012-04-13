@@ -3,236 +3,224 @@
 
 static uint16_t local_port;
 
-/**
- * @brief	This Socket function initialize the channel in perticular mode, and set the port and wait for W5100 done it.
- * @return 	1 for success else 0.
+/*
+ * This Socket function initialize the channel in perticular mode,
+ * and set the port and wait for W5100 done it.
+ * Return 1 for success else 0.
  */
-uint8_t socket(SOCKET s, uint8_t protocol, uint16_t port, uint8_t flag)
+uint8_t socket (SOCKET s, uint8_t protocol, uint16_t port, uint8_t flag)
 {
-  if ((protocol == SnMR::TCP) || (protocol == SnMR::UDP) || (protocol == SnMR::IPRAW) || (protocol == SnMR::MACRAW) || (protocol == SnMR::PPPOE))
-  {
-    close(s);
-    W5100.writeSnMR(s, protocol | flag);
-    if (port != 0) {
-      W5100.writeSnPORT(s, port);
-    } 
-    else {
-      local_port++; // if don't set the source port, set local_port number.
-      W5100.writeSnPORT(s, local_port);
-    }
+    if ((protocol == SnMR_TCP) || (protocol == SnMR_UDP) ||
+        (protocol == SnMR_IPRAW) || (protocol == SnMR_MACRAW) ||
+        (protocol == SnMR_PPPOE))
+    {
+        close (s);
+        w5100_writeSnMR (s, protocol | flag);
+        if (port != 0) {
+            w5100_writeSnPORT (s, port);
+        } else {
+            /* if don't set the source port, set local_port number. */
+            local_port++;
+            w5100_writeSnPORT (s, local_port);
+        }
 
-    W5100.execCmdSn(s, Sock_OPEN);
-    
+        w5100_execCmdSn (s, Sock_OPEN);
+        return 1;
+    }
+    return 0;
+}
+
+
+/*
+ * This function close the socket and parameter is "s" which represent
+ * the socket number.
+ */
+void close (SOCKET s)
+{
+    w5100_execCmdSn (s, Sock_CLOSE);
+    w5100_writeSnIR (s, 0xFF);
+}
+
+/*
+ * This function established the connection for the channel in passive
+ * (server) mode. This function waits for the request from the peer.
+ * Return 1 for success else 0.
+ */
+uint8_t listen (SOCKET s)
+{
+    if (w5100_readSnSR (s) != SnSR_INIT)
+        return 0;
+    w5100_execCmdSn (s, Sock_LISTEN);
     return 1;
-  }
-
-  return 0;
 }
 
-
-/**
- * @brief	This function close the socket and parameter is "s" which represent the socket number
+/*
+ * This function established  the connection for the channel in Active
+ * (client) mode.  This function waits for the untill the connection
+ * is established.
+ * Return 1 for success else 0.
  */
-void close(SOCKET s)
+uint8_t connect (SOCKET s, uint8_t * addr, uint16_t port)
 {
-  W5100.execCmdSn(s, Sock_CLOSE);
-  W5100.writeSnIR(s, 0xFF);
-}
-
-
-/**
- * @brief	This function established  the connection for the channel in passive (server) mode. This function waits for the request from the peer.
- * @return	1 for success else 0.
- */
-uint8_t listen(SOCKET s)
-{
-  if (W5100.readSnSR(s) != SnSR::INIT)
-    return 0;
-  W5100.execCmdSn(s, Sock_LISTEN);
-  return 1;
-}
-
-
-/**
- * @brief	This function established  the connection for the channel in Active (client) mode. 
- * 		This function waits for the untill the connection is established.
- * 		
- * @return	1 for success else 0.
- */
-uint8_t connect(SOCKET s, uint8_t * addr, uint16_t port)
-{
-  if 
-    (
-  ((addr[0] == 0xFF) && (addr[1] == 0xFF) && (addr[2] == 0xFF) && (addr[3] == 0xFF)) ||
-    ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
-    (port == 0x00) 
-    ) 
-    return 0;
-
-  // set destination IP
-  W5100.writeSnDIPR(s, addr);
-  W5100.writeSnDPORT(s, port);
-  W5100.execCmdSn(s, Sock_CONNECT);
-
-  return 1;
-}
-
-
-
-/**
- * @brief	This function used for disconnect the socket and parameter is "s" which represent the socket number
- * @return	1 for success else 0.
- */
-void disconnect(SOCKET s)
-{
-  W5100.execCmdSn(s, Sock_DISCON);
-}
-
-
-/**
- * @brief	This function used to send the data in TCP mode
- * @return	1 for success else 0.
- */
-uint16_t send(SOCKET s, const uint8_t * buf, uint16_t len)
-{
-  uint8_t status=0;
-  uint16_t ret=0;
-  uint16_t freesize=0;
-
-  if (len > W5100.SSIZE) 
-    ret = W5100.SSIZE; // check size not to exceed MAX size.
-  else 
-    ret = len;
-
-  // if freebuf is available, start.
-  do 
-  {
-    freesize = W5100.getTXFreeSize(s);
-    status = W5100.readSnSR(s);
-    if ((status != SnSR::ESTABLISHED) && (status != SnSR::CLOSE_WAIT))
-    {
-      ret = 0; 
-      break;
-    }
-  } 
-  while (freesize < ret);
-
-  // copy data
-  W5100.send_data_processing(s, (uint8_t *)buf, ret);
-  W5100.execCmdSn(s, Sock_SEND);
-
-  /* +2008.01 bj */
-  while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) 
-  {
-    /* m2008.01 [bj] : reduce code */
-    if ( W5100.readSnSR(s) == SnSR::CLOSED )
-    {
-      close(s);
+    if (((addr[0] == 0xFF) && (addr[1] == 0xFF) &&
+         (addr[2] == 0xFF) && (addr[3] == 0xFF)) ||
+        ((addr[0] == 0x00) && (addr[1] == 0x00) &&
+         (addr[2] == 0x00) && (addr[3] == 0x00)) ||
+        (port == 0))
       return 0;
-    }
-  }
-  /* +2008.01 bj */
-  W5100.writeSnIR(s, SnIR::SEND_OK);
-  return ret;
+
+    /* set destination IP */
+    w5100_writeSnDIPR (s, addr);
+    w5100_writeSnDPORT (s, port);
+    w5100_execCmdSn (s, Sock_CONNECT);
+    return 1;
 }
 
-
-/**
- * @brief	This function is an application I/F function which is used to receive the data in TCP mode.
- * 		It continues to wait for data as much as the application wants to receive.
- * 		
- * @return	received data size for success else -1.
+/*
+ * This function used for disconnect the socket and parameter is "s"
+ * which represent the socket number
+ * Return 1 for success else 0.
  */
-uint16_t recv(SOCKET s, uint8_t *buf, uint16_t len)
+void disconnect (SOCKET s)
 {
-  // Check how much data is available
-  uint16_t ret = W5100.getRXReceivedSize(s);
-  if ( ret == 0 )
-  {
-    // No data available.
-    uint8_t status = W5100.readSnSR(s);
-    if ( s == SnSR::LISTEN || s == SnSR::CLOSED || s == SnSR::CLOSE_WAIT )
-    {
-      // The remote end has closed its side of the connection, so this is the eof state
-      ret = 0;
-    }
-    else
-    {
-      // The connection is still up, but there's no data waiting to be read
-      ret = -1;
-    }
-  }
-  else if (ret > len)
-  {
-    ret = len;
-  }
+    w5100_execCmdSn (s, Sock_DISCON);
+}
 
-  if ( ret > 0 )
-  {
-    W5100.recv_data_processing(s, buf, ret);
-    W5100.execCmdSn(s, Sock_RECV);
-  }
-  return ret;
+/*
+ * This function used to send the data in TCP mode
+ * Return 1 for success else 0.
+ */
+uint16_t send (SOCKET s, const uint8_t * buf, uint16_t len)
+{
+    uint8_t status = 0;
+    uint16_t ret = 0;
+    uint16_t freesize = 0;
+
+    if (len > w5100_SSIZE)
+        ret = w5100_SSIZE; /* check size not to exceed MAX size. */
+    else
+        ret = len;
+
+    /* if freebuf is available, start. */
+    do {
+        freesize = w5100_getTXFreeSize (s);
+        status = w5100_readSnSR (s);
+        if ((status != SnSR_ESTABLISHED) && (status != SnSR_CLOSE_WAIT)) {
+            ret = 0;
+            break;
+        }
+    } while (freesize < ret);
+
+    /* copy data */
+    w5100_send_data_processing (s, (uint8_t *)buf, ret);
+    w5100_execCmdSn (s, Sock_SEND);
+
+    /* +2008.01 bj */
+    while ((w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK) {
+        /* m2008.01 [bj] : reduce code */
+        if (w5100_readSnSR(s) == SnSR_CLOSED) {
+          close (s);
+          return 0;
+        }
+    }
+    /* +2008.01 bj */
+    w5100_writeSnIR (s, SnIR_SEND_OK);
+    return ret;
+}
+
+/*
+ * This function is an application I/F function which is used to receive
+ * the data in TCP mode.  It continues to wait for data as much as
+ * the application wants to receive.
+ * Return received data size for success else -1.
+ */
+uint16_t recv (SOCKET s, uint8_t *buf, uint16_t len)
+{
+    /* Check how much data is available */
+    uint16_t ret = w5100_getRXReceivedSize(s);
+    if (ret == 0) {
+        /* No data available. */
+        uint8_t status = w5100_readSnSR (s);
+
+        if (s == SnSR_LISTEN || s == SnSR_CLOSED || s == SnSR_CLOSE_WAIT) {
+            /* The remote end has closed its side of the connection,
+             * so this is the eof state */
+            ret = 0;
+        } else {
+            /* The connection is still up, but there's no data waiting
+             * to be read */
+            ret = -1;
+        }
+    } else if (ret > len) {
+        ret = len;
+    }
+
+    if (ret > 0) {
+        w5100_recv_data_processing (s, buf, ret);
+        w5100_execCmdSn (s, Sock_RECV);
+    }
+    return ret;
 }
 
 
 /**
  * @brief	Returns the first byte in the receive queue (no checking)
- * 		
+ *
  * @return
  */
 uint16_t peek(SOCKET s, uint8_t *buf)
 {
-  W5100.recv_data_processing(s, buf, 1, 1);
+  w5100_recv_data_processing(s, buf, 1, 1);
 
   return 1;
 }
 
 
 /**
- * @brief	This function is an application I/F function which is used to send the data for other then TCP mode. 
+ * @brief	This function is an application I/F function which is used to send the data for other then TCP mode.
  * 		Unlike TCP transmission, The peer's destination address and the port is needed.
- * 		
+ *
  * @return	This function return send data size for success else -1.
  */
 uint16_t sendto(SOCKET s, const uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t port)
 {
   uint16_t ret=0;
 
-  if (len > W5100.SSIZE) ret = W5100.SSIZE; // check size not to exceed MAX size.
+  /* check size not to exceed MAX size. */
+  if (len > w5100_SSIZE) ret = w5100_SSIZE;
   else ret = len;
 
   if
     (
   ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
     ((port == 0x00)) ||(ret == 0)
-    ) 
+    )
   {
     /* +2008.01 [bj] : added return value */
     ret = 0;
   }
   else
   {
-    W5100.writeSnDIPR(s, addr);
-    W5100.writeSnDPORT(s, port);
+    w5100_writeSnDIPR(s, addr);
+    w5100_writeSnDPORT(s, port);
 
-    // copy data
-    W5100.send_data_processing(s, (uint8_t *)buf, ret);
-    W5100.execCmdSn(s, Sock_SEND);
+    /* copy data */
+    w5100_send_data_processing(s, (uint8_t *)buf, ret);
+    w5100_execCmdSn(s, Sock_SEND);
 
     /* +2008.01 bj */
-    while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) 
+    while ( (w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK )
     {
-      if (W5100.readSnIR(s) & SnIR::TIMEOUT)
+      if (w5100_readSnIR(s) & SnIR_TIMEOUT)
       {
         /* +2008.01 [bj]: clear interrupt */
-        W5100.writeSnIR(s, (SnIR::SEND_OK | SnIR::TIMEOUT)); /* clear SEND_OK & TIMEOUT */
+        w5100_writeSnIR(s, (SnIR_SEND_OK | SnIR_TIMEOUT)); /* clear SEND_OK & TIMEOUT */
         return 0;
       }
     }
 
     /* +2008.01 bj */
-    W5100.writeSnIR(s, SnIR::SEND_OK);
+    w5100_writeSnIR(s, SnIR_SEND_OK);
   }
   return ret;
 }
@@ -240,8 +228,8 @@ uint16_t sendto(SOCKET s, const uint8_t *buf, uint16_t len, uint8_t *addr, uint1
 
 /**
  * @brief	This function is an application I/F function which is used to receive the data in other then
- * 	TCP mode. This function is used to receive UDP, IP_RAW and MAC_RAW mode, and handle the header as well. 
- * 	
+ * 	TCP mode. This function is used to receive UDP, IP_RAW and MAC_RAW mode, and handle the header as well.
+ *
  * @return	This function return received data size for success else -1.
  */
 uint16_t recvfrom(SOCKET s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port)
@@ -252,14 +240,15 @@ uint16_t recvfrom(SOCKET s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t 
 
   if ( len > 0 )
   {
-    ptr = W5100.readSnRX_RD(s);
-    switch (W5100.readSnMR(s) & 0x07)
+    ptr = w5100_readSnRX_RD(s);
+    switch (w5100_readSnMR(s) & 0x07)
     {
-    case SnMR::UDP :
+    case SnMR_UDP :
 /* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      W5100.read_data(s, ptr, head, 0x08);
+      w5100_read_data(s, ptr, head, 0x08);
       ptr += 8;
-      // read peer's IP address, port number.
+
+      /* read peer's IP address, port number. */
       addr[0] = head[0];
       addr[1] = head[1];
       addr[2] = head[2];
@@ -269,15 +258,15 @@ uint16_t recvfrom(SOCKET s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t 
       data_len = head[6];
       data_len = (data_len << 8) + head[7];
 /* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      W5100.read_data(s, ptr, buf, data_len); // data copy.
+      w5100_read_data(s, ptr, buf, data_len); /* data copy. */
       ptr += data_len;
 
-      W5100.writeSnRX_RD(s, ptr);
+      w5100_writeSnRX_RD(s, ptr);
       break;
 
-    case SnMR::IPRAW :
+    case SnMR_IPRAW :
 /* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      W5100.read_data(s, ptr, head, 0x06);
+      w5100_read_data(s, ptr, head, 0x06);
       ptr += 6;
 
       addr[0] = head[0];
@@ -287,28 +276,28 @@ uint16_t recvfrom(SOCKET s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t 
       data_len = head[4];
       data_len = (data_len << 8) + head[5];
 /* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      W5100.read_data(s, ptr, buf, data_len); // data copy.
+      w5100_read_data(s, ptr, buf, data_len); /* data copy. */
       ptr += data_len;
 
-      W5100.writeSnRX_RD(s, ptr);
+      w5100_writeSnRX_RD(s, ptr);
       break;
 
-    case SnMR::MACRAW:
+    case SnMR_MACRAW:
 /* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      W5100.read_data(s, ptr,head,2);
+      w5100_read_data(s, ptr,head,2);
       ptr+=2;
       data_len = head[0];
       data_len = (data_len<<8) + head[1] - 2;
 /* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      W5100.read_data(s, ptr,buf,data_len);
+      w5100_read_data(s, ptr,buf,data_len);
       ptr += data_len;
-      W5100.writeSnRX_RD(s, ptr);
+      w5100_writeSnRX_RD(s, ptr);
       break;
 
     default :
       break;
     }
-    W5100.execCmdSn(s, Sock_RECV);
+    w5100_execCmdSn(s, Sock_RECV);
   }
   return data_len;
 }
@@ -319,21 +308,21 @@ uint16_t igmpsend(SOCKET s, const uint8_t * buf, uint16_t len)
   uint8_t status=0;
   uint16_t ret=0;
 
-  if (len > W5100.SSIZE) 
-    ret = W5100.SSIZE; // check size not to exceed MAX size.
-  else 
+  if (len > w5100_SSIZE)
+    ret = w5100_SSIZE; /* check size not to exceed MAX size. */
+  else
     ret = len;
 
   if (ret == 0)
     return 0;
 
-  W5100.send_data_processing(s, (uint8_t *)buf, ret);
-  W5100.execCmdSn(s, Sock_SEND);
+  w5100_send_data_processing(s, (uint8_t *)buf, ret);
+  w5100_execCmdSn(s, Sock_SEND);
 
-  while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) 
+  while ( (w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK )
   {
-    status = W5100.readSnSR(s);
-    if (W5100.readSnIR(s) & SnIR::TIMEOUT)
+    status = w5100_readSnSR(s);
+    if (w5100_readSnIR(s) & SnIR_TIMEOUT)
     {
       /* in case of igmp, if send fails, then socket closed */
       /* if you want change, remove this code. */
@@ -342,7 +331,6 @@ uint16_t igmpsend(SOCKET s, const uint8_t * buf, uint16_t len)
     }
   }
 
-  W5100.writeSnIR(s, SnIR::SEND_OK);
+  w5100_writeSnIR(s, SnIR_SEND_OK);
   return ret;
 }
-
