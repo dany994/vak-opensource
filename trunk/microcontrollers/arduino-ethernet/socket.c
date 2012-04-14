@@ -30,7 +30,6 @@ uint8_t socket (SOCKET s, uint8_t protocol, uint16_t port, uint8_t flag)
     return 0;
 }
 
-
 /*
  * This function close the socket and parameter is "s" which represent
  * the socket number.
@@ -162,175 +161,178 @@ uint16_t recv (SOCKET s, uint8_t *buf, uint16_t len)
     return ret;
 }
 
-
-/**
- * @brief	Returns the first byte in the receive queue (no checking)
- *
- * @return
+/*
+ * Returns the first byte in the receive queue (no checking)
  */
 uint16_t peek(SOCKET s, uint8_t *buf)
 {
-  w5100_recv_data_processing(s, buf, 1, 1);
+    w5100_recv_data_processing(s, buf, 1, 1);
 
-  return 1;
+    return 1;
 }
 
-
-/**
- * @brief	This function is an application I/F function which is used to send the data for other then TCP mode.
- * 		Unlike TCP transmission, The peer's destination address and the port is needed.
+/*
+ * This function is an application I/F function which is used to send
+ * the data for other then TCP mode.  Unlike TCP transmission, the peer's
+ * destination address and the port is needed.
  *
- * @return	This function return send data size for success else -1.
+ * This function return send data size for success else -1.
  */
 uint16_t sendto(SOCKET s, const uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t port)
 {
-  uint16_t ret=0;
+    uint16_t ret=0;
 
-  /* check size not to exceed MAX size. */
-  if (len > w5100_SSIZE) ret = w5100_SSIZE;
-  else ret = len;
+    /* check size not to exceed MAX size. */
+    if (len > w5100_SSIZE)
+        ret = w5100_SSIZE;
+    else
+        ret = len;
 
-  if
-    (
-  ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
-    ((port == 0x00)) ||(ret == 0)
-    )
-  {
-    /* +2008.01 [bj] : added return value */
-    ret = 0;
-  }
-  else
-  {
-    w5100_writeSnDIPR(s, addr);
-    w5100_writeSnDPORT(s, port);
+    if (((addr[0] == 0x00) && (addr[1] == 0x00) &&
+         (addr[2] == 0x00) && (addr[3] == 0x00)) ||
+        (port == 0) || (ret == 0)) {
+        /* +2008.01 [bj] : added return value */
+        ret = 0;
+    } else {
+        w5100_writeSnDIPR(s, addr);
+        w5100_writeSnDPORT(s, port);
 
-    /* copy data */
-    w5100_send_data_processing(s, (uint8_t *)buf, ret);
-    w5100_execCmdSn(s, Sock_SEND);
+        /* copy data */
+        w5100_send_data_processing(s, (uint8_t *)buf, ret);
+        w5100_execCmdSn(s, Sock_SEND);
 
-    /* +2008.01 bj */
-    while ( (w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK )
-    {
-      if (w5100_readSnIR(s) & SnIR_TIMEOUT)
-      {
-        /* +2008.01 [bj]: clear interrupt */
-        w5100_writeSnIR(s, (SnIR_SEND_OK | SnIR_TIMEOUT)); /* clear SEND_OK & TIMEOUT */
-        return 0;
-      }
+        /* +2008.01 bj */
+        while ((w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK) {
+            if (w5100_readSnIR(s) & SnIR_TIMEOUT) {
+                /* +2008.01 [bj]: clear interrupt */
+                /* clear SEND_OK & TIMEOUT */
+                w5100_writeSnIR(s, SnIR_SEND_OK | SnIR_TIMEOUT);
+                return 0;
+            }
+        }
+
+        /* +2008.01 bj */
+        w5100_writeSnIR(s, SnIR_SEND_OK);
     }
-
-    /* +2008.01 bj */
-    w5100_writeSnIR(s, SnIR_SEND_OK);
-  }
-  return ret;
+    return ret;
 }
 
-
-/**
- * @brief	This function is an application I/F function which is used to receive the data in other then
- * 	TCP mode. This function is used to receive UDP, IP_RAW and MAC_RAW mode, and handle the header as well.
+/*
+ * This function is an application I/F function which is used to receive
+ * the data in other then TCP mode.  This function is used to receive UDP,
+ * IP_RAW and MAC_RAW mode, and handle the header as well.
  *
- * @return	This function return received data size for success else -1.
+ * This function return received data size for success else -1.
  */
 uint16_t recvfrom(SOCKET s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port)
 {
-  uint8_t head[8];
-  uint16_t data_len=0;
-  uint16_t ptr=0;
+    uint8_t head[8];
+    uint16_t data_len=0;
+    uint16_t ptr=0;
 
-  if ( len > 0 )
-  {
-    ptr = w5100_readSnRX_RD(s);
-    switch (w5100_readSnMR(s) & 0x07)
-    {
-    case SnMR_UDP :
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      w5100_read_data(s, ptr, head, 0x08);
-      ptr += 8;
+    if (len > 0) {
+        ptr = w5100_readSnRX_RD(s);
+        switch (w5100_readSnMR(s) & 0x07) {
+        case SnMR_UDP:
+            /* removed unint8_t pointer cast in read_data due to
+             * pic32 pointer values are 32 bit and compiler errors
+             * out due to data loss from cast to 16-bit int -LSH */
+            w5100_read_data(s, ptr, head, 0x08);
+            ptr += 8;
 
-      /* read peer's IP address, port number. */
-      addr[0] = head[0];
-      addr[1] = head[1];
-      addr[2] = head[2];
-      addr[3] = head[3];
-      *port = head[4];
-      *port = (*port << 8) + head[5];
-      data_len = head[6];
-      data_len = (data_len << 8) + head[7];
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      w5100_read_data(s, ptr, buf, data_len); /* data copy. */
-      ptr += data_len;
+            /* read peer's IP address, port number. */
+            addr[0] = head[0];
+            addr[1] = head[1];
+            addr[2] = head[2];
+            addr[3] = head[3];
+            *port = head[4];
+            *port = (*port << 8) + head[5];
+            data_len = head[6];
+            data_len = (data_len << 8) + head[7];
 
-      w5100_writeSnRX_RD(s, ptr);
-      break;
+            /* removed unint8_t pointer cast in read_data due to
+             * pic32 pointer values are 32 bit and compiler errors
+             * out due to data loss from cast to 16-bit int -LSH */
+            w5100_read_data(s, ptr, buf, data_len); /* data copy. */
+            ptr += data_len;
 
-    case SnMR_IPRAW :
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      w5100_read_data(s, ptr, head, 0x06);
-      ptr += 6;
+            w5100_writeSnRX_RD(s, ptr);
+            break;
 
-      addr[0] = head[0];
-      addr[1] = head[1];
-      addr[2] = head[2];
-      addr[3] = head[3];
-      data_len = head[4];
-      data_len = (data_len << 8) + head[5];
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      w5100_read_data(s, ptr, buf, data_len); /* data copy. */
-      ptr += data_len;
+        case SnMR_IPRAW :
+            /* removed unint8_t pointer cast in read_data due to
+             * pic32 pointer values are 32 bit and compiler errors
+             * out due to data loss from cast to 16-bit int -LSH */
+            w5100_read_data(s, ptr, head, 0x06);
+            ptr += 6;
 
-      w5100_writeSnRX_RD(s, ptr);
-      break;
+            addr[0] = head[0];
+            addr[1] = head[1];
+            addr[2] = head[2];
+            addr[3] = head[3];
+            data_len = head[4];
+            data_len = (data_len << 8) + head[5];
 
-    case SnMR_MACRAW:
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      w5100_read_data(s, ptr,head,2);
-      ptr+=2;
-      data_len = head[0];
-      data_len = (data_len<<8) + head[1] - 2;
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-      w5100_read_data(s, ptr,buf,data_len);
-      ptr += data_len;
-      w5100_writeSnRX_RD(s, ptr);
-      break;
+            /* removed unint8_t pointer cast in read_data due to
+             * pic32 pointer values are 32 bit and compiler errors
+             * out due to data loss from cast to 16-bit int -LSH */
+            w5100_read_data(s, ptr, buf, data_len); /* data copy. */
+            ptr += data_len;
 
-    default :
-      break;
+            w5100_writeSnRX_RD(s, ptr);
+            break;
+
+        case SnMR_MACRAW:
+            /* removed unint8_t pointer cast in read_data due to
+             * pic32 pointer values are 32 bit and compiler errors
+             * out due to data loss from cast to 16-bit int -LSH */
+            w5100_read_data(s, ptr,head,2);
+            ptr+=2;
+            data_len = head[0];
+            data_len = (data_len<<8) + head[1] - 2;
+
+            /* removed unint8_t pointer cast in read_data due to
+             * pic32 pointer values are 32 bit and compiler errors
+             * out due to data loss from cast to 16-bit int -LSH */
+            w5100_read_data(s, ptr,buf,data_len);
+            ptr += data_len;
+            w5100_writeSnRX_RD(s, ptr);
+            break;
+
+        default :
+            break;
+        }
+        w5100_execCmdSn(s, Sock_RECV);
     }
-    w5100_execCmdSn(s, Sock_RECV);
-  }
-  return data_len;
+    return data_len;
 }
-
 
 uint16_t igmpsend(SOCKET s, const uint8_t * buf, uint16_t len)
 {
-  uint8_t status=0;
-  uint16_t ret=0;
+    uint8_t status=0;
+    uint16_t ret=0;
 
-  if (len > w5100_SSIZE)
-    ret = w5100_SSIZE; /* check size not to exceed MAX size. */
-  else
-    ret = len;
+    if (len > w5100_SSIZE)
+        ret = w5100_SSIZE; /* check size not to exceed MAX size. */
+    else
+        ret = len;
 
-  if (ret == 0)
-    return 0;
+    if (ret == 0)
+        return 0;
 
-  w5100_send_data_processing(s, (uint8_t *)buf, ret);
-  w5100_execCmdSn(s, Sock_SEND);
+    w5100_send_data_processing(s, (uint8_t *)buf, ret);
+    w5100_execCmdSn(s, Sock_SEND);
 
-  while ( (w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK )
-  {
-    status = w5100_readSnSR(s);
-    if (w5100_readSnIR(s) & SnIR_TIMEOUT)
-    {
-      /* in case of igmp, if send fails, then socket closed */
-      /* if you want change, remove this code. */
-      close(s);
-      return 0;
+    while ((w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK) {
+        status = w5100_readSnSR(s);
+        if (w5100_readSnIR(s) & SnIR_TIMEOUT) {
+            /* in case of igmp, if send fails, then socket closed */
+            /* if you want change, remove this code. */
+            close(s);
+            return 0;
+        }
     }
-  }
 
-  w5100_writeSnIR(s, SnIR_SEND_OK);
-  return ret;
+    w5100_writeSnIR(s, SnIR_SEND_OK);
+    return ret;
 }

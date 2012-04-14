@@ -28,6 +28,30 @@ W5100Class W5100;
 #define TXBUF_BASE 0x4000
 #define RXBUF_BASE 0x6000
 
+#define RST     7       // Reset BIT
+
+#define SOCKETS 4
+
+#define SMASK   0x07FF  // Tx buffer MASK
+#define RMASK   0x07FF  // Rx buffer MASK
+
+static uint16_t SBASE[SOCKETS]; // Tx buffer base address
+static uint16_t RBASE[SOCKETS]; // Rx buffer base address
+
+/*
+ * chipKIT definitions for SS pin
+ */
+#if defined(_BOARD_UNO_)
+inline static void initSS()     { TRISDbits.TRISD4  = 0; };
+inline static void setSS()      { LATDbits.LATD4    = 0; };
+inline static void resetSS()    { LATDbits.LATD4    = 1; };
+
+#elif defined (_BOARD_MEGA_)
+inline static void initSS()     { TRISDbits.TRISD4  = 0; };
+inline static void setSS()      { LATDbits.LATD4    = 0; };
+inline static void resetSS()    { LATDbits.LATD4    = 1; };
+#endif
+
 void W5100Class::init(void)
 {
   delay(300);
@@ -193,9 +217,9 @@ uint16_t W5100Class::read(uint16_t _addr, uint8_t *_buf, uint16_t _len)
   return _len;
 }
 
-void W5100Class::execCmdSn(SOCKET s, SockCMD _cmd) {
+void W5100Class::execCmdSn(SOCKET s, int cmd) {
   // Send command to socket
-  writeSnCR(s, _cmd);
+  writeSnCR(s, cmd);
   // Wait for command to complete
   while (readSnCR(s))
     ;
