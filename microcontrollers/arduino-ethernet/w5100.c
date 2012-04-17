@@ -6,221 +6,213 @@
  * or the GNU Lesser General Public License version 2.1, both as
  * published by the Free Software Foundation.
  *
+ * Edit History
+ *  Aug  3,  2011 <Lowell Scott Hanson> ported toh chipKIT boards
+ *  Sept 13, 2011 <Gene Apperson> change SPI clock divider from DIV8 to DIV32
+ *  Apr  16, 2012 <Serge Vakulenko> ported to RetroBSD
  */
-
-//* Edit History
-//*  Aug  3,  2011 <Lowell Scott Hanson> ported toh chipKIT boards
-//*  Sept 13, 2011	<Gene Apperson> change SPI clock divider from DIV8 to DIV32
-
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/spi.h>
 
 #include "w5100.h"
-#include "WProgram.h"
 
-// W5100 controller instance
-W5100Class W5100;
+#define SPI_DEVNAME         "/dev/spi"
+#define SPI_CHANNEL         2       // W5100 chip is connected to SPI2
+#define SPI_KHZ             5000    // Clock speed 5 MHz
+#define SPI_SELPIN          0x0404  // chipKIT board: select pin D4
 
-#define TX_RX_MAX_BUF_SIZE 2048
-#define TX_BUF 0x1100
-#define RX_BUF (TX_BUF + TX_RX_MAX_BUF_SIZE)
+#define TX_RX_MAX_BUF_SIZE  2048
+#define TX_BUF              0x1100
+#define RX_BUF              (TX_BUF + TX_RX_MAX_BUF_SIZE)
 
-#define TXBUF_BASE 0x4000
-#define RXBUF_BASE 0x6000
+#define TXBUF_BASE          0x4000
+#define RXBUF_BASE          0x6000
 
-#define RST     7       // Reset BIT
+#define RST                 7       // Reset BIT
 
-#define SOCKETS 4
+#define SMASK               0x07FF  // Tx buffer MASK
+#define RMASK               0x07FF  // Rx buffer MASK
 
-#define SMASK   0x07FF  // Tx buffer MASK
-#define RMASK   0x07FF  // Rx buffer MASK
+static uint16_t SBASE [MAX_SOCK_NUM];   // Tx buffer base address
+static uint16_t RBASE [MAX_SOCK_NUM];   // Rx buffer base address
 
-static uint16_t SBASE[SOCKETS]; // Tx buffer base address
-static uint16_t RBASE[SOCKETS]; // Rx buffer base address
+static int spi;                     // SPI driver descriptor
 
-/*
- * chipKIT definitions for SS pin
- */
-#if defined(_BOARD_UNO_)
-inline static void initSS()     { TRISDbits.TRISD4  = 0; };
-inline static void setSS()      { LATDbits.LATD4    = 0; };
-inline static void resetSS()    { LATDbits.LATD4    = 1; };
-
-#elif defined (_BOARD_MEGA_)
-inline static void initSS()     { TRISDbits.TRISD4  = 0; };
-inline static void setSS()      { LATDbits.LATD4    = 0; };
-inline static void resetSS()    { LATDbits.LATD4    = 1; };
-#endif
-
-void W5100Class::init(void)
+void w5100_init()
 {
-  delay(300);
+    int i;
 
+    spi = open (SPI_DEVNAME, O_RDWR);
+    if (spi < 0) {
+        perror (SPI_DEVNAME);
+        exit (-1);
+    }
 
-  SPI.begin();
-  //Set the SPI clock speed to 2.5Mhz. Setting it to 5Mhz (DIV16) may
-  //work for some hardware configurations.
-  SPI.setClockDivider(SPI_CLOCK_DIV32);
-  //The W5100 chip operates in SPI mode 0. Early versions of the chipKIT
-  //SPI library (prior to 20110907) set the modes incorrectly. To work
-  //with those early versions use SPI_MODE1.
-  SPI.setDataMode(SPI_MODE0);
+    ioctl (spi, SPICTL_SETCHAN, SPI_CHANNEL);
+    ioctl (spi, SPICTL_SETRATE, SPI_KHZ);
+    ioctl (spi, SPICTL_SETSELPIN, SPI_SELPIN);
 
-  initSS();
-  writeMR(1<<RST);
-  writeTMSR(0x55);
-  writeRMSR(0x55);
+    w5100_writeMR (1 << RST);
+    w5100_writeTMSR (0x55);
+    w5100_writeRMSR (0x55);
 
-  for (int i=0; i<MAX_SOCK_NUM; i++) {
-    SBASE[i] = TXBUF_BASE + SSIZE * i;
-    RBASE[i] = RXBUF_BASE + RSIZE * i;
-  }
+    for (i=0; i<MAX_SOCK_NUM; i++) {
+        SBASE[i] = TXBUF_BASE + W5100_SSIZE * i;
+        RBASE[i] = RXBUF_BASE + W5100_RSIZE * i;
+    }
 }
 
-uint16_t W5100Class::getTXFreeSize(SOCKET s)
+unsigned w5100_getTXFreeSize (socket_t s)
 {
-  uint16_t val=0, val1=0;
-  do {
-    val1 = readSnTX_FSR(s);
-    if (val1 != 0)
-      val = readSnTX_FSR(s);
-  }
-  while (val != val1);
-  return val;
+    unsigned val = 0, val1 = 0;
+
+    do {
+        val1 = w5100_readSnTX_FSR(s);
+        if (val1 != 0)
+            val = w5100_readSnTX_FSR(s);
+    }
+    while (val != val1);
+    return val;
 }
 
-uint16_t W5100Class::getRXReceivedSize(SOCKET s)
+unsigned w5100_getRXReceivedSize (socket_t s)
 {
-  uint16_t val=0,val1=0;
-  do {
-    val1 = readSnRX_RSR(s);
-    if (val1 != 0)
-      val = readSnRX_RSR(s);
-  }
-  while (val != val1);
-  return val;
+    unsigned val = 0, val1 = 0;
+
+    do {
+        val1 = w5100_readSnRX_RSR(s);
+        if (val1 != 0)
+            val = w5100_readSnRX_RSR(s);
+    }
+    while (val != val1);
+    return val;
 }
 
-
-void W5100Class::send_data_processing(SOCKET s, uint8_t *data, uint16_t len)
+void w5100_send_data_processing (socket_t s, uint8_t *data, unsigned len)
 {
-  uint16_t ptr = readSnTX_WR(s);
-  uint16_t offset = ptr & SMASK;
-  uint16_t dstAddr = offset + SBASE[s];
+    unsigned ptr = w5100_readSnTX_WR(s);
+    unsigned offset = ptr & SMASK;
+    unsigned dstAddr = offset + SBASE[s];
 
-digitalWrite(13,HIGH);
+    if (offset + len > W5100_SSIZE) {
+        // Wrap around circular buffer
+        unsigned size = W5100_SSIZE - offset;
+        w5100_write (dstAddr, data, size);
+        w5100_write (SBASE[s], data + size, len - size);
+    } else {
+        w5100_write (dstAddr, data, len);
+    }
 
-  if (offset + len > SSIZE)
-  {
-    // Wrap around circular buffer
-    uint16_t size = SSIZE - offset;
-    write(dstAddr, data, size);
-    write(SBASE[s], data + size, len - size);
-  }
-  else {
-    write(dstAddr, data, len);
-  }
-
-  ptr += len;
-  writeSnTX_WR(s, ptr);
-}
-
-
-void W5100Class::recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uint8_t peek)
-{
-  uint16_t ptr;
-  ptr = readSnRX_RD(s);
-  digitalWrite(13,LOW);
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-read_data(s, ptr, data, len);
-  if (!peek)
-  {
     ptr += len;
-    writeSnRX_RD(s, ptr);
-  }
+    w5100_writeSnTX_WR (s, ptr);
 }
 
-/* removed unint8_t pointer cast in read_data due to pic32 pointer values are 32 bit and compiler errors out due to data loss from cast to 16-bit int -LSH */
-void W5100Class::read_data(SOCKET s,  uint16_t src, volatile uint8_t *dst, uint16_t len)
+void w5100_recv_data_processing (socket_t s, uint8_t *data,
+    unsigned len, int peek)
 {
-  uint16_t size;
-  uint16_t src_mask;
-  uint16_t src_ptr;
+    unsigned ptr = w5100_readSnRX_RD(s);
 
-  src_mask = src & RMASK;
-  src_ptr = RBASE[s] + src_mask;
+    /* removed unint8_t pointer cast in read_data due to pic32 pointer
+     * values are 32 bit and compiler errors out due to data loss
+     * from cast to 16-bit int -LSH */
+    w5100_read_data (s, ptr, data, len);
 
-  if( (src_mask + len) > RSIZE )
-  {
-    size = RSIZE - src_mask;
-    read(src_ptr, (uint8_t *)dst, size);
-    dst += size;
-    read(RBASE[s], (uint8_t *) dst, len - size);
-  }
-  else
-    read(src_ptr, (uint8_t *) dst, len);
+    if (! peek) {
+        ptr += len;
+        w5100_writeSnRX_RD (s, ptr);
+    }
 }
 
-
-uint8_t W5100Class::write(uint16_t _addr, uint8_t _data)
+void w5100_socket_cmd (socket_t s, int cmd)
 {
+    // Send command to socket
+    w5100_writeSnCR (s, cmd);
 
-  setSS();
-  SPI.transfer(0xF0);
-  SPI.transfer(_addr >> 8);
-  SPI.transfer(_addr & 0xFF);
-  SPI.transfer(_data);
-
-  resetSS();
-  return 1;
+    // Wait for command to complete
+    while (w5100_readSnCR(s))
+        ;
 }
 
-uint16_t W5100Class::write(uint16_t _addr, uint8_t *_buf, uint16_t _len)
+/* removed unint8_t pointer cast in read_data due to pic32 pointer
+ * values are 32 bit and compiler errors out due to data loss
+ * from cast to 16-bit int -LSH */
+void w5100_read_data (socket_t s,  unsigned src,
+    volatile uint8_t *dst, unsigned len)
 {
-  for (uint16_t i=0; i<_len; i++)
-  {
-    setSS();
-    SPI.transfer(0xF0);
-    SPI.transfer(_addr >> 8);
-    SPI.transfer(_addr & 0xFF);
-    _addr++;
-    SPI.transfer(_buf[i]);
+    unsigned size;
+    unsigned src_mask;
+    unsigned src_ptr;
 
-    resetSS();
-  }
-  return _len;
+    src_mask = src & RMASK;
+    src_ptr = RBASE[s] + src_mask;
+
+    if (src_mask + len > W5100_RSIZE)
+    {
+        size = W5100_RSIZE - src_mask;
+        w5100_read (src_ptr, (uint8_t *) dst, size);
+        dst += size;
+        w5100_read (RBASE[s], (uint8_t *) dst, len - size);
+    } else
+        w5100_read (src_ptr, (uint8_t *) dst, len);
 }
 
-uint8_t W5100Class::read(uint16_t _addr)
+unsigned w5100_write_byte (unsigned addr, int byte)
 {
-  setSS();
-  SPI.transfer(0x0F);
-  SPI.transfer(_addr >> 8);
-  SPI.transfer(_addr & 0xFF);
-  uint8_t _data = SPI.transfer(0);
-  resetSS();
-  return _data;
+    uint8_t data[4];
+
+    data[0] = 0xF0;
+    data[1] = addr >> 8;
+    data[2] = addr;
+    data[3] = byte;
+    ioctl (spi, SPICTL_IO32, data);
+    return 1;
 }
 
-uint16_t W5100Class::read(uint16_t _addr, uint8_t *_buf, uint16_t _len)
+unsigned w5100_write (unsigned addr, uint8_t *buf, unsigned len)
 {
-  for (uint16_t i=0; i<_len; i++)
-  {
-    setSS();
-    SPI.transfer(0x0F);
-    SPI.transfer(_addr >> 8);
-    SPI.transfer(_addr & 0xFF);
-    _addr++;
-    _buf[i] = SPI.transfer(0);
-    resetSS();
-  }
-  return _len;
+    uint8_t data[4];
+    unsigned i;
+
+    for (i=0; i<len; i++) {
+        data[0] = 0xF0;
+        data[1] = addr >> 8;
+        data[2] = addr;
+        data[3] = buf[i];
+        ioctl (spi, SPICTL_IO32, data);
+        addr++;
+    }
+    return len;
 }
 
-void W5100Class::execCmdSn(SOCKET s, int cmd) {
-  // Send command to socket
-  writeSnCR(s, cmd);
-  // Wait for command to complete
-  while (readSnCR(s))
-    ;
+unsigned w5100_read_byte (unsigned addr)
+{
+    uint8_t data[4];
+
+    data[0] = 0x0F;
+    data[1] = addr >> 8;
+    data[2] = addr;
+    data[3] = 0xFF;
+    ioctl (spi, SPICTL_IO32, data);
+
+    return data[3];
+}
+
+unsigned w5100_read (unsigned addr, uint8_t *buf, unsigned len)
+{
+    uint8_t data[4];
+    unsigned i;
+
+    for (i=0; i<len; i++) {
+        data[0] = 0x0F;
+        data[1] = addr >> 8;
+        data[2] = addr;
+        data[3] = 0xFF;
+        ioctl (spi, SPICTL_IO32, data);
+        addr++;
+        buf[i] = data[3];
+    }
+    return len;
 }

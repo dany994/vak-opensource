@@ -2,9 +2,8 @@
 #define ethernet_h
 
 #include <stdint.h>
-#include <client.h>
-//#include <server.h>
-//#include <w5100.h>
+#include "client.h"
+//#include "server.h"
 
 #define MAX_SOCK_NUM 4
 

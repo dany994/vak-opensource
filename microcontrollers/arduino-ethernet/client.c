@@ -1,30 +1,31 @@
 #include <string.h>
-
+#include <unistd.h>
 #include "ethernet.h"
 #include "socket.h"
-//#include "WProgram.h"
 
-uint16_t client_srcport = 1024;
+unsigned client_srcport = 1024;
 
-void client_begin (uint8_t *ip, uint16_t port)
+void client_begin (client_t *c, uint8_t *ip, unsigned port)
 {
     c->ip = ip;
     c->port = port;
     c->sock = MAX_SOCK_NUM;
 }
 
-void client_begin_sock (client_t *c, uint8_t sock)
+void client_begin_sock (client_t *c, socket_t sock)
 {
     c->sock = sock;
 }
 
-uint8_t client_connect (client_t *c)
+int client_connect (client_t *c)
 {
+    int i;
+
     if (c->sock != MAX_SOCK_NUM)
         return 0;
 
-    for (int i = 0; i < MAX_SOCK_NUM; i++) {
-        uint8_t s = w5100_readSnSR (i);
+    for (i = 0; i < MAX_SOCK_NUM; i++) {
+        unsigned s = w5100_readSnSR (i);
         if (s == SnSR_CLOSED || s == SnSR_FIN_WAIT) {
             c->sock = i;
             break;
@@ -37,15 +38,15 @@ uint8_t client_connect (client_t *c)
     client_srcport++;
     if (client_srcport == 0)
         client_srcport = 1024;
-    socket (c->sock, SnMR_TCP, client_srcport, 0);
+    socket_init (c->sock, SnMR_TCP, client_srcport, 0);
 
-    if (! connect(c->sock, c->ip, c->port)) {
+    if (! socket_connect (c->sock, c->ip, c->port)) {
         c->sock = MAX_SOCK_NUM;
         return 0;
     }
 
     while (client_status(c) != SnSR_ESTABLISHED) {
-        usleep(10);
+        usleep (10000);
         if (client_status(c) == SnSR_CLOSED) {
             c->sock = MAX_SOCK_NUM;
             return 0;
@@ -56,26 +57,26 @@ uint8_t client_connect (client_t *c)
 
 void client_putc (client_t *c, uint8_t b)
 {
-    if (_sock != MAX_SOCK_NUM)
-        send(_sock, &b, 1);
+    if (c->sock != MAX_SOCK_NUM)
+        socket_send (c->sock, &b, 1);
 }
 
 void client_puts (client_t *c, const char *str)
 {
-    if (_sock != MAX_SOCK_NUM)
-        send(_sock, (const uint8_t *)str, strlen(str));
+    if (c->sock != MAX_SOCK_NUM)
+        socket_send (c->sock, (const uint8_t *)str, strlen(str));
 }
 
 void client_write (client_t *c, const uint8_t *buf, size_t size)
 {
-    if (_sock != MAX_SOCK_NUM)
-        send(_sock, buf, size);
+    if (c->sock != MAX_SOCK_NUM)
+        socket_send (c->sock, buf, size);
 }
 
-int client_available (client_t *c, )
+int client_available (client_t *c)
 {
-    if (_sock != MAX_SOCK_NUM)
-        return w5100_getRXReceivedSize(_sock);
+    if (c->sock != MAX_SOCK_NUM)
+        return w5100_getRXReceivedSize (c->sock);
     return 0;
 }
 
@@ -83,7 +84,7 @@ int client_getc (client_t *c)
 {
     uint8_t b;
 
-    if (recv (c->sock, &b, 1) <= 0) {
+    if (socket_recv (c->sock, &b, 1) <= 0) {
         // No data available
         return -1;
     }
@@ -92,7 +93,7 @@ int client_getc (client_t *c)
 
 int client_read (client_t *c, uint8_t *buf, size_t size)
 {
-    return recv (c->sock, buf, size);
+    return socket_recv (c->sock, buf, size);
 }
 
 int client_peek (client_t *c)
@@ -103,7 +104,7 @@ int client_peek (client_t *c)
     if (! client_available (c))
       return -1;
 
-    peek (c->sock, &b);
+    socket_peek (c->sock, &b);
     return b;
 }
 
@@ -115,36 +116,40 @@ void client_flush(client_t *c)
 
 void client_stop (client_t *c)
 {
+    int i;
+
     if (c->sock == MAX_SOCK_NUM)
         return;
 
     // attempt to close the connection gracefully (send a FIN to other side)
-    disconnect (c->sock);
+    socket_disconnect (c->sock);
 
     // wait a second for the connection to close
-    unsigned long start = millis();
-    while (client_status (c) != SnSR_CLOSED && millis() - start < 1000)
-        usleep (10);
+    for (i=0; i<100; i++) {
+        if (client_status (c) == SnSR_CLOSED)
+            break;
+        usleep (10000);
+    }
 
     // if it hasn't closed, close it forcefully
     if (client_status(c) != SnSR_CLOSED)
-        close (c->sock);
+        socket_close (c->sock);
 
     _ethernet_server_port[c->sock] = 0;
     c->sock = MAX_SOCK_NUM;
 }
 
-uint8_t client_connected (client_t *c)
+int client_connected (client_t *c)
 {
     if (c->sock == MAX_SOCK_NUM)
         return 0;
 
-    uint8_t s = client_status (c);
+    unsigned s = client_status (c);
     return ! (s == SnSR_LISTEN || s == SnSR_CLOSED || s == SnSR_FIN_WAIT ||
-        (s == SnSR_CLOSE_WAIT && ! available()));
+        (s == SnSR_CLOSE_WAIT && ! client_available (c)));
 }
 
-uint8_t client_status (client_t *c)
+unsigned client_status (client_t *c)
 {
     if (c->sock == MAX_SOCK_NUM)
         return SnSR_CLOSED;
@@ -152,19 +157,19 @@ uint8_t client_status (client_t *c)
 }
 
 // the next three functions are a hack so we can compare the client returned
-// by Server::available() to null, or use it as the condition in an
+// by server_available() to null, or use it as the condition in an
 // if-statement.  this lets us stay compatible with the Processing network
 // library.
 #if 0
 uint8_t Client::operator==(int p) {
-    return _sock == MAX_SOCK_NUM;
+    return c->sock == MAX_SOCK_NUM;
 }
 
 uint8_t Client::operator!=(int p) {
-    return _sock != MAX_SOCK_NUM;
+    return c->sock != MAX_SOCK_NUM;
 }
 
 Client::operator bool() {
-    return _sock != MAX_SOCK_NUM;
+    return c->sock != MAX_SOCK_NUM;
 }
 #endif
