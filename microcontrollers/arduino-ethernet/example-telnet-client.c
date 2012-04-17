@@ -37,7 +37,7 @@ client_t client;
 int main()
 {
     /* start the Ethernet connection */
-    ethernet_begin (mac, ip, 0, 0);
+    ethernet_init (mac, ip, 0, 0);
 
     /* give the Ethernet shield a second to initialize */
     usleep (1000000);
@@ -46,7 +46,7 @@ int main()
      * with the IP address and port of the server
      * that you want to connect to (port 23 is default for telnet;
      * if you're using Processing's ChatServer, use  port 10002). */
-    client_begin (&client, server, 10002);
+    client_init (&client, server, 10002);
 
     printf("connecting...\n");
 

@@ -1,19 +1,17 @@
 #include <string.h>
-#include "w5100.h"
 #include "socket.h"
-#include "client.h"
 #include "server.h"
 
 unsigned _server_port;
 
-void server_begin (unsigned port)
+void server_init (unsigned port)
 {
     unsigned sock;
     client_t client;
 
     _server_port = port;
     for (sock = 0; sock < MAX_SOCK_NUM; sock++) {
-        client_begin_sock (&client, sock);
+        client_init_sock (&client, sock);
 
         if (client_status (&client) == SnSR_CLOSED) {
             socket_init (sock, SnMR_TCP, port, 0);
@@ -31,7 +29,7 @@ void server_accept()
     int listening = 0;
 
     for (sock = 0; sock < MAX_SOCK_NUM; sock++) {
-        client_begin_sock (&client, sock);
+        client_init_sock (&client, sock);
 
         if (_socket_port[sock] == _server_port) {
             if (client_status (&client) == SnSR_LISTEN) {
@@ -45,7 +43,7 @@ void server_accept()
     }
 
     if (! listening) {
-        server_begin (_server_port);
+        server_init (_server_port);
     }
 }
 
@@ -56,7 +54,7 @@ int server_available (client_t *client)
     server_accept();
 
     for (sock = 0; sock < MAX_SOCK_NUM; sock++) {
-        client_begin_sock (client, sock);
+        client_init_sock (client, sock);
 
         if (_socket_port[sock] == _server_port &&
               (client_status (client) == SnSR_ESTABLISHED ||
@@ -88,7 +86,7 @@ void server_write (const uint8_t *buffer, size_t size)
     server_accept();
 
     for (sock = 0; sock < MAX_SOCK_NUM; sock++) {
-        client_begin_sock (&client, sock);
+        client_init_sock (&client, sock);
 
         if (_socket_port[sock] == _server_port &&
           client_status (&client) == SnSR_ESTABLISHED) {

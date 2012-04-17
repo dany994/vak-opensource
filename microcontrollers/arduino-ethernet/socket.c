@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include "w5100.h"
 #include "socket.h"
 
 uint16_t _socket_port [MAX_SOCK_NUM] = { 0 };

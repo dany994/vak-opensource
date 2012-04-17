@@ -1,7 +1,6 @@
 /*
  * Udp.cpp: Library to send/receive UDP packets with the Arduino ethernet shield.
  * This version only offers minimal wrapping of socket.c/socket.h
- * Drop Udp.h/.cpp into the Ethernet library directory at hardware/libraries/Ethernet/
  *
  * NOTE: UDP is fast, but has some important limitations (thanks to Warren Gray for mentioning these)
  * 1) UDP does not guarantee the order in which assembled UDP packets are received. This
@@ -33,32 +32,48 @@
  *
  * bjoern@cs.stanford.edu 12/30/2008
  */
-
 #ifndef udp_h
 #define udp_h
 
 #define UDP_TX_PACKET_MAX_SIZE 24
 
-class UDP {
-private:
-  uint8_t _sock;  // socket ID for Wiz5100
-  uint16_t _port; // local port to listen on
-
-public:
-  UDP();
-  uint8_t begin(uint16_t);	// initialize, start listening on specified port. Returns 1 if successful, 0 if there are no sockets available to use
-  int available();								// has data been received?
-
-  // C-style buffer-oriented functions
-  uint16_t sendPacket(uint8_t *, uint16_t, uint8_t *, uint16_t); //send a packet to specified peer
-  uint16_t sendPacket(const char[], uint8_t *, uint16_t);  //send a string as a packet to specified peer
-  int readPacket(uint8_t *, uint16_t);		// read a received packet
-  int readPacket(uint8_t *, uint16_t, uint8_t *, uint16_t *);		// read a received packet, also return sender's ip and port
-  // readPacket that fills a character string buffer
-  int readPacket(char *, uint16_t, uint8_t *, uint16_t &);
-
-  // Finish with the UDP socket
-  void stop();
+struct _udp_t {
+    unsigned port;      // local port to listen on
+    unsigned sock;      // socket ID for Wiz5100
 };
+typedef struct _udp_t udp_t;
+
+/*
+ * Initialize, start listening on specified port.
+ * Returns 1 if successful, 0 if there are no sockets available to use.
+ */
+int udp_init (udp_t *u, unsigned port);
+
+/*
+ * Has data been received?
+ */
+unsigned udp_available (udp_t *u);
+
+/*
+ * Finish with the UDP socket.
+ */
+void udp_stop (udp_t *u);
+
+/*
+ * Send a packet to specified peer.
+ */
+uint16_t udp_send_packet (udp_t *u, const uint8_t *data, unsigned len,
+                          uint8_t *ip, unsigned port);
+
+/*
+ * Send a zero-terminated string to specified peer.
+ */
+uint16_t udp_send_string (udp_t *u, const char *data,
+                          uint8_t *ip, unsigned port);
+
+/*
+ * Read a received packet, also return sender's ip and port.
+ */
+int udp_read_packet (udp_t *u, uint8_t *buf, unsigned len, uint8_t *ip, unsigned *port);
 
 #endif

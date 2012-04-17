@@ -8,10 +8,10 @@ struct _client_t {
 };
 typedef struct _client_t client_t;
 
-extern unsigned client_srcport;
+extern unsigned _client_srcport;
 
-void client_begin (client_t *c, uint8_t *ip, unsigned port);
-void client_begin_sock (client_t *c, unsigned sock);
+void client_init (client_t *c, uint8_t *ip, unsigned port);
+void client_init_sock (client_t *c, unsigned sock);
 
 unsigned client_status (client_t *);
 int client_connect (client_t *);
