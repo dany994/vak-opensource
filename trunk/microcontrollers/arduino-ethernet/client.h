@@ -1,10 +1,8 @@
 #ifndef client_h
 #define client_h
 
-#include "w5100.h"
-
 struct _client_t {
-    socket_t sock;
+    unsigned sock;
     uint8_t *ip;
     unsigned port;
 };
@@ -13,7 +11,7 @@ typedef struct _client_t client_t;
 extern unsigned client_srcport;
 
 void client_begin (client_t *c, uint8_t *ip, unsigned port);
-void client_begin_sock (client_t *c, socket_t sock);
+void client_begin_sock (client_t *c, unsigned sock);
 
 unsigned client_status (client_t *);
 int client_connect (client_t *);
@@ -27,9 +25,5 @@ int client_peek (client_t *);
 void client_flush (client_t *);
 void client_stop (client_t *);
 int client_connected (client_t *);
-
-//uint8_t operator==(int);
-//uint8_t operator!=(int);
-//operator bool();
 
 #endif

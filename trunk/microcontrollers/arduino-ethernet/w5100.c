@@ -65,81 +65,81 @@ void w5100_init()
     }
 }
 
-unsigned w5100_getTXFreeSize (socket_t s)
+unsigned w5100_getTXFreeSize (unsigned sock)
 {
     unsigned val = 0, val1 = 0;
 
     do {
-        val1 = w5100_readSnTX_FSR(s);
+        val1 = w5100_readSnTX_FSR (sock);
         if (val1 != 0)
-            val = w5100_readSnTX_FSR(s);
+            val = w5100_readSnTX_FSR (sock);
     }
     while (val != val1);
     return val;
 }
 
-unsigned w5100_getRXReceivedSize (socket_t s)
+unsigned w5100_getRXReceivedSize (unsigned sock)
 {
     unsigned val = 0, val1 = 0;
 
     do {
-        val1 = w5100_readSnRX_RSR(s);
+        val1 = w5100_readSnRX_RSR (sock);
         if (val1 != 0)
-            val = w5100_readSnRX_RSR(s);
+            val = w5100_readSnRX_RSR (sock);
     }
     while (val != val1);
     return val;
 }
 
-void w5100_send_data_processing (socket_t s, uint8_t *data, unsigned len)
+void w5100_send_data_processing (unsigned sock, uint8_t *data, unsigned len)
 {
-    unsigned ptr = w5100_readSnTX_WR(s);
+    unsigned ptr = w5100_readSnTX_WR (sock);
     unsigned offset = ptr & SMASK;
-    unsigned dstAddr = offset + SBASE[s];
+    unsigned dstAddr = offset + SBASE[sock];
 
     if (offset + len > W5100_SSIZE) {
         // Wrap around circular buffer
         unsigned size = W5100_SSIZE - offset;
         w5100_write (dstAddr, data, size);
-        w5100_write (SBASE[s], data + size, len - size);
+        w5100_write (SBASE[sock], data + size, len - size);
     } else {
         w5100_write (dstAddr, data, len);
     }
 
     ptr += len;
-    w5100_writeSnTX_WR (s, ptr);
+    w5100_writeSnTX_WR (sock, ptr);
 }
 
-void w5100_recv_data_processing (socket_t s, uint8_t *data,
+void w5100_recv_data_processing (unsigned sock, uint8_t *data,
     unsigned len, int peek)
 {
-    unsigned ptr = w5100_readSnRX_RD(s);
+    unsigned ptr = w5100_readSnRX_RD (sock);
 
     /* removed unint8_t pointer cast in read_data due to pic32 pointer
      * values are 32 bit and compiler errors out due to data loss
      * from cast to 16-bit int -LSH */
-    w5100_read_data (s, ptr, data, len);
+    w5100_read_data (sock, ptr, data, len);
 
     if (! peek) {
         ptr += len;
-        w5100_writeSnRX_RD (s, ptr);
+        w5100_writeSnRX_RD (sock, ptr);
     }
 }
 
-void w5100_socket_cmd (socket_t s, int cmd)
+void w5100_socket_cmd (unsigned sock, int cmd)
 {
     // Send command to socket
-    w5100_writeSnCR (s, cmd);
+    w5100_writeSnCR (sock, cmd);
 
     // Wait for command to complete
-    while (w5100_readSnCR(s))
+    while (w5100_readSnCR (sock))
         ;
 }
 
 /* removed unint8_t pointer cast in read_data due to pic32 pointer
  * values are 32 bit and compiler errors out due to data loss
  * from cast to 16-bit int -LSH */
-void w5100_read_data (socket_t s,  unsigned src,
+void w5100_read_data (unsigned sock,  unsigned src,
     volatile uint8_t *dst, unsigned len)
 {
     unsigned size;
@@ -147,14 +147,14 @@ void w5100_read_data (socket_t s,  unsigned src,
     unsigned src_ptr;
 
     src_mask = src & RMASK;
-    src_ptr = RBASE[s] + src_mask;
+    src_ptr = RBASE[sock] + src_mask;
 
     if (src_mask + len > W5100_RSIZE)
     {
         size = W5100_RSIZE - src_mask;
         w5100_read (src_ptr, (uint8_t *) dst, size);
         dst += size;
-        w5100_read (RBASE[s], (uint8_t *) dst, len - size);
+        w5100_read (RBASE[sock], (uint8_t *) dst, len - size);
     } else
         w5100_read (src_ptr, (uint8_t *) dst, len);
 }

@@ -2,6 +2,8 @@
 #include "w5100.h"
 #include "socket.h"
 
+uint16_t _socket_port [MAX_SOCK_NUM] = { 0 };
+
 static unsigned local_port;
 
 /*
@@ -9,36 +11,36 @@ static unsigned local_port;
  * and set the port and wait for W5100 done it.
  * Return 1 for success else 0.
  */
-unsigned socket_init (socket_t s, unsigned protocol, unsigned port, unsigned flag)
+unsigned socket_init (unsigned sock, unsigned protocol, unsigned port, unsigned flag)
 {
     if ((protocol == SnMR_TCP) || (protocol == SnMR_UDP) ||
         (protocol == SnMR_IPRAW) || (protocol == SnMR_MACRAW) ||
         (protocol == SnMR_PPPOE))
     {
-        socket_close (s);
-        w5100_writeSnMR (s, protocol | flag);
+        socket_close (sock);
+        w5100_writeSnMR (sock, protocol | flag);
         if (port != 0) {
-            w5100_writeSnPORT (s, port);
+            w5100_writeSnPORT (sock, port);
         } else {
             /* if don't set the source port, set local_port number. */
             local_port++;
-            w5100_writeSnPORT (s, local_port);
+            w5100_writeSnPORT (sock, local_port);
         }
 
-        w5100_socket_cmd (s, Sock_OPEN);
+        w5100_socket_cmd (sock, Sock_OPEN);
         return 1;
     }
     return 0;
 }
 
 /*
- * This function close the socket and parameter is "s" which represent
+ * This function close the socket and parameter is "sock" which represent
  * the socket number.
  */
-void socket_close (socket_t s)
+void socket_close (unsigned sock)
 {
-    w5100_socket_cmd (s, Sock_CLOSE);
-    w5100_writeSnIR (s, 0xFF);
+    w5100_socket_cmd (sock, Sock_CLOSE);
+    w5100_writeSnIR (sock, 0xFF);
 }
 
 /*
@@ -46,11 +48,11 @@ void socket_close (socket_t s)
  * (server) mode. This function waits for the request from the peer.
  * Return 1 for success else 0.
  */
-unsigned socket_listen (socket_t s)
+unsigned socket_listen (unsigned sock)
 {
-    if (w5100_readSnSR (s) != SnSR_INIT)
+    if (w5100_readSnSR (sock) != SnSR_INIT)
         return 0;
-    w5100_socket_cmd (s, Sock_LISTEN);
+    w5100_socket_cmd (sock, Sock_LISTEN);
     return 1;
 }
 
@@ -60,7 +62,7 @@ unsigned socket_listen (socket_t s)
  * is established.
  * Return 1 for success else 0.
  */
-unsigned socket_connect (socket_t s, uint8_t * addr, unsigned port)
+unsigned socket_connect (unsigned sock, uint8_t * addr, unsigned port)
 {
     if (((addr[0] == 0xFF) && (addr[1] == 0xFF) &&
          (addr[2] == 0xFF) && (addr[3] == 0xFF)) ||
@@ -70,27 +72,27 @@ unsigned socket_connect (socket_t s, uint8_t * addr, unsigned port)
       return 0;
 
     /* set destination IP */
-    w5100_writeSnDIPR (s, addr);
-    w5100_writeSnDPORT (s, port);
-    w5100_socket_cmd (s, Sock_CONNECT);
+    w5100_writeSnDIPR (sock, addr);
+    w5100_writeSnDPORT (sock, port);
+    w5100_socket_cmd (sock, Sock_CONNECT);
     return 1;
 }
 
 /*
- * This function used for disconnect the socket and parameter is "s"
+ * This function used for disconnect the socket and parameter is "sock"
  * which represent the socket number
  * Return 1 for success else 0.
  */
-void socket_disconnect (socket_t s)
+void socket_disconnect (unsigned sock)
 {
-    w5100_socket_cmd (s, Sock_DISCON);
+    w5100_socket_cmd (sock, Sock_DISCON);
 }
 
 /*
  * This function used to send the data in TCP mode
  * Return 1 for success else 0.
  */
-unsigned socket_send (socket_t s, const uint8_t * buf, unsigned len)
+unsigned socket_send (unsigned sock, const uint8_t * buf, unsigned len)
 {
     unsigned status = 0;
     unsigned ret = 0;
@@ -103,8 +105,8 @@ unsigned socket_send (socket_t s, const uint8_t * buf, unsigned len)
 
     /* if freebuf is available, start. */
     do {
-        freesize = w5100_getTXFreeSize (s);
-        status = w5100_readSnSR (s);
+        freesize = w5100_getTXFreeSize (sock);
+        status = w5100_readSnSR (sock);
         if ((status != SnSR_ESTABLISHED) && (status != SnSR_CLOSE_WAIT)) {
             ret = 0;
             break;
@@ -112,19 +114,19 @@ unsigned socket_send (socket_t s, const uint8_t * buf, unsigned len)
     } while (freesize < ret);
 
     /* copy data */
-    w5100_send_data_processing (s, (uint8_t *)buf, ret);
-    w5100_socket_cmd (s, Sock_SEND);
+    w5100_send_data_processing (sock, (uint8_t *)buf, ret);
+    w5100_socket_cmd (sock, Sock_SEND);
 
     /* +2008.01 bj */
-    while ((w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK) {
+    while ((w5100_readSnIR (sock) & SnIR_SEND_OK) != SnIR_SEND_OK) {
         /* m2008.01 [bj] : reduce code */
-        if (w5100_readSnSR(s) == SnSR_CLOSED) {
-          socket_close (s);
+        if (w5100_readSnSR (sock) == SnSR_CLOSED) {
+          socket_close (sock);
           return 0;
         }
     }
     /* +2008.01 bj */
-    w5100_writeSnIR (s, SnIR_SEND_OK);
+    w5100_writeSnIR (sock, SnIR_SEND_OK);
     return ret;
 }
 
@@ -134,15 +136,16 @@ unsigned socket_send (socket_t s, const uint8_t * buf, unsigned len)
  * the application wants to receive.
  * Return received data size for success else -1.
  */
-unsigned socket_recv (socket_t s, uint8_t *buf, unsigned len)
+unsigned socket_recv (unsigned sock, uint8_t *buf, unsigned len)
 {
     /* Check how much data is available */
-    unsigned ret = w5100_getRXReceivedSize(s);
+    unsigned ret = w5100_getRXReceivedSize (sock);
     if (ret == 0) {
         /* No data available. */
-        w5100_readSnSR (s);
+        w5100_readSnSR (sock);
 
-        if (s == SnSR_LISTEN || s == SnSR_CLOSED || s == SnSR_CLOSE_WAIT) {
+        if (sock == SnSR_LISTEN || sock == SnSR_CLOSED ||
+            sock == SnSR_CLOSE_WAIT) {
             /* The remote end has closed its side of the connection,
              * so this is the eof state */
             ret = 0;
@@ -156,8 +159,8 @@ unsigned socket_recv (socket_t s, uint8_t *buf, unsigned len)
     }
 
     if (ret > 0) {
-        w5100_recv_data_processing (s, buf, ret, 0);
-        w5100_socket_cmd (s, Sock_RECV);
+        w5100_recv_data_processing (sock, buf, ret, 0);
+        w5100_socket_cmd (sock, Sock_RECV);
     }
     return ret;
 }
@@ -165,9 +168,9 @@ unsigned socket_recv (socket_t s, uint8_t *buf, unsigned len)
 /*
  * Returns the first byte in the receive queue (no checking)
  */
-unsigned socket_peek (socket_t s, uint8_t *buf)
+unsigned socket_peek (unsigned sock, uint8_t *buf)
 {
-    w5100_recv_data_processing (s, buf, 1, 1);
+    w5100_recv_data_processing (sock, buf, 1, 1);
     return 1;
 }
 
@@ -178,7 +181,7 @@ unsigned socket_peek (socket_t s, uint8_t *buf)
  *
  * This function return send data size for success else -1.
  */
-unsigned socket_sendto (socket_t s, const uint8_t *buf, unsigned len, uint8_t *addr, unsigned port)
+unsigned socket_sendto (unsigned sock, const uint8_t *buf, unsigned len, uint8_t *addr, unsigned port)
 {
     unsigned ret = 0;
 
@@ -194,25 +197,25 @@ unsigned socket_sendto (socket_t s, const uint8_t *buf, unsigned len, uint8_t *a
         /* +2008.01 [bj] : added return value */
         ret = 0;
     } else {
-        w5100_writeSnDIPR(s, addr);
-        w5100_writeSnDPORT(s, port);
+        w5100_writeSnDIPR (sock, addr);
+        w5100_writeSnDPORT (sock, port);
 
         /* copy data */
-        w5100_send_data_processing(s, (uint8_t *)buf, ret);
-        w5100_socket_cmd(s, Sock_SEND);
+        w5100_send_data_processing (sock, (uint8_t *)buf, ret);
+        w5100_socket_cmd (sock, Sock_SEND);
 
         /* +2008.01 bj */
-        while ((w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK) {
-            if (w5100_readSnIR(s) & SnIR_TIMEOUT) {
+        while ((w5100_readSnIR (sock) & SnIR_SEND_OK) != SnIR_SEND_OK) {
+            if (w5100_readSnIR (sock) & SnIR_TIMEOUT) {
                 /* +2008.01 [bj]: clear interrupt */
                 /* clear SEND_OK & TIMEOUT */
-                w5100_writeSnIR(s, SnIR_SEND_OK | SnIR_TIMEOUT);
+                w5100_writeSnIR (sock, SnIR_SEND_OK | SnIR_TIMEOUT);
                 return 0;
             }
         }
 
         /* +2008.01 bj */
-        w5100_writeSnIR(s, SnIR_SEND_OK);
+        w5100_writeSnIR (sock, SnIR_SEND_OK);
     }
     return ret;
 }
@@ -224,20 +227,20 @@ unsigned socket_sendto (socket_t s, const uint8_t *buf, unsigned len, uint8_t *a
  *
  * This function return received data size for success else -1.
  */
-unsigned socket_recvfrom (socket_t s, uint8_t *buf, unsigned len, uint8_t *addr, unsigned *port)
+unsigned socket_recvfrom (unsigned sock, uint8_t *buf, unsigned len, uint8_t *addr, unsigned *port)
 {
     uint8_t head[8];
     unsigned data_len = 0;
     unsigned ptr = 0;
 
     if (len > 0) {
-        ptr = w5100_readSnRX_RD(s);
-        switch (w5100_readSnMR(s) & 0x07) {
+        ptr = w5100_readSnRX_RD (sock);
+        switch (w5100_readSnMR (sock) & 0x07) {
         case SnMR_UDP:
             /* removed unint8_t pointer cast in read_data due to
              * pic32 pointer values are 32 bit and compiler errors
              * out due to data loss from cast to 16-bit int -LSH */
-            w5100_read_data(s, ptr, head, 0x08);
+            w5100_read_data (sock, ptr, head, 0x08);
             ptr += 8;
 
             /* read peer's IP address, port number. */
@@ -252,17 +255,17 @@ unsigned socket_recvfrom (socket_t s, uint8_t *buf, unsigned len, uint8_t *addr,
             /* removed unint8_t pointer cast in read_data due to
              * pic32 pointer values are 32 bit and compiler errors
              * out due to data loss from cast to 16-bit int -LSH */
-            w5100_read_data(s, ptr, buf, data_len); /* data copy. */
+            w5100_read_data (sock, ptr, buf, data_len); /* data copy. */
             ptr += data_len;
 
-            w5100_writeSnRX_RD(s, ptr);
+            w5100_writeSnRX_RD (sock, ptr);
             break;
 
         case SnMR_IPRAW :
             /* removed unint8_t pointer cast in read_data due to
              * pic32 pointer values are 32 bit and compiler errors
              * out due to data loss from cast to 16-bit int -LSH */
-            w5100_read_data(s, ptr, head, 0x06);
+            w5100_read_data (sock, ptr, head, 0x06);
             ptr += 6;
 
             addr[0] = head[0];
@@ -275,17 +278,17 @@ unsigned socket_recvfrom (socket_t s, uint8_t *buf, unsigned len, uint8_t *addr,
             /* removed unint8_t pointer cast in read_data due to
              * pic32 pointer values are 32 bit and compiler errors
              * out due to data loss from cast to 16-bit int -LSH */
-            w5100_read_data(s, ptr, buf, data_len); /* data copy. */
+            w5100_read_data (sock, ptr, buf, data_len); /* data copy. */
             ptr += data_len;
 
-            w5100_writeSnRX_RD(s, ptr);
+            w5100_writeSnRX_RD (sock, ptr);
             break;
 
         case SnMR_MACRAW:
             /* removed unint8_t pointer cast in read_data due to
              * pic32 pointer values are 32 bit and compiler errors
              * out due to data loss from cast to 16-bit int -LSH */
-            w5100_read_data(s, ptr,head,2);
+            w5100_read_data (sock, ptr,head,2);
             ptr+=2;
             data_len = head[0];
             data_len = (data_len<<8) + head[1] - 2;
@@ -293,20 +296,20 @@ unsigned socket_recvfrom (socket_t s, uint8_t *buf, unsigned len, uint8_t *addr,
             /* removed unint8_t pointer cast in read_data due to
              * pic32 pointer values are 32 bit and compiler errors
              * out due to data loss from cast to 16-bit int -LSH */
-            w5100_read_data(s, ptr,buf,data_len);
+            w5100_read_data (sock, ptr,buf,data_len);
             ptr += data_len;
-            w5100_writeSnRX_RD(s, ptr);
+            w5100_writeSnRX_RD (sock, ptr);
             break;
 
         default :
             break;
         }
-        w5100_socket_cmd(s, Sock_RECV);
+        w5100_socket_cmd (sock, Sock_RECV);
     }
     return data_len;
 }
 
-unsigned socket_igmpsend (socket_t s, const uint8_t * buf, unsigned len)
+unsigned socket_igmpsend (unsigned sock, const uint8_t * buf, unsigned len)
 {
     unsigned status = 0;
     unsigned ret = 0;
@@ -319,19 +322,19 @@ unsigned socket_igmpsend (socket_t s, const uint8_t * buf, unsigned len)
     if (ret == 0)
         return 0;
 
-    w5100_send_data_processing(s, (uint8_t *)buf, ret);
-    w5100_socket_cmd(s, Sock_SEND);
+    w5100_send_data_processing (sock, (uint8_t *)buf, ret);
+    w5100_socket_cmd (sock, Sock_SEND);
 
-    while ((w5100_readSnIR(s) & SnIR_SEND_OK) != SnIR_SEND_OK) {
-        status = w5100_readSnSR(s);
-        if (w5100_readSnIR(s) & SnIR_TIMEOUT) {
+    while ((w5100_readSnIR (sock) & SnIR_SEND_OK) != SnIR_SEND_OK) {
+        status = w5100_readSnSR (sock);
+        if (w5100_readSnIR (sock) & SnIR_TIMEOUT) {
             /* in case of igmp, if send fails, then socket closed */
             /* if you want change, remove this code. */
-            socket_close (s);
+            socket_close (sock);
             return 0;
         }
     }
 
-    w5100_writeSnIR(s, SnIR_SEND_OK);
+    w5100_writeSnIR (sock, SnIR_SEND_OK);
     return ret;
 }

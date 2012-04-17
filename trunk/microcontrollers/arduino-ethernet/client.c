@@ -12,7 +12,7 @@ void client_begin (client_t *c, uint8_t *ip, unsigned port)
     c->sock = MAX_SOCK_NUM;
 }
 
-void client_begin_sock (client_t *c, socket_t sock)
+void client_begin_sock (client_t *c, unsigned sock)
 {
     c->sock = sock;
 }
@@ -108,7 +108,7 @@ int client_peek (client_t *c)
     return b;
 }
 
-void client_flush(client_t *c)
+void client_flush (client_t *c)
 {
     while (client_available (c))
         client_getc (c);
@@ -135,7 +135,7 @@ void client_stop (client_t *c)
     if (client_status(c) != SnSR_CLOSED)
         socket_close (c->sock);
 
-    _ethernet_server_port[c->sock] = 0;
+    _socket_port[c->sock] = 0;
     c->sock = MAX_SOCK_NUM;
 }
 
@@ -155,21 +155,3 @@ unsigned client_status (client_t *c)
         return SnSR_CLOSED;
     return w5100_readSnSR (c->sock);
 }
-
-// the next three functions are a hack so we can compare the client returned
-// by server_available() to null, or use it as the condition in an
-// if-statement.  this lets us stay compatible with the Processing network
-// library.
-#if 0
-uint8_t Client::operator==(int p) {
-    return c->sock == MAX_SOCK_NUM;
-}
-
-uint8_t Client::operator!=(int p) {
-    return c->sock != MAX_SOCK_NUM;
-}
-
-Client::operator bool() {
-    return c->sock != MAX_SOCK_NUM;
-}
-#endif

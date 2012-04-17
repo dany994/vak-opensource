@@ -79,8 +79,6 @@
 #define CH_BASE         0x0400
 #define CH_SIZE         0x0100
 
-typedef unsigned socket_t;
-
 /*----------------------------------------------
  * W5100 Registers
  */
@@ -139,52 +137,52 @@ __GP_REGISTER16(UPORT,  0x002E);    // Unreachable Port address in UDP mode
  * W5100 Socket registers
  */
 static inline unsigned
-w5100_readSn_byte (socket_t s, unsigned addr)
+w5100_readSn_byte (unsigned sock, unsigned addr)
 {
-    return w5100_read_byte (CH_BASE + s*CH_SIZE + addr);
+    return w5100_read_byte (CH_BASE + sock*CH_SIZE + addr);
 }
 
 static inline unsigned
-w5100_writeSn_byte (socket_t s, unsigned addr, unsigned data)
+w5100_writeSn_byte (unsigned sock, unsigned addr, unsigned data)
 {
-    return w5100_write_byte (CH_BASE + s*CH_SIZE + addr, data);
+    return w5100_write_byte (CH_BASE + sock*CH_SIZE + addr, data);
 }
 
 static inline unsigned
-w5100_readSn (socket_t s, unsigned addr, uint8_t *buf, unsigned len)
+w5100_readSn (unsigned sock, unsigned addr, uint8_t *buf, unsigned len)
 {
-    return w5100_read (CH_BASE + s*CH_SIZE + addr, buf, len);
+    return w5100_read (CH_BASE + sock*CH_SIZE + addr, buf, len);
 }
 
 static inline unsigned
-w5100_writeSn (socket_t s, unsigned addr, uint8_t *buf, unsigned len)
+w5100_writeSn (unsigned sock, unsigned addr, uint8_t *buf, unsigned len)
 {
-    return w5100_write (CH_BASE + s*CH_SIZE + addr, buf, len);
+    return w5100_write (CH_BASE + sock*CH_SIZE + addr, buf, len);
 }
 
 #define __SOCKET_REGISTER8(name, address)                                   \
-    static inline void w5100_write##name (socket_t s, unsigned data) {      \
-        w5100_writeSn_byte (s, address, data);                              \
+    static inline void w5100_write##name (unsigned sock, unsigned data) {   \
+        w5100_writeSn_byte (sock, address, data);                           \
     }                                                                       \
-    static inline unsigned w5100_read##name (socket_t s) {                  \
-        return w5100_readSn_byte (s, address);                              \
+    static inline unsigned w5100_read##name (unsigned sock) {               \
+        return w5100_readSn_byte (sock, address);                           \
     }
 #define __SOCKET_REGISTER16(name, address)                                  \
-    static inline void w5100_write##name (socket_t s, unsigned data) {      \
-        w5100_writeSn_byte (s, address,   data >> 8);                       \
-        w5100_writeSn_byte (s, address+1, data & 0xFF);                     \
+    static inline void w5100_write##name (unsigned sock, unsigned data) {   \
+        w5100_writeSn_byte (sock, address,   data >> 8);                    \
+        w5100_writeSn_byte (sock, address+1, data & 0xFF);                  \
     }                                                                       \
-    static inline unsigned w5100_read##name (socket_t s) {                  \
-        unsigned res = w5100_readSn_byte (s, address);                      \
-        res = (res << 8) + w5100_readSn_byte (s, address + 1);              \
+    static inline unsigned w5100_read##name (unsigned sock) {               \
+        unsigned res = w5100_readSn_byte (sock, address);                   \
+        res = (res << 8) + w5100_readSn_byte (sock, address + 1);           \
         return res;                                                         \
     }
 #define __SOCKET_REGISTER_N(name, address, size)                            \
-    static inline unsigned w5100_write##name (socket_t s, uint8_t *buff) {  \
-        return w5100_writeSn (s, address, buff, size);                      \
+    static inline unsigned w5100_write##name (unsigned sock, uint8_t *buf) { \
+        return w5100_writeSn (sock, address, buf, size);                    \
     }                                                                       \
-    static inline unsigned read##name (socket_t s, uint8_t *buff) {         \
-        return w5100_readSn (s, address, buff, size);                       \
+    static inline unsigned read##name (unsigned sock, uint8_t *buf) {       \
+        return w5100_readSn (sock, address, buf, size);                     \
     }
 
 __SOCKET_REGISTER8(SnMR,        0x0000)     // Mode
@@ -223,7 +221,7 @@ void w5100_init();
  * the data from Receive buffer. Here also take care of the condition
  * while it exceed the Rx memory uper-bound of socket.
  */
-void w5100_read_data (socket_t s, unsigned src, volatile uint8_t * dst, unsigned len);
+void w5100_read_data (unsigned sock, unsigned src, volatile uint8_t * dst, unsigned len);
 
 /*
  * This function is being called by send() and sendto() function also.
@@ -232,7 +230,7 @@ void w5100_read_data (socket_t s, unsigned src, volatile uint8_t * dst, unsigned
  * in buffer update the Tx write pointer register. User should read
  * upper byte first and lower byte later to get proper value.
  */
-void w5100_send_data_processing (socket_t s, uint8_t *data, unsigned len);
+void w5100_send_data_processing (unsigned sock, uint8_t *data, unsigned len);
 
 /*
  * This function is being called by recv() also.
@@ -241,7 +239,7 @@ void w5100_send_data_processing (socket_t s, uint8_t *data, unsigned len);
  * the data from receive buffer update the Rx write pointer register.
  * User should read upper byte first and lower byte later to get proper value.
  */
-void w5100_recv_data_processing (socket_t s, uint8_t *data, unsigned len, int peek);
+void w5100_recv_data_processing (unsigned sock, uint8_t *data, unsigned len, int peek);
 
 static inline void w5100_getGatewayIp (uint8_t *addr)
 {
@@ -293,9 +291,9 @@ static inline void w5100_setRetransmissionCount (unsigned retry)
     w5100_writeRCR (retry);
 }
 
-void w5100_socket_cmd (socket_t s, int cmd);
+void w5100_socket_cmd (unsigned sock, int cmd);
 
-unsigned w5100_getTXFreeSize (socket_t s);
-unsigned w5100_getRXReceivedSize (socket_t s);
+unsigned w5100_getTXFreeSize (unsigned sock);
+unsigned w5100_getRXReceivedSize (unsigned sock);
 
 #endif
