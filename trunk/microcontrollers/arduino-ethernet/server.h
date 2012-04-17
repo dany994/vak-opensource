@@ -5,7 +5,8 @@
 
 extern unsigned _server_port;
 
-void server_begin (unsigned port);
+void server_init (unsigned port);
+
 int server_available (client_t *);
 void server_accept (void);
 void server_putc (uint8_t byte);

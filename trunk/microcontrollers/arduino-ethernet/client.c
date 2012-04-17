@@ -3,16 +3,16 @@
 #include "ethernet.h"
 #include "socket.h"
 
-unsigned client_srcport = 1024;
+unsigned _client_srcport = 1024;
 
-void client_begin (client_t *c, uint8_t *ip, unsigned port)
+void client_init (client_t *c, uint8_t *ip, unsigned port)
 {
     c->ip = ip;
     c->port = port;
     c->sock = MAX_SOCK_NUM;
 }
 
-void client_begin_sock (client_t *c, unsigned sock)
+void client_init_sock (client_t *c, unsigned sock)
 {
     c->sock = sock;
 }
@@ -35,10 +35,10 @@ int client_connect (client_t *c)
     if (c->sock == MAX_SOCK_NUM)
         return 0;
 
-    client_srcport++;
-    if (client_srcport == 0)
-        client_srcport = 1024;
-    socket_init (c->sock, SnMR_TCP, client_srcport, 0);
+    _client_srcport++;
+    if (_client_srcport == 0)
+        _client_srcport = 1024;
+    socket_init (c->sock, SnMR_TCP, _client_srcport, 0);
 
     if (! socket_connect (c->sock, c->ip, c->port)) {
         c->sock = MAX_SOCK_NUM;

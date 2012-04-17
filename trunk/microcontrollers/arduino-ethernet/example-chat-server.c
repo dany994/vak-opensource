@@ -29,11 +29,11 @@ int got_a_message = 0;  /* whether you got a message from the client yet */
 int main()
 {
     /* Initialize the ethernet device */
-    ethernet_begin (mac, ip, gateway, subnet);
+    ethernet_init (mac, ip, gateway, subnet);
 
     /* Start listening for clients.
      * Telnet defaults to port 23. */
-    server_begin (23);
+    server_init (23);
 
     for (;;) {
         /* Wait for a new client. */

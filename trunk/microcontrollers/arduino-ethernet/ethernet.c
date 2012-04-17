@@ -1,7 +1,7 @@
-#include "w5100.h"
 #include "ethernet.h"
+#include "w5100.h"
 
-void ethernet_begin (uint8_t *mac, uint8_t *ip, uint8_t *gateway, uint8_t *subnet)
+void ethernet_init (uint8_t *mac, uint8_t *ip, uint8_t *gateway, uint8_t *subnet)
 {
     if (! gateway) {
         uint8_t default_gateway[4];
