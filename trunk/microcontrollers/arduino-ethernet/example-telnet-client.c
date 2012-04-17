@@ -14,7 +14,10 @@
  * created 14 Sep 2010
  * by Tom Igoe
  */
-#include <ethernet.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include "ethernet.h"
 
 /*
  * Enter a MAC address and IP address for your controller below.
@@ -29,16 +32,15 @@ unsigned char ip[] = { 192,168,1,177 };
  */
 unsigned char server[] = { 1,1,1,1 };
 
-ethernet_t ethernet;
 client_t client;
 
 int main()
 {
     /* start the Ethernet connection */
-    ethernet_begin(mac, ip);
+    ethernet_begin (mac, ip, 0, 0);
 
     /* give the Ethernet shield a second to initialize */
-    sleep(1);
+    usleep (1000000);
 
     /* Initialize the Ethernet client library
      * with the IP address and port of the server
@@ -61,7 +63,7 @@ int main()
         /* if there are incoming bytes available
          * from the server, read them and print them */
         if (client_available (&client)) {
-            char c = client_read (&client);
+            char c = client_getc (&client);
             putchar(c);
         }
 
@@ -76,7 +78,7 @@ int main()
 
             read(0, &inChar, 1);
             if (client_connected (&client)) {
-                client_putchar (&client, inChar);
+                client_putc (&client, inChar);
             }
         }
     }

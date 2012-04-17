@@ -1,19 +1,21 @@
 TOPSRC          = /scratch/retrobsd/trunk
 include $(TOPSRC)/target.mk
 
-OBJS            = example-telnet-client.o
+CFLAGS          += -O -Wall -Werror
+
+OBJS            = w5100.o socket.o ethernet.o client.o example-telnet-client.o
 LIBS            +=
 
-all:            adc-demo
+all:            example-telnet-client
 
-adc-demo:       ${OBJS}
-		${CC} ${LDFLAGS} -o adc-demo.elf ${OBJS} ${LIBS}
-		${OBJDUMP} -S adc-demo.elf > adc-demo.dis
-		${SIZE} adc-demo.elf
-		${ELF2AOUT} adc-demo.elf $@
+example-telnet-client: ${OBJS}
+		${CC} ${LDFLAGS} -o $@.elf ${OBJS} ${LIBS}
+		${OBJDUMP} -S $@.elf > $@.dis
+		${SIZE} $@.elf
+		${ELF2AOUT} $@.elf $@
 
 clean:
-		-rm -f adc-demo ${OBJS} adc-demo.elf adc-demo.dis
+		-rm -f example-telnet-client ${OBJS} *.elf *.dis
 
 install:        all
-		install adc-demo $(DESTDIR)/bin/
+		install example-telnet-client $(DESTDIR)/bin/

@@ -1,9 +1,9 @@
 #include "w5100.h"
 #include "ethernet.h"
 
-uint8_t _ethernet_state[MAX_SOCK_NUM] = { 0 };
+uint8_t _ethernet_state [MAX_SOCK_NUM] = { 0 };
 
-uint16_t _ethernet_server_port[MAX_SOCK_NUM] = { 0 };
+uint16_t _ethernet_server_port [MAX_SOCK_NUM] = { 0 };
 
 void ethernet_begin (uint8_t *mac, uint8_t *ip, uint8_t *gateway, uint8_t *subnet)
 {
