@@ -3,52 +3,54 @@
 
 #include "w5100.h"
 
+extern uint16_t _socket_port [MAX_SOCK_NUM];
+
 /*
  * Opens a socket(TCP or UDP or IP_RAW mode)
  */
-unsigned socket_init (socket_t s, unsigned protocol, unsigned port, unsigned flag);
+unsigned socket_init (unsigned sock, unsigned protocol, unsigned port, unsigned flag);
 
 /*
  * Close socket
  */
-void socket_close (socket_t s);
+void socket_close (unsigned sock);
 
 /*
  * Establish TCP connection (Active connection)
  */
-unsigned socket_connect (socket_t s, uint8_t *addr, unsigned port);
+unsigned socket_connect (unsigned sock, uint8_t *addr, unsigned port);
 
 /*
  * disconnect the connection
  */
-void socket_disconnect (socket_t s);
+void socket_disconnect (unsigned sock);
 
 /*
  * Establish TCP connection (Passive connection)
  */
-unsigned socket_listen (socket_t s);
+unsigned socket_listen (unsigned sock);
 
 /*
  * Send data (TCP)
  */
-unsigned socket_send (socket_t s, const uint8_t *buf, unsigned len);
+unsigned socket_send (unsigned sock, const uint8_t *buf, unsigned len);
 
 /*
  * Receive data (TCP)
  */
-unsigned socket_recv (socket_t s, uint8_t *buf, unsigned len);
-unsigned socket_peek (socket_t s, uint8_t *buf);
+unsigned socket_recv (unsigned sock, uint8_t *buf, unsigned len);
+unsigned socket_peek (unsigned sock, uint8_t *buf);
 
 /*
  * Send data (UDP/IP RAW)
  */
-unsigned socket_sendto (socket_t s, const uint8_t *buf, unsigned len, uint8_t *addr, unsigned port);
+unsigned socket_sendto (unsigned sock, const uint8_t *buf, unsigned len, uint8_t *addr, unsigned port);
 
 /*
  * Receive data (UDP/IP RAW)
  */
-unsigned socket_recvfrom (socket_t s, uint8_t *buf, unsigned len, uint8_t *addr, unsigned *port);
+unsigned socket_recvfrom (unsigned sock, uint8_t *buf, unsigned len, uint8_t *addr, unsigned *port);
 
-unsigned socket_igmpsend (socket_t s, const uint8_t *buf, unsigned len);
+unsigned socket_igmpsend (unsigned sock, const uint8_t *buf, unsigned len);
 
 #endif /* _SOCKET_H_ */
