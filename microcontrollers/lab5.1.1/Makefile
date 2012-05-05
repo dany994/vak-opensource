@@ -268,8 +268,6 @@ build/%.o:      $(ARDUINO_CORE_PATH)/%.cpp
 # various object conversions
 build/%.hex:    build/%.elf
 		$(OBJCOPY) -O ihex -R .eeprom $< $@
-		$(OBJDUMP) -h -S $< > build/$*.dis
-		$(OBJCOPY) -O binary $< build/$*.bin
 
 build/%.eep:    build/%.elf
 		-$(OBJCOPY) -j .eeprom --set-section-flags=.eeprom="alloc,load" \
