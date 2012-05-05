@@ -197,7 +197,8 @@ void loop()
 //
 // Обработчик прерывания от таймера.
 //
-extern "C" { __ISR (_TIMER_2_VECTOR, IPL3AUTO)
+extern "C" {
+__ISR (_TIMER_2_VECTOR, IPL3AUTO)
 void timer2_handler()
 {
     // Сбрасываем флаг прерывания.
