@@ -1,20 +1,30 @@
 #include <peripheral/int.h>
 
+//
 // Размер стека для задач: пятьсот слов, или примерно два килобайта.
+//
 #define STACK_NWORDS    500
 
+//
 // Память для стеков задач.
+//
 int task1_stack [STACK_NWORDS];
 int task2_stack [STACK_NWORDS];
 
+//
 // Указатели стека для задач.
+//
 int *task1_stack_pointer;
 int *task2_stack_pointer;
 
-// Номер текущей задачи.
+//
+// Номер работающей задачи.
+//
 int current_task = 0;
 
-// Время в миллисекундах.
+//
+// Текущее время в миллисекундах.
+//
 volatile unsigned time_msec;
 
 //
@@ -80,11 +90,11 @@ void wait (unsigned msec, int button)
 {
     unsigned t0 = time_msec;
 
-    while (time_msec - t0 < msec) {
-        // Если нажата указанная кнопка - останавливаемся,
+    while (button_pressed (button) ||
+           time_msec - t0 < msec)
+    {
+        // Если нажата указанная кнопка - ждём,
         // пока она не освободится.
-        while (button_pressed (button))
-            ;
     }
 }
 
@@ -118,43 +128,44 @@ void task2()
 
 //
 // Установка начального значения стека для запуска новой задачи.
+// Возвращает начальное значение для регистра sp.
 //
 int *create_task (int start, int *stack)
 {
     // Для хранения контекста в стеке выделяется 34 слова.
     stack += STACK_NWORDS - 34 - 4;
 
-    stack [3] = 0;              // at
-    stack [4] = 0;              // v0
-    stack [5] = 0;              // v1
-    stack [6] = 0;              // a0
-    stack [7] = 0;              // a1
-    stack [8] = 0;              // a2
-    stack [9] = 0;              // a3
-    stack [10] = 0;             // t0
-    stack [11] = 0;             // t1
-    stack [12] = 0;             // t2
-    stack [13] = 0;             // t3
-    stack [14] = 0;             // t4
-    stack [15] = 0;             // t5
-    stack [16] = 0;             // t6
-    stack [17] = 0;             // t7
-    stack [18] = 0;             // s0
-    stack [19] = 0;             // s1
-    stack [20] = 0;             // s2
-    stack [21] = 0;             // s3
-    stack [22] = 0;             // s4
-    stack [23] = 0;             // s5
-    stack [24] = 0;             // s6
-    stack [25] = 0;             // s7
-    stack [26] = 0;             // t8
-    stack [27] = 0;             // t9
-    stack [28] = 0;             // s8
-    stack [29] = 0;             // ra
-    stack [30] = 0;             // hi
-    stack [31] = 0;             // lo
-    stack [32] = 0x10000003;    // Status: CU0, EXL, IE
-    stack [33] = start;         // EPC: адрес начала
+    stack [3] = 0;              // Регистр at
+    stack [4] = 0;              // Регистр v0
+    stack [5] = 0;              // Регистр v1
+    stack [6] = 0;              // Регистр a0
+    stack [7] = 0;              // Регистр a1
+    stack [8] = 0;              // Регистр a2
+    stack [9] = 0;              // Регистр a3
+    stack [10] = 0;             // Регистр t0
+    stack [11] = 0;             // Регистр t1
+    stack [12] = 0;             // Регистр t2
+    stack [13] = 0;             // Регистр t3
+    stack [14] = 0;             // Регистр t4
+    stack [15] = 0;             // Регистр t5
+    stack [16] = 0;             // Регистр t6
+    stack [17] = 0;             // Регистр t7
+    stack [18] = 0;             // Регистр s0
+    stack [19] = 0;             // Регистр s1
+    stack [20] = 0;             // Регистр s2
+    stack [21] = 0;             // Регистр s3
+    stack [22] = 0;             // Регистр s4
+    stack [23] = 0;             // Регистр s5
+    stack [24] = 0;             // Регистр s6
+    stack [25] = 0;             // Регистр s7
+    stack [26] = 0;             // Регистр t8
+    stack [27] = 0;             // Регистр t9
+    stack [28] = 0;             // Регистр s8
+    stack [29] = 0;             // Регистр ra
+    stack [30] = 0;             // Регистр hi
+    stack [31] = 0;             // Регистр lo
+    stack [32] = 0x10000003;    // Регистр Status: биты CU0, EXL, IE
+    stack [33] = start;         // Регистр EPC: адрес начала
 
     return stack;
 }
