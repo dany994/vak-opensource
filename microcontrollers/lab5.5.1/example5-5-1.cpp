@@ -1,19 +1,4 @@
-#include <WProgram.h>
 #include <plib.h>
-
-// Кнопки на контактах 11 и 12.
-const int button1 = 11;
-const int button2 = 12;
-
-// 7-сегментный индикатор на контактах 2-9.
-const int segm_a = 2;
-const int segm_b = 3;
-const int segm_c = 4;
-const int segm_d = 5;
-const int segm_e = 6;
-const int segm_f = 7;
-const int segm_g = 8;
-const int segm_h = 9;
 
 // Размер стека для задач: пятьсот слов, или примерно два килобайта.
 #define STACK_NWORDS    500
@@ -71,6 +56,21 @@ void display (int segment, int on)
 }
 
 //
+// Опрос состояния кнопки.
+// Возвращает ненулевое значение, если кнопка нажата.
+//
+int button_pressed (int button)
+{
+    switch (button) {
+    case '1':
+        return PORTG >> 11 & 1;         // Контакт 11 - сигнал RG7
+    case '2':
+        return PORTG >> 12 & 1;         // Контакт 12 - сигнал RG8
+    }
+    return 0;
+}
+
+//
 // Функция ожидания, с остановом при нажатой кнопке.
 //
 void wait (int msec, int button)
@@ -78,7 +78,7 @@ void wait (int msec, int button)
     while (msec >= 5) {
         // Если нажата указанная кнопка - останавливаемся,
         // пока она не освободится.
-        while (digitalRead (button) == LOW)
+        while (button_pressed (button))
             ;
 
         //delay (5);
@@ -93,10 +93,10 @@ void wait (int msec, int button)
 void task1()
 {
     for (;;) {
-        display ('d', 1); wait (100, button1); display ('d', 0);
-        display ('e', 1); wait (100, button1); display ('e', 0);
-        display ('g', 1); wait (100, button1); display ('g', 0);
-        display ('c', 1); wait (100, button1); display ('c', 0);
+        display ('d', 1); wait (100, '1'); display ('d', 0);
+        display ('e', 1); wait (100, '1'); display ('e', 0);
+        display ('g', 1); wait (100, '1'); display ('g', 0);
+        display ('c', 1); wait (100, '1'); display ('c', 0);
     }
 }
 
@@ -107,10 +107,10 @@ void task1()
 void task2()
 {
     for (;;) {
-        display ('a', 1); wait (150, button2); display ('a', 0);
-        display ('b', 1); wait (150, button2); display ('b', 0);
-        display ('g', 1); wait (150, button2); display ('g', 0);
-        display ('f', 1); wait (150, button2); display ('f', 0);
+        display ('a', 1); wait (150, '2'); display ('a', 0);
+        display ('b', 1); wait (150, '2'); display ('b', 0);
+        display ('g', 1); wait (150, '2'); display ('g', 0);
+        display ('f', 1); wait (150, '2'); display ('f', 0);
     }
 }
 
@@ -158,42 +158,79 @@ int *create_task (int start, int *stack)
 }
 
 //
-// Начальная инициализация и основной цикл программы.
+// Начальная инициализация.
+//
+int init()
+{
+    /*
+     * Setup interrupt controller.
+     */
+    INTCON = 0;                 /* Interrupt Control */
+    IPTMR = 0;                  /* Temporal Proximity Timer */
+    IFS0 = IFS1 = 0;            /* Interrupt Flag Status */
+    IEC0 = IEC1 = 0;            /* Interrupt Enable Control */
+    IPC0 = IPC1 = IPC2 =        /* Interrupt Priority Control */
+    IPC3 = IPC4 = IPC5 =
+    IPC6 = IPC7 = IPC8 =
+    IPC11 =              1<<2 | 1<<10 | 1<<18 | 1<<26;
+
+    /*
+     * Setup wait states.
+     */
+    CHECON = 2;
+    BMXCONCLR = 0x40;
+    CHECONSET = 0x30;
+
+    /* Disable JTAG port, to use it for i/o. */
+    DDPCON = 0;
+
+    /* Use all B ports as digital. */
+    AD1PCFG = ~0;
+
+    /* Config register: enable kseg0 caching. */
+    int config;
+    asm volatile ("mfc0 %0, $16" : "=r" (config));
+    config |= 3;
+    asm volatile ("mtc0 %0, $16" : : "r" (config));
+}
+
+//
+// Основная функция программы.
 //
 int main()
 {
-    SYSTEMConfig (F_CPU, SYS_CFG_ALL);
-    INTConfigureSystem (INT_SYSTEM_CONFIG_MULT_VECTOR);
-    //INTEnableSystemMultiVectoredInt();
+    init();
 
-    // Disable the JTAG interface.
-    DDPCONbits.JTAGEN = 0;
+    // Устанавливаем прерывание от таймера с частотой 1000 Гц.
+    int compare = F_CPU / 2 / 1000;
+    asm volatile ("mtc0 %0, $11" : : "r" (compare));
+    asm volatile ("mtc0 %0, $9" : : "r" (0));
+    IEC0SET = 1 << _CORE_TIMER_IRQ;
 
     // Сигналы от кнопок используем как входы.
-    pinMode (button1, INPUT);
-    pinMode (button2, INPUT);
+    TRISGSET = 1 << 7;          // Кнопка 1 - сигнал RG7
+    TRISGSET = 1 << 8;          // Кнопка 2 - сигнал RG8
 
-    // Сигналы управления светодиодами - выходы.
-    pinMode (segm_a, OUTPUT);
-    pinMode (segm_b, OUTPUT);
-    pinMode (segm_c, OUTPUT);
-    pinMode (segm_d, OUTPUT);
-    pinMode (segm_e, OUTPUT);
-    pinMode (segm_f, OUTPUT);
-    pinMode (segm_g, OUTPUT);
-    pinMode (segm_h, OUTPUT);
-
-    // Устанавливаем прерывание от таймера с частотой 100 Гц.
-    OpenTimer2 (T2_ON | T2_PS_1_256, F_CPU / 256 / 100);
-    ConfigIntTimer2 (T2_INT_ON | T2_INT_PRIOR_3);
+    // Сигналы управления 7-сегментным индикатором - выходы.
+    TRISDCLR = 1 << 8;          // Сегмент A - сигнал RD8
+    TRISDCLR = 1 << 0;          // Сегмент B - сигнал RD0
+    TRISFCLR = 1 << 1;          // Сегмент C - сигнал RF1
+    TRISDCLR = 1 << 1;          // Сегмент D - сигнал RD1
+    TRISDCLR = 1 << 2;          // Сегмент E - сигнал RD2
+    TRISDCLR = 1 << 9;          // Сегмент F - сигнал RD9
+    TRISDCLR = 1 << 10;         // Сегмент G - сигнал RD10
+    TRISDCLR = 1 << 3;          // Сегмент H - сигнал RD3
 
     // Создаём две задачи.
     task1_stack_pointer = create_task ((int) task1, task1_stack);
     task2_stack_pointer = create_task ((int) task2, task2_stack);
 
+    asm volatile ("ei");
+
     for (;;) {
         // Ничего не делаем, ждём прерывания от таймера.
         // После первого же прерывания начинают работать задачи.
+        asm volatile ("wait");
     }
 }
 
@@ -201,11 +238,11 @@ int main()
 // Обработчик прерывания от таймера.
 //
 extern "C" {
-__ISR (_TIMER_2_VECTOR, IPL3AUTO)
-void timer2_handler()
+__ISR (_CORE_TIMER_VECTOR, ipl2)
+void CoreTimerHandler()
 {
     // Сбрасываем флаг прерывания.
-    mT2ClearIntFlag();
+    IFS0CLR = 1 << _CORE_TIMER_IRQ;
 
     // Сохраняем значение указателя стека для текущей задачи.
     int *sp;
