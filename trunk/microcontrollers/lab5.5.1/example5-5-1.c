@@ -1,4 +1,4 @@
-#include <plib.h>
+#include <peripheral/int.h>
 
 // Размер стека для задач: пятьсот слов, или примерно два килобайта.
 #define STACK_NWORDS    500
@@ -13,6 +13,9 @@ int *task2_stack_pointer;
 
 // Номер текущей задачи.
 int current_task = 0;
+
+// Время в миллисекундах.
+volatile unsigned time_msec;
 
 //
 // Отображение одного сегмента на дисплее
@@ -63,9 +66,9 @@ int button_pressed (int button)
 {
     switch (button) {
     case '1':
-        return PORTG >> 11 & 1;         // Контакт 11 - сигнал RG7
+        return PORTG >> 11 & 1;     // Контакт 11 - сигнал RG7
     case '2':
-        return PORTG >> 12 & 1;         // Контакт 12 - сигнал RG8
+        return PORTG >> 12 & 1;     // Контакт 12 - сигнал RG8
     }
     return 0;
 }
@@ -73,16 +76,15 @@ int button_pressed (int button)
 //
 // Функция ожидания, с остановом при нажатой кнопке.
 //
-void wait (int msec, int button)
+void wait (unsigned msec, int button)
 {
-    while (msec >= 5) {
+    unsigned t0 = time_msec;
+
+    while (time_msec - t0 < msec) {
         // Если нажата указанная кнопка - останавливаемся,
         // пока она не освободится.
         while (button_pressed (button))
             ;
-
-        //delay (5);
-        msec -= 5;
     }
 }
 
@@ -119,7 +121,8 @@ void task2()
 //
 int *create_task (int start, int *stack)
 {
-    stack += STACK_NWORDS - 36 - 4;
+    // Для хранения контекста в стеке выделяется 34 слова.
+    stack += STACK_NWORDS - 34 - 4;
 
     stack [3] = 0;              // at
     stack [4] = 0;              // v0
@@ -150,9 +153,8 @@ int *create_task (int start, int *stack)
     stack [29] = 0;             // ra
     stack [30] = 0;             // hi
     stack [31] = 0;             // lo
-    stack [33] = 0x10000003;    // Status: CU0, EXL, IE
-    stack [34] = 0;             // SRSCtl
-    stack [35] = start;         // EPC: адрес начала
+    stack [32] = 0x10000003;    // Status: CU0, EXL, IE
+    stack [33] = start;         // EPC: адрес начала
 
     return stack;
 }
@@ -162,36 +164,38 @@ int *create_task (int start, int *stack)
 //
 int init()
 {
-    /*
-     * Setup interrupt controller.
-     */
-    INTCON = 0;                 /* Interrupt Control */
-    IPTMR = 0;                  /* Temporal Proximity Timer */
-    IFS0 = IFS1 = 0;            /* Interrupt Flag Status */
-    IEC0 = IEC1 = 0;            /* Interrupt Enable Control */
-    IPC0 = IPC1 = IPC2 =        /* Interrupt Priority Control */
-    IPC3 = IPC4 = IPC5 =
-    IPC6 = IPC7 = IPC8 =
-    IPC11 =              1<<2 | 1<<10 | 1<<18 | 1<<26;
-
-    /*
-     * Setup wait states.
-     */
+    // Задаём количество тактов ожидания для памяти.
+    // Скорость работы процессора увеличится.
     CHECON = 2;
     BMXCONCLR = 0x40;
     CHECONSET = 0x30;
 
-    /* Disable JTAG port, to use it for i/o. */
-    DDPCON = 0;
-
-    /* Use all B ports as digital. */
-    AD1PCFG = ~0;
-
-    /* Config register: enable kseg0 caching. */
+    // Разрешаем кэширование сегмента kseg0, будет еще быстрее.
+    // Это задаётся в младших битах регистра Config.
     int config;
     asm volatile ("mfc0 %0, $16" : "=r" (config));
     config |= 3;
     asm volatile ("mtc0 %0, $16" : : "r" (config));
+
+    // Отключаем порт JTAG, чтобы освободить эти ножки для чего-то полезного.
+    DDPCON = 0;
+
+    // Переключаем все сигналы порта B в цифровой режим.
+    AD1PCFG = ~0;
+
+    //
+    // Контроллер прерываний.
+    //
+    INTCON = 0;                 // Interrupt Control
+    IPTMR = 0;                  // Temporal Proximity Timer
+    IFS0 = IFS1 = 0;            // Interrupt Flag Status
+    IEC0 = IEC1 = 0;            // Interrupt Enable Control
+
+    IPC0 = IPC1 =               // Interrupt Priority Control
+    IPC2 = IPC3 =
+    IPC4 = IPC5 =
+    IPC6 = IPC7 =
+    IPC8 = IPC11 = 1<<2 | 1<<10 | 1<<18 | 1<<26;
 }
 
 //
@@ -225,6 +229,7 @@ int main()
     task1_stack_pointer = create_task ((int) task1, task1_stack);
     task2_stack_pointer = create_task ((int) task2, task2_stack);
 
+    // Разрешаем прерывания.
     asm volatile ("ei");
 
     for (;;) {
@@ -236,15 +241,18 @@ int main()
 
 //
 // Обработчик прерывания от таймера.
+// Имя функции фиксированное.
 //
-extern "C" {
-__ISR (_CORE_TIMER_VECTOR, ipl2)
+__ISR (_CORE_TIMER_VECTOR, ipl1)
 void CoreTimerHandler()
 {
     // Сбрасываем флаг прерывания.
     IFS0CLR = 1 << _CORE_TIMER_IRQ;
 
-    // Сохраняем значение указателя стека для текущей задачи.
+    // Наращиваем счётчик времени.
+    ++time_msec;
+
+    // Запоминаем значение указателя стека для текущей задачи.
     int *sp;
     asm volatile ("move %0, $sp" : "=r" (sp));
 
@@ -257,18 +265,20 @@ void CoreTimerHandler()
 
     // Переключаемся на другую задачу: меняем указатель стека.
     if (current_task == 1) {
+        current_task = 2;
         sp = task2_stack_pointer;
     } else {
+        current_task = 1;
         sp = task1_stack_pointer;
     }
 
-    // Перечисляем здесь все регистры, которые необходимо сохранять и
-    // и восстанавливать из стека при переключении контекста.
-    // Компилятор сгенерирует нужные команды.
+    // Устанавливаем новое значение стека.
     asm volatile ("move $sp, %0" : : "r" (sp) :
                         "$1","$2","$3","$4","$5","$6","$7","$8","$9",
                         "$10","$11","$12","$13","$14","$15","$16","$17",
                         "$18","$19","$20","$21","$22","$23","$24","$25",
                         "$30","$31","hi","lo","sp");
-}
+    // Перечисляем здесь все регистры, которые необходимо сохранять и
+    // и восстанавливать из стека при переключении контекста.
+    // Компилятор сгенерирует нужные команды.
 }

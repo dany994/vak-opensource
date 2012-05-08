@@ -27,8 +27,6 @@ MPIDE_DIR       = /opt/mpide-0022-linux32-20110822
 
 ARDUINO_PORT    = /dev/ttyUSB*
 
-ARDUINO_LIBS    = Wire Wire/utility
-
 BOARD_TAG       = uno_pic32
 
 ########################################################################
@@ -193,7 +191,7 @@ CPPFLAGS        = -mprocessor=$(MCU) -DF_CPU=$(F_CPU) \
 ifdef DEBUG
 CPPFLAGS        += -O0 -g -mdebugger
 else
-CPPFLAGS        += -O2
+CPPFLAGS        += -O2 -g
 endif
 
 CXXFLAGS        = -fno-exceptions
