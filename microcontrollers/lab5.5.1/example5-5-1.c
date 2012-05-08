@@ -66,9 +66,9 @@ int button_pressed (int button)
 {
     switch (button) {
     case '1':
-        return PORTG >> 11 & 1;     // Контакт 11 - сигнал RG7
+        return ~PORTG >> 8 & 1;     // Контакт 11 - сигнал RG8
     case '2':
-        return PORTG >> 12 & 1;     // Контакт 12 - сигнал RG8
+        return ~PORTG >> 7 & 1;     // Контакт 12 - сигнал RG7
     }
     return 0;
 }
@@ -109,10 +109,10 @@ void task1()
 void task2()
 {
     for (;;) {
-        display ('a', 1); wait (150, '2'); display ('a', 0);
-        display ('b', 1); wait (150, '2'); display ('b', 0);
-        display ('g', 1); wait (150, '2'); display ('g', 0);
-        display ('f', 1); wait (150, '2'); display ('f', 0);
+        display ('a', 1); wait (75, '2'); display ('a', 0);
+        display ('b', 1); wait (75, '2'); display ('b', 0);
+        display ('g', 1); wait (75, '2'); display ('g', 0);
+        display ('f', 1); wait (75, '2'); display ('f', 0);
     }
 }
 
@@ -207,23 +207,23 @@ int main()
 
     // Устанавливаем прерывание от таймера с частотой 1000 Гц.
     int compare = F_CPU / 2 / 1000;
-    asm volatile ("mtc0 %0, $11" : : "r" (compare));
     asm volatile ("mtc0 %0, $9" : : "r" (0));
+    asm volatile ("mtc0 %0, $11" : : "r" (compare));
     IEC0SET = 1 << _CORE_TIMER_IRQ;
 
     // Сигналы от кнопок используем как входы.
-    TRISGSET = 1 << 7;          // Кнопка 1 - сигнал RG7
-    TRISGSET = 1 << 8;          // Кнопка 2 - сигнал RG8
+    TRISGSET = 1 << 8;                      // Кнопка 1 - сигнал RG8
+    TRISGSET = 1 << 7;                      // Кнопка 2 - сигнал RG7
 
     // Сигналы управления 7-сегментным индикатором - выходы.
-    TRISDCLR = 1 << 8;          // Сегмент A - сигнал RD8
-    TRISDCLR = 1 << 0;          // Сегмент B - сигнал RD0
-    TRISFCLR = 1 << 1;          // Сегмент C - сигнал RF1
-    TRISDCLR = 1 << 1;          // Сегмент D - сигнал RD1
-    TRISDCLR = 1 << 2;          // Сегмент E - сигнал RD2
-    TRISDCLR = 1 << 9;          // Сегмент F - сигнал RD9
-    TRISDCLR = 1 << 10;         // Сегмент G - сигнал RD10
-    TRISDCLR = 1 << 3;          // Сегмент H - сигнал RD3
+    TRISDCLR = 1 << 8;  LATDCLR = 1 << 8;   // Сегмент A - сигнал RD8
+    TRISDCLR = 1 << 0;  LATDCLR = 1 << 0;   // Сегмент B - сигнал RD0
+    TRISFCLR = 1 << 1;  LATFCLR = 1 << 1;   // Сегмент C - сигнал RF1
+    TRISDCLR = 1 << 1;  LATDCLR = 1 << 1;   // Сегмент D - сигнал RD1
+    TRISDCLR = 1 << 2;  LATDCLR = 1 << 2;   // Сегмент E - сигнал RD2
+    TRISDCLR = 1 << 9;  LATDCLR = 1 << 9;   // Сегмент F - сигнал RD9
+    TRISDCLR = 1 << 10; LATDCLR = 1 << 10;  // Сегмент G - сигнал RD10
+    TRISDCLR = 1 << 3;  LATDCLR = 1 << 3;   // Сегмент H - сигнал RD3
 
     // Создаём две задачи.
     task1_stack_pointer = create_task ((int) task1, task1_stack);
@@ -235,7 +235,6 @@ int main()
     for (;;) {
         // Ничего не делаем, ждём прерывания от таймера.
         // После первого же прерывания начинают работать задачи.
-        asm volatile ("wait");
     }
 }
 
@@ -246,7 +245,14 @@ int main()
 __ISR (_CORE_TIMER_VECTOR, ipl1)
 void CoreTimerHandler()
 {
-    // Сбрасываем флаг прерывания.
+    // Увеличиваем регистр Compare чтобы получить следующее
+    // прерывание еще через миллисекунду.
+    int compare;
+    asm volatile ("mfc0 %0, $11" : "=r" (compare));
+    compare += F_CPU / 2 / 1000;
+    asm volatile ("mtc0 %0, $11" : : "r" (compare));
+
+    // Сбрасываем флаг в контроллере прерываний.
     IFS0CLR = 1 << _CORE_TIMER_IRQ;
 
     // Наращиваем счётчик времени.
