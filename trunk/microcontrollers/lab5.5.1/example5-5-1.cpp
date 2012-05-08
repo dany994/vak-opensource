@@ -81,7 +81,7 @@ void wait (int msec, int button)
         while (digitalRead (button) == LOW)
             ;
 
-        delay (5);
+        //delay (5);
         msec -= 5;
     }
 }
@@ -158,10 +158,17 @@ int *create_task (int start, int *stack)
 }
 
 //
-// Начальная инициализация программы.
+// Начальная инициализация и основной цикл программы.
 //
-void setup()
+int main()
 {
+    SYSTEMConfig (F_CPU, SYS_CFG_ALL);
+    INTConfigureSystem (INT_SYSTEM_CONFIG_MULT_VECTOR);
+    //INTEnableSystemMultiVectoredInt();
+
+    // Disable the JTAG interface.
+    DDPCONbits.JTAGEN = 0;
+
     // Сигналы от кнопок используем как входы.
     pinMode (button1, INPUT);
     pinMode (button2, INPUT);
@@ -183,15 +190,11 @@ void setup()
     // Создаём две задачи.
     task1_stack_pointer = create_task ((int) task1, task1_stack);
     task2_stack_pointer = create_task ((int) task2, task2_stack);
-}
 
-//
-// Основной цикл программы.
-//
-void loop()
-{
-    // Ничего не делаем, ждём прерывания от таймера.
-    // После первого же прерывания начинают работать задачи.
+    for (;;) {
+        // Ничего не делаем, ждём прерывания от таймера.
+        // После первого же прерывания начинают работать задачи.
+    }
 }
 
 //
