@@ -1,5 +1,4 @@
 #include <WProgram.h>
-#include <plib.h>
 
 // Кнопки на контактах 11 и 12.
 const int button1 = 11;

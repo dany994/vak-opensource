@@ -27,8 +27,6 @@ MPIDE_DIR       = /opt/mpide-0022-linux32-20110822
 
 ARDUINO_PORT    = /dev/ttyUSB*
 
-ARDUINO_LIBS    = Wire Wire/utility
-
 BOARD_TAG       = uno_pic32
 
 ########################################################################
