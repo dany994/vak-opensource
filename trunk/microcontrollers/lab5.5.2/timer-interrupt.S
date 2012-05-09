@@ -50,90 +50,51 @@ timer_handler:
 	sw	v0, 16(sp)          // Регистр 2
 	sw	$1, 12(sp)          // Регистр 1
 
-        // Увеличиваем регистр Compare чтобы получить следующее
-        // прерывание еще через миллисекунду.
-	mfc0	v0, _CP0_COMPARE
-	li	v1, 80000 / 2       // F_CPU / 1000 / 2
-	addu	v0, v1
-	mtc0	v0, _CP0_COMPARE
-
-        // Сбрасываем флаг в контроллере прерываний.
-        li      v0, 1 << _CORE_TIMER_IRQ
-        la      t0, IFS0CLR
-        sw      v0, (t0)            // IFS0CLR := 1 << _CORE_TIMER_IRQ
-
-        // Наращиваем счётчик времени.
-	lw	v1, %gp_rel(time_msec)(gp)
-	addiu	v1, 1               // time_msec += 1
-	sw	v1, %gp_rel(time_msec)(gp)
-
-        // Запоминаем значение указателя стека для текущей задачи.
+        // Меняем значение указателя стека: переключение на другую задачу.
+        jal     task_switch
 	move	a0, sp
+	move	sp, v0              // sp = task_switch (sp)
 
-	lw	v1, %gp_rel(current_task)(gp)
-	li	v0, 1
-	beq	v1, v0, task1
-	li	v0, 2
-	beq	v1, v0, task2
-        nop
-        b       notask
-        nop
-
-task1:  // Задача 1: переключаемся на задачу 2
-	sw	a0, %gp_rel(task1_stack_pointer)(gp) // task1_stack_pointer = sp
-	li	v1, 2
-	sw	v1, %gp_rel(current_task)(gp)        // current_task = 2
-	lw	sp, %gp_rel(task2_stack_pointer)(gp) // sp = task2_stack_pointer
-	b       restore
-	nop
-
-task2:  // Задача 2: переключаемся на задачу 1
-	sw	a0, %gp_rel(task2_stack_pointer)(gp) // task2_stack_pointer = sp
-notask:	li	v1, 1
-	sw	v1, %gp_rel(current_task)(gp)        // current_task = 1
-	lw	sp, %gp_rel(task1_stack_pointer)(gp) // sp = task1_stack_pointer
-
-restore:
         // Восстанавливаем все регистры из стека.
 	lw	a1, 132(sp)
-	mtc0	a1, _CP0_EPC
+	mtc0	a1, _CP0_EPC        // Адрес возврата EPC
 
 	lw	a1, 128(sp)
-	mtc0	a1, _CP0_STATUS
+	mtc0	a1, _CP0_STATUS     // Режим процессора Status
 
 	lw	a1, 124(sp)
-	mtlo	a1
+	mtlo	a1                  // Регистр LO
 
 	lw	a1, 120(sp)
-	mthi	a1
+	mthi	a1                  // Регистр HI
 
-	lw	ra, 116(sp)
-	lw	s8, 112(sp)
-	lw	t9, 108(sp)
-	lw	t8, 104(sp)
-	lw	s7, 100(sp)
-	lw	s6, 96(sp)
-	lw	s5, 92(sp)
-	lw	s4, 88(sp)
-	lw	s3, 84(sp)
-	lw	s2, 80(sp)
-	lw	s1, 76(sp)
-	lw	s0, 72(sp)
-	lw	t7, 68(sp)
-	lw	t6, 64(sp)
-	lw	t5, 60(sp)
-	lw	t4, 56(sp)
-	lw	t3, 52(sp)
-	lw	t2, 48(sp)
-	lw	t1, 44(sp)
-	lw	t0, 40(sp)
-	lw	a3, 36(sp)
-	lw	a2, 32(sp)
-	lw	a1, 28(sp)
-	lw	a0, 24(sp)
-	lw	v1, 20(sp)
-	lw	v0, 16(sp)
-	lw	$1, 12(sp)
+	lw	ra, 116(sp)         // Регистр 31
+	lw	s8, 112(sp)         // Регистр 30
+	lw	t9, 108(sp)         // Регистр 25
+	lw	t8, 104(sp)         // Регистр 24
+	lw	s7, 100(sp)         // Регистр 23
+	lw	s6, 96(sp)          // Регистр 22
+	lw	s5, 92(sp)          // Регистр 21
+	lw	s4, 88(sp)          // Регистр 20
+	lw	s3, 84(sp)          // Регистр 19
+	lw	s2, 80(sp)          // Регистр 18
+	lw	s1, 76(sp)          // Регистр 17
+	lw	s0, 72(sp)          // Регистр 16
+	lw	t7, 68(sp)          // Регистр 15
+	lw	t6, 64(sp)          // Регистр 14
+	lw	t5, 60(sp)          // Регистр 13
+	lw	t4, 56(sp)          // Регистр 12
+	lw	t3, 52(sp)          // Регистр 11
+	lw	t2, 48(sp)          // Регистр 10
+	lw	t1, 44(sp)          // Регистр 9
+	lw	t0, 40(sp)          // Регистр 8
+	lw	a3, 36(sp)          // Регистр 7
+	lw	a2, 32(sp)          // Регистр 6
+	lw	a1, 28(sp)          // Регистр 5
+	lw	a0, 24(sp)          // Регистр 4
+	lw	v1, 20(sp)          // Регистр 3
+	lw	v0, 16(sp)          // Регистр 2
+	lw	$1, 12(sp)          // Регистр 1
 
 	addiu	sp, sp, 136         // Освобождаем место в стеке
 	eret                        // Выходим из прерывания
