@@ -11,11 +11,9 @@ PIC32_DEVCFG (
 
     DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
     DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
-    DEVCFG1_OSCIOFNC |          /* CLKO output active */
     DEVCFG1_FPBDIV_2 |          /* Peripheral bus clock = SYSCLK/2 */
     DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
-    DEVCFG1_FCKS_DISABLE |      /* Clock switching disable */
-    DEVCFG1_WDTPS_1024,         /* Watchdog postscale = 1/1024 */
+    DEVCFG1_FCKS_DISABLE,       /* Clock switching disable */
 
     DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
     DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
@@ -24,8 +22,7 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLODIV_1,         /* PLL postscaler = 1/1 */
 
     DEVCFG3_USERID(0xffff) |    /* User-defined ID */
-    DEVCFG3_FSRSSEL_7 |         /* Assign irq priority 7 to shadow set */
-    DEVCFG3_FETHIO);            /* Default Ethernet i/o pins */
+    DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
 
 /*
  * Boot code.
@@ -48,16 +45,11 @@ int main()
     mtc0 (C0_INTCTL, 1, 1 << 5);        /* Vector spacing 32 bytes */
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
-#if 0
-    /* Setup wait states. */
-    CHECON = 2;
-    BMXCONCLR = 0x40;
-    CHECONSET = 0x30;
-#endif
+
     /* Disable JTAG port, to make all LEDs available. */
     DDPCON = 0;
 
-    /* Use all B ports as digital. */
+    /* Use all ports as digital. */
     ANSELA = 0;
     ANSELB = 0;
 
