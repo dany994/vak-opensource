@@ -7,7 +7,7 @@
  * Chip configuration.
  */
 PIC32_DEVCFG (
-    DEVCFG0_DEBUG_ENABLED,      /* ICE debugger disabled */
+    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
 
     DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
     DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
@@ -19,7 +19,7 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
     DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
     DEVCFG2_UPLLDIS |           /* Disable USB PLL */
-    DEVCFG2_FPLLODIV_1,         /* PLL postscaler = 1/1 */
+    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 
     DEVCFG3_USERID(0xffff) |    /* User-defined ID */
     DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
@@ -55,19 +55,19 @@ int main()
 
     /* Use pin RA4 as output: LED1 control. */
     TRISACLR = 1 << 4;
-    PORTACLR = 1 << 4;
+    LATACLR = 1 << 4;
 
     /* Use pin RB8 as output: LED2 control. */
     TRISBCLR = 1 << 8;
-    PORTBSET = 1 << 8;
+    LATBSET = 1 << 8;
 
     while (1) {
 
         /* Invert pin RA4. */
-        PORTAINV = 1 << 4;
+        LATAINV = 1 << 4;
 
         /* Invert pin RB8. */
-        PORTBINV = 1 << 8;
+        LATBINV = 1 << 8;
 
         /* Delay. */
         unsigned i;
