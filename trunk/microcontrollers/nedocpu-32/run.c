@@ -3,6 +3,8 @@
  */
 #include "pic32mx.h"
 
+#define MHZ     40              /* CPU clock is 40 MHz. */
+
 /*
  * Chip configuration.
  */
@@ -26,7 +28,8 @@ PIC32_DEVCFG (
     DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
 
 /*
- * Boot code.
+ * Boot code at bfc00000.
+ * Setup stack pointer and $gp registers, and jump to main().
  */
 asm ("          .section .exception");
 asm ("          .globl _start");
@@ -38,12 +41,15 @@ asm ("          jr      $ra");
 asm ("          .text");
 
 /*
- * Delay for a given number of milliseconds.
+ * Delay for a given number of microseconds.
+ * The processor has a 32-bit hardware Count register,
+ * which increments at half CPU rate.
+ * We use it to get a precise delay.
  */
-void mdelay (unsigned msec)
+void udelay (unsigned usec)
 {
     unsigned now = mfc0 (C0_COUNT, 0);
-    unsigned final = now + msec * MHZ * 500;
+    unsigned final = now + usec * MHZ / 2;
 
     for (;;) {
         now = mfc0 (C0_COUNT, 0);
@@ -71,30 +77,31 @@ int main()
     ANSELA = 0;
     ANSELB = 0;
 
-    /* All PORTA, PORTB as output. */
+    /* Set A and B ports as output. */
     LATA = 0;
     LATB = 0;
     TRISA = 0;
     TRISB = 0;
 
     int value = 1;
-    int dir = 1;
+    int to_left = 1;
     for (;;) {
         LATA = value & 0x1f;
         LATB = (value >> 5) & 0xffff;
-        if (dir > 0)
+
+        /* Shift the value. */
+        if (to_left)
             value <<= 1;
         else
             value >>= 1;
 
-        if (! (value & 0x1fffff)) {
-            /* Reverse direction */
-            dir = -dir;
-            value = 2;
-            if (dir < 0)
-                value <<= 18;
-        }
+        /* Reverse direction. */
+        if (value == 1 << 20)
+            to_left = 0;
+        else if (value == 1)
+            to_left = 1;
 
-        mdelay (100);
+        /* Wait 100 msec. */
+        udelay (100000);
     }
 }
