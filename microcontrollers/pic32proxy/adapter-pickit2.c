@@ -33,7 +33,6 @@ typedef struct {
     hid_device *hiddev;
 
     unsigned char reply [64];
-    unsigned use_executable;
     unsigned serial_execution_mode;
 
 } pickit_adapter_t;
@@ -267,266 +266,13 @@ static unsigned pickit_read_word (adapter_t *adapter, unsigned addr)
 static void pickit_read_data (adapter_t *adapter,
     unsigned addr, unsigned nwords, unsigned *data)
 {
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    unsigned char buf [64];
-    unsigned words_read;
+    //pickit_adapter_t *a = (pickit_adapter_t*) adapter;
 
     //fprintf (stderr, "%s: read %d bytes from %08x\n", a->name, nwords*4, addr);
-    if (! a->use_executable) {
-        /* Without PE. */
-        for (; nwords > 0; nwords--) {
-            *data++ = pickit_read_word (adapter, addr);
-            addr += 4;
-        }
-        return;
+    for (; nwords > 0; nwords--) {
+        *data++ = pickit_read_word (adapter, addr);
+        addr += 4;
     }
-
-    /* Use PE to read memory. */
-    for (words_read = 0; words_read < nwords; ) {
-        /* Download addresses for 8 script runs. */
-        unsigned i, k = 0;
-        memset (buf, CMD_END_OF_BUFFER, 64);
-        buf[k++] = CMD_CLEAR_DOWNLOAD_BUFFER;
-        buf[k++] = CMD_DOWNLOAD_DATA;
-        buf[k++] = 8 * 4;
-        for (i = 0; i < 8; i++) {
-            unsigned address = addr + words_read*4 + i*32*4;
-            buf[k++] = address;
-            buf[k++] = address >> 8;
-            buf[k++] = address >> 16;
-            buf[k++] = address >> 24;
-        }
-        pickit_send_buf (a, buf, k);
-
-        for (k = 0; k < 8; k++) {
-            /* Read progmem. */
-            pickit_send (a, 17, CMD_CLEAR_UPLOAD_BUFFER,
-                CMD_EXECUTE_SCRIPT, 13,
-                    SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
-                    SCRIPT_JT2_XFRFASTDAT_LIT,
-                        0x20, 0, 1, 0,          // READ
-                    SCRIPT_JT2_XFRFASTDAT_BUF,
-                    SCRIPT_JT2_WAIT_PE_RESP,
-                    SCRIPT_JT2_GET_PE_RESP,
-                    SCRIPT_LOOP, 1, 31,
-                CMD_UPLOAD_DATA_NOLEN);
-            pickit_recv (a);
-            memcpy (data, a->reply, 64);
-            data += 64/4;
-            words_read += 64/4;
-
-            /* Get second half of upload buffer. */
-            pickit_send (a, 1, CMD_UPLOAD_DATA_NOLEN);
-            pickit_recv (a);
-            memcpy (data, a->reply, 64);
-            data += 64/4;
-            words_read += 64/4;
-        }
-    }
-}
-
-/*
- * Put data to download buffer.
- * Max 15 words (60 bytes).
- */
-static void download_data (pickit_adapter_t *a,
-    unsigned *data, unsigned nwords, int clear_flag)
-{
-    unsigned char buf [64];
-    unsigned i, k = 0;
-
-    memset (buf, CMD_END_OF_BUFFER, 64);
-    if (clear_flag)
-        buf[k++] = CMD_CLEAR_DOWNLOAD_BUFFER;
-    buf[k++] = CMD_DOWNLOAD_DATA;
-    buf[k++] = nwords * 4;
-    for (i=0; i<nwords; i++) {
-        unsigned word = *data++;
-        buf[k++] = word;
-        buf[k++] = word >> 8;
-        buf[k++] = word >> 16;
-        buf[k++] = word >> 24;
-    }
-    pickit_send_buf (a, buf, k);
-}
-
-/*
- * Write a word to flash memory.
- */
-static void pickit_program_word (adapter_t *adapter,
-    unsigned addr, unsigned word)
-{
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-
-    if (debug_level > 0)
-        fprintf (stderr, "%s: program word at %08x: %08x\n", a->name, addr, word);
-    if (! a->use_executable) {
-        /* Without PE. */
-        fprintf (stderr, "%s: slow flash write not implemented yet.\n", a->name);
-        exit (-1);
-    }
-    /* Use PE to write flash memory. */
-    pickit_send (a, 22, CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_EXECUTE_SCRIPT, 18,
-            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
-            SCRIPT_JT2_XFRFASTDAT_LIT,
-                2, 0, 3, 0,                     // WORD_PROGRAM
-            SCRIPT_JT2_XFRFASTDAT_LIT,
-                (unsigned char) addr,
-                (unsigned char) (addr >> 8),
-                (unsigned char) (addr >> 16),
-                (unsigned char) (addr >> 24),
-            SCRIPT_JT2_XFRFASTDAT_LIT,
-                (unsigned char) word,
-                (unsigned char) (word >> 8),
-                (unsigned char) (word >> 16),
-                (unsigned char) (word >> 24),
-            SCRIPT_JT2_GET_PE_RESP,
-        CMD_UPLOAD_DATA);
-    pickit_recv (a);
-    //fprintf (stderr, "%s: word program PE response %u bytes: %02x...\n",
-    //  a->name, a->reply[0], a->reply[1]);
-    if (a->reply[0] != 4 || a->reply[1] != 0) { // response code 0 = success
-        fprintf (stderr, "%s: failed to program word %08x at %08x, reply = %02x-%02x-%02x-%02x-%02x\n",
-            a->name, word, addr, a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
-        exit (-1);
-    }
-}
-
-/*
- * Flash write row of memory.
- */
-static void pickit_program_row32 (adapter_t *adapter, unsigned addr,
-    unsigned *data)
-{
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-
-    if (debug_level > 0)
-        fprintf (stderr, "%s: row program 128 bytes at %08x\n", a->name, addr);
-    if (! a->use_executable) {
-        /* Without PE. */
-        fprintf (stderr, "%s: slow flash write not implemented yet.\n", a->name);
-        exit (-1);
-    }
-    /* Use PE to write flash memory. */
-
-    pickit_send (a, 15, CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_EXECUTE_SCRIPT, 12,
-            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
-            SCRIPT_JT2_XFRFASTDAT_LIT,
-		32, 0, 0, 0,                     // PROGRAM ROW
-	    SCRIPT_JT2_XFRFASTDAT_LIT,
-		(unsigned char) addr,
-		(unsigned char) (addr >> 8),
-		(unsigned char) (addr >> 16),
-		(unsigned char) (addr >> 24));
-
-    /* Download 128 bytes of data. */
-    download_data (a, data, 15, 1);
-    download_data (a, data+15, 15, 0);
-
-    pickit_send (a, 18,
-	CMD_DOWNLOAD_DATA, 2*4,
-            WORD_AS_BYTES (data[30]),
-            WORD_AS_BYTES (data[31]),
-	CMD_EXECUTE_SCRIPT, 6,              // execute
-            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
-            SCRIPT_JT2_XFRFASTDAT_BUF,
-            SCRIPT_LOOP, 1, 31);
-
-    pickit_send (a, 5, CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_EXECUTE_SCRIPT, 1,
-            SCRIPT_JT2_GET_PE_RESP,
-        CMD_UPLOAD_DATA);
-
-    pickit_recv (a);
-    //fprintf (stderr, "%s: program PE response %u bytes: %02x...\n",
-    //  a->name, a->reply[0], a->reply[1]);
-    if (a->reply[0] != 4 || a->reply[1] != 0) { // response code 0 = success
-        fprintf (stderr, "%s: failed to program row flash memory at %08x, reply = %02x-%02x-%02x-%02x-%02x\n",
-            a->name, addr, a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
-        exit (-1);
-    }
-}
-
-static void pickit_program_row128 (adapter_t *adapter, unsigned addr,
-    unsigned *data)
-{
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    unsigned i;
-
-    if (debug_level > 0)
-        fprintf (stderr, "%s: row program 512 bytes at %08x\n", a->name, addr);
-    if (! a->use_executable) {
-        /* Without PE. */
-        fprintf (stderr, "%s: slow flash write not implemented yet.\n", a->name);
-        exit (-1);
-    }
-    /* Use PE to write flash memory. */
-
-    pickit_send (a, 15, CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_EXECUTE_SCRIPT, 12,
-            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
-            SCRIPT_JT2_XFRFASTDAT_LIT,
-		128, 0, 0, 0,                     // PROGRAM ROW
-	    SCRIPT_JT2_XFRFASTDAT_LIT,
-		(unsigned char) addr,
-		(unsigned char) (addr >> 8),
-		(unsigned char) (addr >> 16),
-		(unsigned char) (addr >> 24));
-
-    /* Download 512 bytes of data. */
-
-    for (i = 0; i < 2; i++) {
-        /* Download 256 bytes of data. */
-        download_data (a, data, 15, 1);
-        download_data (a, data+15, 15, 0);
-        download_data (a, data+30, 15, 0);
-        download_data (a, data+45, 15, 0);
-
-        pickit_send (a, 26,
-            CMD_DOWNLOAD_DATA, 4*4,
-                WORD_AS_BYTES (data[60]),
-                WORD_AS_BYTES (data[61]),
-                WORD_AS_BYTES (data[62]),
-                WORD_AS_BYTES (data[63]),
-            CMD_EXECUTE_SCRIPT, 6,              // execute
-                SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,
-                SCRIPT_JT2_XFRFASTDAT_BUF,
-                SCRIPT_LOOP, 1, 63);
-
-        data += 64;
-    }
-
-    pickit_send (a, 5, CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_EXECUTE_SCRIPT, 1,
-            SCRIPT_JT2_GET_PE_RESP,
-        CMD_UPLOAD_DATA);
-
-    pickit_recv (a);
-    //fprintf (stderr, "%s: program PE response %u bytes: %02x...\n",
-    //  a->name, a->reply[0], a->reply[1]);
-    if (a->reply[0] != 4 || a->reply[1] != 0) { // response code 0 = success
-        fprintf (stderr, "%s: failed to program row flash memory at %08x, reply = %02x-%02x-%02x-%02x-%02x\n",
-            a->name, addr, a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
-        exit (-1);
-    }
-}
-
-/*
- * Erase all flash memory.
- */
-static void pickit_erase_chip (adapter_t *adapter)
-{
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-
-    //fprintf (stderr, "%s: erase chip\n", a->name);
-    pickit_send (a, 11, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 8,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_ERASE,
-        SCRIPT_DELAY_LONG, 74);                 // 400 msec
-    check_timeout (a, "chip erase");
 }
 
 /*
@@ -583,7 +329,7 @@ adapter_t *adapter_open_pickit (void)
         vers_minor = a->reply[1];
         vers_rev = a->reply[2];
     }
-    printf ("      Adapter: %s Version %d.%d.%d\n",
+    printf ("Adapter: %s Version %d.%d.%d\n",
         a->name, vers_major, vers_minor, vers_rev);
 
     /* Detach power from the board. */
@@ -699,9 +445,5 @@ adapter_t *adapter_open_pickit (void)
     a->adapter.get_idcode = pickit_get_idcode;
     a->adapter.read_word = pickit_read_word;
     a->adapter.read_data = pickit_read_data;
-    a->adapter.erase_chip = pickit_erase_chip;
-    a->adapter.program_word = pickit_program_word;
-    a->adapter.program_row128 = pickit_program_row128;
-    a->adapter.program_row32 = pickit_program_row32;
     return &a->adapter;
 }

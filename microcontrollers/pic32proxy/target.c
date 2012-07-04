@@ -23,9 +23,8 @@ struct _target_t {
     adapter_t   *adapter;
     const char  *cpu_name;
     unsigned    cpuid;
-    unsigned    flash_addr;
-    unsigned    flash_bytes;
-    unsigned    boot_bytes;
+    unsigned    flash_kbytes;
+    unsigned    boot_kbytes;
     unsigned    pe;
 };
 
@@ -155,6 +154,12 @@ target_t *target_open ()
 
     /* Check CPU identifier. */
     t->cpuid = t->adapter->get_idcode (t->adapter);
+    if (t->cpuid == 0 || t->cpuid == ~0) {
+        /* Device not detected. */
+        fprintf (stderr, "Bad CPUID=%08x.\n", t->cpuid);
+        t->adapter->close (t->adapter, 0);
+        exit (1);
+    }
     unsigned i;
     for (i=0; (t->cpuid ^ pic32mx_dev[i].devid) & 0x0fffffff; i++) {
         if (pic32mx_dev[i].devid == 0) {
@@ -165,10 +170,11 @@ target_t *target_open ()
         }
     }
     t->cpu_name = pic32mx_dev[i].name;
-    t->flash_addr = 0x1d000000;
-    t->flash_bytes = pic32mx_dev[i].flash_kbytes * 1024;
-    t->boot_bytes = pic32mx_dev[i].boot_kbytes * 1024;
+    t->flash_kbytes = pic32mx_dev[i].flash_kbytes;
+    t->boot_kbytes = pic32mx_dev[i].boot_kbytes;
     t->pe = pic32mx_dev[i].pe;
+
+    printf ("Processor: %s\n", t->cpu_name);
     return t;
 }
 
@@ -230,68 +236,81 @@ void target_read_block (target_t *t, unsigned addr,
 unsigned target_read_word (target_t *t, unsigned addr)
 {
     // TODO
+    fprintf (stderr, "TODO: target_read_word (addr = %08x)\n", addr);
     return ~0;
 }
 
 void target_write_word (target_t *t, unsigned addr, unsigned word)
 {
     // TODO
+    fprintf (stderr, "TODO: target_write_word (addr = %08x, word = %08x)\n", addr, word);
 }
 
 void target_write_block (target_t *t, unsigned addr,
 	unsigned nwords, unsigned *data)
 {
     // TODO
+    fprintf (stderr, "TODO: target_write_block (addr = %08x, nwords = %u)\n", addr, nwords);
 }
 
 void target_stop (target_t *t)
 {
     // TODO
+    fprintf (stderr, "TODO: target_stop()\n");
 }
 
 void target_step (target_t *t)
 {
     // TODO
+    fprintf (stderr, "TODO: target_step()\n");
 }
 
 void target_resume (target_t *t)
 {
     // TODO
+    fprintf (stderr, "TODO: target_resume()\n");
 }
 
 void target_run (target_t *t, unsigned addr)
 {
     // TODO
+    fprintf (stderr, "TODO: target_run (addr = %08x)\n", addr);
 }
 
 void target_restart (target_t *t)
 {
     // TODO
+    fprintf (stderr, "TODO: target_restart()\n");
 }
 
 int target_is_stopped (target_t *t, int *is_aborted)
 {
     // TODO
+    fprintf (stderr, "TODO: target_is_stopped()\n");
     return 1;
 }
 
 unsigned target_read_register (target_t *t, unsigned regno)
 {
     // TODO
+    fprintf (stderr, "TODO: target_read_register (regno = %u)\n", regno);
     return ~0;
 }
 
 void target_write_register (target_t *t, unsigned regno, unsigned val)
 {
     // TODO
+    fprintf (stderr, "TODO: target_write_register (regno = %u, val = %08x)\n", regno, val);
 }
 
 void target_add_break (target_t *t, unsigned addr, int type)
 {
     // TODO
+    fprintf (stderr, "TODO: target_add_break (addr = %u, type = %d)\n", addr, type);
 }
 
 void target_remove_break (target_t *t, unsigned addr)
 {
     // TODO
+    fprintf (stderr, "TODO: target_remove_break (addr = %08x)\n", addr);
 }
