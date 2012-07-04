@@ -1,5 +1,5 @@
 /*
- * Interface to PIC32 microcontroller via debug port.
+ * Interface to PIC32 microcontroller via JTAG or ICSP port.
  *
  * Copyright (C) 2012 Serge Vakulenko
  *

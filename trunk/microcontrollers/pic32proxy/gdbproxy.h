@@ -389,7 +389,7 @@ struct rp_target_s
 #define PACKET_BUFF_SIZE                8192
 
 extern int debug_level;
-extern rp_target ejtag_target;
+extern rp_target mips_target;
 
 /* Initialization function in init.c */
 rp_target *rp_init(void);
