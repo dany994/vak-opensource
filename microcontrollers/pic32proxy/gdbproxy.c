@@ -1189,7 +1189,7 @@ int main (int argc, char **argv)
     printf("'--copying' option for details.\n\n");
 
     /* Find the target */
-    t = &ejtag_target;
+    t = &mips_target;
     assert(t->open != NULL);
     assert(t->close != NULL);
     assert(t->connect != NULL);

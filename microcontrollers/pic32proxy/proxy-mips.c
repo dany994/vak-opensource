@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2012 Serge Vakulenko
+ * Interface to MIPS target platform.
  *
- * Interface to EJTAG debug block via JTAG-USB adapter.
+ * Copyright (C) 2012 Serge Vakulenko
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,78 +20,78 @@
  * Description of MIPS32 architecture.
  * Register numbering should match GDB.
  */
-#define RP_EJTAG_MIN_ADDRESS            0x0U
-#define RP_EJTAG_MAX_ADDRESS            0xFFFFFFFF
-#define RP_EJTAG_NUM_REGS               72
-#define RP_EJTAG_REG_BYTES              (RP_EJTAG_NUM_REGS*sizeof(unsigned))
-#define RP_EJTAG_REGNUM_SP              29 /* Stack pointer */
-#define RP_EJTAG_REGNUM_FP              30 /* Frame pointer */
-#define RP_EJTAG_REGNUM_STATUS          32 /* Processor status */
-#define RP_EJTAG_REGNUM_LO              33
-#define RP_EJTAG_REGNUM_HI              34
-#define RP_EJTAG_REGNUM_BADVADDR        35
-#define RP_EJTAG_REGNUM_CAUSE           36
-#define RP_EJTAG_REGNUM_PC              37 /* Program counter */
-#define RP_EJTAG_REGNUM_FP0             38 /* FPU registers */
-#define RP_EJTAG_REGNUM_FCSR            70 /* FPU status */
-#define RP_EJTAG_REGNUM_FIR             71 /* FPU implementation information */
+#define RP_MIPS_MIN_ADDRESS             0x0U
+#define RP_MIPS_MAX_ADDRESS             0xFFFFFFFF
+#define RP_MIPS_NUM_REGS                72
+#define RP_MIPS_REG_BYTES               (RP_MIPS_NUM_REGS*sizeof(unsigned))
+#define RP_MIPS_REGNUM_SP               29 /* Stack pointer */
+#define RP_MIPS_REGNUM_FP               30 /* Frame pointer */
+#define RP_MIPS_REGNUM_STATUS           32 /* Processor status */
+#define RP_MIPS_REGNUM_LO               33
+#define RP_MIPS_REGNUM_HI               34
+#define RP_MIPS_REGNUM_BADVADDR         35
+#define RP_MIPS_REGNUM_CAUSE            36
+#define RP_MIPS_REGNUM_PC               37 /* Program counter */
+#define RP_MIPS_REGNUM_FP0              38 /* FPU registers */
+#define RP_MIPS_REGNUM_FCSR             70 /* FPU status */
+#define RP_MIPS_REGNUM_FIR              71 /* FPU implementation information */
 
 /*
  * Primitives of selected target (EJTAG).
  */
-static int  ejtag_open (int argc, char * const argv[],
+static int  mips_open (int argc, char * const argv[],
                         const char *prog_name, log_func log_fn);
-static void ejtag_close (void);
-static int  ejtag_connect (char *status_string,
+static void mips_close (void);
+static int  mips_connect (char *status_string,
                         size_t status_string_size, int *can_restart);
-static int  ejtag_disconnect (void);
-static void ejtag_kill (void);
-static int  ejtag_restart (void);
-static void ejtag_stop (void);
-static int  ejtag_set_gen_thread (rp_thread_ref *thread);
-static int  ejtag_set_ctrl_thread (rp_thread_ref *thread);
-static int  ejtag_is_thread_alive (rp_thread_ref *thread, int *alive);
-static int  ejtag_read_registers (uint8_t *data_buf, uint8_t *avail_buf,
+static int  mips_disconnect (void);
+static void mips_kill (void);
+static int  mips_restart (void);
+static void mips_stop (void);
+static int  mips_set_gen_thread (rp_thread_ref *thread);
+static int  mips_set_ctrl_thread (rp_thread_ref *thread);
+static int  mips_is_thread_alive (rp_thread_ref *thread, int *alive);
+static int  mips_read_registers (uint8_t *data_buf, uint8_t *avail_buf,
                         size_t buf_size, size_t *read_size);
-static int  ejtag_write_registers (uint8_t *data_buf, size_t write_size);
-static int  ejtag_read_single_register (unsigned int reg_no,
+static int  mips_write_registers (uint8_t *data_buf, size_t write_size);
+static int  mips_read_single_register (unsigned int reg_no,
                         uint8_t *data_buf, uint8_t *avail_buf,
                         size_t buf_size, size_t *read_size);
-static int  ejtag_write_single_register (unsigned int reg_no,
+static int  mips_write_single_register (unsigned int reg_no,
                         uint8_t *data_buf, size_t write_size);
-static int  ejtag_read_mem (uint64_t addr, uint8_t *data_buf,
+static int  mips_read_mem (uint64_t addr, uint8_t *data_buf,
                         size_t req_size, size_t *actual_size);
-static int  ejtag_write_mem (uint64_t addr, uint8_t *data_buf,
+static int  mips_write_mem (uint64_t addr, uint8_t *data_buf,
                         size_t req_sise);
-static int  ejtag_resume_from_current (int step, int sig);
-static int  ejtag_resume_from_addr (int step, int sig, uint64_t addr);
-static int  ejtag_go_waiting (int sig);
-static int  ejtag_wait_partial (int first, char *status_string,
+static int  mips_resume_from_current (int step, int sig);
+static int  mips_resume_from_addr (int step, int sig, uint64_t addr);
+static int  mips_go_waiting (int sig);
+static int  mips_wait_partial (int first, char *status_string,
                         size_t status_string_len, out_func out,
                         int *implemented, int *more);
-static int  ejtag_wait (char *status_string, size_t status_string_len,
+static int  mips_wait (char *status_string, size_t status_string_len,
                         out_func out, int *implemented);
-static int  ejtag_process_query (unsigned int *mask,
+static int  mips_process_query (unsigned int *mask,
                         rp_thread_ref *arg, rp_thread_info *info);
-static int  ejtag_list_query (int first, rp_thread_ref *arg,
+static int  mips_list_query (int first, rp_thread_ref *arg,
                         rp_thread_ref *result, size_t max_num,
                         size_t *num, int *done);
-static int  ejtag_current_thread_query (rp_thread_ref *thread);
-static int  ejtag_offsets_query (uint64_t *text,
+static int  mips_current_thread_query (rp_thread_ref *thread);
+static int  mips_offsets_query (uint64_t *text,
                         uint64_t *data, uint64_t *bss);
-static int  ejtag_crc_query (uint64_t addr, size_t len, uint32_t *val);
-static int  ejtag_raw_query (char *in_buf, char *out_buf,
+static int  mips_crc_query (uint64_t addr, size_t len, uint32_t *val);
+static int  mips_raw_query (char *in_buf, char *out_buf,
                         size_t out_buf_size);
-static int  ejtag_remcmd (char *in_buf, out_func of, data_func df);
-static int  ejtag_add_break (int type, uint64_t addr, unsigned int len);
-static int  ejtag_remove_break (int type, uint64_t addr, unsigned int len);
+static int  mips_remcmd (char *in_buf, out_func of, data_func df);
+static int  mips_add_break (int type, uint64_t addr, unsigned int len);
+static int  mips_remove_break (int type, uint64_t addr, unsigned int len);
 
 /*
  * Remove commands, specific for a target platform.
  */
-static int ejtag_rcmd_help (int argc, char *argv[], out_func of, data_func df);
+static int mips_rcmd_help (int argc, char *argv[], out_func of, data_func df);
 
-#define RCMD(name, hlp) {#name, ejtag_rcmd_##name, hlp}  //table entry generation
+#define RCMD(name, hlp) {#name, mips_rcmd_##name, hlp}  //table entry generation
 
 /*
  * Data structure for remote commands.
@@ -105,51 +105,51 @@ typedef struct {
 /*
  * Global descriptor of target platform.
  */
-rp_target ejtag_target = {
+rp_target mips_target = {
     NULL,       /* next */
-    "ejtag",
+    "mips",
     "MIPS processor with EJTAG port",
     NULL,       /* help */
-    ejtag_open,
-    ejtag_close,
-    ejtag_connect,
-    ejtag_disconnect,
-    ejtag_kill,
-    ejtag_restart,
-    ejtag_stop,
-    ejtag_set_gen_thread,
-    ejtag_set_ctrl_thread,
-    ejtag_is_thread_alive,
-    ejtag_read_registers,
-    ejtag_write_registers,
-    ejtag_read_single_register,
-    ejtag_write_single_register,
-    ejtag_read_mem,
-    ejtag_write_mem,
-    ejtag_resume_from_current,
-    ejtag_resume_from_addr,
-    ejtag_go_waiting,
-    ejtag_wait_partial,
-    ejtag_wait,
-    ejtag_process_query,
-    ejtag_list_query,
-    ejtag_current_thread_query,
-    ejtag_offsets_query,
-    ejtag_crc_query,
-    ejtag_raw_query,
-    ejtag_remcmd,
-    ejtag_add_break,
-    ejtag_remove_break
+    mips_open,
+    mips_close,
+    mips_connect,
+    mips_disconnect,
+    mips_kill,
+    mips_restart,
+    mips_stop,
+    mips_set_gen_thread,
+    mips_set_ctrl_thread,
+    mips_is_thread_alive,
+    mips_read_registers,
+    mips_write_registers,
+    mips_read_single_register,
+    mips_write_single_register,
+    mips_read_mem,
+    mips_write_mem,
+    mips_resume_from_current,
+    mips_resume_from_addr,
+    mips_go_waiting,
+    mips_wait_partial,
+    mips_wait,
+    mips_process_query,
+    mips_list_query,
+    mips_current_thread_query,
+    mips_offsets_query,
+    mips_crc_query,
+    mips_raw_query,
+    mips_remcmd,
+    mips_add_break,
+    mips_remove_break
 };
 
 static struct {
-    /* Start up parameters, set by ejtag_open */
+    /* Start up parameters, set by mips_open */
     log_func    log;
     target_t    *device;
 } target;
 
 /* Local functions */
-static char *ejtag_out_treg (char *in, unsigned int reg_no);
+static char *mips_out_treg (char *in, unsigned int reg_no);
 
 #ifdef NDEBUG
 #define DEBUG_OUT(...)
@@ -170,7 +170,7 @@ static void DEBUG_OUT(const char *string,...)
  * Connect to JTAG adapter.
  * Called at start of pic32proxy and on every disconnect.
  */
-static int ejtag_open(int argc,
+static int mips_open(int argc,
                          char * const argv[],
                          const char *prog_name,
                          log_func log_fn)
@@ -189,8 +189,8 @@ static int ejtag_open(int argc,
     target.log = log_fn;
 
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_open()",
-                        ejtag_target.name);
+                        "%s: mips_open()",
+                        mips_target.name);
 
     /* Process options */
     for (;;) {
@@ -207,7 +207,7 @@ static int ejtag_open(int argc,
         default:
             target.log(RP_VAL_LOGLEVEL_NOTICE,
                                 "%s: Use `%s --help' to see a complete list of options",
-                                ejtag_target.name,
+                                mips_target.name,
                                 prog_name);
             return RP_VAL_TARGETRET_ERR;
         }
@@ -220,7 +220,7 @@ static int ejtag_open(int argc,
         if (! target.device) {
             target.log(RP_VAL_LOGLEVEL_ERR,
                             "%s: failed to initialize JTAG adapter",
-                            ejtag_target.name);
+                            mips_target.name);
             return RP_VAL_TARGETRET_ERR;
         }
     }
@@ -232,11 +232,11 @@ static int ejtag_open(int argc,
  * Called when debugger disconnects from pic32proxy.
  * Need to resume a processor.
  */
-static void ejtag_close()
+static void mips_close()
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_close()",
-                        ejtag_target.name);
+                        "%s: mips_close()",
+                        mips_target.name);
     assert (target.device != 0);
 
     target_resume (target.device);
@@ -247,15 +247,15 @@ static void ejtag_close()
  * Called when debugger connects to pic32proxy.
  * Should stop a processor.
  */
-static int ejtag_connect(char *status_string,
+static int mips_connect(char *status_string,
                             size_t status_string_len,
                             int *can_restart)
 {
     char *cp;
 
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_connect()",
-                        ejtag_target.name);
+                        "%s: mips_connect()",
+                        mips_target.name);
 
     assert (target.device != 0);
 
@@ -270,8 +270,8 @@ static int ejtag_connect(char *status_string,
     /* Fill out the the status string */
     sprintf(status_string, "T%02d", RP_SIGNAL_BREAKPOINT);
 
-    cp = ejtag_out_treg(&status_string[3], RP_EJTAG_REGNUM_PC);
-    cp = ejtag_out_treg(cp, RP_EJTAG_REGNUM_FP);
+    cp = mips_out_treg(&status_string[3], RP_MIPS_REGNUM_PC);
+    cp = mips_out_treg(cp, RP_MIPS_REGNUM_FP);
     return RP_VAL_TARGETRET_OK;
 }
 
@@ -280,11 +280,11 @@ static int ejtag_connect(char *status_string,
  * Disconnect from adapter.
  * No need to do anything.
  */
-static int ejtag_disconnect()
+static int mips_disconnect()
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_disconnect()",
-                        ejtag_target.name);
+                        "%s: mips_disconnect()",
+                        mips_target.name);
     return RP_VAL_TARGETRET_OK;
 }
 
@@ -292,18 +292,18 @@ static int ejtag_disconnect()
  * Target method.
  * Kill the target debug session.
  */
-static void ejtag_kill()
+static void mips_kill()
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_kill()",
-                        ejtag_target.name);
+                        "%s: mips_kill()",
+                        mips_target.name);
 }
 
-static int ejtag_restart()
+static int mips_restart()
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_restart()",
-                        ejtag_target.name);
+                        "%s: mips_restart()",
+                        mips_target.name);
     assert (target.device != 0);
 
     target_restart (target.device);
@@ -313,21 +313,21 @@ static int ejtag_restart()
 /*
  * Target method: Stop (i,e, break) the target program.
  */
-static void ejtag_stop()
+static void mips_stop()
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_stop()",
-                        ejtag_target.name);
+                        "%s: mips_stop()",
+                        mips_target.name);
     assert (target.device != 0);
 
     target_stop (target.device);
 }
 
-static int ejtag_set_gen_thread(rp_thread_ref *thread)
+static int mips_set_gen_thread(rp_thread_ref *thread)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_set_gen_thread()",
-                        ejtag_target.name);
+                        "%s: mips_set_gen_thread()",
+                        mips_target.name);
 
     return RP_VAL_TARGETRET_NOSUPP;
 }
@@ -335,11 +335,11 @@ static int ejtag_set_gen_thread(rp_thread_ref *thread)
 /*
  * Target method
  */
-static int ejtag_set_ctrl_thread(rp_thread_ref *thread)
+static int mips_set_ctrl_thread(rp_thread_ref *thread)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_set_ctrl_thread()",
-                        ejtag_target.name);
+                        "%s: mips_set_ctrl_thread()",
+                        mips_target.name);
 
     return RP_VAL_TARGETRET_NOSUPP;
 }
@@ -347,11 +347,11 @@ static int ejtag_set_ctrl_thread(rp_thread_ref *thread)
 /*
  * Target method
  */
-static int ejtag_is_thread_alive(rp_thread_ref *thread, int *alive)
+static int mips_is_thread_alive(rp_thread_ref *thread, int *alive)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_is_thread_alive()",
-                        ejtag_target.name);
+                        "%s: mips_is_thread_alive()",
+                        mips_target.name);
 
     return RP_VAL_TARGETRET_OK;
 }
@@ -360,29 +360,29 @@ static int ejtag_is_thread_alive(rp_thread_ref *thread, int *alive)
  * Target method.
  * Read values of all registers.
  */
-static int ejtag_read_registers(uint8_t *data_buf,
+static int mips_read_registers(uint8_t *data_buf,
                                  uint8_t *avail_buf,
                                  size_t buf_size,
                                  size_t *read_size)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_read_registers()",
-                        ejtag_target.name);
+                        "%s: mips_read_registers()",
+                        mips_target.name);
     assert (target.device != 0);
     assert (data_buf != NULL);
     assert (avail_buf != NULL);
-    assert (buf_size >= RP_EJTAG_REG_BYTES);
+    assert (buf_size >= RP_MIPS_REG_BYTES);
     assert (read_size != NULL);
 
     /* Show only CPU and CP0 registers.
      * A debugger will ask for FPU registers separately. */
     int i;
-    for (i=0; i<RP_EJTAG_REGNUM_FP0; i++) {
+    for (i=0; i<RP_MIPS_REGNUM_FP0; i++) {
         unsigned val = target_read_register (target.device, i);
         memcpy (data_buf + i*sizeof(unsigned), &val, sizeof(unsigned));
         memset (avail_buf + i*sizeof(unsigned), 1, sizeof(unsigned));
     }
-    *read_size = RP_EJTAG_REG_BYTES;
+    *read_size = RP_MIPS_REG_BYTES;
     return RP_VAL_TARGETRET_OK;
 }
 
@@ -390,18 +390,18 @@ static int ejtag_read_registers(uint8_t *data_buf,
  * Target method.
  * Write the registers to the target.
  */
-static int ejtag_write_registers(uint8_t *buf, size_t write_size)
+static int mips_write_registers(uint8_t *buf, size_t write_size)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_write_registers()",
-                        ejtag_target.name);
+                        "%s: mips_write_registers()",
+                        mips_target.name);
     assert (target.device != 0);
     assert (buf != NULL);
     assert (write_size > 0);
-    assert (write_size <= RP_EJTAG_REG_BYTES);
+    assert (write_size <= RP_MIPS_REG_BYTES);
 
     int i;
-    for (i=0; i<RP_EJTAG_NUM_REGS; i++) {
+    for (i=0; i<RP_MIPS_NUM_REGS; i++) {
         unsigned offset = i * sizeof(unsigned);
         if (offset + sizeof(unsigned) > write_size)
             break;
@@ -415,22 +415,22 @@ static int ejtag_write_registers(uint8_t *buf, size_t write_size)
  * Target method.
  * Read a value of single register.
  */
-static int ejtag_read_single_register(unsigned int reg_no,
+static int mips_read_single_register(unsigned int reg_no,
                                          uint8_t *data_buf,
                                          uint8_t *avail_buf,
                                          size_t buf_size,
                                          size_t *read_size)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_read_single_register (%d)",
-                        ejtag_target.name, reg_no);
+                        "%s: mips_read_single_register (%d)",
+                        mips_target.name, reg_no);
     assert (target.device != 0);
     assert (data_buf != NULL);
     assert (avail_buf != NULL);
-    assert (buf_size >= RP_EJTAG_REG_BYTES);
+    assert (buf_size >= RP_MIPS_REG_BYTES);
     assert (read_size != NULL);
 
-    if (reg_no < 0 || reg_no >= RP_EJTAG_NUM_REGS)
+    if (reg_no < 0 || reg_no >= RP_MIPS_NUM_REGS)
         return RP_VAL_TARGETRET_ERR;
 
     unsigned val = target_read_register (target.device, reg_no);
@@ -444,19 +444,19 @@ static int ejtag_read_single_register(unsigned int reg_no,
 /*
  * Target method.
  */
-static int ejtag_write_single_register(unsigned int reg_no,
+static int mips_write_single_register(unsigned int reg_no,
                                           uint8_t *buf,
                                           size_t write_size)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_write_single_register (%d, 0x%X)",
-                        ejtag_target.name,
+                        "%s: mips_write_single_register (%d, 0x%X)",
+                        mips_target.name,
                         reg_no, *(unsigned*) buf);
     assert (target.device != 0);
     assert (buf != NULL);
     assert (write_size == 4);
 
-    if (reg_no < 0 || reg_no >= RP_EJTAG_NUM_REGS)
+    if (reg_no < 0 || reg_no >= RP_MIPS_NUM_REGS)
         return RP_VAL_TARGETRET_ERR;
 
     unsigned val = *(unsigned*) buf;
@@ -469,30 +469,30 @@ static int ejtag_write_single_register(unsigned int reg_no,
  * Target method.
  * Read a requested number of bytes from device memory.
  */
-static int ejtag_read_mem(uint64_t addr,
+static int mips_read_mem(uint64_t addr,
                              uint8_t *buf,
                              size_t req_size,
                              size_t *actual_size)
 {
 //    target.log(RP_VAL_LOGLEVEL_DEBUG,
-//        "%s: ejtag_read_mem(0x%llX, ptr, %d, ptr)",
-//        ejtag_target.name, addr, req_size);
+//        "%s: mips_read_mem(0x%llX, ptr, %d, ptr)",
+//        mips_target.name, addr, req_size);
     assert (target.device != 0);
     assert (buf != NULL);
     assert (req_size > 0);
     assert (actual_size != NULL);
 
-    if (addr > RP_EJTAG_MAX_ADDRESS) {
+    if (addr > RP_MIPS_MAX_ADDRESS) {
         target.log(RP_VAL_LOGLEVEL_ERR,
                             "%s: bad address 0x%llx",
-                            ejtag_target.name,
+                            mips_target.name,
                             addr);
 
         return RP_VAL_TARGETRET_ERR;
     }
 
-    if (addr + req_size > RP_EJTAG_MAX_ADDRESS + 1ULL)
-        req_size = RP_EJTAG_MAX_ADDRESS + 1ULL - addr;
+    if (addr + req_size > RP_MIPS_MAX_ADDRESS + 1ULL)
+        req_size = RP_MIPS_MAX_ADDRESS + 1ULL - addr;
     *actual_size = req_size;
 
     unsigned offset = (addr & 3);
@@ -546,13 +546,13 @@ static int ejtag_read_mem(uint64_t addr,
  * Target method.
  * Write a requested number of bytes to device memory.
  */
-static int ejtag_write_mem(uint64_t addr,
+static int mips_write_mem(uint64_t addr,
                               uint8_t *buf,
                               size_t write_size)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_write_mem(0x%llX, ptr, %d)",
-                        ejtag_target.name,
+                        "%s: mips_write_mem(0x%llX, ptr, %d)",
+                        mips_target.name,
                         addr,
                         write_size);
     assert (target.device != 0);
@@ -562,20 +562,20 @@ static int ejtag_write_mem(uint64_t addr,
     if (write_size == 0)
         return RP_VAL_TARGETRET_OK;
 
-    if (addr > RP_EJTAG_MAX_ADDRESS)
+    if (addr > RP_MIPS_MAX_ADDRESS)
     {
         target.log(RP_VAL_LOGLEVEL_ERR,
                             "%s: bad address 0x%llx",
-                            ejtag_target.name,
+                            mips_target.name,
                             addr);
         return RP_VAL_TARGETRET_ERR;
     }
 
-    if ((addr + write_size - 1) > RP_EJTAG_MAX_ADDRESS)
+    if ((addr + write_size - 1) > RP_MIPS_MAX_ADDRESS)
     {
         target.log(RP_VAL_LOGLEVEL_ERR,
                             "%s: bad address/write_size 0x%llx/0x%x",
-                            ejtag_target.name,
+                            mips_target.name,
                             addr,
                             write_size);
         return RP_VAL_TARGETRET_ERR;
@@ -644,11 +644,11 @@ static int ejtag_write_mem(uint64_t addr,
 /*
  * Target method.
  */
-static int ejtag_resume_from_current(int step, int sig)
+static int mips_resume_from_current(int step, int sig)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_resume_from_current(%s, %d)",
-                        ejtag_target.name,
+                        "%s: mips_resume_from_current(%s, %d)",
+                        mips_target.name,
                         (step)  ?  "step"  :  "run",
                         sig);
     assert (target.device != 0);
@@ -667,11 +667,11 @@ static int ejtag_resume_from_current(int step, int sig)
  * Target method.
  * Run the target from the new PC address.
  */
-static int ejtag_resume_from_addr(int step, int sig, uint64_t addr)
+static int mips_resume_from_addr(int step, int sig, uint64_t addr)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_resume_from_addr(%s, %d, 0x%llX)",
-                        ejtag_target.name,
+                        "%s: mips_resume_from_addr(%s, %d, 0x%llX)",
+                        mips_target.name,
                         (step)  ?  "step"  :  "run",
                         sig,
                         addr);
@@ -684,11 +684,11 @@ static int ejtag_resume_from_addr(int step, int sig, uint64_t addr)
 /*
  * Target method.
  */
-static int ejtag_go_waiting(int sig)
+static int mips_go_waiting(int sig)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_go_waiting()",
-                        ejtag_target.name);
+                        "%s: mips_go_waiting()",
+                        mips_target.name);
     return RP_VAL_TARGETRET_NOSUPP;
 }
 
@@ -696,7 +696,7 @@ static int ejtag_go_waiting(int sig)
  * Target method.
  * Test the target state (i.e. running/stopped) without blocking.
  */
-static int ejtag_wait_partial(int first, char *status_string,
+static int mips_wait_partial(int first, char *status_string,
     size_t status_string_len, out_func of,
     int *implemented, int *more)
 {
@@ -716,8 +716,8 @@ static int ejtag_wait_partial(int first, char *status_string,
     if (! target_is_stopped (target.device, &is_aborted)) {
         *more = TRUE;
 //        target.log(RP_VAL_LOGLEVEL_DEBUG,
-//                        "%s: ejtag_wait_partial() cpu is running",
-//                        ejtag_target.name);
+//                        "%s: mips_wait_partial() cpu is running",
+//                        mips_target.name);
 //fprintf (stderr, "."); fflush (stderr);
         return RP_VAL_TARGETRET_OK;
     }
@@ -725,20 +725,20 @@ static int ejtag_wait_partial(int first, char *status_string,
     if (is_aborted) {
         sig = RP_SIGNAL_ABORTED;
         target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_wait_partial() cpu is aborted",
-                        ejtag_target.name);
+                        "%s: mips_wait_partial() cpu is aborted",
+                        mips_target.name);
     } else {
         sig = RP_SIGNAL_BREAKPOINT;
         target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_wait_partial() cpu stopped on breakpoint",
-                        ejtag_target.name);
+                        "%s: mips_wait_partial() cpu stopped on breakpoint",
+                        mips_target.name);
     }
 
     /* Fill out the status string */
     sprintf(status_string, "T%02d", sig);
 
-    cp = ejtag_out_treg(&status_string[3], RP_EJTAG_REGNUM_PC);
-    cp = ejtag_out_treg(cp, RP_EJTAG_REGNUM_FP);
+    cp = mips_out_treg(&status_string[3], RP_MIPS_REGNUM_PC);
+    cp = mips_out_treg(cp, RP_MIPS_REGNUM_FP);
     *more = FALSE;
     return RP_VAL_TARGETRET_OK;
 }
@@ -747,14 +747,14 @@ static int ejtag_wait_partial(int first, char *status_string,
  * Target method.
  * Wait with blocking - non needed.
  */
-static int ejtag_wait(char *status_string,
+static int mips_wait(char *status_string,
                          size_t status_string_len,
                          out_func of,
                          int *implemented)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_wait() - not implemented",
-                        ejtag_target.name);
+                        "%s: mips_wait() - not implemented",
+                        mips_target.name);
 
     *implemented = FALSE;
     return RP_VAL_TARGETRET_NOSUPP;
@@ -763,13 +763,13 @@ static int ejtag_wait(char *status_string,
 /*
  * Target method.
  */
-static int ejtag_process_query(unsigned int *mask,
+static int mips_process_query(unsigned int *mask,
                                   rp_thread_ref *arg,
                                   rp_thread_info *info)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_process_query()",
-                        ejtag_target.name);
+                        "%s: mips_process_query()",
+                        mips_target.name);
 
     /* Does your target support threads? Is so, implement this function.
        Otherwise just return no support. */
@@ -779,7 +779,7 @@ static int ejtag_process_query(unsigned int *mask,
 /*
  * Target method.
  */
-static int ejtag_list_query(int first,
+static int mips_list_query(int first,
                                rp_thread_ref *arg,
                                rp_thread_ref *result,
                                size_t max_num,
@@ -787,8 +787,8 @@ static int ejtag_list_query(int first,
                                int *done)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_list_query()",
-                        ejtag_target.name);
+                        "%s: mips_list_query()",
+                        mips_target.name);
 
     /* Does your target support threads? Is so, implement this function.
        Otherwise just return no support. */
@@ -798,11 +798,11 @@ static int ejtag_list_query(int first,
 /*
  * Target method.
  */
-static int ejtag_current_thread_query(rp_thread_ref *thread)
+static int mips_current_thread_query(rp_thread_ref *thread)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_current_thread_query()",
-                        ejtag_target.name);
+                        "%s: mips_current_thread_query()",
+                        mips_target.name);
 
     /* Does your target support threads? Is so, implement this function.
        Otherwise just return no support. */
@@ -812,11 +812,11 @@ static int ejtag_current_thread_query(rp_thread_ref *thread)
 /*
  * Target method.
  */
-static int ejtag_offsets_query(uint64_t *text, uint64_t *data, uint64_t *bss)
+static int mips_offsets_query(uint64_t *text, uint64_t *data, uint64_t *bss)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_offsets_query()",
-                        ejtag_target.name);
+                        "%s: mips_offsets_query()",
+                        mips_target.name);
     assert (target.device != 0);
     assert (text != NULL);
     assert (data != NULL);
@@ -832,35 +832,35 @@ static int ejtag_offsets_query(uint64_t *text, uint64_t *data, uint64_t *bss)
 /*
  * Target method.
  */
-static int ejtag_crc_query(uint64_t addr, size_t len, uint32_t *val)
+static int mips_crc_query(uint64_t addr, size_t len, uint32_t *val)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_crc_query()",
-                        ejtag_target.name);
+                        "%s: mips_crc_query()",
+                        mips_target.name);
     assert (target.device != 0);
 
-    if (addr > RP_EJTAG_MAX_ADDRESS ||
-        addr + len > RP_EJTAG_MAX_ADDRESS + 1) {
+    if (addr > RP_MIPS_MAX_ADDRESS ||
+        addr + len > RP_MIPS_MAX_ADDRESS + 1) {
         target.log(RP_VAL_LOGLEVEL_ERR,
                             "%s: bad address 0x%llx",
-                            ejtag_target.name,
+                            mips_target.name,
                             addr);
         return RP_VAL_TARGETRET_ERR;
     }
 
     target.log(RP_VAL_LOGLEVEL_ERR,
-                        "%s: crc not implemented", ejtag_target.name);
+                        "%s: crc not implemented", mips_target.name);
     return RP_VAL_TARGETRET_ERR;
 }
 
 /*
  * Target method.
  */
-static int ejtag_raw_query(char *in_buf, char *out_buf, size_t out_buf_size)
+static int mips_raw_query(char *in_buf, char *out_buf, size_t out_buf_size)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_raw_query(\"%s\")",
-                        ejtag_target.name, in_buf);
+                        "%s: mips_raw_query(\"%s\")",
+                        mips_target.name, in_buf);
 
     return RP_VAL_TARGETRET_NOSUPP;
 }
@@ -885,13 +885,13 @@ static int tohex(char *s, const char *t)
 /*
  * Command: erase flash.
  */
-static int ejtag_rcmd_erase(int argc, char *argv[], out_func of, data_func df)
+static int mips_rcmd_erase(int argc, char *argv[], out_func of, data_func df)
 {
     char buf[1000 + 1];
 
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_rcmd_erase()",
-                        ejtag_target.name);
+                        "%s: mips_rcmd_erase()",
+                        mips_target.name);
     tohex(buf, "Erasing target flash - ");
     of(buf);
 
@@ -916,7 +916,7 @@ static const RCMD_TABLE remote_commands[] =
 /*
  * Help function, generate help text from command table.
  */
-static int ejtag_rcmd_help(int argc, char *argv[], out_func of, data_func df)
+static int mips_rcmd_help(int argc, char *argv[], out_func of, data_func df)
 {
     char buf[1000 + 1];
     char buf2[1000 + 1];
@@ -978,7 +978,7 @@ static int remote_decode_byte(const char *in, unsigned int *byte)
  */
 #define MAXARGS 4
 
-static int ejtag_remcmd(char *in_buf, out_func of, data_func df)
+static int mips_remcmd(char *in_buf, out_func of, data_func df)
 {
     int count = 0;
     int i;
@@ -989,8 +989,8 @@ static int ejtag_remcmd(char *in_buf, out_func of, data_func df)
     char *s;
 
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_remcmd()",
-                        ejtag_target.name);
+                        "%s: mips_remcmd()",
+                        mips_target.name);
     DEBUG_OUT("command '%s'", in_buf);
 
     if (strlen(in_buf))
@@ -1046,11 +1046,11 @@ static int ejtag_remcmd(char *in_buf, out_func of, data_func df)
 /*
  * Target method.
  */
-static int ejtag_add_break(int type, uint64_t addr, unsigned int len)
+static int mips_add_break(int type, uint64_t addr, unsigned int len)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-        "%s: ejtag_add_break(%d, 0x%llx, %d)",
-        ejtag_target.name, type, addr, len);
+        "%s: mips_add_break(%d, 0x%llx, %d)",
+        mips_target.name, type, addr, len);
     assert (target.device != 0);
     switch (type) {
     case 1:             /* hardware-breakpoint */
@@ -1073,11 +1073,11 @@ static int ejtag_add_break(int type, uint64_t addr, unsigned int len)
 /*
  * Target method.
  */
-static int ejtag_remove_break(int type, uint64_t addr, unsigned int len)
+static int mips_remove_break(int type, uint64_t addr, unsigned int len)
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: ejtag_remove_break(%d, 0x%llx, %d)",
-                        ejtag_target.name,
+                        "%s: mips_remove_break(%d, 0x%llx, %d)",
+                        mips_target.name,
                         type,
                         addr,
                         len);
@@ -1090,7 +1090,7 @@ static int ejtag_remove_break(int type, uint64_t addr, unsigned int len)
  * Output registers in the format suitable
  * for TAAn:r...;n:r...; format.
  */
-static char *ejtag_out_treg(char *in, unsigned int reg_no)
+static char *mips_out_treg(char *in, unsigned int reg_no)
 {
     static const char hex[] = "0123456789abcdef";
     uint32_t reg_val;
@@ -1098,7 +1098,7 @@ static char *ejtag_out_treg(char *in, unsigned int reg_no)
     if (in == NULL)
         return NULL;
 
-    assert (reg_no < RP_EJTAG_NUM_REGS);
+    assert (reg_no < RP_MIPS_NUM_REGS);
 
     *in++ = hex[(reg_no >> 4) & 0x0f];
     *in++ = hex[reg_no & 0x0f];
