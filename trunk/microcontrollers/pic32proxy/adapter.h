@@ -15,13 +15,7 @@ struct _adapter_t {
     void (*close) (adapter_t *a, int power_on);
     unsigned (*get_idcode) (adapter_t *a);
     void (*read_data) (adapter_t *a, unsigned addr, unsigned nwords, unsigned *data);
-    void (*verify_data) (adapter_t *a, unsigned addr, unsigned nwords, unsigned *data);
-    void (*program_block) (adapter_t *a, unsigned addr, unsigned *data);
-    void (*program_row128) (adapter_t *a, unsigned addr, unsigned *data);
-    void (*program_row32) (adapter_t *a, unsigned addr, unsigned *data);
-    void (*program_word) (adapter_t *a, unsigned addr, unsigned word);
     unsigned (*read_word) (adapter_t *a, unsigned addr);
-    void (*erase_chip) (adapter_t *a);
 };
 
 adapter_t *adapter_open_pickit (void);

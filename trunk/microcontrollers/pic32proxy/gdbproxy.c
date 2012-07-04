@@ -29,7 +29,7 @@
  *
  *  QQI can be contacted as qqi@world.std.com
  */
-#define VERSION         "1.8"
+#define VERSION         "1.0." SVNVERSION
 
 #if defined(WIN32)
 #   include <windows.h>
@@ -1172,7 +1172,7 @@ int main (int argc, char **argv)
             return 0;
         case 'V':
             /* version */
-            printf("Remote proxy for GDB, version %s\n\n", VERSION);
+            printf("GDB proxy for Microchip PIC32 processors, Version %s\n\n", VERSION);
             return 0;
         default:
             rp_usage();
@@ -1180,9 +1180,9 @@ int main (int argc, char **argv)
         }
     }
 
-    printf("Remote GDB proxy for Microchip PIC32 processors, Version %s\n",
+    printf("GDB proxy for Microchip PIC32 processors, Version %s\n",
         VERSION);
-    printf("Copyright (C) 2010 Serge Vakulenko\n\n");
+    printf("Copyright (C) 2012 Serge Vakulenko\n\n");
     printf("MCremote comes with ABSOLUTELY NO WARRANTY; for details\n");
     printf("use `--warranty' option. This is Open Source software. You are\n");
     printf("welcome to redistribute it under certain conditions. Use the\n");
