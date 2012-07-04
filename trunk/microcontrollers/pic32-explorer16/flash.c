@@ -50,8 +50,8 @@ void delay()
 
 int main()
 {
-    void SoftReset (void);
-    SoftReset();
+    //void SoftReset (void);
+    //SoftReset();
 
     /* Initialize coprocessor 0. */
     mtc0 (C0_COUNT, 0, 0);
@@ -70,13 +70,13 @@ int main()
 
     while (1) {
         /* Invert pins PA7-PA0. */
-        PORTAINV = 1 << 7; delay();
-        PORTAINV = 1 << 6; delay();
-        PORTAINV = 1 << 5; delay();
-        PORTAINV = 1 << 4; delay();
-        PORTAINV = 1 << 3; delay();
-        PORTAINV = 1 << 2; delay();
-        PORTAINV = 1 << 1; delay();
         PORTAINV = 1 << 0; delay();
+        PORTAINV = 1 << 1; delay();
+        PORTAINV = 1 << 2; delay();
+        PORTAINV = 1 << 3; delay();
+        PORTAINV = 1 << 4; delay();
+        PORTAINV = 1 << 5; delay();
+        PORTAINV = 1 << 6; delay();
+        PORTAINV = 1 << 7; delay();
     }
 }
