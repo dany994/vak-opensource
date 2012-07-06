@@ -40,6 +40,9 @@ typedef struct {
     unsigned long long high_bit_mask;
     unsigned high_byte_bits;
 
+    /* EJTAG Control register. */
+    unsigned control;
+
     /* Execution context. */
     unsigned *local_iparam;
     int num_iparam;
@@ -418,7 +421,7 @@ static int mpsse_cpu_stopped (adapter_t *adapter)
     mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
 
     /* Check if Debug Mode bit is set. */
-    mpsse_send (a, 0, 0, 32, CONTROL_PRACC, 1);
+    mpsse_send (a, 0, 0, 32, a->control, 1);
     ctl = mpsse_recv (a);
     return ctl & CONTROL_DM;
 }
@@ -435,14 +438,25 @@ static void mpsse_stop_cpu (adapter_t *adapter)
     mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
 
     /* Set EjtagBrk bit - request a Debug exception. */
-    mpsse_send (a, 0, 0, 32, CONTROL_EJTAGBRK, 0);
+    mpsse_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 0);
 
     /* The processor should enter Debug Mode. */
-    mpsse_send (a, 0, 0, 32, CONTROL_EJTAGBRK, 1);
-    ctl = mpsse_recv (a);
-    if (! (ctl & CONTROL_DM)) {
-        fprintf (stderr, "Failed to enter Debug Mode!\n");
-        exit (1);
+    mpsse_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
+    for (;;) {
+        ctl = mpsse_recv (a);
+        if (debug_level > 0)
+            fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
+
+        if (ctl & CONTROL_ROCC) {
+            fprintf (stderr, "stop_cpu: Reset occured, clearing\n");
+            mpsse_send (a, 0, 0, 32,
+                (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK, 1);
+            continue;
+        }
+
+        if (ctl & CONTROL_DM)
+            break;
+        mpsse_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
     }
 }
 
@@ -507,7 +521,7 @@ static void pracc_exec_read (mpsse_adapter_t *a, unsigned address)
 
     /* Clear the access pending bit (let the processor eat!) */
     mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-    mpsse_send (a, 0, 0, 32, 0, 0);
+    mpsse_send (a, 0, 0, 32, a->control & ~CONTROL_PRACC, 0);
     mpsse_flush_output (a);
 }
 
@@ -523,7 +537,7 @@ static void pracc_exec_write (mpsse_adapter_t *a, unsigned address)
 
     /* Clear access pending bit */
     mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-    mpsse_send (a, 0, 0, 32, 0, 0);
+    mpsse_send (a, 0, 0, 32, a->control & ~CONTROL_PRACC, 0);
     mpsse_flush_output (a);
 
     if ((address >= MIPS32_PRACC_PARAM_IN) &&
@@ -574,7 +588,7 @@ static void mpsse_exec (adapter_t *adapter, int code_len,
 
 	/* Wait for the PrAcc to become "1". */
         do {
-            mpsse_send (a, 0, 0, 32, CONTROL_PRACC, 1);
+            mpsse_send (a, 0, 0, 32, a->control, 1);
             ctl = mpsse_recv (a);
 fprintf (stderr, "exec: ctl = %08x\n", ctl);
         } while (! (ctl & CONTROL_PRACC));
@@ -734,6 +748,8 @@ failed: usb_release_interface (a->usbdev, 0);
     /* Leave it in ETAP mode. */
     mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
     mpsse_flush_output (a);
+    a->control = CONTROL_ROCC | CONTROL_PRACC |
+                 CONTROL_PROBEN | CONTROL_PROBTRAP;
 
     /* User functions. */
     a->adapter.close = mpsse_close;
