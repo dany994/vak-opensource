@@ -12,10 +12,21 @@
 typedef struct _adapter_t adapter_t;
 
 struct _adapter_t {
+    const char *name;
+
     void (*close) (adapter_t *a, int power_on);
     unsigned (*get_idcode) (adapter_t *a);
-    void (*read_data) (adapter_t *a, unsigned addr, unsigned nwords, unsigned *data);
-    unsigned (*read_word) (adapter_t *a, unsigned addr);
+    int (*cpu_stopped) (adapter_t *a);
+    void (*reset_cpu) (adapter_t *a);
+    void (*stop_cpu) (adapter_t *a);
+    void (*run_cpu) (adapter_t *a);
+    void (*step_cpu) (adapter_t *a);
+    void (*exec) (adapter_t *a, int code_len, const unsigned *code,
+                  int num_param_in, unsigned *param_in,
+                  int num_param_out, unsigned *param_out, int cycle);
+
+    //void (*read_data) (adapter_t *a, unsigned addr, unsigned nwords, unsigned *data);
+    //unsigned (*read_word) (adapter_t *a, unsigned addr);
 };
 
 adapter_t *adapter_open_pickit (void);
