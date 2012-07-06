@@ -430,8 +430,13 @@ static int mips_read_single_register(unsigned int reg_no,
     assert (buf_size >= RP_MIPS_REG_BYTES);
     assert (read_size != NULL);
 
-    if (reg_no < 0 || reg_no >= RP_MIPS_NUM_REGS)
-        return RP_VAL_TARGETRET_ERR;
+    if (reg_no >= RP_MIPS_NUM_REGS) {
+        /* Register is not readable. */
+        memset (data_buf, 0, sizeof(unsigned));
+        memset (avail_buf, 0, sizeof(unsigned));
+        *read_size = sizeof(unsigned);
+        return RP_VAL_TARGETRET_OK;
+    }
 
     unsigned val = target_read_register (target.device, reg_no);
 
