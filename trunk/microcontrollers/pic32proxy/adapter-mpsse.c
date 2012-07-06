@@ -418,7 +418,7 @@ static int mpsse_cpu_stopped (adapter_t *adapter)
     mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
 
     /* Check if Debug Mode bit is set. */
-    mpsse_send (a, 0, 0, 32, 0, 1);
+    mpsse_send (a, 0, 0, 32, CONTROL_PRACC, 1);
     ctl = mpsse_recv (a);
     return ctl & CONTROL_DM;
 }
@@ -464,134 +464,6 @@ static void mpsse_run_cpu (adapter_t *adapter)
     //usb_adapter_t *a = (usb_adapter_t*) adapter;
 }
 
-#if 0
-/*
- * Put device to serial execution mode.
- */
-static void serial_execution (mpsse_adapter_t *a)
-{
-    if (a->serial_execution_mode)
-        return;
-    a->serial_execution_mode = 1;
-
-    /* Enter serial execution. */
-    if (debug_level > 0)
-        fprintf (stderr, "%s: enter serial execution\n", a->adapter.name);
-
-    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
-    mpsse_send (a, 1, 1, 5, ETAP_EJTAGBOOT, 0);
-
-    /* Check status. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);
-    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);
-    mpsse_send (a, 0, 0, 8, MCHP_DEASSERT_RST, 0);
-    mpsse_send (a, 0, 0, 8, MCHP_FLASH_ENABLE, 0);
-    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);
-    unsigned status = mpsse_recv (a);
-    if (debug_level > 0)
-        fprintf (stderr, "%s: status %04x\n", a->adapter.name, status);
-    if (status != (MCHP_STATUS_CPS | MCHP_STATUS_CFGRDY |
-                   MCHP_STATUS_FAEN | MCHP_STATUS_DEVRST)) {
-        fprintf (stderr, "%s: invalid status = %04x (reset)\n", a->adapter.name, status);
-        exit (-1);
-    }
-
-    /* Deactivate /SYSRST. */
-    mpsse_reset (a, 0, 0, 1);
-    mdelay (10);
-
-    /* Check status. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);
-    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);
-    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);
-    status = mpsse_recv (a);
-    if (debug_level > 0)
-        fprintf (stderr, "%s: status %04x\n", a->adapter.name, status);
-    if (status != (MCHP_STATUS_CPS | MCHP_STATUS_CFGRDY |
-                   MCHP_STATUS_FAEN)) {
-        fprintf (stderr, "%s: invalid status = %04x (no reset)\n", a->adapter.name, status);
-        exit (-1);
-    }
-
-    /* Leave it in ETAP mode. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
-    mpsse_flush_output (a);
-}
-
-static void xfer_instruction (mpsse_adapter_t *a, unsigned instruction)
-{
-    unsigned ctl;
-
-    if (debug_level > 1)
-        fprintf (stderr, "%s: xfer instruction %08x\n", a->adapter.name, instruction);
-
-    /* Select Control Register. */
-    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-
-    /* Wait until CPU is ready.
-     * Check if Processor Access bit (bit 18) is set. */
-    do {
-        mpsse_send (a, 0, 0, 32, CONTROL_PRACC |
-                                 CONTROL_PROBEN |
-                                 CONTROL_PROBTRAP |
-                                 CONTROL_EJTAGBRK, 1);
-        ctl = mpsse_recv (a);
-    } while (! (ctl & CONTROL_PRACC));
-
-    /* Select Data Register.
-     * Send the instruction. */
-    mpsse_send (a, 1, 1, 5, ETAP_DATA, 0);
-    mpsse_send (a, 0, 0, 32, instruction, 0);
-
-    /* Tell CPU to execute instruction. */
-    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-    mpsse_send (a, 0, 0, 32, CONTROL_PROBEN |
-                             CONTROL_PROBTRAP, 0);
-}
-
-/*
- * Read a word from memory (without PE).
- */
-static unsigned mpsse_read_word (adapter_t *adapter, unsigned addr)
-{
-    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-    unsigned addr_lo = addr & 0xFFFF;
-    unsigned addr_hi = (addr >> 16) & 0xFFFF;
-
-    serial_execution (a);
-
-    //fprintf (stderr, "%s: read word from %08x\n", a->adapter.name, addr);
-    xfer_instruction (a, 0x3c04bf80);           // lui s3, 0xFF20
-    xfer_instruction (a, 0x3c080000 | addr_hi); // lui t0, addr_hi
-    xfer_instruction (a, 0x35080000 | addr_lo); // ori t0, addr_lo
-    xfer_instruction (a, 0x8d090000);           // lw t1, 0(t0)
-    xfer_instruction (a, 0xae690000);           // sw t1, 0(s3)
-
-    mpsse_send (a, 1, 1, 5, ETAP_FASTDATA, 0);
-    mpsse_send (a, 0, 0, 33, 0, 1);
-    unsigned word = mpsse_recv (a) >> 1;
-
-    if (debug_level > 0)
-        fprintf (stderr, "%s: read word at %08x -> %08x\n", a->adapter.name, addr, word);
-    return word;
-}
-
-/*
- * Read a memory block.
- */
-static void mpsse_read_data (adapter_t *adapter,
-    unsigned addr, unsigned nwords, unsigned *data)
-{
-    //mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-
-    //fprintf (stderr, "%s: read %d bytes from %08x\n", a->adapter.name, nwords*4, addr);
-    for (; nwords > 0; nwords--) {
-        *data++ = mpsse_read_word (adapter, addr);
-        addr += 4;
-    }
-}
-#endif
-
 static void pracc_exec_read (mpsse_adapter_t *a, unsigned address)
 {
     int offset;
@@ -626,6 +498,8 @@ static void pracc_exec_read (mpsse_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
+    if (debug_level > 0)
+        fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
 
     /* Send the data out */
     mpsse_send (a, 1, 1, 5, ETAP_DATA, 0);
@@ -674,6 +548,8 @@ static void pracc_exec_write (mpsse_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
+    if (debug_level > 0)
+        fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
 }
 
 static void mpsse_exec (adapter_t *adapter, int code_len,
@@ -698,14 +574,16 @@ static void mpsse_exec (adapter_t *adapter, int code_len,
 
 	/* Wait for the PrAcc to become "1". */
         do {
-            mpsse_send (a, 0, 0, 32, 0, 1);
+            mpsse_send (a, 0, 0, 32, CONTROL_PRACC, 1);
             ctl = mpsse_recv (a);
+fprintf (stderr, "exec: ctl = %08x\n", ctl);
         } while (! (ctl & CONTROL_PRACC));
 
         /* Read Address register. */
         mpsse_send (a, 1, 1, 5, ETAP_ADDRESS, 0);
         mpsse_send (a, 0, 0, 32, 0, 1);
         address = mpsse_recv (a);
+fprintf (stderr, "exec: address = %08x\n", address);
 
         /* Check for read or write */
         if (ctl & CONTROL_PRNW) {
@@ -852,6 +730,10 @@ failed: usb_release_interface (a->usbdev, 0);
         free (a);
         return 0;
     }
+
+    /* Leave it in ETAP mode. */
+    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
+    mpsse_flush_output (a);
 
     /* User functions. */
     a->adapter.close = mpsse_close;
