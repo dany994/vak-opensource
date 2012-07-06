@@ -17,12 +17,12 @@
 #include <usb.h>
 
 #include "adapter.h"
+#include "mips.h"
 #include "pic32.h"
 
 typedef struct {
     /* Common part */
     adapter_t adapter;
-    const char *name;
 
     /* Device handle for libusb. */
     usb_dev_handle *usbdev;
@@ -40,7 +40,15 @@ typedef struct {
     unsigned long long high_bit_mask;
     unsigned high_byte_bits;
 
-    unsigned serial_execution_mode;
+    /* Execution context. */
+    unsigned *local_iparam;
+    int num_iparam;
+    unsigned *local_oparam;
+    int num_oparam;
+    const unsigned *code;
+    int code_len;
+    unsigned stack [32];
+    int stack_offset;
 } mpsse_adapter_t;
 
 /*
@@ -354,7 +362,7 @@ static void mpsse_close (adapter_t *adapter, int power_on)
     mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
 
     /* Clear EJTAGBOOT mode. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);    /* Send command. */
+    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
     mpsse_send (a, 6, 31, 0, 0, 0);             /* TMS 1-1-1-1-1-0 */
     mpsse_flush_output (a);
 
@@ -381,10 +389,82 @@ static unsigned mpsse_get_idcode (adapter_t *adapter)
     idcode = mpsse_recv (a);
 
     if (debug_level > 0)
-        fprintf (stderr, "%s: idcode %08x\n", a->name, idcode);
+        fprintf (stderr, "%s: idcode %08x\n", a->adapter.name, idcode);
     return idcode;
 }
 
+/*
+ * Hardware reset.
+ */
+static void mpsse_reset_cpu (adapter_t *adapter)
+{
+    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
+    mpsse_flush_output (a);
+
+    /* Toggle /SYSRST for several microseconds. */
+    mpsse_reset (a, 0, 1, 1);
+    mpsse_reset (a, 0, 0, 1);
+}
+
+/*
+ * Is the processor stopped?
+ */
+static int mpsse_cpu_stopped (adapter_t *adapter)
+{
+    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
+    unsigned ctl;
+
+    /* Select Control Register. */
+    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+
+    /* Check if Debug Mode bit is set. */
+    mpsse_send (a, 0, 0, 32, 0, 1);
+    ctl = mpsse_recv (a);
+    return ctl & CONTROL_DM;
+}
+
+/*
+ * Stop the processor.
+ */
+static void mpsse_stop_cpu (adapter_t *adapter)
+{
+    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
+    unsigned ctl;
+
+    /* Select Control Register. */
+    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+
+    /* Set EjtagBrk bit - request a Debug exception. */
+    mpsse_send (a, 0, 0, 32, CONTROL_EJTAGBRK, 0);
+
+    /* The processor should enter Debug Mode. */
+    mpsse_send (a, 0, 0, 32, CONTROL_EJTAGBRK, 1);
+    ctl = mpsse_recv (a);
+    if (! (ctl & CONTROL_DM)) {
+        fprintf (stderr, "Failed to enter Debug Mode!\n");
+        exit (1);
+    }
+}
+
+/*
+ * Execute a single instruction.
+ */
+static void mpsse_step_cpu (adapter_t *adapter)
+{
+    // TODO
+    //usb_adapter_t *a = (usb_adapter_t*) adapter;
+}
+
+/*
+ * Continue execution.
+ */
+static void mpsse_run_cpu (adapter_t *adapter)
+{
+    // TODO
+    //usb_adapter_t *a = (usb_adapter_t*) adapter;
+}
+
+#if 0
 /*
  * Put device to serial execution mode.
  */
@@ -396,23 +476,23 @@ static void serial_execution (mpsse_adapter_t *a)
 
     /* Enter serial execution. */
     if (debug_level > 0)
-        fprintf (stderr, "%s: enter serial execution\n", a->name);
+        fprintf (stderr, "%s: enter serial execution\n", a->adapter.name);
 
-    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);    /* Send command. */
-    mpsse_send (a, 1, 1, 5, ETAP_EJTAGBOOT, 0); /* Send command. */
+    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
+    mpsse_send (a, 1, 1, 5, ETAP_EJTAGBOOT, 0);
 
     /* Check status. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);    /* Send command. */
-    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);   /* Send command. */
-    mpsse_send (a, 0, 0, 8, MCHP_DEASSERT_RST, 0);  /* Xfer data. */
-    mpsse_send (a, 0, 0, 8, MCHP_FLASH_ENABLE, 0);  /* Xfer data. */
-    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);    /* Xfer data. */
+    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);
+    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);
+    mpsse_send (a, 0, 0, 8, MCHP_DEASSERT_RST, 0);
+    mpsse_send (a, 0, 0, 8, MCHP_FLASH_ENABLE, 0);
+    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);
     unsigned status = mpsse_recv (a);
     if (debug_level > 0)
-        fprintf (stderr, "%s: status %04x\n", a->name, status);
+        fprintf (stderr, "%s: status %04x\n", a->adapter.name, status);
     if (status != (MCHP_STATUS_CPS | MCHP_STATUS_CFGRDY |
                    MCHP_STATUS_FAEN | MCHP_STATUS_DEVRST)) {
-        fprintf (stderr, "%s: invalid status = %04x (reset)\n", a->name, status);
+        fprintf (stderr, "%s: invalid status = %04x (reset)\n", a->adapter.name, status);
         exit (-1);
     }
 
@@ -421,20 +501,20 @@ static void serial_execution (mpsse_adapter_t *a)
     mdelay (10);
 
     /* Check status. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);    /* Send command. */
-    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);   /* Send command. */
-    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);    /* Xfer data. */
+    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);
+    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);
+    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);
     status = mpsse_recv (a);
     if (debug_level > 0)
-        fprintf (stderr, "%s: status %04x\n", a->name, status);
+        fprintf (stderr, "%s: status %04x\n", a->adapter.name, status);
     if (status != (MCHP_STATUS_CPS | MCHP_STATUS_CFGRDY |
                    MCHP_STATUS_FAEN)) {
-        fprintf (stderr, "%s: invalid status = %04x (no reset)\n", a->name, status);
+        fprintf (stderr, "%s: invalid status = %04x (no reset)\n", a->adapter.name, status);
         exit (-1);
     }
 
     /* Leave it in ETAP mode. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);    /* Send command. */
+    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
     mpsse_flush_output (a);
 }
 
@@ -443,29 +523,29 @@ static void xfer_instruction (mpsse_adapter_t *a, unsigned instruction)
     unsigned ctl;
 
     if (debug_level > 1)
-        fprintf (stderr, "%s: xfer instruction %08x\n", a->name, instruction);
+        fprintf (stderr, "%s: xfer instruction %08x\n", a->adapter.name, instruction);
 
-    // Select Control Register
-    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);       /* Send command. */
+    /* Select Control Register. */
+    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
 
-    // Wait until CPU is ready
-    // Check if Processor Access bit (bit 18) is set
+    /* Wait until CPU is ready.
+     * Check if Processor Access bit (bit 18) is set. */
     do {
-        mpsse_send (a, 0, 0, 32, CONTROL_PRACC |    /* Xfer data. */
+        mpsse_send (a, 0, 0, 32, CONTROL_PRACC |
                                  CONTROL_PROBEN |
                                  CONTROL_PROBTRAP |
                                  CONTROL_EJTAGBRK, 1);
         ctl = mpsse_recv (a);
     } while (! (ctl & CONTROL_PRACC));
 
-    // Select Data Register
-    // Send the instruction
-    mpsse_send (a, 1, 1, 5, ETAP_DATA, 0);          /* Send command. */
-    mpsse_send (a, 0, 0, 32, instruction, 0);       /* Send data. */
+    /* Select Data Register.
+     * Send the instruction. */
+    mpsse_send (a, 1, 1, 5, ETAP_DATA, 0);
+    mpsse_send (a, 0, 0, 32, instruction, 0);
 
-    // Tell CPU to execute instruction
-    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);       /* Send command. */
-    mpsse_send (a, 0, 0, 32, CONTROL_PROBEN |       /* Send data. */
+    /* Tell CPU to execute instruction. */
+    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+    mpsse_send (a, 0, 0, 32, CONTROL_PROBEN |
                              CONTROL_PROBTRAP, 0);
 }
 
@@ -480,19 +560,19 @@ static unsigned mpsse_read_word (adapter_t *adapter, unsigned addr)
 
     serial_execution (a);
 
-    //fprintf (stderr, "%s: read word from %08x\n", a->name, addr);
+    //fprintf (stderr, "%s: read word from %08x\n", a->adapter.name, addr);
     xfer_instruction (a, 0x3c04bf80);           // lui s3, 0xFF20
     xfer_instruction (a, 0x3c080000 | addr_hi); // lui t0, addr_hi
     xfer_instruction (a, 0x35080000 | addr_lo); // ori t0, addr_lo
     xfer_instruction (a, 0x8d090000);           // lw t1, 0(t0)
     xfer_instruction (a, 0xae690000);           // sw t1, 0(s3)
 
-    mpsse_send (a, 1, 1, 5, ETAP_FASTDATA, 0);  /* Send command. */
-    mpsse_send (a, 0, 0, 33, 0, 1);             /* Get fastdata. */
+    mpsse_send (a, 1, 1, 5, ETAP_FASTDATA, 0);
+    mpsse_send (a, 0, 0, 33, 0, 1);
     unsigned word = mpsse_recv (a) >> 1;
 
     if (debug_level > 0)
-        fprintf (stderr, "%s: read word at %08x -> %08x\n", a->name, addr, word);
+        fprintf (stderr, "%s: read word at %08x -> %08x\n", a->adapter.name, addr, word);
     return word;
 }
 
@@ -504,10 +584,151 @@ static void mpsse_read_data (adapter_t *adapter,
 {
     //mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
 
-    //fprintf (stderr, "%s: read %d bytes from %08x\n", a->name, nwords*4, addr);
+    //fprintf (stderr, "%s: read %d bytes from %08x\n", a->adapter.name, nwords*4, addr);
     for (; nwords > 0; nwords--) {
         *data++ = mpsse_read_word (adapter, addr);
         addr += 4;
+    }
+}
+#endif
+
+static void pracc_exec_read (mpsse_adapter_t *a, unsigned address)
+{
+    int offset;
+    unsigned data;
+
+    if ((address >= MIPS32_PRACC_PARAM_IN) &&
+        (address <= MIPS32_PRACC_PARAM_IN + a->num_iparam * 4))
+    {
+        offset = (address - MIPS32_PRACC_PARAM_IN) / 4;
+        data = a->local_iparam [offset];
+
+    } else if ((address >= MIPS32_PRACC_PARAM_OUT) &&
+               (address <= MIPS32_PRACC_PARAM_OUT + a->num_oparam * 4))
+    {
+        offset = (address - MIPS32_PRACC_PARAM_OUT) / 4;
+        data = a->local_oparam [offset];
+
+    } else if ((address >= MIPS32_PRACC_TEXT) &&
+               (address <= MIPS32_PRACC_TEXT + a->code_len * 4))
+    {
+        offset = (address - MIPS32_PRACC_TEXT) / 4;
+        data = a->code [offset];
+
+    } else if (address == MIPS32_PRACC_STACK)
+    {
+        /* save to our debug stack */
+        offset = --a->stack_offset;
+        data = a->stack [offset];
+    } else
+    {
+        fprintf (stderr, "%s: error reading unexpected address %08x\n",
+            a->adapter.name, address);
+        exit (-1);
+    }
+
+    /* Send the data out */
+    mpsse_send (a, 1, 1, 5, ETAP_DATA, 0);
+    mpsse_send (a, 0, 0, 32, data, 0);
+
+    /* Clear the access pending bit (let the processor eat!) */
+    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+    mpsse_send (a, 0, 0, 32, 0, 0);
+    mpsse_flush_output (a);
+}
+
+static void pracc_exec_write (mpsse_adapter_t *a, unsigned address)
+{
+    unsigned data;
+    int offset;
+
+    /* Get data */
+    mpsse_send (a, 1, 1, 5, ETAP_DATA, 0);
+    mpsse_send (a, 0, 0, 32, 0, 1);
+    data = mpsse_recv (a);
+
+    /* Clear access pending bit */
+    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+    mpsse_send (a, 0, 0, 32, 0, 0);
+    mpsse_flush_output (a);
+
+    if ((address >= MIPS32_PRACC_PARAM_IN) &&
+        (address <= MIPS32_PRACC_PARAM_IN + a->num_iparam * 4))
+    {
+        offset = (address - MIPS32_PRACC_PARAM_IN) / 4;
+        a->local_iparam [offset] = data;
+
+    } else if ((address >= MIPS32_PRACC_PARAM_OUT) &&
+               (address <= MIPS32_PRACC_PARAM_OUT + a->num_oparam * 4))
+    {
+        offset = (address - MIPS32_PRACC_PARAM_OUT) / 4;
+        a->local_oparam [offset] = data;
+
+    } else if (address == MIPS32_PRACC_STACK)
+    {
+        /* save data onto our stack */
+        a->stack [a->stack_offset++] = data;
+    } else
+    {
+        fprintf (stderr, "%s: error writing unexpected address %08x\n",
+            a->adapter.name, address);
+        exit (-1);
+    }
+}
+
+static void mpsse_exec (adapter_t *adapter, int code_len,
+    const unsigned *code, int num_param_in, uint32_t *param_in,
+    int num_param_out, uint32_t *param_out, int cycle)
+{
+    mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
+    unsigned ctl, address;
+    int pass = 0;
+
+    a->local_iparam = param_in;
+    a->local_oparam = param_out;
+    a->num_iparam = num_param_in;
+    a->num_oparam = num_param_out;
+    a->code = code;
+    a->code_len = code_len;
+    a->stack_offset = 0;
+
+    for (;;) {
+        /* Select Control register. */
+        mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+
+	/* Wait for the PrAcc to become "1". */
+        do {
+            mpsse_send (a, 0, 0, 32, 0, 1);
+            ctl = mpsse_recv (a);
+        } while (! (ctl & CONTROL_PRACC));
+
+        /* Read Address register. */
+        mpsse_send (a, 1, 1, 5, ETAP_ADDRESS, 0);
+        mpsse_send (a, 0, 0, 32, 0, 1);
+        address = mpsse_recv (a);
+
+        /* Check for read or write */
+        if (ctl & CONTROL_PRNW) {
+            pracc_exec_write (a, address);
+        } else {
+            /* Check to see if its reading at the debug vector. The first pass through
+             * the module is always read at the vector, so the first one we allow.  When
+             * the second read from the vector occurs we are done and just exit. */
+            if ((address == MIPS32_PRACC_TEXT) && (pass++)) {
+                break;
+            }
+            pracc_exec_read (a, address);
+        }
+
+        if (cycle == 0)
+            break;
+    }
+
+    /* Stack sanity check */
+    if (a->stack_offset != 0) {
+        fprintf (stderr, "%s: exec stack not zero = %d\n",
+            a->adapter.name, a->stack_offset);
+        exit (-1);
     }
 }
 
@@ -544,15 +765,15 @@ found:
         fprintf (stderr, "%s: out of memory\n", name);
         return 0;
     }
-    a->name = name;
+    a->adapter.name = name;
     a->usbdev = usb_open (dev);
     if (! a->usbdev) {
-        fprintf (stderr, "%s: usb_open() failed\n", a->name);
+        fprintf (stderr, "%s: usb_open() failed\n", a->adapter.name);
         free (a);
         return 0;
     }
     usb_claim_interface (a->usbdev, 0);
-    printf ("Adapter: %s, id %04x:%04x\n", a->name,
+    printf ("Adapter: %s, id %04x:%04x\n", a->adapter.name,
         dev->descriptor.idVendor, dev->descriptor.idProduct);
 
     /* Reset the ftdi device. */
@@ -560,9 +781,9 @@ found:
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
         SIO_RESET, 0, 1, 0, 0, 1000) != 0) {
         if (errno == EPERM)
-            fprintf (stderr, "%s: superuser privileges needed.\n", a->name);
+            fprintf (stderr, "%s: superuser privileges needed.\n", a->adapter.name);
         else
-            fprintf (stderr, "%s: FTDI reset failed\n", a->name);
+            fprintf (stderr, "%s: FTDI reset failed\n", a->adapter.name);
 failed: usb_release_interface (a->usbdev, 0);
         usb_close (a->usbdev);
         free (a);
@@ -573,7 +794,7 @@ failed: usb_release_interface (a->usbdev, 0);
     if (usb_control_msg (a->usbdev,
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
         SIO_SET_BITMODE, 0x20b, 1, 0, 0, 1000) != 0) {
-        fprintf (stderr, "%s: can't set sync mpsse mode\n", a->name);
+        fprintf (stderr, "%s: can't set sync mpsse mode\n", a->adapter.name);
         goto failed;
     }
 
@@ -585,18 +806,18 @@ failed: usb_release_interface (a->usbdev, 0);
     if (usb_control_msg (a->usbdev,
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
         SIO_SET_LATENCY_TIMER, latency_timer, 1, 0, 0, 1000) != 0) {
-        fprintf (stderr, "%s: unable to set latency timer\n", a->name);
+        fprintf (stderr, "%s: unable to set latency timer\n", a->adapter.name);
         goto failed;
     }
     if (usb_control_msg (a->usbdev,
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN,
         SIO_GET_LATENCY_TIMER, 0, 1, (char*) &latency_timer, 1, 1000) != 1) {
-        fprintf (stderr, "%s: unable to get latency timer\n", a->name);
+        fprintf (stderr, "%s: unable to get latency timer\n", a->adapter.name);
         goto failed;
     }
     if (debug_level) {
-    	fprintf (stderr, "%s: divisor: %u\n", a->name, divisor);
-    	fprintf (stderr, "%s: latency timer: %u usec\n", a->name, latency_timer);
+    	fprintf (stderr, "%s: divisor: %u\n", a->adapter.name, divisor);
+    	fprintf (stderr, "%s: latency timer: %u usec\n", a->adapter.name, latency_timer);
     }
 
     /* Light a LED. */
@@ -604,7 +825,7 @@ failed: usb_release_interface (a->usbdev, 0);
 
     if (debug_level) {
      int baud = 6000000 / (divisor + 1);
-        fprintf (stderr, "%s: speed %d samples/sec\n", a->name, baud);
+        fprintf (stderr, "%s: speed %d samples/sec\n", a->adapter.name, baud);
     }
     mpsse_speed (a, divisor);
 
@@ -616,18 +837,18 @@ failed: usb_release_interface (a->usbdev, 0);
     mpsse_send (a, 6, 31, 0, 0, 0);             /* TMS 1-1-1-1-1-0 */
 
     /* Check status. */
-    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);    /* Send command. */
-    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);   /* Send command. */
-    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);    /* Xfer data. */
+    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);
+    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);
+    mpsse_send (a, 0, 0, 8, MCHP_STATUS, 1);
     unsigned status = mpsse_recv (a);
     if (debug_level > 0)
-        fprintf (stderr, "%s: status %04x\n", a->name, status);
+        fprintf (stderr, "%s: status %04x\n", a->adapter.name, status);
     if (status & MCHP_STATUS_DEVRST)
-        fprintf (stderr, "%s: processor is in reset mode\n", a->name);
+        fprintf (stderr, "%s: processor is in reset mode\n", a->adapter.name);
     if ((status & ~MCHP_STATUS_DEVRST) !=
         (MCHP_STATUS_CPS | MCHP_STATUS_CFGRDY | MCHP_STATUS_FAEN))
     {
-        fprintf (stderr, "%s: invalid status = %04x\n", a->name, status);
+        fprintf (stderr, "%s: invalid status = %04x\n", a->adapter.name, status);
         free (a);
         return 0;
     }
@@ -635,7 +856,13 @@ failed: usb_release_interface (a->usbdev, 0);
     /* User functions. */
     a->adapter.close = mpsse_close;
     a->adapter.get_idcode = mpsse_get_idcode;
-    a->adapter.read_word = mpsse_read_word;
-    a->adapter.read_data = mpsse_read_data;
+    a->adapter.cpu_stopped = mpsse_cpu_stopped;
+    a->adapter.stop_cpu = mpsse_stop_cpu;
+    a->adapter.reset_cpu = mpsse_reset_cpu;
+    a->adapter.run_cpu = mpsse_run_cpu;
+    a->adapter.step_cpu = mpsse_step_cpu;
+    a->adapter.exec = mpsse_exec;
+    //a->adapter.read_word = mpsse_read_word;
+    //a->adapter.read_data = mpsse_read_data;
     return &a->adapter;
 }

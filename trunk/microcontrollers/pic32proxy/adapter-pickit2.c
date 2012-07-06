@@ -27,7 +27,6 @@ typedef struct {
     /* Common part */
     adapter_t adapter;
     int is_pk3;
-    const char *name;
 
     /* Device handle for libusb. */
     hid_device *hiddev;
@@ -90,7 +89,7 @@ static void pickit_send (pickit_adapter_t *a, unsigned argc, ...)
 static void pickit_recv (pickit_adapter_t *a)
 {
     if (hid_read (a->hiddev, a->reply, 64) != 64) {
-        fprintf (stderr, "%s: error receiving packet\n", a->name);
+        fprintf (stderr, "pickit: error receiving packet\n");
         exit (-1);
     }
     if (debug_level > 0) {
@@ -113,38 +112,71 @@ static void check_timeout (pickit_adapter_t *a, const char *message)
     pickit_recv (a);
     status = a->reply[0] | a->reply[1] << 8;
     if (status & STATUS_ICD_TIMEOUT) {
-        fprintf (stderr, "%s: timed out at %s, status = %04x\n",
-            a->name, message, status);
+        fprintf (stderr, "pickit: timed out at %s, status = %04x\n",
+            message, status);
         exit (-1);
     }
 }
 
 /*
- * Put device to serial execution mode.
+ * Hardware reset.
  */
-static void serial_execution (pickit_adapter_t *a)
+static void pickit_reset_cpu (adapter_t *adapter)
 {
-    if (a->serial_execution_mode)
-        return;
-    a->serial_execution_mode = 1;
+    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
 
-    // Enter serial execution.
-    if (debug_level > 0)
-        fprintf (stderr, "%s: enter serial execution\n", a->name);
-    pickit_send (a, 29, CMD_EXECUTE_SCRIPT, 27,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_STATUS,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_ASSERT_RST,
-        SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
-        SCRIPT_JT2_SETMODE, 6, 0x1F,
-        SCRIPT_JT2_SENDCMD, ETAP_EJTAGBOOT,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_FLASH_ENABLE);
+    /* Reset active low. */
+    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
+        SCRIPT_MCLR_GND_ON);
+
+    /* Disable reset. */
+    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
+        SCRIPT_MCLR_GND_OFF);
+}
+
+/*
+ * Is the processor stopped?
+ */
+static int pickit_cpu_stopped (adapter_t *adapter)
+{
+#if 0
+    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
+    unsigned ir;
+
+    pickit_send (a, 1, 1, 4, TAP_DEBUG_ENABLE, 1);
+    ir = pickit_recv (a);
+    return ir & 4;
+#else
+    return 0;
+#endif
+}
+
+/*
+ * Stop the processor.
+ */
+static void pickit_stop_cpu (adapter_t *adapter)
+{
+#if 0
+    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
+    unsigned old_ir, i;
+
+    /* Debug request. */
+    pickit_send (a, 1, 1, 4, TAP_DEBUG_REQUEST, 0);
+
+    /* Wait while processor enters debug mode. */
+    i = 0;
+    for (;;) {
+        pickit_send (a, 1, 1, 4, TAP_DEBUG_ENABLE, 1);
+        old_ir = pickit_recv (a);
+        if (old_ir == 5)
+            break;
+        mdelay (10);
+        if (++i >= 50) {
+            fprintf (stderr, "Timeout while entering debug mode\n");
+            exit (1);
+        }
+    }
+#endif
 }
 
 static void pickit_finish (pickit_adapter_t *a, int power_on)
@@ -179,7 +211,7 @@ static void pickit_finish (pickit_adapter_t *a, int power_on)
 static void pickit_close (adapter_t *adapter, int power_on)
 {
     pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    //fprintf (stderr, "%s: close\n", a->name);
+    //fprintf (stderr, "pickit: close\n");
 
     pickit_finish (a, power_on);
     free (a);
@@ -200,12 +232,41 @@ static unsigned pickit_get_idcode (adapter_t *adapter)
         SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0);
     pickit_send (a, 1, CMD_UPLOAD_DATA);
     pickit_recv (a);
-    //fprintf (stderr, "%s: read id, %d bytes: %02x %02x %02x %02x\n", a->name,
+    //fprintf (stderr, "pickit: read id, %d bytes: %02x %02x %02x %02x\n",
     //  a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
     if (a->reply[0] != 4)
         return 0;
     idcode = a->reply[1] | a->reply[2] << 8 | a->reply[3] << 16 | a->reply[4] << 24;
     return idcode;
+}
+
+#if 0
+/*
+ * Put device to serial execution mode.
+ */
+static void serial_execution (pickit_adapter_t *a)
+{
+    if (a->serial_execution_mode)
+        return;
+    a->serial_execution_mode = 1;
+
+    // Enter serial execution.
+    if (debug_level > 0)
+        fprintf (stderr, "pickit: enter serial execution\n");
+    pickit_send (a, 29, CMD_EXECUTE_SCRIPT, 27,
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_STATUS,
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_ASSERT_RST,
+        SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
+        SCRIPT_JT2_SETMODE, 6, 0x1F,
+        SCRIPT_JT2_SENDCMD, ETAP_EJTAGBOOT,
+        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_FLASH_ENABLE);
 }
 
 /*
@@ -246,8 +307,8 @@ static unsigned pickit_read_word (adapter_t *adapter, unsigned addr)
         CMD_UPLOAD_DATA);
     pickit_recv (a);
     if (a->reply[0] != 8) {
-        fprintf (stderr, "%s: read word %08x: bad reply length=%u\n",
-            a->name, addr, a->reply[0]);
+        fprintf (stderr, "pickit: read word %08x: bad reply length=%u\n",
+            addr, a->reply[0]);
         exit (-1);
     }
     unsigned value = a->reply[1] | (a->reply[2] << 8) |
@@ -268,12 +329,13 @@ static void pickit_read_data (adapter_t *adapter,
 {
     //pickit_adapter_t *a = (pickit_adapter_t*) adapter;
 
-    //fprintf (stderr, "%s: read %d bytes from %08x\n", a->name, nwords*4, addr);
+    //fprintf (stderr, "pickit: read %d bytes from %08x\n", nwords*4, addr);
     for (; nwords > 0; nwords--) {
         *data++ = pickit_read_word (adapter, addr);
         addr += 4;
     }
 }
+#endif
 
 /*
  * Initialize adapter PICkit2/PICkit3.
@@ -303,7 +365,7 @@ adapter_t *adapter_open_pickit (void)
     }
     a->hiddev = hiddev;
     a->is_pk3 = is_pk3;
-    a->name = is_pk3 ? "PICkit3" : "PICkit2";
+    a->adapter.name = is_pk3 ? "PICkit3" : "PICkit2";
 
     /* Read version of adapter. */
     unsigned vers_major, vers_minor, vers_rev;
@@ -330,7 +392,7 @@ adapter_t *adapter_open_pickit (void)
         vers_rev = a->reply[2];
     }
     printf ("Adapter: %s Version %d.%d.%d\n",
-        a->name, vers_major, vers_minor, vers_rev);
+        a->adapter.name, vers_major, vers_minor, vers_rev);
 
     /* Detach power from the board. */
     pickit_send (a, 4, CMD_EXECUTE_SCRIPT, 2,
@@ -361,7 +423,7 @@ adapter_t *adapter_open_pickit (void)
     pickit_recv (a);
     unsigned status = a->reply[0] | a->reply[1] << 8;
     if (debug_level > 0)
-        fprintf (stderr, "%s: status %04x\n", a->name, status);
+        fprintf (stderr, "pickit: status %04x\n", status);
 
     switch (status & ~(STATUS_RESET | STATUS_BUTTON_PRESSED)) {
     case STATUS_VPP_GND_ON:
@@ -380,9 +442,9 @@ adapter_t *adapter_open_pickit (void)
         pickit_recv (a);
         status = a->reply[0] | a->reply[1] << 8;
         if (debug_level > 0)
-            fprintf (stderr, "%s: status %04x\n", a->name, status);
+            fprintf (stderr, "pickit: status %04x\n", status);
         if (status != (STATUS_VDD_ON | STATUS_VPP_GND_ON)) {
-            fprintf (stderr, "%s: invalid status = %04x.\n", a->name, status);
+            fprintf (stderr, "pickit: invalid status = %04x.\n", status);
             return 0;
         }
         /* Wait for power to stabilize. */
@@ -390,7 +452,7 @@ adapter_t *adapter_open_pickit (void)
         break;
 
     default:
-        fprintf (stderr, "%s: invalid status = %04x\n", a->name, status);
+        fprintf (stderr, "pickit: invalid status = %04x\n", status);
         return 0;
     }
 
@@ -423,9 +485,9 @@ adapter_t *adapter_open_pickit (void)
     pickit_send (a, 1, CMD_UPLOAD_DATA);
     pickit_recv (a);
     if (debug_level > 1)
-        fprintf (stderr, "%s: got %02x-%02x\n", a->name, a->reply[0], a->reply[1]);
+        fprintf (stderr, "pickit: got %02x-%02x\n", a->reply[0], a->reply[1]);
     if (a->reply[0] != 1) {
-        fprintf (stderr, "%s: cannot get MCHP STATUS\n", a->name);
+        fprintf (stderr, "pickit: cannot get MCHP STATUS\n");
         pickit_finish (a, 0);
         return 0;
     }
@@ -443,7 +505,10 @@ adapter_t *adapter_open_pickit (void)
     /* User functions. */
     a->adapter.close = pickit_close;
     a->adapter.get_idcode = pickit_get_idcode;
-    a->adapter.read_word = pickit_read_word;
-    a->adapter.read_data = pickit_read_data;
+    a->adapter.cpu_stopped = pickit_cpu_stopped;
+    a->adapter.stop_cpu = pickit_stop_cpu;
+    a->adapter.reset_cpu = pickit_reset_cpu;
+    //a->adapter.read_word = pickit_read_word;
+    //a->adapter.read_data = pickit_read_data;
     return &a->adapter;
 }
