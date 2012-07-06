@@ -208,164 +208,77 @@ unsigned target_idcode (target_t *t)
 }
 
 /*
- * Translate virtual to physical address.
- */
-static unsigned virt_to_phys (unsigned addr)
-{
-    if (addr >= 0x80000000 && addr < 0xA0000000)
-        return addr - 0x80000000;
-    if (addr >= 0xA0000000 && addr < 0xC0000000)
-        return addr - 0xA0000000;
-    return addr;
-}
-
-/*
  * Save the state of CPU.
  */
 static void target_save_state (target_t *t)
 {
-    static const unsigned code[] = {                    /* start: */
-        MIPS32_MTC0 (2, 31, 0),                         /* move $2 to COP0 DeSave */
-        MIPS32_LUI (2, UPPER16(MIPS32_PRACC_PARAM_OUT)),/* $2 = MIPS32_PRACC_PARAM_OUT */
-        MIPS32_ORI (2, 2, LOWER16(MIPS32_PRACC_PARAM_OUT)),
-        MIPS32_SW (0, 0*4, 2),                          /* sw $0,0*4($2) */
-        MIPS32_SW (1, 1*4, 2),                          /* sw $1,1*4($2) */
-        MIPS32_SW (15, 15*4, 2),                        /* sw $15,15*4($2) */
-        MIPS32_MFC0 (2, 31, 0),                         /* move COP0 DeSave to $2 */
-        MIPS32_MTC0 (15, 31, 0),                        /* move $15 to COP0 DeSave */
-        MIPS32_LUI (15, UPPER16(MIPS32_PRACC_STACK)),   /* $15 = MIPS32_PRACC_STACK */
-        MIPS32_ORI (15, 15, LOWER16(MIPS32_PRACC_STACK)),
-        MIPS32_SW (1, 0, 15),                           /* sw $1,($15) */
-        MIPS32_SW (2, 0, 15),                           /* sw $2,($15) */
-        MIPS32_LUI (1, UPPER16(MIPS32_PRACC_PARAM_OUT)),/* $1 = MIPS32_PRACC_PARAM_OUT */
-        MIPS32_ORI (1, 1, LOWER16(MIPS32_PRACC_PARAM_OUT)),
-        MIPS32_SW (2, 2*4, 1),                          /* sw $2,2*4($1) */
-        MIPS32_SW (3, 3*4, 1),                          /* sw $3,3*4($1) */
-        MIPS32_SW (4, 4*4, 1),                          /* sw $4,4*4($1) */
-        MIPS32_SW (5, 5*4, 1),                          /* sw $5,5*4($1) */
-        MIPS32_SW (6, 6*4, 1),                          /* sw $6,6*4($1) */
-        MIPS32_SW (7, 7*4, 1),                          /* sw $7,7*4($1) */
-        MIPS32_SW (8, 8*4, 1),                          /* sw $8,8*4($1) */
-        MIPS32_SW (9, 9*4, 1),                          /* sw $9,9*4($1) */
-        MIPS32_SW (10, 10*4, 1),                        /* sw $10,10*4($1) */
-        MIPS32_SW (11, 11*4, 1),                        /* sw $11,11*4($1) */
-        MIPS32_SW (12, 12*4, 1),                        /* sw $12,12*4($1) */
-        MIPS32_SW (13, 13*4, 1),                        /* sw $13,13*4($1) */
-        MIPS32_SW (14, 14*4, 1),                        /* sw $14,14*4($1) */
-        MIPS32_SW (16, 16*4, 1),                        /* sw $16,16*4($1) */
-        MIPS32_SW (17, 17*4, 1),                        /* sw $17,17*4($1) */
-        MIPS32_SW (18, 18*4, 1),                        /* sw $18,18*4($1) */
-        MIPS32_SW (19, 19*4, 1),                        /* sw $19,19*4($1) */
-        MIPS32_SW (20, 20*4, 1),                        /* sw $20,20*4($1) */
-        MIPS32_SW (21, 21*4, 1),                        /* sw $21,21*4($1) */
-        MIPS32_SW (22, 22*4, 1),                        /* sw $22,22*4($1) */
-        MIPS32_SW (23, 23*4, 1),                        /* sw $23,23*4($1) */
-        MIPS32_SW (24, 24*4, 1),                        /* sw $24,24*4($1) */
-        MIPS32_SW (25, 25*4, 1),                        /* sw $25,25*4($1) */
-        MIPS32_SW (26, 26*4, 1),                        /* sw $26,26*4($1) */
-        MIPS32_SW (27, 27*4, 1),                        /* sw $27,27*4($1) */
-        MIPS32_SW (28, 28*4, 1),                        /* sw $28,28*4($1) */
-        MIPS32_SW (29, 29*4, 1),                        /* sw $29,29*4($1) */
-        MIPS32_SW (30, 30*4, 1),                        /* sw $30,30*4($1) */
-        MIPS32_SW (31, 31*4, 1),                        /* sw $31,31*4($1) */
+    static const unsigned code[] = {                /* start: */
+        MIPS32_MTC0 (2, 31, 0),                     /* move $2 to COP0 DeSave */
+        MIPS32_LUI (2, UPPER16(PRACC_PARAM_OUT)),   /* $2 = PRACC_PARAM_OUT */
+        MIPS32_ORI (2, 2, LOWER16(PRACC_PARAM_OUT)),
+        MIPS32_SW (0, 0*4, 2),                      /* sw $0,0*4($2) */
+        MIPS32_SW (1, 1*4, 2),                      /* sw $1,1*4($2) */
+        MIPS32_SW (15, 15*4, 2),                    /* sw $15,15*4($2) */
+        MIPS32_MFC0 (2, 31, 0),                     /* move COP0 DeSave to $2 */
+        MIPS32_MTC0 (15, 31, 0),                    /* move $15 to COP0 DeSave */
+        MIPS32_LUI (15, UPPER16(PRACC_STACK)),      /* $15 = PRACC_STACK */
+        MIPS32_ORI (15, 15, LOWER16(PRACC_STACK)),
+        MIPS32_SW (1, 0, 15),                       /* sw $1,($15) */
+        MIPS32_SW (2, 0, 15),                       /* sw $2,($15) */
+        MIPS32_LUI (1, UPPER16(PRACC_PARAM_OUT)),   /* $1 = PRACC_PARAM_OUT */
+        MIPS32_ORI (1, 1, LOWER16(PRACC_PARAM_OUT)),
+        MIPS32_SW (2, 2*4, 1),                      /* sw $2,2*4($1) */
+        MIPS32_SW (3, 3*4, 1),                      /* sw $3,3*4($1) */
+        MIPS32_SW (4, 4*4, 1),                      /* sw $4,4*4($1) */
+        MIPS32_SW (5, 5*4, 1),                      /* sw $5,5*4($1) */
+        MIPS32_SW (6, 6*4, 1),                      /* sw $6,6*4($1) */
+        MIPS32_SW (7, 7*4, 1),                      /* sw $7,7*4($1) */
+        MIPS32_SW (8, 8*4, 1),                      /* sw $8,8*4($1) */
+        MIPS32_SW (9, 9*4, 1),                      /* sw $9,9*4($1) */
+        MIPS32_SW (10, 10*4, 1),                    /* sw $10,10*4($1) */
+        MIPS32_SW (11, 11*4, 1),                    /* sw $11,11*4($1) */
+        MIPS32_SW (12, 12*4, 1),                    /* sw $12,12*4($1) */
+        MIPS32_SW (13, 13*4, 1),                    /* sw $13,13*4($1) */
+        MIPS32_SW (14, 14*4, 1),                    /* sw $14,14*4($1) */
+        MIPS32_SW (16, 16*4, 1),                    /* sw $16,16*4($1) */
+        MIPS32_SW (17, 17*4, 1),                    /* sw $17,17*4($1) */
+        MIPS32_SW (18, 18*4, 1),                    /* sw $18,18*4($1) */
+        MIPS32_SW (19, 19*4, 1),                    /* sw $19,19*4($1) */
+        MIPS32_SW (20, 20*4, 1),                    /* sw $20,20*4($1) */
+        MIPS32_SW (21, 21*4, 1),                    /* sw $21,21*4($1) */
+        MIPS32_SW (22, 22*4, 1),                    /* sw $22,22*4($1) */
+        MIPS32_SW (23, 23*4, 1),                    /* sw $23,23*4($1) */
+        MIPS32_SW (24, 24*4, 1),                    /* sw $24,24*4($1) */
+        MIPS32_SW (25, 25*4, 1),                    /* sw $25,25*4($1) */
+        MIPS32_SW (26, 26*4, 1),                    /* sw $26,26*4($1) */
+        MIPS32_SW (27, 27*4, 1),                    /* sw $27,27*4($1) */
+        MIPS32_SW (28, 28*4, 1),                    /* sw $28,28*4($1) */
+        MIPS32_SW (29, 29*4, 1),                    /* sw $29,29*4($1) */
+        MIPS32_SW (30, 30*4, 1),                    /* sw $30,30*4($1) */
+        MIPS32_SW (31, 31*4, 1),                    /* sw $31,31*4($1) */
 
-        MIPS32_MFC0 (2, 12, 0),                         /* move status to $2 */
-        MIPS32_SW (2, 32*4, 1),                         /* sw $2,32*4($1) */
-        MIPS32_MFLO (2),                                /* move lo to $2 */
-        MIPS32_SW (2, 33*4, 1),                         /* sw $2,33*4($1) */
-        MIPS32_MFHI (2),                                /* move hi to $2 */
-        MIPS32_SW (2, 34*4, 1),                         /* sw $2,34*4($1) */
-        MIPS32_MFC0 (2, 8, 0),                          /* move badvaddr to $2 */
-        MIPS32_SW (2, 35*4, 1),                         /* sw $2,35*4($1) */
-        MIPS32_MFC0 (2, 13, 0),                         /* move cause to $2 */
-        MIPS32_SW (2, 36*4, 1),                         /* sw $2,36*4($1) */
-        MIPS32_MFC0 (2, 24, 0),                         /* move depc (pc) to $2 */
-        MIPS32_SW (2, 37*4, 1),                         /* sw $2,37*4($1) */
+        MIPS32_MFC0 (2, 12, 0),                     /* move status to $2 */
+        MIPS32_SW (2, 32*4, 1),                     /* sw $2,32*4($1) */
+        MIPS32_MFLO (2),                            /* move lo to $2 */
+        MIPS32_SW (2, 33*4, 1),                     /* sw $2,33*4($1) */
+        MIPS32_MFHI (2),                            /* move hi to $2 */
+        MIPS32_SW (2, 34*4, 1),                     /* sw $2,34*4($1) */
+        MIPS32_MFC0 (2, 8, 0),                      /* move badvaddr to $2 */
+        MIPS32_SW (2, 35*4, 1),                     /* sw $2,35*4($1) */
+        MIPS32_MFC0 (2, 13, 0),                     /* move cause to $2 */
+        MIPS32_SW (2, 36*4, 1),                     /* sw $2,36*4($1) */
+        MIPS32_MFC0 (2, 24, 0),                     /* move depc (pc) to $2 */
+        MIPS32_SW (2, 37*4, 1),                     /* sw $2,37*4($1) */
 
-        MIPS32_LW (2, 0, 15),                           /* lw $2,($15) */
-        MIPS32_LW (1, 0, 15),                           /* lw $1,($15) */
-        MIPS32_B (NEG16(58)),                           /* b start */
-        MIPS32_MFC0 (15, 31, 0),                        /* move COP0 DeSave to $15 */
+        MIPS32_LW (2, 0, 15),                       /* lw $2,($15) */
+        MIPS32_LW (1, 0, 15),                       /* lw $1,($15) */
+        MIPS32_B (NEG16(58)),                       /* b start */
+        MIPS32_MFC0 (15, 31, 0),                    /* move COP0 DeSave to $15 */
     };
 
 fprintf (stderr, "save_state()\n");
-    t->adapter->exec (t->adapter, ARRAY_SIZE(code), code,
-        0, 0, ARRAY_SIZE(t->reg), t->reg, 1);
-}
-
-/*
- * Restore the state of CPU.
- */
-static void target_restore_state (target_t *t)
-{
-    /* Nothing to do. */
-}
-
-void target_stop (target_t *t)
-{
-fprintf (stderr, "target_stop()\n");
-    if (! t->is_running)
-        return;
-    t->adapter->stop_cpu (t->adapter);
-    t->is_running = 0;
-    target_save_state (t);
-}
-
-void target_step (target_t *t)
-{
-    // TODO
-    fprintf (stderr, "TODO: target_step()\n");
-}
-
-void target_resume (target_t *t)
-{
-    static const unsigned code[] = {
-        MIPS32_DRET,                            /* return from debug mode */
-    };
-
-fprintf (stderr, "target_resume()\n");
-    if (t->is_running)
-        return;
-    target_restore_state (t);
-    t->is_running = 1;
-    t->adapter->exec (t->adapter, ARRAY_SIZE(code), code,
-        0, 0, 0, 0, 0);
-}
-
-void target_run (target_t *t, unsigned addr)
-{
-    // TODO
-    fprintf (stderr, "TODO: target_run (addr = %08x)\n", addr);
-}
-
-void target_restart (target_t *t)
-{
-    // TODO
-    fprintf (stderr, "TODO: target_restart()\n");
-}
-
-int target_is_stopped (target_t *t, int *is_aborted)
-{
-fprintf (stderr, "target_is_stopped()\n");
-    *is_aborted = 0;
-
-    /* Tiny delay. */
-    mdelay (100);
-    if (! t->adapter->cpu_stopped (t->adapter))
-        return 0;
-
-    /* Stopped. */
-    if (t->is_running) {
-        //t->adapter->stop_cpu (t->adapter);
-        t->is_running = 0;
-        target_save_state (t);
-    }
-#if 0
-    /* BREAKD instruction detected. */
-    if (t->adapter->oscr & OSCR_SWO)
-        *is_aborted = 1;
-#endif
-    return 1;
+    t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code,
+        0, 0, ARRAY_SIZE(t->reg), t->reg);
 }
 
 /*
@@ -403,6 +316,246 @@ unsigned target_read_register (target_t *t, unsigned regno)
     return 0;
 }
 
+/*
+ * The processor is running: stop it.
+ */
+void target_stop (target_t *t)
+{
+fprintf (stderr, "target_stop()\n");
+    if (! t->is_running)
+        return;
+    t->adapter->stop_cpu (t->adapter);
+    t->is_running = 0;
+    target_save_state (t);
+}
+
+/*
+ * The processor is supposedly running: check if it has been stopped.
+ * Return 1 when stopped or 0 if still running.
+ */
+int target_is_stopped (target_t *t, int *is_aborted)
+{
+fprintf (stderr, "target_is_stopped()\n");
+    *is_aborted = 0;
+
+    /* Tiny delay. */
+    mdelay (100);
+    if (! t->adapter->cpu_stopped (t->adapter))
+        return 0;
+
+    /* Stopped. */
+    if (t->is_running) {
+        t->is_running = 0;
+        target_save_state (t);
+    }
+#if 0
+    /* BREAKD instruction detected. */
+    if (t->adapter->oscr & OSCR_SWO)
+        *is_aborted = 1;
+#endif
+    return 1;
+}
+
+/*
+ * The processor is stopped: let it run.
+ */
+void target_resume (target_t *t)
+{
+    static const unsigned code[] = {
+        MIPS32_DRET,                            /* return from debug mode */
+    };
+
+fprintf (stderr, "target_resume()\n");
+    if (t->is_running)
+        return;
+    t->is_running = 1;
+    t->adapter->exec (t->adapter, 0, ARRAY_SIZE(code), code, 0, 0, 0, 0);
+}
+
+/*
+ * The processor is stopped: start it from the given address.
+ */
+void target_run (target_t *t, unsigned addr)
+{
+    static const unsigned code[] = {
+	MIPS32_MTC0 (15, 31, 0),                    /* move $15 to COP0 DeSave */
+	MIPS32_LUI (15, UPPER16(PRACC_PARAM_IN)),   /* $15 = PRACC_PARAM_IN */
+	MIPS32_LW (15, LOWER16(PRACC_PARAM_IN), 15),/* $15 = addr */
+	MIPS32_MTC0 (15, 24, 0),                    /* move $15 to COP0 DEPC */
+	MIPS32_MFC0 (15, 31, 0),                    /* move COP0 DeSave to $15 */
+        MIPS32_DRET,                                /* return from debug mode */
+    };
+
+fprintf (stderr, "target_run (addr = %08x)\n", addr);
+    if (t->is_running)
+        return;
+
+    t->is_running = 1;
+    t->adapter->exec (t->adapter, 0, ARRAY_SIZE(code), code, 1, &addr, 0, 0);
+}
+
+/*
+ * Restart the processor, using hardware reset.
+ */
+void target_restart (target_t *t)
+{
+fprintf (stderr, "target_restart()\n");
+    t->adapter->reset_cpu (t->adapter);
+    t->is_running = 1;
+}
+
+/*
+ * The processor is stopped: run it for one instruction only.
+ */
+void target_step (target_t *t)
+{
+    static const unsigned code_step[] = {
+        MIPS32_MTC0 (1, 31, 0),			/* move $1 to COP0 DeSave */
+        MIPS32_MFC0 (1, 23, 0),			/* move COP0 Debug to $1 */
+        MIPS32_ORI (1, 1, 0x0100),		/* set SSt bit in debug reg */
+        MIPS32_MTC0 (1, 23, 0),			/* move $1 to COP0 Debug */
+        MIPS32_MFC0 (1, 31, 0),			/* move COP0 DeSave to $1 */
+        MIPS32_DRET,                            /* return from debug mode */
+    };
+    static const unsigned code_step_disable[] = {
+        MIPS32_MTC0 (15, 31, 0),		/* move $15 to COP0 DeSave */
+        MIPS32_LUI (15, UPPER16(PRACC_STACK)),  /* $15 = PRACC_STACK */
+        MIPS32_ORI (15, 15, LOWER16(PRACC_STACK)),
+        MIPS32_SW (1, 0, 15),			/* sw $1,($15) */
+        MIPS32_SW (2, 0, 15),			/* sw $2,($15) */
+        MIPS32_MFC0 (1, 23, 0),			/* move COP0 Debug to $1 */
+        MIPS32_LUI (2, 0xFFFF),			/* $2 = 0xfffffeff */
+        MIPS32_ORI (2, 2, 0xFEFF),
+        MIPS32_AND (1, 1, 2),
+        MIPS32_MTC0 (1, 23, 0),			/* move $1 to COP0 Debug */
+        MIPS32_LW (2, 0, 15),
+        MIPS32_LW (1, 0, 15),
+        MIPS32_B (NEG16(13)),
+        MIPS32_MFC0 (15, 31, 0),		/* move COP0 DeSave to $15 */
+    };
+
+fprintf (stderr, "target_step()\n");
+    if (t->is_running)
+        return;
+
+    t->adapter->exec (t->adapter, 1,
+        ARRAY_SIZE(code_step), code_step, 0, 0, 0, 0);
+    target_save_state (t);
+
+    t->adapter->exec (t->adapter, 1,
+        ARRAY_SIZE(code_step_disable), code_step_disable, 0, 0, 0, 0);
+}
+
+/*
+ * Read data from memory.
+ */
+unsigned target_read_word (target_t *t, unsigned addr)
+{
+    static const unsigned code[] = {            /* start: */
+        MIPS32_MTC0 (15, 31, 0),		/* move $15 to COP0 DeSave */
+        MIPS32_LUI (15, UPPER16(PRACC_STACK)),	/* $15 = PRACC_STACK */
+        MIPS32_ORI (15, 15, LOWER16(PRACC_STACK)),
+        MIPS32_SW (8, 0, 15),			/* sw $8,($15) */
+
+        MIPS32_LW (8, NEG16(PRACC_STACK - PRACC_PARAM_IN), 15), /* load R8 @ param_in[0] = address */
+
+        MIPS32_LW (8, 0, 8),			/* lw $8,0($8), Load $8 with the word @mem[$8] */
+        MIPS32_SW (8, NEG16(PRACC_STACK - PRACC_PARAM_OUT), 15), /* store R8 @ param_out[0] */
+
+        MIPS32_LW (8, 0, 15),			/* lw $8,($15) */
+        MIPS32_B (NEG16(9)),			/* b start */
+        MIPS32_MFC0 (15, 31, 0),		/* move COP0 DeSave to $15 */
+    };
+    unsigned word;
+
+fprintf (stderr, "target_read_word (addr = %08x) -> %08x\n", addr, word);
+    t->adapter->exec (t->adapter, 1,
+        ARRAY_SIZE(code), code, 1, &addr, 1, &word);
+    return word;
+}
+
+void target_read_block (target_t *t, unsigned addr,
+    unsigned nwords, unsigned *data)
+{
+    if (nwords == 1) {
+        *data = target_read_word (t, addr);
+        return;
+    }
+fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
+
+    static const unsigned code[] = {            /* start: */
+        MIPS32_MTC0 (15, 31, 0),		/* move $15 to COP0 DeSave */
+        MIPS32_LUI (15, UPPER16(PRACC_STACK)),	/* $15 = PRACC_STACK */
+        MIPS32_ORI (15, 15, LOWER16(PRACC_STACK)),
+        MIPS32_SW (8, 0, 15),			/* sw $8,($15) */
+        MIPS32_SW (9, 0, 15),			/* sw $9,($15) */
+        MIPS32_SW (10, 0, 15),			/* sw $10,($15) */
+        MIPS32_SW (11, 0, 15),			/* sw $11,($15) */
+
+        MIPS32_LUI (8, UPPER16(PRACC_PARAM_IN)),/* $8 = PRACC_PARAM_IN */
+        MIPS32_ORI (8, 8, LOWER16(PRACC_PARAM_IN)),
+        MIPS32_LW (9, 0, 8),			/* $9 = mem[$8]; read addr */
+        MIPS32_LW (10, 4, 8),			/* $10 = mem[$8 + 4]; read nwords */
+        MIPS32_LUI (11, UPPER16(PRACC_PARAM_OUT)),/* $11 = PRACC_PARAM_OUT */
+        MIPS32_ORI (11, 11, LOWER16(PRACC_PARAM_OUT)),
+                                                /* loop: */
+        MIPS32_BEQ (0, 10, 8),			/* beq 0, $10, end */
+        MIPS32_NOP,
+
+        MIPS32_LW (8, 0, 9),			/* lw $8,0($9), Load $8 with the word @mem[$9] */
+        MIPS32_SW (8, 0, 11),			/* sw $8,0($11) */
+
+        MIPS32_ADDI (10, 10, NEG16(1)),		/* $10-- */
+        MIPS32_ADDI (9, 9, 4),			/* $1 += 4 */
+        MIPS32_ADDI (11, 11, 4),		/* $11 += 4 */
+
+        MIPS32_B (NEG16(8)),			/* b loop */
+        MIPS32_NOP,
+                                                /* end: */
+        MIPS32_LW (11, 0, 15),			/* lw $11,($15) */
+        MIPS32_LW (10, 0, 15),			/* lw $10,($15) */
+        MIPS32_LW (9, 0, 15),			/* lw $9,($15) */
+        MIPS32_LW (8, 0, 15),			/* lw $8,($15) */
+        MIPS32_B (NEG16(27)),			/* b start */
+        MIPS32_MFC0 (15, 31, 0),		/* move COP0 DeSave to $15 */
+    };
+    int n, nread;
+    unsigned param_in[2];
+
+    nread = 0;
+    while (nwords > 0) {
+        n = nwords;
+        if (nwords > 0x400)
+            n = 0x400;
+
+        param_in[0] = addr;
+        param_in[1] = n;
+
+        t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code,
+            ARRAY_SIZE(param_in), param_in, n, &data[nread]);
+
+        nwords -= n;
+        addr += n;
+        nread += n;
+    }
+}
+
+/*
+ * Write data to memory.
+ */
+void target_write_word (target_t *t, unsigned addr, unsigned word)
+{
+    // TODO
+    fprintf (stderr, "TODO: target_write_word (addr = %08x, word = %08x)\n", addr, word);
+}
+
+void target_write_block (target_t *t, unsigned addr,
+    unsigned nwords, unsigned *data)
+{
+    // TODO
+    fprintf (stderr, "TODO: target_write_block (addr = %08x, nwords = %u)\n", addr, nwords);
+}
+
 void target_write_register (target_t *t, unsigned regno, unsigned val)
 {
     // TODO
@@ -419,55 +572,4 @@ void target_remove_break (target_t *t, unsigned addr)
 {
     // TODO
     fprintf (stderr, "TODO: target_remove_break (addr = %08x)\n", addr);
-}
-
-/*
- * Read data from memory.
- */
-void target_read_block (target_t *t, unsigned addr,
-    unsigned nwords, unsigned *data)
-{
-#if 0
-    if (! t->adapter->read_data) {
-        printf ("\nData reading not supported by the adapter.\n");
-        exit (1);
-    }
-#endif
-    addr = virt_to_phys (addr);
-fprintf (stderr, "TODO: target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
-#if 0
-    while (nwords > 0) {
-        unsigned n = nwords;
-        if (n > 256)
-            n = 256;
-        t->adapter->read_data (t->adapter, addr, 256, data);
-        addr += n<<2;
-        data += n;
-        nwords -= n;
-    }
-    //fprintf (stderr, "    done (addr = %x)\n", addr);
-#endif
-}
-
-unsigned target_read_word (target_t *t, unsigned addr)
-{
-    unsigned word;
-
-    //word = t->adapter->read_word (t->adapter, addr);
-    word = ~0;
-fprintf (stderr, "TODO: target_read_word (addr = %08x) -> %08x\n", addr, word);
-    return word;
-}
-
-void target_write_word (target_t *t, unsigned addr, unsigned word)
-{
-    // TODO
-    fprintf (stderr, "TODO: target_write_word (addr = %08x, word = %08x)\n", addr, word);
-}
-
-void target_write_block (target_t *t, unsigned addr,
-    unsigned nwords, unsigned *data)
-{
-    // TODO
-    fprintf (stderr, "TODO: target_write_block (addr = %08x, nwords = %u)\n", addr, nwords);
 }

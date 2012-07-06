@@ -19,10 +19,10 @@ struct _adapter_t {
     int (*cpu_stopped) (adapter_t *a);
     void (*reset_cpu) (adapter_t *a);
     void (*stop_cpu) (adapter_t *a);
-    void (*step_cpu) (adapter_t *a);
-    void (*exec) (adapter_t *a, int code_len, const unsigned *code,
+    void (*exec) (adapter_t *a, int cycle,
+                  int num_code_words, const unsigned *code,
                   int num_param_in, unsigned *param_in,
-                  int num_param_out, unsigned *param_out, int cycle);
+                  int num_param_out, unsigned *param_out);
 
     //void (*read_data) (adapter_t *a, unsigned addr, unsigned nwords, unsigned *data);
     //unsigned (*read_word) (adapter_t *a, unsigned addr);
