@@ -460,15 +460,6 @@ static void mpsse_stop_cpu (adapter_t *adapter)
     }
 }
 
-/*
- * Execute a single instruction.
- */
-static void mpsse_step_cpu (adapter_t *adapter)
-{
-    // TODO
-    //usb_adapter_t *a = (usb_adapter_t*) adapter;
-}
-
 static void pracc_exec_read (mpsse_adapter_t *a, unsigned address)
 {
     int offset;
@@ -555,9 +546,10 @@ static void pracc_exec_write (mpsse_adapter_t *a, unsigned address)
     //fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
 }
 
-static void mpsse_exec (adapter_t *adapter, int code_len,
-    const unsigned *code, int num_param_in, uint32_t *param_in,
-    int num_param_out, uint32_t *param_out, int cycle)
+static void mpsse_exec (adapter_t *adapter, int cycle,
+    int code_len, const unsigned *code,
+    int num_param_in, uint32_t *param_in,
+    int num_param_out, uint32_t *param_out)
 {
     mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
     unsigned ctl, address;
@@ -746,7 +738,6 @@ failed: usb_release_interface (a->usbdev, 0);
     a->adapter.cpu_stopped = mpsse_cpu_stopped;
     a->adapter.stop_cpu = mpsse_stop_cpu;
     a->adapter.reset_cpu = mpsse_reset_cpu;
-    a->adapter.step_cpu = mpsse_step_cpu;
     a->adapter.exec = mpsse_exec;
     //a->adapter.read_word = mpsse_read_word;
     //a->adapter.read_data = mpsse_read_data;
