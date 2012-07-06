@@ -1,5 +1,6 @@
 /*
  * Interface to PIC32 microcontroller via JTAG or ICSP port.
+ * Codelets borrowed from OpenOCD project.
  *
  * Copyright (C) 2012 Serge Vakulenko
  *
@@ -223,8 +224,7 @@ static unsigned virt_to_phys (unsigned addr)
  */
 static void target_save_state (target_t *t)
 {
-    static const unsigned code[] = {
-                                                        /* start: */
+    static const unsigned code[] = {                    /* start: */
         MIPS32_MTC0 (2, 31, 0),                         /* move $2 to COP0 DeSave */
         MIPS32_LUI (2, UPPER16(MIPS32_PRACC_PARAM_OUT)),/* $2 = MIPS32_PRACC_PARAM_OUT */
         MIPS32_ORI (2, 2, LOWER16(MIPS32_PRACC_PARAM_OUT)),
@@ -290,7 +290,7 @@ static void target_save_state (target_t *t)
 
 fprintf (stderr, "save_state()\n");
     t->adapter->exec (t->adapter, ARRAY_SIZE(code), code,
-        0, NULL, ARRAY_SIZE(t->reg), t->reg, 1);
+        0, 0, ARRAY_SIZE(t->reg), t->reg, 1);
 }
 
 /*
@@ -319,12 +319,17 @@ void target_step (target_t *t)
 
 void target_resume (target_t *t)
 {
-fprintf (stderr, "TODO: target_resume()\n");
+    static const unsigned code[] = {
+        MIPS32_DRET,                            /* return from debug mode */
+    };
+
+fprintf (stderr, "target_resume()\n");
     if (t->is_running)
         return;
     target_restore_state (t);
     t->is_running = 1;
-    t->adapter->run_cpu (t->adapter);
+    t->adapter->exec (t->adapter, ARRAY_SIZE(code), code,
+        0, 0, 0, 0, 0);
 }
 
 void target_run (target_t *t, unsigned addr)
@@ -378,7 +383,7 @@ fprintf (stderr, "target_is_stopped()\n");
  */
 unsigned target_read_register (target_t *t, unsigned regno)
 {
-fprintf (stderr, "target_read_register (regno = %u)\n", regno);
+    //fprintf (stderr, "target_read_register (regno = %u)\n", regno);
     switch (regno) {
     case 0 ... 31:              /* general purpose registers */
         return t->reg [regno];
