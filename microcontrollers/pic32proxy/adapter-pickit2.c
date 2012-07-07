@@ -1,5 +1,6 @@
 /*
- * Interface to PIC32 ICSP port using Microchip PICkit2/PICkit3 USB adapter.
+ * Interface to PIC32 ICSP port via Microchip PICkit2 or
+ * PICkit3 USB adapter.
  *
  * To use PICkit3, you would need to upgrade the firmware
  * using free PICkit 3 Scripting Tool from Microchip.
@@ -21,6 +22,7 @@
 #include "adapter.h"
 #include "hidapi.h"
 #include "pickit2.h"
+#include "mips.h"
 #include "pic32.h"
 
 typedef struct {
@@ -32,8 +34,16 @@ typedef struct {
     hid_device *hiddev;
 
     unsigned char reply [64];
-    unsigned serial_execution_mode;
 
+    /* Execution context. */
+    unsigned *local_iparam;
+    int num_iparam;
+    unsigned *local_oparam;
+    int num_oparam;
+    const unsigned *code;
+    int code_len;
+    unsigned stack [32];
+    int stack_offset;
 } pickit_adapter_t;
 
 /*
@@ -139,6 +149,7 @@ static void pickit_reset_cpu (adapter_t *adapter)
  */
 static int pickit_cpu_stopped (adapter_t *adapter)
 {
+    // TODO
 #if 0
     pickit_adapter_t *a = (pickit_adapter_t*) adapter;
     unsigned ir;
@@ -156,6 +167,7 @@ static int pickit_cpu_stopped (adapter_t *adapter)
  */
 static void pickit_stop_cpu (adapter_t *adapter)
 {
+    // TODO
 #if 0
     pickit_adapter_t *a = (pickit_adapter_t*) adapter;
     unsigned old_ir, i;
@@ -320,22 +332,160 @@ static unsigned pickit_read_word (adapter_t *adapter, unsigned addr)
     value |= value2 & 0x80000000;
     return value;
 }
+#endif
 
-/*
- * Read a block of memory, multiple of 1 kbyte.
- */
-static void pickit_read_data (adapter_t *adapter,
-    unsigned addr, unsigned nwords, unsigned *data)
+static void pracc_exec_read (pickit_adapter_t *a, unsigned address)
 {
-    //pickit_adapter_t *a = (pickit_adapter_t*) adapter;
+    int offset;
+    unsigned data;
 
-    //fprintf (stderr, "pickit: read %d bytes from %08x\n", nwords*4, addr);
-    for (; nwords > 0; nwords--) {
-        *data++ = pickit_read_word (adapter, addr);
-        addr += 4;
+    if ((address >= PRACC_PARAM_IN) &&
+        (address <= PRACC_PARAM_IN + a->num_iparam * 4))
+    {
+        offset = (address - PRACC_PARAM_IN) / 4;
+        data = a->local_iparam [offset];
+
+    } else if ((address >= PRACC_PARAM_OUT) &&
+               (address <= PRACC_PARAM_OUT + a->num_oparam * 4))
+    {
+        offset = (address - PRACC_PARAM_OUT) / 4;
+        data = a->local_oparam [offset];
+
+    } else if ((address >= PRACC_TEXT) &&
+               (address <= PRACC_TEXT + a->code_len * 4))
+    {
+        offset = (address - PRACC_TEXT) / 4;
+        data = a->code [offset];
+
+    } else if (address == PRACC_STACK)
+    {
+        /* save to our debug stack */
+        offset = --a->stack_offset;
+        data = a->stack [offset];
+    } else
+    {
+        fprintf (stderr, "%s: error reading unexpected address %08x\n",
+            a->adapter.name, address);
+        exit (-1);
+    }
+    //fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
+
+    /* Send the data out */
+    // TODO
+    //pickit_send (a, 1, 1, 5, ETAP_DATA, 0);
+    //pickit_send (a, 0, 0, 32, data, 0);
+
+    /* Clear the access pending bit (let the processor eat!) */
+    //pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+    //pickit_send (a, 0, 0, 32, a->control & ~CONTROL_PRACC, 0);
+    //pickit_flush_output (a);
+}
+
+static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
+{
+    unsigned data;
+    int offset;
+
+    /* Get data */
+    // TODO
+    data = 0;
+    //pickit_send (a, 1, 1, 5, ETAP_DATA, 0);
+    //pickit_send (a, 0, 0, 32, 0, 1);
+    //data = pickit_recv (a);
+
+    /* Clear access pending bit */
+    //pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+    //pickit_send (a, 0, 0, 32, a->control & ~CONTROL_PRACC, 0);
+    //pickit_flush_output (a);
+
+    if ((address >= PRACC_PARAM_IN) &&
+        (address <= PRACC_PARAM_IN + a->num_iparam * 4))
+    {
+        offset = (address - PRACC_PARAM_IN) / 4;
+        a->local_iparam [offset] = data;
+
+    } else if ((address >= PRACC_PARAM_OUT) &&
+               (address <= PRACC_PARAM_OUT + a->num_oparam * 4))
+    {
+        offset = (address - PRACC_PARAM_OUT) / 4;
+        a->local_oparam [offset] = data;
+
+    } else if (address == PRACC_STACK)
+    {
+        /* save data onto our stack */
+        a->stack [a->stack_offset++] = data;
+    } else
+    {
+        fprintf (stderr, "%s: error writing unexpected address %08x\n",
+            a->adapter.name, address);
+        exit (-1);
+    }
+    //fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
+}
+
+static void pickit_exec (adapter_t *adapter, int cycle,
+    int code_len, const unsigned *code,
+    int num_param_in, unsigned *param_in,
+    int num_param_out, unsigned *param_out)
+{
+    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
+    unsigned ctl, address;
+    int pass = 0;
+
+    a->local_iparam = param_in;
+    a->local_oparam = param_out;
+    a->num_iparam = num_param_in;
+    a->num_oparam = num_param_out;
+    a->code = code;
+    a->code_len = code_len;
+    a->stack_offset = 0;
+
+    for (;;) {
+        /* Select Control register. */
+        // TODO
+        //pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+
+	/* Wait for the PrAcc to become "1". */
+        do {
+            // TODO
+            ctl = 0;
+            //pickit_send (a, 0, 0, 32, a->control, 1);
+            //ctl = pickit_recv (a);
+            //fprintf (stderr, "exec: ctl = %08x\n", ctl);
+        } while (! (ctl & CONTROL_PRACC));
+
+        /* Read Address register. */
+        // TODO
+        address = 0;
+        //pickit_send (a, 1, 1, 5, ETAP_ADDRESS, 0);
+        //pickit_send (a, 0, 0, 32, 0, 1);
+        //address = pickit_recv (a);
+        //fprintf (stderr, "exec: address = %08x\n", address);
+
+        /* Check for read or write */
+        if (ctl & CONTROL_PRNW) {
+            pracc_exec_write (a, address);
+        } else {
+            /* Check to see if its reading at the debug vector. The first pass through
+             * the module is always read at the vector, so the first one we allow.  When
+             * the second read from the vector occurs we are done and just exit. */
+            if ((address == PRACC_TEXT) && (pass++)) {
+                break;
+            }
+            pracc_exec_read (a, address);
+        }
+
+        if (cycle == 0)
+            break;
+    }
+
+    /* Stack sanity check */
+    if (a->stack_offset != 0) {
+        fprintf (stderr, "%s: exec stack not zero = %d\n",
+            a->adapter.name, a->stack_offset);
+        exit (-1);
     }
 }
-#endif
 
 /*
  * Initialize adapter PICkit2/PICkit3.
@@ -508,7 +658,6 @@ adapter_t *adapter_open_pickit (void)
     a->adapter.cpu_stopped = pickit_cpu_stopped;
     a->adapter.stop_cpu = pickit_stop_cpu;
     a->adapter.reset_cpu = pickit_reset_cpu;
-    //a->adapter.read_word = pickit_read_word;
-    //a->adapter.read_data = pickit_read_data;
+    a->adapter.exec = pickit_exec;
     return &a->adapter;
 }

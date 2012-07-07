@@ -1,5 +1,6 @@
 /*
- * Interface to PIC32 microcontroller via JTAG or ICSP port.
+ * Interface to debug port of PIC32 microcontroller.
+ * This file is independent of any JTAG or ICSP adapter used.
  * Codelets borrowed from OpenOCD project.
  *
  * Copyright (C) 2012 Serge Vakulenko
@@ -32,7 +33,7 @@ struct _target_t {
     unsigned    boot_kbytes;
 
     unsigned    reg [38];
-#define REG_STATUS      32
+#define REG_STATUS      32      /* Should match GDB. */
 #define REG_LO          33
 #define REG_HI          34
 #define REG_BADVADDR    35
@@ -285,7 +286,6 @@ static void target_save_state (target_t *t)
         MIPS_MFC0 (15, 31, 0),                      /* move COP0 DeSave to $15 */
     };
 
-fprintf (stderr, "save_state()\n");
     t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code,
         0, 0, ARRAY_SIZE(t->reg), t->reg);
 
@@ -329,9 +329,7 @@ fprintf (stderr, "save_state()\n");
  *      35    - CP0 BadVAddr
  *      36    - CP0 Cause
  *      37    - PC
- *      38-69 - FPRs
- *      70    - FCSR
- *      71    - FIR
+ * FPU registers not supported for PIC32.
  */
 unsigned target_read_register (target_t *t, unsigned regno)
 {
@@ -357,7 +355,6 @@ unsigned target_read_register (target_t *t, unsigned regno)
  */
 void target_stop (target_t *t)
 {
-fprintf (stderr, "target_stop()\n");
     if (! t->is_running)
         return;
     t->adapter->stop_cpu (t->adapter);
@@ -371,7 +368,6 @@ fprintf (stderr, "target_stop()\n");
  */
 int target_is_stopped (target_t *t, int *is_aborted)
 {
-fprintf (stderr, "target_is_stopped()\n");
     *is_aborted = 0;
 
     /* Tiny delay. */
@@ -401,7 +397,6 @@ void target_resume (target_t *t)
         MIPS_DRET,                            /* return from debug mode */
     };
 
-fprintf (stderr, "target_resume()\n");
     if (t->is_running)
         return;
     t->is_running = 1;
@@ -422,7 +417,6 @@ void target_run (target_t *t, unsigned addr)
         MIPS_DRET,                                  /* return from debug mode */
     };
 
-fprintf (stderr, "target_run (addr = %08x)\n", addr);
     if (t->is_running)
         return;
 
@@ -435,7 +429,6 @@ fprintf (stderr, "target_run (addr = %08x)\n", addr);
  */
 void target_restart (target_t *t)
 {
-fprintf (stderr, "target_restart()\n");
     t->adapter->reset_cpu (t->adapter);
     t->is_running = 1;
 }
@@ -470,7 +463,6 @@ void target_step (target_t *t)
         MIPS_MFC0 (15, 31, 0),                  /* move COP0 DeSave to $15 */
     };
 
-fprintf (stderr, "target_step()\n");
     if (t->is_running)
         return;
 
@@ -506,7 +498,6 @@ unsigned target_read_word (target_t *t, unsigned addr)
 
     t->adapter->exec (t->adapter, 1,
         ARRAY_SIZE(code), code, 1, &addr, 1, &word);
-fprintf (stderr, "target_read_word (addr = %08x) -> %08x\n", addr, word);
     return word;
 }
 
@@ -517,7 +508,6 @@ void target_read_block (target_t *t, unsigned addr,
         *data = target_read_word (t, addr);
         return;
     }
-fprintf (stderr, "target_read_block (addr = %x, nwords = %d)\n", addr, nwords);
 
     static const unsigned code[] = {            /* start: */
         MIPS_MTC0 (15, 31, 0),                  /* move $15 to COP0 DeSave */
@@ -598,7 +588,6 @@ void target_write_word (target_t *t, unsigned addr, unsigned word)
         MIPS_B (NEG16(11)),			/* b start */
         MIPS_MFC0 (15, 31, 0),                  /* move COP0 DeSave to $15 */
     };
-fprintf (stderr, "target_write_word (addr = %08x, word = %08x)\n", addr, word);
 
     unsigned param_in [2];
     param_in[0] = addr;
@@ -644,7 +633,6 @@ void target_write_block (target_t *t, unsigned addr,
         target_write_word (t, addr, *data);
         return;
     }
-fprintf (stderr, "target_write_block (addr = %08x, nwords = %u)\n", addr, nwords);
 
     unsigned param_in [nwords + 2];
     param_in[0] = addr;
@@ -665,6 +653,7 @@ fprintf (stderr, "target_write_block (addr = %08x, nwords = %u)\n", addr, nwords
  *      35    - CP0 BadVAddr
  *      36    - CP0 Cause
  *      37    - PC
+ * FPU registers not supported for PIC32.
  */
 void target_write_register (target_t *t, unsigned regno, unsigned val)
 {
@@ -681,7 +670,6 @@ void target_write_register (target_t *t, unsigned regno, unsigned val)
         MIPS_B (NEG16(5)),			/* b start */
         MIPS_MFC0 (15, 31, 0),                  /* move COP0 DeSave to $15 */
     };
-fprintf (stderr, "target_write_register (regno = %u, val = %08x)\n", regno, val);
 
     if (regno < 32) {
         /* General purpose registers: special case. */
@@ -728,7 +716,6 @@ void target_add_break (target_t *t, unsigned addr, int type)
 {
     int i, control;
 
-fprintf (stderr, "target_add_break (addr = %u, type = '%c')\n", addr, type);
     if (type == 'b') {
         /* Instruction breakpoint. */
         if (t->nbpoints <= 0)
@@ -753,8 +740,6 @@ fprintf (stderr, "target_add_break (addr = %u, type = '%c')\n", addr, type);
         target_write_word (t, EJTAG_IBA(i), addr);
         target_write_word (t, EJTAG_IBM(i), 0x00000000);
         target_write_word (t, EJTAG_IBC(i), DBC_BE);
-fprintf (stderr, "set breakpoint slot %i, address %08x\n", i, addr);
-
     } else {
         /* Data watchpoint. */
         if (t->nwatchpoints <= 0)
@@ -782,15 +767,12 @@ fprintf (stderr, "set breakpoint slot %i, address %08x\n", i, addr);
         switch (type) {
         case 'r':
             control &= ~DBC_NOLB;
-fprintf (stderr, "set READ watchpoint slot %i, address %08x\n", i, addr);
             break;
         case 'w':
             control &= ~DBC_NOSB;
-fprintf (stderr, "set WRITE watchpoint slot %i, address %08x\n", i, addr);
             break;
         case 'a':
             control &= ~(DBC_NOLB | DBC_NOSB);
-fprintf (stderr, "set R/W watchpoint slot %i, address %08x\n", i, addr);
             break;
 	}
 
@@ -805,23 +787,20 @@ fprintf (stderr, "set R/W watchpoint slot %i, address %08x\n", i, addr);
 }
 
 /*
- * Clear a breakpoint or watchpoint.
+ * Clear a breakpoint or watchpoint by address.
  */
 void target_remove_break (target_t *t, unsigned addr)
 {
     int i;
 
-fprintf (stderr, "target_remove_break (addr = %08x)\n", addr);
     for (i=0; i<t->nbpoints; i++) {
         if (t->bp_used[i] && t->bp_value[i] == addr) {
             target_write_word (t, EJTAG_IBC(i), 0);
-fprintf (stderr, "clear breakpoint slot %i, address %08x\n", i, addr);
         }
     }
     for (i=0; i<t->nwatchpoints; i++) {
         if (t->watch_used[i] && t->watch_value[i] == addr) {
             target_write_word (t, EJTAG_DBC(i), 0);
-fprintf (stderr, "clear watchpoint slot %i, address %08x\n", i, addr);
         }
     }
 }

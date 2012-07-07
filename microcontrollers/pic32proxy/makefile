@@ -2,7 +2,7 @@ CC		= gcc
 
 SVNVERS         = $(shell svnversion)
 CFLAGS		= -Wall -g -O -I/opt/local/include -Ihidapi -DSVNVERSION='"$(SVNVERS)"'
-LDFLAGS		= -s
+LDFLAGS		=
 
 # Linux
 LIBS            += -lusb-1.0
@@ -12,7 +12,8 @@ HIDSRC          = hidapi/hid-libusb.c
 #LIBS            += -framework IOKit -framework CoreFoundation
 #HIDSRC          = hidapi/hid-mac.c
 
-REMOTE_OBJS	= gdbproxy.o rpmisc.o target-pic32mx.o adapter-pickit2.o adapter-mpsse.o hid.o proxy-mips.o
+REMOTE_OBJS	= gdbproxy.o rpmisc.o target-pic32mx.o hid.o proxy-mips.o \
+                  adapter-pickit2.o adapter-mpsse.o
 
 # Olimex ARM-USB-Tiny JTAG adapter.
 CFLAGS         += -DUSE_MPSSE
@@ -38,10 +39,9 @@ install:	pic32proxy
 		fi
 		install -d /usr/local/share/locale/ru/LC_MESSAGES
 ###
-adapter-mpsse.o: adapter-mpsse.c adapter.h pic32.h
-adapter-pickit2.o: adapter-pickit2.c adapter.h hidapi/hidapi.h pickit2.h pic32.h
+adapter-mpsse.o: adapter-mpsse.c adapter.h mips.h pic32.h
+adapter-pickit2.o: adapter-pickit2.c adapter.h hidapi/hidapi.h pickit2.h mips.h pic32.h
 gdbproxy.o: gdbproxy.c gdbproxy.h
 proxy-mips.o: proxy-mips.c gdbproxy.h target.h
-proxy-skeleton.o: proxy-skeleton.c gdbproxy.h
 rpmisc.o: rpmisc.c gdbproxy.h
-target-pic32mx.o: target-pic32mx.c target.h adapter.h pic32.h
+target-pic32mx.o: target-pic32mx.c target.h adapter.h mips.h pic32.h
