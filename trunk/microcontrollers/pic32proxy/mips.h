@@ -1,5 +1,5 @@
 /*
- * Instructions and registers of MIPS32 processor.
+ * Instructions and registers of MIPS processor.
  *
  * Copyright (C) 2011 Serge Vakulenko
  *
@@ -11,96 +11,67 @@
 /*
  * Opcodes for some mips instructions
  */
-#define	MIPS_JR		0x8		/* jr rs; */
-#define	MIPS_JAL	(0x3 << 26)	/* jal 0; jump and link */
-#define	MIPS_ADD	0x20		/* add rd, rs, rt */
-#define	MIPS_ADDI	(0x8 << 26)	/* addi rt << 16, rs << 21, imed */
-#define	MIPS_ADDIU	(0x8 << 26)	/* addiu rt << 16, rs << 21, imed */
-#define MIPS_MFHI	0x10		/* mfhi, (rd << 11) */
-#define MIPS_MFLO	0x12		/* mflo, (rd << 11) */
-#define MIPS_MTHI	0x11		/* mthi, (rd << 21) */
-#define MIPS_MTLO	0x13		/* mtlo, (rd << 21) */
-#define MIPS_SLL	0x0		/* sll dest << 11, src << 16, sa << 6 */
-#define MIPS_SRL	(0x0 | 0x3)	/* srl dest << 11, src << 16, sa << 6 */
-#define MIPS_NOP	MIPS_SLL	/* nop (SLL, r0, r0, 0) */
-#define	MIPS_OR		37		/* add rd, rs, rt */
-#define MIPS_ORI	(0xd << 26)	/* ori rt << 16, rs << 21, imed */
-#define MIPS_MFC0	(0x10 << 26)	/* mfc0 rt << 16, rd << 11, sel */
-#define MIPS_MTC0	((0x10<<26)|(4<<21))/* mtc0 rt << 16, rd << 11, sel */
-#define MIPS_TLBP	0x42000008	/* tlbp */
-#define MIPS_TLBR	0X42000001	/* tlbr */
-#define MIPS_TLBWI	0X42000002	/* tlbwi */
-#define MIPS_TLBWR	0X42000006	/* tlbwr */
-#define MIPS_LUI	(15 << 26)	/* lui (r << 16) imm */
-#define MIPS_SW		(0x2b << 26)	/* sw (rbase << 21) (rto << 16) offt */
-#define MIPS_LW		(0x23 << 26)	/* lw (rbase << 21) (rto << 16) offt */
-#define MIPS_SWC1	(0x39 << 26)	/* swc1 (rbase << 21) (rto << 16) offt */
-#define MIPS_LWC1	(0x31 << 26)	/* lwc1 (rbase << 21) (rto << 16) offt */
-#define MIPS_MTC1	((0x11<<26)|(4<<21))/* mtc0 rt << 16, rd << 11, sel */
-#define MIPS_CTC1	((0x11<<26)|(6<<21))/* ctc1 rt << 16, fs << 11 */
-#define MIPS_CFC1	((0x11<<26)|(2<<21))/* cfc1 rt << 16, fs << 11 */
+#define MIPS_OP_BEQ	0x04
+#define MIPS_OP_BNE	0x05
+#define MIPS_OP_ADDI	0x08
+#define MIPS_OP_AND	0x24
+#define MIPS_OP_COP0	0x10
+#define MIPS_OP_JR	0x08
+#define MIPS_OP_LUI	0x0F
+#define MIPS_OP_LW	0x23
+#define MIPS_OP_LBU	0x24
+#define MIPS_OP_LHU	0x25
+#define MIPS_OP_MFHI	0x10
+#define MIPS_OP_MTHI	0x11
+#define MIPS_OP_MFLO	0x12
+#define MIPS_OP_MTLO	0x13
+#define MIPS_OP_SB	0x28
+#define MIPS_OP_SH	0x29
+#define MIPS_OP_SW	0x2B
+#define MIPS_OP_ORI	0x0D
+#define MIPS_OP_XOR	0x26
+#define MIPS_OP_SRL	0x03
 
-#define MIPS32_OP_BEQ	0x04
-#define MIPS32_OP_BNE	0x05
-#define MIPS32_OP_ADDI	0x08
-#define MIPS32_OP_AND	0x24
-#define MIPS32_OP_COP0	0x10
-#define MIPS32_OP_JR	0x08
-#define MIPS32_OP_LUI	0x0F
-#define MIPS32_OP_LW	0x23
-#define MIPS32_OP_LBU	0x24
-#define MIPS32_OP_LHU	0x25
-#define MIPS32_OP_MFHI	0x10
-#define MIPS32_OP_MTHI	0x11
-#define MIPS32_OP_MFLO	0x12
-#define MIPS32_OP_MTLO	0x13
-#define MIPS32_OP_SB	0x28
-#define MIPS32_OP_SH	0x29
-#define MIPS32_OP_SW	0x2B
-#define MIPS32_OP_ORI	0x0D
-#define MIPS32_OP_XOR	0x26
-#define MIPS32_OP_SRL	0x03
+#define MIPS_COP0_MF	0x00
+#define MIPS_COP0_MT	0x04
 
-#define MIPS32_COP0_MF	0x00
-#define MIPS32_COP0_MT	0x04
-
-#define MIPS32_R_INST(opcode, rs, rt, rd, shamt, funct)	\
+#define MIPS_R_INST(opcode, rs, rt, rd, shamt, funct)	\
                         (((opcode) << 26) | ((rs) << 21) | ((rt) << 16) | \
                          ((rd) << 11)| ((shamt) << 6) | (funct))
 
-#define MIPS32_I_INST(opcode, rs, rt, immd)	\
+#define MIPS_I_INST(opcode, rs, rt, immd)	\
                         (((opcode) << 26) | ((rs) << 21) | ((rt) << 16) | (immd))
 
-#define MIPS32_J_INST(opcode, addr)	\
+#define MIPS_J_INST(opcode, addr)	\
                         (((opcode) << 26) | (addr))
 
-#define MIPS32_NOP					0
-#define MIPS32_ADDI(tar, src, val)	MIPS32_I_INST(MIPS32_OP_ADDI, src, tar, val)
-#define MIPS32_AND(reg, off, val)	MIPS32_R_INST(0, off, val, reg, 0, MIPS32_OP_AND)
-#define MIPS32_B(off)			MIPS32_BEQ(0, 0, off)
-#define MIPS32_BEQ(src,tar,off)		MIPS32_I_INST(MIPS32_OP_BEQ, src, tar, off)
-#define MIPS32_BNE(src,tar,off)		MIPS32_I_INST(MIPS32_OP_BNE, src, tar, off)
-#define MIPS32_JR(reg)			MIPS32_R_INST(0, reg, 0, 0, 0, MIPS32_OP_JR)
-#define MIPS32_MFC0(gpr, cpr, sel)	MIPS32_R_INST(MIPS32_OP_COP0, MIPS32_COP0_MF, gpr, cpr, 0, sel)
-#define MIPS32_MTC0(gpr,cpr, sel)	MIPS32_R_INST(MIPS32_OP_COP0, MIPS32_COP0_MT, gpr, cpr, 0, sel)
-#define MIPS32_LBU(reg, off, base)	MIPS32_I_INST(MIPS32_OP_LBU, base, reg, off)
-#define MIPS32_LHU(reg, off, base)	MIPS32_I_INST(MIPS32_OP_LHU, base, reg, off)
-#define MIPS32_LUI(reg, val)		MIPS32_I_INST(MIPS32_OP_LUI, 0, reg, val)
-#define MIPS32_LW(reg, off, base)	MIPS32_I_INST(MIPS32_OP_LW, base, reg, off)
-#define MIPS32_MFLO(reg)		MIPS32_R_INST(0, 0, 0, reg, 0, MIPS32_OP_MFLO)
-#define MIPS32_MFHI(reg)		MIPS32_R_INST(0, 0, 0, reg, 0, MIPS32_OP_MFHI)
-#define MIPS32_MTLO(reg)		MIPS32_R_INST(0, reg, 0, 0, 0, MIPS32_OP_MTLO)
-#define MIPS32_MTHI(reg)		MIPS32_R_INST(0, reg, 0, 0, 0, MIPS32_OP_MTHI)
-#define MIPS32_ORI(tar, src, val)	MIPS32_I_INST(MIPS32_OP_ORI, src, tar, val)
-#define MIPS32_SB(reg, off, base)	MIPS32_I_INST(MIPS32_OP_SB, base, reg, off)
-#define MIPS32_SH(reg, off, base)	MIPS32_I_INST(MIPS32_OP_SH, base, reg, off)
-#define MIPS32_SW(reg, off, base)	MIPS32_I_INST(MIPS32_OP_SW, base, reg, off)
-#define MIPS32_XOR(reg, val1, val2)	MIPS32_R_INST(0, val1, val2, reg, 0, MIPS32_OP_XOR)
-#define MIPS32_SRL(reg, src, off)	MIPS32_R_INST(0, 0, src, reg, off, MIPS32_OP_SRL)
+#define MIPS_NOP                    0
+#define MIPS_ADDI(tar, src, val)    MIPS_I_INST(MIPS_OP_ADDI, src, tar, val)
+#define MIPS_AND(reg, off, val)     MIPS_R_INST(0, off, val, reg, 0, MIPS_OP_AND)
+#define MIPS_B(off)                 MIPS_BEQ(0, 0, off)
+#define MIPS_BEQ(src,tar,off)       MIPS_I_INST(MIPS_OP_BEQ, src, tar, off)
+#define MIPS_BNE(src,tar,off)       MIPS_I_INST(MIPS_OP_BNE, src, tar, off)
+#define MIPS_JR(reg)                MIPS_R_INST(0, reg, 0, 0, 0, MIPS_OP_JR)
+#define MIPS_MFC0(gpr, cpr, sel)    MIPS_R_INST(MIPS_OP_COP0, MIPS_COP0_MF, gpr, cpr, 0, sel)
+#define MIPS_MTC0(gpr,cpr, sel)     MIPS_R_INST(MIPS_OP_COP0, MIPS_COP0_MT, gpr, cpr, 0, sel)
+#define MIPS_LBU(reg, off, base)    MIPS_I_INST(MIPS_OP_LBU, base, reg, off)
+#define MIPS_LHU(reg, off, base)    MIPS_I_INST(MIPS_OP_LHU, base, reg, off)
+#define MIPS_LUI(reg, val)          MIPS_I_INST(MIPS_OP_LUI, 0, reg, val)
+#define MIPS_LW(reg, off, base)     MIPS_I_INST(MIPS_OP_LW, base, reg, off)
+#define MIPS_MFLO(reg)              MIPS_R_INST(0, 0, 0, reg, 0, MIPS_OP_MFLO)
+#define MIPS_MFHI(reg)              MIPS_R_INST(0, 0, 0, reg, 0, MIPS_OP_MFHI)
+#define MIPS_MTLO(reg)              MIPS_R_INST(0, reg, 0, 0, 0, MIPS_OP_MTLO)
+#define MIPS_MTHI(reg)              MIPS_R_INST(0, reg, 0, 0, 0, MIPS_OP_MTHI)
+#define MIPS_ORI(tar, src, val)     MIPS_I_INST(MIPS_OP_ORI, src, tar, val)
+#define MIPS_SB(reg, off, base)     MIPS_I_INST(MIPS_OP_SB, base, reg, off)
+#define MIPS_SH(reg, off, base)     MIPS_I_INST(MIPS_OP_SH, base, reg, off)
+#define MIPS_SW(reg, off, base)     MIPS_I_INST(MIPS_OP_SW, base, reg, off)
+#define MIPS_XOR(reg, val1, val2)   MIPS_R_INST(0, val1, val2, reg, 0, MIPS_OP_XOR)
+#define MIPS_SRL(reg, src, off)     MIPS_R_INST(0, 0, src, reg, off, MIPS_OP_SRL)
 
 /* ejtag specific instructions */
-#define MIPS32_DRET		0x4200001F
-#define MIPS32_SDBBP		0x7000003F
+#define MIPS_DRET		0x4200001F
+#define MIPS_SDBBP		0x7000003F
 #define MIPS16_SDBBP		0xE801
 
 #define PRACC_FASTDATA_AREA	0xFF200000
