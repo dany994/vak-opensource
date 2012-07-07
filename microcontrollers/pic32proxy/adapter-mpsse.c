@@ -465,25 +465,25 @@ static void pracc_exec_read (mpsse_adapter_t *a, unsigned address)
     int offset;
     unsigned data;
 
-    if ((address >= MIPS32_PRACC_PARAM_IN) &&
-        (address <= MIPS32_PRACC_PARAM_IN + a->num_iparam * 4))
+    if ((address >= PRACC_PARAM_IN) &&
+        (address <= PRACC_PARAM_IN + a->num_iparam * 4))
     {
-        offset = (address - MIPS32_PRACC_PARAM_IN) / 4;
+        offset = (address - PRACC_PARAM_IN) / 4;
         data = a->local_iparam [offset];
 
-    } else if ((address >= MIPS32_PRACC_PARAM_OUT) &&
-               (address <= MIPS32_PRACC_PARAM_OUT + a->num_oparam * 4))
+    } else if ((address >= PRACC_PARAM_OUT) &&
+               (address <= PRACC_PARAM_OUT + a->num_oparam * 4))
     {
-        offset = (address - MIPS32_PRACC_PARAM_OUT) / 4;
+        offset = (address - PRACC_PARAM_OUT) / 4;
         data = a->local_oparam [offset];
 
-    } else if ((address >= MIPS32_PRACC_TEXT) &&
-               (address <= MIPS32_PRACC_TEXT + a->code_len * 4))
+    } else if ((address >= PRACC_TEXT) &&
+               (address <= PRACC_TEXT + a->code_len * 4))
     {
-        offset = (address - MIPS32_PRACC_TEXT) / 4;
+        offset = (address - PRACC_TEXT) / 4;
         data = a->code [offset];
 
-    } else if (address == MIPS32_PRACC_STACK)
+    } else if (address == PRACC_STACK)
     {
         /* save to our debug stack */
         offset = --a->stack_offset;
@@ -521,19 +521,19 @@ static void pracc_exec_write (mpsse_adapter_t *a, unsigned address)
     mpsse_send (a, 0, 0, 32, a->control & ~CONTROL_PRACC, 0);
     mpsse_flush_output (a);
 
-    if ((address >= MIPS32_PRACC_PARAM_IN) &&
-        (address <= MIPS32_PRACC_PARAM_IN + a->num_iparam * 4))
+    if ((address >= PRACC_PARAM_IN) &&
+        (address <= PRACC_PARAM_IN + a->num_iparam * 4))
     {
-        offset = (address - MIPS32_PRACC_PARAM_IN) / 4;
+        offset = (address - PRACC_PARAM_IN) / 4;
         a->local_iparam [offset] = data;
 
-    } else if ((address >= MIPS32_PRACC_PARAM_OUT) &&
-               (address <= MIPS32_PRACC_PARAM_OUT + a->num_oparam * 4))
+    } else if ((address >= PRACC_PARAM_OUT) &&
+               (address <= PRACC_PARAM_OUT + a->num_oparam * 4))
     {
-        offset = (address - MIPS32_PRACC_PARAM_OUT) / 4;
+        offset = (address - PRACC_PARAM_OUT) / 4;
         a->local_oparam [offset] = data;
 
-    } else if (address == MIPS32_PRACC_STACK)
+    } else if (address == PRACC_STACK)
     {
         /* save data onto our stack */
         a->stack [a->stack_offset++] = data;
@@ -587,7 +587,7 @@ static void mpsse_exec (adapter_t *adapter, int cycle,
             /* Check to see if its reading at the debug vector. The first pass through
              * the module is always read at the vector, so the first one we allow.  When
              * the second read from the vector occurs we are done and just exit. */
-            if ((address == MIPS32_PRACC_TEXT) && (pass++)) {
+            if ((address == PRACC_TEXT) && (pass++)) {
                 break;
             }
             pracc_exec_read (a, address);
