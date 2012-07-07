@@ -38,6 +38,15 @@ struct _target_t {
 #define REG_BADVADDR    35
 #define REG_CAUSE       36
 #define REG_DEPC        37
+
+    unsigned    dcr;            /* Debug control register. */
+    int         dcr_valid;
+    unsigned    nbpoints;       /* Number of hardware breakpoints. */
+    unsigned    bp_value [15];
+    int         bp_used [15];
+    unsigned    nwatchpoints;   /* Number of hardware watchpoints. */
+    unsigned    watch_value [15];
+    int         watch_used [15];
 };
 
 static const struct {
@@ -279,6 +288,36 @@ static void target_save_state (target_t *t)
 fprintf (stderr, "save_state()\n");
     t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code,
         0, 0, ARRAY_SIZE(t->reg), t->reg);
+
+    if (! t->dcr_valid) {
+        /* Get the parameters of debug block. */
+        t->dcr = target_read_word (t, EJTAG_DCR);
+        t->dcr_valid = 1;
+        //fprintf (stderr, "DCR = %08x\n", t->dcr);
+
+        if (t->dcr & DCR_INSTBRK) {
+            /* Instruction breakpoints supported.
+             * Get number of inst breakpoints.
+             * Clear break status. */
+            unsigned ibs = target_read_word (t, EJTAG_IBS);
+            target_write_word (t, EJTAG_IBS, 0);
+
+            t->nbpoints = (ibs >> 24) & 0x0F;
+            //fprintf (stderr, "IBS = %08x, %u instruction breakpoints\n", ibs, t->nbpoints);
+        }
+        if (t->dcr & DCR_DATABRK) {
+            /* Data breakpoints supported.
+             * Get number of data breakpoints.
+             * Clear break status. */
+            unsigned dbs = target_read_word (t, EJTAG_DBS);
+            target_write_word (t, EJTAG_DBS, 0);
+
+            t->nwatchpoints = (dbs >> 24) & 0x0F;
+            //fprintf (stderr, "DBS = %08x, %u watchpoints\n", dbs, t->nwatchpoints);
+        }
+        printf ("Debug hardware: %u breakpoints, %u watchpoints\n",
+            t->nbpoints, t->nwatchpoints);
+    }
 }
 
 /*
@@ -346,7 +385,7 @@ fprintf (stderr, "target_is_stopped()\n");
         target_save_state (t);
     }
 #if 0
-    /* BREAKD instruction detected. */
+    /* TODO: BREAKD instruction detected. */
     if (t->adapter->oscr & OSCR_SWO)
         *is_aborted = 1;
 #endif
@@ -656,28 +695,22 @@ fprintf (stderr, "target_write_register (regno = %u, val = %08x)\n", regno, val)
     code [1] = MIPS_LUI (15, UPPER16(val));
     code [2] = MIPS_ORI (15, 15, LOWER16(val));
     switch (regno) {
-    case 32:                            /* CP0 Status */
-        t->reg [REG_STATUS] = val;
+    case REG_STATUS:
         code [3] = MIPS_MTC0 (15, CP0_STATUS, 0);
         break;
-    case 33:                            /* LO */
-        t->reg [REG_LO] = val;
+    case REG_LO:
         code [3] = MIPS_MTLO (15);
         break;
-    case 34:                            /* HI */
-        t->reg [REG_HI] = val;
+    case REG_HI:
         code [3] = MIPS_MTHI (15);
         break;
-    case 35:                            /* CP0 BadVAddr */
-        t->reg [REG_BADVADDR] = val;
+    case REG_BADVADDR:
         code [3] = MIPS_MTC0 (15, CP0_BADVADDR, 0);
         break;
-    case 36:                            /* CP0 Cause */
-        t->reg [REG_CAUSE] = val;
+    case REG_CAUSE:
         code [3] = MIPS_MTC0 (15, CP0_CAUSE, 0);
         break;
-    case 37:                            /* PC */
-        t->reg [REG_DEPC] = val;
+    case REG_DEPC:
         code [3] = MIPS_MTC0 (15, CP0_DEPC, 0);
         break;
     default:
@@ -685,16 +718,110 @@ fprintf (stderr, "target_write_register (regno = %u, val = %08x)\n", regno, val)
     }
 
     t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code, 0, 0, 0, 0);
+    t->reg [regno] = val;
 }
 
+/*
+ * Set an instruction breakpoint or a data watchpoint.
+ */
 void target_add_break (target_t *t, unsigned addr, int type)
 {
-    // TODO
-    fprintf (stderr, "TODO: target_add_break (addr = %u, type = %d)\n", addr, type);
+    int i, control;
+
+fprintf (stderr, "target_add_break (addr = %u, type = '%c')\n", addr, type);
+    if (type == 'b') {
+        /* Instruction breakpoint. */
+        if (t->nbpoints <= 0)
+            return;
+
+        /* Find free slot. */
+        for (i=0; i<t->nbpoints; i++) {
+            if (! t->bp_used[i])
+                break;
+        }
+        if (i >= t->nbpoints) {
+            /* All breakpoints used.
+             * Forget the oldest one. */
+            for (i=0; i<t->nbpoints-1; i++) {
+                unsigned val = target_read_word (t, EJTAG_IBA(i+1));
+                target_write_word (t, EJTAG_IBA(i), val);
+            }
+            i = t->nbpoints - 1;
+        }
+        t->bp_used[i] = 1;
+        t->bp_value[i] = addr;
+        target_write_word (t, EJTAG_IBA(i), addr);
+        target_write_word (t, EJTAG_IBM(i), 0x00000000);
+        target_write_word (t, EJTAG_IBC(i), DBC_BE);
+fprintf (stderr, "set breakpoint slot %i, address %08x\n", i, addr);
+
+    } else {
+        /* Data watchpoint. */
+        if (t->nwatchpoints <= 0)
+            return;
+
+        /* Find free slot. */
+        for (i=0; i<t->nwatchpoints; i++) {
+            if (! t->watch_used[i])
+                break;
+        }
+        if (i >= t->nwatchpoints) {
+            /* All watchpoints used.
+             * Forget the oldest one. */
+            for (i=0; i<t->nwatchpoints-1; i++) {
+                unsigned val = target_read_word (t, EJTAG_DBA(i+1));
+                target_write_word (t, EJTAG_DBA(i), val);
+            }
+            i = t->nwatchpoints - 1;
+        }
+
+	/* Enable watchpoint, ignore all byte lanes in value register
+	 * and exclude both load and store accesses from  watchpoint
+	 * condition evaluation. */
+	control = DBC_NOSB | DBC_NOLB | DBC_BE | (0xff << DBC_BLM_SHIFT);
+        switch (type) {
+        case 'r':
+            control &= ~DBC_NOLB;
+fprintf (stderr, "set READ watchpoint slot %i, address %08x\n", i, addr);
+            break;
+        case 'w':
+            control &= ~DBC_NOSB;
+fprintf (stderr, "set WRITE watchpoint slot %i, address %08x\n", i, addr);
+            break;
+        case 'a':
+            control &= ~(DBC_NOLB | DBC_NOSB);
+fprintf (stderr, "set R/W watchpoint slot %i, address %08x\n", i, addr);
+            break;
+	}
+
+        t->watch_used[i] = 1;
+        t->watch_value[i] = addr;
+        target_write_word (t, EJTAG_DBA(i), addr);
+        target_write_word (t, EJTAG_DBM(i), 0x00000000);
+        target_write_word (t, EJTAG_DBASID(i), 0x00000000);
+        target_write_word (t, EJTAG_DBC(i), control);
+        target_write_word (t, EJTAG_DBV(i), 0);
+    }
 }
 
+/*
+ * Clear a breakpoint or watchpoint.
+ */
 void target_remove_break (target_t *t, unsigned addr)
 {
-    // TODO
-    fprintf (stderr, "TODO: target_remove_break (addr = %08x)\n", addr);
+    int i;
+
+fprintf (stderr, "target_remove_break (addr = %08x)\n", addr);
+    for (i=0; i<t->nbpoints; i++) {
+        if (t->bp_used[i] && t->bp_value[i] == addr) {
+            target_write_word (t, EJTAG_IBC(i), 0);
+fprintf (stderr, "clear breakpoint slot %i, address %08x\n", i, addr);
+        }
+    }
+    for (i=0; i<t->nwatchpoints; i++) {
+        if (t->watch_used[i] && t->watch_value[i] == addr) {
+            target_write_word (t, EJTAG_DBC(i), 0);
+fprintf (stderr, "clear watchpoint slot %i, address %08x\n", i, addr);
+        }
+    }
 }

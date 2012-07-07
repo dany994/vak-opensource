@@ -124,6 +124,43 @@
 #define CP0_DESAVE	31
 
 /*
+ * Breakpoint support registers.
+ */
+#define EJTAG_DCR	0xFF300000
+#define EJTAG_IBS	0xFF301000
+#define EJTAG_IBA(n)	(0xFF301100 | (n) << 8)
+#define EJTAG_IBM(n)	(0xFF301108 | (n) << 8)
+#define EJTAG_IBASID(n)	(0xFF301110 | (n) << 8)
+#define EJTAG_IBC(n)	(0xFF301118 | (n) << 8)
+#define EJTAG_IBCC(n)	(0xFF301120 | (n) << 8)
+#define EJTAG_IBPC(n)	(0xFF301128 | (n) << 8)
+#define EJTAG_DBS	0xFF302000
+#define EJTAG_DBA(n)	(0xFF302100 | (n) << 8)
+#define EJTAG_DBM(n)	(0xFF302108 | (n) << 8)
+#define EJTAG_DBASID(n)	(0xFF302110 | (n) << 8)
+#define EJTAG_DBC(n)	(0xFF302118 | (n) << 8)
+#define EJTAG_DBV(n)	(0xFF302120 | (n) << 8)
+#define EJTAG_DBCC(n)	(0xFF302128 | (n) << 8)
+#define EJTAG_DBPC(n)	(0xFF302130 | (n) << 8)
+
+/*
+ * DCR - Debug Control Register.
+ */
+#define DCR_ENM         (1 << 29)
+#define DCR_DATABRK     (1 << 17)
+#define DCR_INSTBRK     (1 << 16)
+#define DCR_INTE        (1 << 4)
+
+/*
+ * DBC - Debug Breakpoint Control.
+ */
+#define DBC_NOSB        (1 << 13)
+#define DBC_NOLB        (1 << 12)
+#define DBC_BLM_MASK    0xff
+#define DBC_BLM_SHIFT   4
+#define DBC_BE          (1 << 0)
+
+/*
  * Status register.
  */
 #define ST_IE		0x00000001	/* Interrupt enable */
