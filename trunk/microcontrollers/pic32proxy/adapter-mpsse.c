@@ -1,5 +1,5 @@
 /*
- * Interface to PIC32 JTAG port using FT2232-based USB adapter.
+ * Interface to PIC32 JTAG port via FT2232-based USB adapter.
  * For example: Olimex ARM-USB-Tiny adapter.
  *
  * Copyright (C) 2011 Serge Vakulenko
@@ -548,8 +548,8 @@ static void pracc_exec_write (mpsse_adapter_t *a, unsigned address)
 
 static void mpsse_exec (adapter_t *adapter, int cycle,
     int code_len, const unsigned *code,
-    int num_param_in, uint32_t *param_in,
-    int num_param_out, uint32_t *param_out)
+    int num_param_in, unsigned *param_in,
+    int num_param_out, unsigned *param_out)
 {
     mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
     unsigned ctl, address;
@@ -624,13 +624,13 @@ adapter_t *adapter_open_mpsse (void)
         for (dev = bus->devices; dev; dev = dev->next) {
             if (dev->descriptor.idVendor == OLIMEX_VID &&
                 (dev->descriptor.idProduct == OLIMEX_ARM_USB_TINY ||
-                 dev->descriptor.idProduct == OLIMEX_ARM_USB_TINY_H))
+                 dev->descriptor.idProduct == OLIMEX_ARM_USB_TINY_H)) {
                 name = "Olimex ARM-USB-Tiny";
                 goto found;
+            }
         }
     }
-    /*fprintf (stderr, "USB adapter not found: vid=%04x, pid=%04x\n",
-        OLIMEX_VID, OLIMEX_PID);*/
+    //printf ("FT2232 adapter not found\n");
     return 0;
 found:
     a = calloc (1, sizeof (*a));
@@ -739,7 +739,5 @@ failed: usb_release_interface (a->usbdev, 0);
     a->adapter.stop_cpu = mpsse_stop_cpu;
     a->adapter.reset_cpu = mpsse_reset_cpu;
     a->adapter.exec = mpsse_exec;
-    //a->adapter.read_word = mpsse_read_word;
-    //a->adapter.read_data = mpsse_read_data;
     return &a->adapter;
 }
