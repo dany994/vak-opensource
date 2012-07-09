@@ -152,11 +152,15 @@ static int pickit_cpu_stopped (adapter_t *adapter)
     // TODO
 #if 0
     pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    unsigned ir;
+    unsigned ctl;
 
-    pickit_send (a, 1, 1, 4, TAP_DEBUG_ENABLE, 1);
-    ir = pickit_recv (a);
-    return ir & 4;
+    /* Select Control Register. */
+    pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+
+    /* Check if Debug Mode bit is set. */
+    pickit_send (a, 0, 0, 32, a->control, 1);
+    ctl = pickit_recv (a);
+    return ctl & CONTROL_DM;
 #else
     return 0;
 #endif
@@ -170,23 +174,29 @@ static void pickit_stop_cpu (adapter_t *adapter)
     // TODO
 #if 0
     pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    unsigned old_ir, i;
+    unsigned ctl;
 
-    /* Debug request. */
-    pickit_send (a, 1, 1, 4, TAP_DEBUG_REQUEST, 0);
+    /* Select Control Register. */
+    pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
 
-    /* Wait while processor enters debug mode. */
-    i = 0;
+    /* Set EjtagBrk bit - request a Debug exception. */
+    pickit_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 0);
+
+    /* The processor should enter Debug Mode. */
+    pickit_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
     for (;;) {
-        pickit_send (a, 1, 1, 4, TAP_DEBUG_ENABLE, 1);
-        old_ir = pickit_recv (a);
-        if (old_ir == 5)
+        ctl = pickit_recv (a);
+        if (debug_level > 0)
+            fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
+
+        if (ctl & CONTROL_ROCC) {
+            fprintf (stderr, "stop_cpu: Reset occured, clearing\n");
+            pickit_send (a, 0, 0, 32,
+                (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK, 0);
+        } else if (ctl & CONTROL_DM)
             break;
-        mdelay (10);
-        if (++i >= 50) {
-            fprintf (stderr, "Timeout while entering debug mode\n");
-            exit (1);
-        }
+
+        pickit_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
     }
 #endif
 }
