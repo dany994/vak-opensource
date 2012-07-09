@@ -450,12 +450,10 @@ static void mpsse_stop_cpu (adapter_t *adapter)
         if (ctl & CONTROL_ROCC) {
             fprintf (stderr, "stop_cpu: Reset occured, clearing\n");
             mpsse_send (a, 0, 0, 32,
-                (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK, 1);
-            continue;
-        }
-
-        if (ctl & CONTROL_DM)
+                (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK, 0);
+        } else if (ctl & CONTROL_DM)
             break;
+
         mpsse_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
     }
 }
