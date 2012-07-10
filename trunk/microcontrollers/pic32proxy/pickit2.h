@@ -150,13 +150,13 @@
 #define SCRIPT_SET_ICSP_PINS       0xF3     // + 1
 #define SCRIPT_BUSY_LED_OFF        0xF4     // +
 #define SCRIPT_BUSY_LED_ON         0xF5     // +
-#define SCRIPT_MCLR_GND_OFF        0xF6     // +
-#define SCRIPT_MCLR_GND_ON         0xF7     // +
-#define SCRIPT_VPP_PWM_OFF         0xF8     // +
-#define SCRIPT_VPP_PWM_ON          0xF9     // +
-#define SCRIPT_VPP_OFF             0xFA     // +
-#define SCRIPT_VPP_ON              0xFB     // +
-#define SCRIPT_VDD_GND_OFF         0xFC     // +
-#define SCRIPT_VDD_GND_ON          0xFD     // +
-#define SCRIPT_VDD_OFF             0xFE     // +
-#define SCRIPT_VDD_ON              0xFF     // +
+#define SCRIPT_MCLR_GND_OFF        0xF6     // + pin_VPP_GROUND = 0;
+#define SCRIPT_MCLR_GND_ON         0xF7     // + pin_VPP_GROUND = 1;
+#define SCRIPT_VPP_PWM_OFF         0xF8     // + TURN_OFF_VPP_SUPPLY; pin_VPP_PUMP = 0;
+#define SCRIPT_VPP_PWM_ON          0xF9     // + TURN_ON_VPP_SUPPLY;
+#define SCRIPT_VPP_OFF             0xFA     // + pin_VPP_ON = 0;
+#define SCRIPT_VPP_ON              0xFB     // + pin_VPP_ON = 1;
+#define SCRIPT_VDD_GND_OFF         0xFC     // + pin_INT_NVDD_GND = 1; -- disable ballast
+#define SCRIPT_VDD_GND_ON          0xFD     // + pin_INT_NVDD_GND = 0; -- add ballast
+#define SCRIPT_VDD_OFF             0xFE     // + pin_SUPPLY_PWR = 1; -- disable power output
+#define SCRIPT_VDD_ON              0xFF     // + pin_SUPPLY_PWR = 0; -- enable power output

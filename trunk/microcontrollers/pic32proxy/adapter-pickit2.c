@@ -140,11 +140,11 @@ static void pickit_reset_cpu (adapter_t *adapter)
 
     /* Reset active low. */
     pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
-        SCRIPT_MCLR_GND_ON);
+        SCRIPT_MCLR_GND_ON);                    // connect /MCLR to ground
 
     /* Disable reset. */
     pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
-        SCRIPT_MCLR_GND_OFF);
+        SCRIPT_MCLR_GND_OFF);                   // detach /MCLR from ground
 }
 
 static void pickit_finish (pickit_adapter_t *a, int power_on)
@@ -152,9 +152,9 @@ static void pickit_finish (pickit_adapter_t *a, int power_on)
     /* Exit programming mode. */
     pickit_send (a, 18, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 15,
         SCRIPT_JT2_SETMODE, 5, 0x1f,
-        SCRIPT_VPP_OFF,
-        SCRIPT_MCLR_GND_ON,
-        SCRIPT_VPP_PWM_OFF,
+        SCRIPT_VPP_OFF,                         // disconnect /MCLR from power
+        SCRIPT_MCLR_GND_ON,                     // connect /MCLR to ground
+        SCRIPT_VPP_PWM_OFF,                     // disable power pump
         SCRIPT_SET_ICSP_PINS, 6,                // set PGC high, PGD input
         SCRIPT_SET_ICSP_PINS, 2,                // set PGC low, PGD input
         SCRIPT_SET_ICSP_PINS, 3,                // set PGC and PGD as input
@@ -164,13 +164,13 @@ static void pickit_finish (pickit_adapter_t *a, int power_on)
     if (! power_on) {
         /* Detach power from the board. */
         pickit_send (a, 4, CMD_EXECUTE_SCRIPT, 2,
-            SCRIPT_VDD_OFF,
-            SCRIPT_VDD_GND_ON);
+            SCRIPT_VDD_OFF,                     // disable power output
+            SCRIPT_VDD_GND_ON);                 // add ballast
     }
 
     /* Disable reset. */
     pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
-        SCRIPT_MCLR_GND_OFF);
+        SCRIPT_MCLR_GND_OFF);                   // detach /MCLR from ground
 
     /* Read board status. */
     check_timeout (a, "finish");
@@ -563,8 +563,8 @@ adapter_t *adapter_open_pickit (void)
 
     /* Detach power from the board. */
     pickit_send (a, 4, CMD_EXECUTE_SCRIPT, 2,
-        SCRIPT_VDD_OFF,
-        SCRIPT_VDD_GND_ON);
+        SCRIPT_VDD_OFF,                         // disable power output
+        SCRIPT_VDD_GND_ON);                     // add ballast
 
     /* Setup power voltage 3.3V, fault limit 2.81V. */
     unsigned vdd = (unsigned) (3.3 * 32 + 10.5) << 6;
@@ -582,7 +582,8 @@ adapter_t *adapter_open_pickit (void)
         SCRIPT_SET_ICSP_SPEED, divisor);
 
     /* Reset active low. */
-    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1, SCRIPT_MCLR_GND_ON);
+    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
+        SCRIPT_MCLR_GND_ON);                    // connect /MCLR to ground
 
     /* Read board status. */
     pickit_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
@@ -600,8 +601,8 @@ adapter_t *adapter_open_pickit (void)
     case STATUS_VDD_GND_ON | STATUS_VPP_GND_ON:
         /* Enable power to the board. */
         pickit_send (a, 4, CMD_EXECUTE_SCRIPT, 2,
-            SCRIPT_VDD_GND_OFF,
-            SCRIPT_VDD_ON);
+            SCRIPT_VDD_GND_OFF,                 // disable ballast
+            SCRIPT_VDD_ON);                     // enable power output
 
         /* Read board status. */
         pickit_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
@@ -623,36 +624,38 @@ adapter_t *adapter_open_pickit (void)
     }
 
     /* Enter programming mode. */
-    pickit_send (a, 42, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 39,
-        SCRIPT_VPP_OFF,
-        SCRIPT_MCLR_GND_ON,
-        SCRIPT_VPP_PWM_ON,
+    pickit_send (a, 46, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 43,
+        SCRIPT_VPP_OFF,                         // disconnect /MCLR from power
+        SCRIPT_MCLR_GND_ON,                     // connect /MCLR to ground
+        SCRIPT_VPP_PWM_ON,                      // enable power pump
         SCRIPT_BUSY_LED_ON,
         SCRIPT_SET_ICSP_PINS, 0,                // set PGC and PGD output low
         SCRIPT_DELAY_LONG, 20,                  // 100 msec
-        SCRIPT_MCLR_GND_OFF,
-        SCRIPT_VPP_ON,
+        SCRIPT_MCLR_GND_OFF,                    // detach /MCLR from ground
+        SCRIPT_VPP_ON,                          // connect /MCLR to power
         SCRIPT_DELAY_SHORT, 23,                 // 1 msec
-        SCRIPT_VPP_OFF,
-        SCRIPT_MCLR_GND_ON,
+        SCRIPT_VPP_OFF,                         // disconnect /MCLR from power
+        SCRIPT_MCLR_GND_ON,                     // connect /MCLR to ground
         SCRIPT_DELAY_SHORT, 47,                 // 2 msec
         SCRIPT_WRITE_BYTE_LITERAL, 0xb2,        // magic word
         SCRIPT_WRITE_BYTE_LITERAL, 0xc2,
         SCRIPT_WRITE_BYTE_LITERAL, 0x12,
         SCRIPT_WRITE_BYTE_LITERAL, 0x0a,
-        SCRIPT_MCLR_GND_OFF,
-        SCRIPT_VPP_ON,
+        SCRIPT_MCLR_GND_OFF,                    // detach /MCLR from ground
+        SCRIPT_VPP_ON,                          // connect /MCLR to power
         SCRIPT_DELAY_LONG, 2,                   // 10 msec
         SCRIPT_SET_ICSP_PINS, 2,                // set PGC low, PGD input
         SCRIPT_JT2_SETMODE, 6, 0x1f,
         SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
         SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_FLASH_ENABLE,
         SCRIPT_JT2_XFERDATA8_LIT, MCHP_STATUS);
     pickit_send (a, 1, CMD_UPLOAD_DATA);
     pickit_recv (a);
     if (debug_level > 1)
         fprintf (stderr, "pickit: got %02x-%02x\n", a->reply[0], a->reply[1]);
-    if (a->reply[0] != 1) {
+    if (a->reply[0] != 3) {
         fprintf (stderr, "pickit: cannot get MCHP STATUS\n");
         pickit_finish (a, 0);
         return 0;
