@@ -432,29 +432,24 @@ static int mpsse_cpu_stopped (adapter_t *adapter)
 static void mpsse_stop_cpu (adapter_t *adapter)
 {
     mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-    unsigned ctl;
+    unsigned ctl = 0;
 
     /* Select Control Register. */
     mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
 
-    /* Set EjtagBrk bit - request a Debug exception. */
-    mpsse_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 0);
-
-    /* The processor should enter Debug Mode. */
-    mpsse_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
-    for (;;) {
+    /* Loop until Debug Mode entered. */
+    while (! (ctl & CONTROL_DM)) {
+        /* Set EjtagBrk bit - request a Debug exception.
+         * Clear a 'reset occured' flag. */
+        mpsse_send (a, 0, 0, 32, (a->control & ~CONTROL_ROCC) |
+                                 CONTROL_EJTAGBRK, 1);
         ctl = mpsse_recv (a);
         if (debug_level > 0)
             fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
 
         if (ctl & CONTROL_ROCC) {
-            fprintf (stderr, "stop_cpu: Reset occured, clearing\n");
-            mpsse_send (a, 0, 0, 32,
-                (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK, 0);
-        } else if (ctl & CONTROL_DM)
-            break;
-
-        mpsse_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
+            fprintf (stderr, "stop_cpu: Reset occured\n");
+        }
     }
 }
 

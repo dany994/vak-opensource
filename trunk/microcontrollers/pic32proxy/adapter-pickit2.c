@@ -35,6 +35,9 @@ typedef struct {
 
     unsigned char reply [64];
 
+    /* EJTAG Control register. */
+    unsigned control;
+
     /* Execution context. */
     unsigned *local_iparam;
     int num_iparam;
@@ -144,63 +147,6 @@ static void pickit_reset_cpu (adapter_t *adapter)
         SCRIPT_MCLR_GND_OFF);
 }
 
-/*
- * Is the processor stopped?
- */
-static int pickit_cpu_stopped (adapter_t *adapter)
-{
-    // TODO
-#if 0
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    unsigned ctl;
-
-    /* Select Control Register. */
-    pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-
-    /* Check if Debug Mode bit is set. */
-    pickit_send (a, 0, 0, 32, a->control, 1);
-    ctl = pickit_recv (a);
-    return ctl & CONTROL_DM;
-#else
-    return 0;
-#endif
-}
-
-/*
- * Stop the processor.
- */
-static void pickit_stop_cpu (adapter_t *adapter)
-{
-    // TODO
-#if 0
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    unsigned ctl;
-
-    /* Select Control Register. */
-    pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-
-    /* Set EjtagBrk bit - request a Debug exception. */
-    pickit_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 0);
-
-    /* The processor should enter Debug Mode. */
-    pickit_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
-    for (;;) {
-        ctl = pickit_recv (a);
-        if (debug_level > 0)
-            fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
-
-        if (ctl & CONTROL_ROCC) {
-            fprintf (stderr, "stop_cpu: Reset occured, clearing\n");
-            pickit_send (a, 0, 0, 32,
-                (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK, 0);
-        } else if (ctl & CONTROL_DM)
-            break;
-
-        pickit_send (a, 0, 0, 32, a->control | CONTROL_EJTAGBRK, 1);
-    }
-#endif
-}
-
 static void pickit_finish (pickit_adapter_t *a, int power_on)
 {
     /* Exit programming mode. */
@@ -260,6 +206,65 @@ static unsigned pickit_get_idcode (adapter_t *adapter)
         return 0;
     idcode = a->reply[1] | a->reply[2] << 8 | a->reply[3] << 16 | a->reply[4] << 24;
     return idcode;
+}
+
+/*
+ * Is the processor stopped?
+ */
+static int pickit_cpu_stopped (adapter_t *adapter)
+{
+    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
+    unsigned ctl;
+
+    pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 10,
+            SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
+            SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
+            SCRIPT_JT2_XFERDATA32_LIT,
+                WORD_AS_BYTES (a->control),     /* write/read Control reg */
+        CMD_UPLOAD_DATA);
+    pickit_recv (a);
+
+    ctl = a->reply[0] | (a->reply[1] << 8) |
+          (a->reply[2] << 16) | (a->reply[3] << 24);
+    if (debug_level > 0)
+        fprintf (stderr, "is_stopped: Control = %08x\n", ctl);
+
+    /* Check if Debug Mode bit is set. */
+    return a->reply[0] & CONTROL_DM;
+}
+
+/*
+ * Stop the processor.
+ */
+static void pickit_stop_cpu (adapter_t *adapter)
+{
+    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
+    unsigned ctl = 0;
+
+    /* Loop until Debug Mode entered. */
+    while (! (ctl & CONTROL_DM)) {
+        /* Set EjtagBrk bit - request a Debug exception.
+         * Clear a 'reset occured' flag. */
+        ctl = (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK;
+        pickit_send (a, 12, CMD_CLEAR_UPLOAD_BUFFER,
+            CMD_EXECUTE_SCRIPT, 9,
+                SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
+                SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
+                SCRIPT_JT2_XFERDATA32_LIT,
+                    WORD_AS_BYTES (ctl));           /* write/read Control reg */
+        pickit_send (a, 1, CMD_UPLOAD_DATA);
+        pickit_recv (a);
+
+        ctl = a->reply[1] | (a->reply[2] << 8) |
+              (a->reply[3] << 16) | (a->reply[4] << 24);
+        if (debug_level > 0)
+            fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
+
+        if (ctl & CONTROL_ROCC) {
+            fprintf (stderr, "stop_cpu: Reset occured\n");
+        }
+    }
 }
 
 #if 0
@@ -378,7 +383,7 @@ static void pracc_exec_read (pickit_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    //fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
+    fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
 
     /* Send the data out */
     // TODO
@@ -458,7 +463,7 @@ static void pickit_exec (adapter_t *adapter, int cycle,
 	/* Wait for the PrAcc to become "1". */
         do {
             // TODO
-            ctl = 0;
+            ctl = CONTROL_PRACC;
             //pickit_send (a, 0, 0, 32, a->control, 1);
             //ctl = pickit_recv (a);
             //fprintf (stderr, "exec: ctl = %08x\n", ctl);
@@ -466,7 +471,7 @@ static void pickit_exec (adapter_t *adapter, int cycle,
 
         /* Read Address register. */
         // TODO
-        address = 0;
+        address = PRACC_TEXT;
         //pickit_send (a, 1, 1, 5, ETAP_ADDRESS, 0);
         //pickit_send (a, 0, 0, 32, 0, 1);
         //address = pickit_recv (a);
@@ -526,6 +531,8 @@ adapter_t *adapter_open_pickit (void)
     a->hiddev = hiddev;
     a->is_pk3 = is_pk3;
     a->adapter.name = is_pk3 ? "PICkit3" : "PICkit2";
+    a->control = CONTROL_ROCC | CONTROL_PRACC |
+                 CONTROL_PROBEN | CONTROL_PROBTRAP;
 
     /* Read version of adapter. */
     unsigned vers_major, vers_minor, vers_rev;
@@ -575,8 +582,7 @@ adapter_t *adapter_open_pickit (void)
         SCRIPT_SET_ICSP_SPEED, divisor);
 
     /* Reset active low. */
-    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
-        SCRIPT_MCLR_GND_ON);
+    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1, SCRIPT_MCLR_GND_ON);
 
     /* Read board status. */
     pickit_send (a, 2, CMD_CLEAR_UPLOAD_BUFFER, CMD_READ_STATUS);
@@ -657,9 +663,7 @@ adapter_t *adapter_open_pickit (void)
         return 0;
     }
     if (! (a->reply[1] & MCHP_STATUS_CPS)) {
-        fprintf (stderr, "Device is code protected and must be erased first.\n");
-        pickit_finish (a, 0);
-        return 0;
+        fprintf (stderr, "WARNING: device is code protected.\n");
     }
 
     /* User functions. */
