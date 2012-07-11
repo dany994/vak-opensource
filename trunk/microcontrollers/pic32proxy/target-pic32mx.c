@@ -15,6 +15,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 
 #include "target.h"
@@ -40,15 +41,17 @@ struct _target_t {
 #define REG_CAUSE       36
 #define REG_DEPC        37
 
-    unsigned    dcr;            /* Debug control register. */
+    unsigned    dcr;                    /* Debug control register. */
     int         dcr_valid;
-    unsigned    nbpoints;       /* Number of hardware breakpoints. */
+    unsigned    nbpoints;               /* Number of hardware breakpoints. */
     unsigned    bp_value [15];
     int         bp_used [15];
-    unsigned    nwatchpoints;   /* Number of hardware watchpoints. */
+    unsigned    nwatchpoints;           /* Number of hardware watchpoints. */
     unsigned    watch_value [15];
     int         watch_used [15];
 };
+
+static target_t *target_current;        /* For sigint handler */
 
 static const struct {
     unsigned devid;
@@ -148,73 +151,13 @@ void mdelay (unsigned msec)
 }
 #endif
 
-/*
- * Connect to JTAG adapter.
- */
-target_t *target_open ()
+static void target_sigint (int sig)
 {
-    target_t *t;
-
-    t = calloc (1, sizeof (target_t));
-    if (! t) {
-        fprintf (stderr, "Out of memory\n");
-        exit (-1);
+    printf ("\nInterrupted by user.\n");
+    if (target_current) {
+        target_current->adapter->close (target_current->adapter, 0);
     }
-    t->cpu_name = "Unknown";
-
-    /* Find adapter. */
-    t->adapter = adapter_open_pickit ();
-#ifdef USE_MPSSE
-    if (! t->adapter)
-        t->adapter = adapter_open_mpsse ();
-#endif
-    if (! t->adapter) {
-        fprintf (stderr, "No target found.\n");
-        exit (-1);
-    }
-
-    /* Check CPU identifier. */
-    t->cpuid = t->adapter->get_idcode (t->adapter);
-    if (t->cpuid == 0 || t->cpuid == ~0) {
-        /* Device not detected. */
-        fprintf (stderr, "Bad CPUID=%08x.\n", t->cpuid);
-        t->adapter->close (t->adapter, 0);
-        exit (1);
-    }
-    unsigned i;
-    for (i=0; (t->cpuid ^ pic32mx_dev[i].devid) & 0x0fffffff; i++) {
-        if (pic32mx_dev[i].devid == 0) {
-            /* Device not detected. */
-            fprintf (stderr, "Unknown CPUID=%08x.\n", t->cpuid);
-            t->adapter->close (t->adapter, 0);
-            exit (1);
-        }
-    }
-    t->cpu_name = pic32mx_dev[i].name;
-    t->flash_kbytes = pic32mx_dev[i].flash_kbytes;
-    t->boot_kbytes = pic32mx_dev[i].boot_kbytes;
-    t->is_running = 1;
-
-    printf ("Processor: %s\n", t->cpu_name);
-    return t;
-}
-
-/*
- * Close the device.
- */
-void target_close (target_t *t, int power_on)
-{
-    t->adapter->close (t->adapter, power_on);
-}
-
-const char *target_cpu_name (target_t *t)
-{
-    return t->cpu_name;
-}
-
-unsigned target_idcode (target_t *t)
-{
-    return t->cpuid;
+    exit (0);
 }
 
 /*
@@ -318,6 +261,81 @@ static void target_save_state (target_t *t)
         printf ("Debug hardware: %u breakpoints, %u watchpoints\n",
             t->nbpoints, t->nwatchpoints);
     }
+}
+
+/*
+ * Connect to JTAG adapter.
+ * Must stop a processor, but avoid resetting it, if possible.
+ */
+target_t *target_open ()
+{
+    target_t *t;
+
+    t = calloc (1, sizeof (target_t));
+    if (! t) {
+        fprintf (stderr, "Out of memory\n");
+        exit (-1);
+    }
+    t->cpu_name = "Unknown";
+
+    /* Find adapter. */
+    t->adapter = adapter_open_pickit ();
+#ifdef USE_MPSSE
+    if (! t->adapter)
+        t->adapter = adapter_open_mpsse ();
+#endif
+    if (! t->adapter) {
+        fprintf (stderr, "No target found.\n");
+        exit (-1);
+    }
+    target_current = t;
+    signal (SIGINT, target_sigint);
+
+    /* Check CPU identifier. */
+    t->cpuid = t->adapter->get_idcode (t->adapter);
+    if (t->cpuid == 0 || t->cpuid == ~0) {
+        /* Device not detected. */
+        fprintf (stderr, "Bad CPUID=%08x.\n", t->cpuid);
+        t->adapter->close (t->adapter, 0);
+        exit (1);
+    }
+    unsigned i;
+    for (i=0; (t->cpuid ^ pic32mx_dev[i].devid) & 0x0fffffff; i++) {
+        if (pic32mx_dev[i].devid == 0) {
+            /* Device not detected. */
+            fprintf (stderr, "Unknown CPUID=%08x.\n", t->cpuid);
+            t->adapter->close (t->adapter, 0);
+            exit (1);
+        }
+    }
+    t->cpu_name = pic32mx_dev[i].name;
+    t->flash_kbytes = pic32mx_dev[i].flash_kbytes;
+    t->boot_kbytes = pic32mx_dev[i].boot_kbytes;
+    printf ("Processor: %s\n", t->cpu_name);
+
+    /* Stop the processor. */
+    t->adapter->stop_cpu (t->adapter);
+    target_save_state (t);
+    return t;
+}
+
+/*
+ * Close the device.
+ */
+void target_close (target_t *t, int power_on)
+{
+    t->adapter->close (t->adapter, power_on);
+    target_current = 0;
+}
+
+const char *target_cpu_name (target_t *t)
+{
+    return t->cpu_name;
+}
+
+unsigned target_idcode (target_t *t)
+{
+    return t->cpuid;
 }
 
 /*
