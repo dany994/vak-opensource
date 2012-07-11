@@ -385,15 +385,13 @@ static void pracc_exec_read (pickit_adapter_t *a, unsigned address)
     }
     fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
 
-    /* Send the data out */
-    // TODO
-    //pickit_send (a, 1, 1, 5, ETAP_DATA, 0);
-    //pickit_send (a, 0, 0, 32, data, 0);
-
-    /* Clear the access pending bit (let the processor eat!) */
-    //pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-    //pickit_send (a, 0, 0, 32, a->control & ~CONTROL_PRACC, 0);
-    //pickit_flush_output (a);
+    /* Send the data out.
+     * Clear the access pending bit (let the processor eat!) */
+    pickit_send (a, 10, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 7,
+            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,      // write FastData
+            SCRIPT_JT2_XFRFASTDAT_LIT,
+                WORD_AS_BYTES (data));
 }
 
 static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
@@ -401,17 +399,15 @@ static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
     unsigned data;
     int offset;
 
-    /* Get data */
-    // TODO
-    data = 0;
-    //pickit_send (a, 1, 1, 5, ETAP_DATA, 0);
-    //pickit_send (a, 0, 0, 32, 0, 1);
-    //data = pickit_recv (a);
-
-    /* Clear access pending bit */
-    //pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
-    //pickit_send (a, 0, 0, 32, a->control & ~CONTROL_PRACC, 0);
-    //pickit_flush_output (a);
+    /* Get data.
+     * Clear access pending bit. */
+    pickit_send (a, 5, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 1,
+            SCRIPT_JT2_GET_PE_RESP,
+        CMD_UPLOAD_DATA);
+    pickit_recv (a);
+    data = a->reply[1] | (a->reply[2] << 8) |
+           (a->reply[3] << 16) | (a->reply[4] << 24);
 
     if ((address >= PRACC_PARAM_IN) &&
         (address <= PRACC_PARAM_IN + a->num_iparam * 4))
@@ -435,7 +431,7 @@ static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    //fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
+    fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
 }
 
 static void pickit_exec (adapter_t *adapter, int cycle,
@@ -456,26 +452,35 @@ static void pickit_exec (adapter_t *adapter, int cycle,
     a->stack_offset = 0;
 
     for (;;) {
-        /* Select Control register. */
-        // TODO
-        //pickit_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+        /* Write/read Control register. */
+        pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
+            CMD_EXECUTE_SCRIPT, 9,
+                SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
+                SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
+                SCRIPT_JT2_XFERDATA32_LIT,
+                    WORD_AS_BYTES (a->control),     /* write/read Control reg */
+            CMD_UPLOAD_DATA);
+        pickit_recv (a);
+        ctl = a->reply[1] | (a->reply[2] << 8) |
+              (a->reply[3] << 16) | (a->reply[4] << 24);
+        fprintf (stderr, "exec: ctl = %08x\n", ctl);
 
 	/* Wait for the PrAcc to become "1". */
-        do {
-            // TODO
-            ctl = CONTROL_PRACC;
-            //pickit_send (a, 0, 0, 32, a->control, 1);
-            //ctl = pickit_recv (a);
-            //fprintf (stderr, "exec: ctl = %08x\n", ctl);
-        } while (! (ctl & CONTROL_PRACC));
+        if (! (ctl & CONTROL_PRACC))
+            continue;
 
         /* Read Address register. */
-        // TODO
-        address = PRACC_TEXT;
-        //pickit_send (a, 1, 1, 5, ETAP_ADDRESS, 0);
-        //pickit_send (a, 0, 0, 32, 0, 1);
-        //address = pickit_recv (a);
-        //fprintf (stderr, "exec: address = %08x\n", address);
+        pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
+            CMD_EXECUTE_SCRIPT, 9,
+                SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
+                SCRIPT_JT2_SENDCMD, ETAP_ADDRESS,   /* select Address Register */
+                SCRIPT_JT2_XFERDATA32_LIT,
+                    0, 0, 0, 0,                     /* read Address reg */
+            CMD_UPLOAD_DATA);
+        pickit_recv (a);
+        address = a->reply[1] | (a->reply[2] << 8) |
+              (a->reply[3] << 16) | (a->reply[4] << 24);
+        fprintf (stderr, "exec: address = %08x\n", address);
 
         /* Check for read or write */
         if (ctl & CONTROL_PRNW) {
@@ -506,6 +511,10 @@ static void pickit_exec (adapter_t *adapter, int cycle,
  * Initialize adapter PICkit2/PICkit3.
  * Return a pointer to a data structure, allocated dynamically.
  * When adapter not found, return 0.
+ * Unfortunately, on any connect (or disconnect) to ICSP port.
+ * the processor needs to be reset.
+ * While ICSP port is active, the processor runs slowly:
+ * probably the main PLL is disabled.  No workaround still known.
  */
 adapter_t *adapter_open_pickit (void)
 {
@@ -624,7 +633,7 @@ adapter_t *adapter_open_pickit (void)
     }
 
     /* Enter programming mode. */
-    pickit_send (a, 46, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 43,
+    pickit_send (a, 46+4, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 43+4,
         SCRIPT_VPP_OFF,                         // disconnect /MCLR from power
         SCRIPT_MCLR_GND_ON,                     // connect /MCLR to ground
         SCRIPT_VPP_PWM_ON,                      // enable power pump
@@ -646,6 +655,8 @@ adapter_t *adapter_open_pickit (void)
         SCRIPT_DELAY_LONG, 2,                   // 10 msec
         SCRIPT_SET_ICSP_PINS, 2,                // set PGC low, PGD input
         SCRIPT_JT2_SETMODE, 6, 0x1f,
+        SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
+        SCRIPT_JT2_SENDCMD, ETAP_EJTAGBOOT,     // stop on boot vector
         SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
         SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
         SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
