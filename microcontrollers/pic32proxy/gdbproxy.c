@@ -759,7 +759,8 @@ static int handle_restart_target_command(char * const in_buf,
     assert(can_restart);
 
     /* Let us do our best to restart the system */
-    if ((ret = t->restart()) != RP_VAL_TARGETRET_OK)
+    ret = t->restart();
+    if (ret != RP_VAL_TARGETRET_OK)
     {
         /* There is no point to continuing */
         rp_log(RP_VAL_LOGLEVEL_ERR,

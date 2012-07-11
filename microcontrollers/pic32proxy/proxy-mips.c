@@ -212,34 +212,25 @@ static int mips_open(int argc,
             return RP_VAL_TARGETRET_ERR;
         }
     }
-
-    if (! target.device) {
-        /* First time - connect to adapter.
-         * Do not reset a processor! */
-        target.device = target_open();
-        if (! target.device) {
-            target.log(RP_VAL_LOGLEVEL_ERR,
-                            "%s: failed to initialize JTAG adapter",
-                            mips_target.name);
-            return RP_VAL_TARGETRET_ERR;
-        }
-    }
     return RP_VAL_TARGETRET_OK;
 }
 
 /*
  * Target method.
  * Called when debugger disconnects from pic32proxy.
- * Need to resume a processor.
+ * Resume a processor and close adapter connection.
  */
 static void mips_close()
 {
     target.log(RP_VAL_LOGLEVEL_DEBUG,
                         "%s: mips_close()",
                         mips_target.name);
-    assert (target.device != 0);
 
-    target_resume (target.device);
+    if (target.device != 0) {
+        target_resume (target.device);
+        target_close (target.device, 0);
+        target.device = 0;
+    }
 }
 
 /*
@@ -256,16 +247,22 @@ static int mips_connect(char *status_string,
     target.log(RP_VAL_LOGLEVEL_DEBUG,
                         "%s: mips_connect()",
                         mips_target.name);
-
-    assert (target.device != 0);
-
+    assert (target.device == 0);
     assert (status_string != NULL);
     assert (status_string_len >= 34);
     assert (can_restart != NULL);
 
     *can_restart = TRUE;
 
-    target_stop (target.device);
+    /* First time - connect to adapter.
+     * Must stop a processor! */
+    target.device = target_open();
+    if (! target.device) {
+        target.log(RP_VAL_LOGLEVEL_ERR,
+                        "%s: failed to initialize JTAG adapter",
+                        mips_target.name);
+        return RP_VAL_TARGETRET_ERR;
+    }
 
     /* Fill out the the status string */
     sprintf(status_string, "T%02d", RP_SIGNAL_BREAKPOINT);
@@ -277,8 +274,7 @@ static int mips_connect(char *status_string,
 
 /*
  * Target method.
- * Disconnect from adapter.
- * No need to do anything.
+ * Called on debugger detach command.
  */
 static int mips_disconnect()
 {

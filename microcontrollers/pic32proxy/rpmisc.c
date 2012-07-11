@@ -627,47 +627,18 @@ static void rp_log_local(int level, const char *fmt, ...)
     va_list args;
 
     /* Convert our log level values to system ones */
-    switch (level)
-    {
-    case RP_VAL_LOGLEVEL_EMERG:
-        fprintf(stderr, "emergency: ");
-        break;
-    case RP_VAL_LOGLEVEL_ALERT:
-        fprintf(stderr, "alert:     ");
-        break;
-    case RP_VAL_LOGLEVEL_CRIT:
-        fprintf(stderr, "critical:  ");
-        break;
-    case RP_VAL_LOGLEVEL_ERR:
-        fprintf(stderr, "error:     ");
-        break;
-    case RP_VAL_LOGLEVEL_WARNING:
-        fprintf(stderr, "warning:   ");
-        break;
-    case RP_VAL_LOGLEVEL_NOTICE:
-        fprintf(stderr, "notice:    ");
-        break;
-    case RP_VAL_LOGLEVEL_INFO:
-        fprintf(stderr, "info:      ");
-        break;
+    switch (level) {
     case RP_VAL_LOGLEVEL_DEBUG:
         if (debug_level < 1)
             return;
-        fprintf(stderr, "debug:     ");
         break;
     case RP_VAL_LOGLEVEL_DEBUG2:
         if (debug_level < 2)
             return;
-        fprintf(stderr, "debug:     ");
         break;
     case RP_VAL_LOGLEVEL_DEBUG3:
         if (debug_level < 3)
             return;
-        fprintf(stderr, "debug:     ");
-        break;
-    default:
-        assert(0);
-        fprintf(stderr, "debug:     ");
         break;
     }
 
@@ -686,8 +657,7 @@ static void rp_log_system(int level, const char *fmt, ...)
     int priority;
 
     /* Convert our log level values to system ones */
-    switch (level)
-    {
+    switch (level) {
     case RP_VAL_LOGLEVEL_EMERG:
         priority = LOG_EMERG;
         break;
