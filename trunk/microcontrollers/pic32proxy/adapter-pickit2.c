@@ -194,11 +194,12 @@ static unsigned pickit_get_idcode (adapter_t *adapter)
     unsigned idcode;
 
     /* Read device id. */
-    pickit_send (a, 12, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 9,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_IDCODE,
-        SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0);
-    pickit_send (a, 1, CMD_UPLOAD_DATA);
+    pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 9,
+            SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+            SCRIPT_JT2_SENDCMD, MTAP_IDCODE,
+            SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0,
+        CMD_UPLOAD_DATA);
     pickit_recv (a);
     //fprintf (stderr, "pickit: read id, %d bytes: %02x %02x %02x %02x\n",
     //  a->reply[0], a->reply[1], a->reply[2], a->reply[3], a->reply[4]);
@@ -217,21 +218,24 @@ static int pickit_cpu_stopped (adapter_t *adapter)
     unsigned ctl;
 
     pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_EXECUTE_SCRIPT, 10,
+        CMD_EXECUTE_SCRIPT, 9,
             SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
             SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
             SCRIPT_JT2_XFERDATA32_LIT,
                 WORD_AS_BYTES (a->control),     /* write/read Control reg */
         CMD_UPLOAD_DATA);
     pickit_recv (a);
-
-    ctl = a->reply[0] | (a->reply[1] << 8) |
-          (a->reply[2] << 16) | (a->reply[3] << 24);
+    if (a->reply[0] != 4) {
+        fprintf (stderr, "pickit_cpu_stopped: bad reply length = %u\n", a->reply[0]);
+        exit (-1);
+    }
+    ctl = a->reply[1] | (a->reply[2] << 8) |
+          (a->reply[3] << 16) | (a->reply[4] << 24);
     if (debug_level > 0)
-        fprintf (stderr, "is_stopped: Control = %08x\n", ctl);
+        fprintf (stderr, "is_stopped: control = %08x\n", ctl);
 
     /* Check if Debug Mode bit is set. */
-    return a->reply[0] & CONTROL_DM;
+    return ctl & CONTROL_DM;
 }
 
 /*
@@ -247,15 +251,18 @@ static void pickit_stop_cpu (adapter_t *adapter)
         /* Set EjtagBrk bit - request a Debug exception.
          * Clear a 'reset occured' flag. */
         ctl = (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK;
-        pickit_send (a, 12, CMD_CLEAR_UPLOAD_BUFFER,
+        pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
             CMD_EXECUTE_SCRIPT, 9,
                 SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
                 SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
                 SCRIPT_JT2_XFERDATA32_LIT,
-                    WORD_AS_BYTES (ctl));           /* write/read Control reg */
-        pickit_send (a, 1, CMD_UPLOAD_DATA);
+                    WORD_AS_BYTES (ctl),            /* write/read Control reg */
+            CMD_UPLOAD_DATA);
         pickit_recv (a);
-
+        if (a->reply[0] != 4) {
+            fprintf (stderr, "pickit_stop_cpu: bad reply length = %u\n", a->reply[0]);
+            exit (-1);
+        }
         ctl = a->reply[1] | (a->reply[2] << 8) |
               (a->reply[3] << 16) | (a->reply[4] << 24);
         if (debug_level > 0)
@@ -267,92 +274,10 @@ static void pickit_stop_cpu (adapter_t *adapter)
     }
 }
 
-#if 0
-/*
- * Put device to serial execution mode.
- */
-static void serial_execution (pickit_adapter_t *a)
-{
-    if (a->serial_execution_mode)
-        return;
-    a->serial_execution_mode = 1;
-
-    // Enter serial execution.
-    if (debug_level > 0)
-        fprintf (stderr, "pickit: enter serial execution\n");
-    pickit_send (a, 29, CMD_EXECUTE_SCRIPT, 27,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_STATUS,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_ASSERT_RST,
-        SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
-        SCRIPT_JT2_SETMODE, 6, 0x1F,
-        SCRIPT_JT2_SENDCMD, ETAP_EJTAGBOOT,
-        SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
-        SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
-        SCRIPT_JT2_XFERDATA8_LIT, MCHP_FLASH_ENABLE);
-}
-
-/*
- * Read a word from memory (without PE).
- */
-static unsigned pickit_read_word (adapter_t *adapter, unsigned addr)
-{
-    pickit_adapter_t *a = (pickit_adapter_t*) adapter;
-    serial_execution (a);
-
-    unsigned addr_lo = addr & 0xFFFF;
-    unsigned addr_hi = (addr >> 16) & 0xFFFF;
-    pickit_send (a, 64, CMD_CLEAR_DOWNLOAD_BUFFER,
-        CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_DOWNLOAD_DATA, 28,
-            WORD_AS_BYTES (0x3c04bf80),             // lui s3, 0xFF20
-            WORD_AS_BYTES (0x3c080000 | addr_hi),   // lui t0, addr_hi
-            WORD_AS_BYTES (0x35080000 | addr_lo),   // ori t0, addr_lo
-            WORD_AS_BYTES (0x8d090000),             // lw t1, 0(t0)
-            WORD_AS_BYTES (0xae690000),             // sw t1, 0(s3)
-            WORD_AS_BYTES (0x00094842),             // srl t1, 1
-            WORD_AS_BYTES (0xae690004),             // sw t1, 4(s3)
-        CMD_EXECUTE_SCRIPT, 29,
-            SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
-            SCRIPT_JT2_SETMODE, 6, 0x1F,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,      // read FastData
-            SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0,
-            SCRIPT_JT2_SETMODE, 6, 0x1F,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_XFERINST_BUF,
-            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,      // read FastData
-            SCRIPT_JT2_XFERDATA32_LIT, 0, 0, 0, 0,
-        CMD_UPLOAD_DATA);
-    pickit_recv (a);
-    if (a->reply[0] != 8) {
-        fprintf (stderr, "pickit: read word %08x: bad reply length=%u\n",
-            addr, a->reply[0]);
-        exit (-1);
-    }
-    unsigned value = a->reply[1] | (a->reply[2] << 8) |
-           (a->reply[3] << 16) | (a->reply[4] << 24);
-    unsigned value2 = a->reply[5] | (a->reply[6] << 8) |
-           (a->reply[7] << 16) | (a->reply[8] << 24);
-//fprintf (stderr, "    %08x -> %08x %08x\n", addr, value, value2);
-    value >>= 1;
-    value |= value2 & 0x80000000;
-    return value;
-}
-#endif
-
 static void pracc_exec_read (pickit_adapter_t *a, unsigned address)
 {
     int offset;
-    unsigned data;
+    unsigned data, ctl;
 
     if ((address >= PRACC_PARAM_IN) &&
         (address <= PRACC_PARAM_IN + a->num_iparam * 4))
@@ -383,15 +308,20 @@ static void pracc_exec_read (pickit_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
+    if (debug_level > 0)
+        fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
 
     /* Send the data out.
      * Clear the access pending bit (let the processor eat!) */
-    pickit_send (a, 10, CMD_CLEAR_UPLOAD_BUFFER,
-        CMD_EXECUTE_SCRIPT, 7,
-            SCRIPT_JT2_SENDCMD, ETAP_FASTDATA,      // write FastData
-            SCRIPT_JT2_XFRFASTDAT_LIT,
-                WORD_AS_BYTES (data));
+    ctl = a->control & ~CONTROL_PRACC;
+    pickit_send (a, 17, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 14,
+            SCRIPT_JT2_SENDCMD, ETAP_DATA,      /* write Data */
+            SCRIPT_JT2_XFERDATA32_LIT,
+                WORD_AS_BYTES (data),
+            SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
+            SCRIPT_JT2_XFERDATA32_LIT,
+                WORD_AS_BYTES (ctl));           /* write/read Control reg */
 }
 
 static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
@@ -406,6 +336,10 @@ static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
             SCRIPT_JT2_GET_PE_RESP,
         CMD_UPLOAD_DATA);
     pickit_recv (a);
+    if (a->reply[0] != 4) {
+        fprintf (stderr, "pickit pracc_exec_write: bad reply length = %u\n", a->reply[0]);
+        exit (-1);
+    }
     data = a->reply[1] | (a->reply[2] << 8) |
            (a->reply[3] << 16) | (a->reply[4] << 24);
 
@@ -431,7 +365,8 @@ static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
+    if (debug_level > 0)
+        fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
 }
 
 static void pickit_exec (adapter_t *adapter, int cycle,
@@ -461,9 +396,14 @@ static void pickit_exec (adapter_t *adapter, int cycle,
                     WORD_AS_BYTES (a->control),     /* write/read Control reg */
             CMD_UPLOAD_DATA);
         pickit_recv (a);
+        if (a->reply[0] != 4) {
+            fprintf (stderr, "pickit_exec: bad ctl reply length = %u\n", a->reply[0]);
+            exit (-1);
+        }
         ctl = a->reply[1] | (a->reply[2] << 8) |
               (a->reply[3] << 16) | (a->reply[4] << 24);
-        fprintf (stderr, "exec: ctl = %08x\n", ctl);
+        if (debug_level > 0)
+            fprintf (stderr, "exec: ctl = %08x\n", ctl);
 
 	/* Wait for the PrAcc to become "1". */
         if (! (ctl & CONTROL_PRACC))
@@ -478,9 +418,14 @@ static void pickit_exec (adapter_t *adapter, int cycle,
                     0, 0, 0, 0,                     /* read Address reg */
             CMD_UPLOAD_DATA);
         pickit_recv (a);
+        if (a->reply[0] != 4) {
+            fprintf (stderr, "pickit_exec: bad address reply length = %u\n", a->reply[0]);
+            exit (-1);
+        }
         address = a->reply[1] | (a->reply[2] << 8) |
               (a->reply[3] << 16) | (a->reply[4] << 24);
-        fprintf (stderr, "exec: address = %08x\n", address);
+        if (debug_level > 0)
+            fprintf (stderr, "exec: address = %08x\n", address);
 
         /* Check for read or write */
         if (ctl & CONTROL_PRNW) {
@@ -567,7 +512,7 @@ adapter_t *adapter_open_pickit (void)
         vers_minor = a->reply[1];
         vers_rev = a->reply[2];
     }
-    printf ("Adapter: %s Version %d.%d.%d\n",
+    printf ("adapter: %s Version %d.%d.%d\n",
         a->adapter.name, vers_major, vers_minor, vers_rev);
 
     /* Detach power from the board. */

@@ -639,7 +639,7 @@ found:
         return 0;
     }
     usb_claim_interface (a->usbdev, 0);
-    printf ("Adapter: %s, id %04x:%04x\n", a->adapter.name,
+    printf ("adapter: %s, id %04x:%04x\n", a->adapter.name,
         dev->descriptor.idVendor, dev->descriptor.idProduct);
 
     /* Reset the ftdi device. */
