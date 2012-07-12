@@ -153,7 +153,7 @@ void mdelay (unsigned msec)
 
 static void target_sigint (int sig)
 {
-    printf ("\nInterrupted by user.\n");
+    printf ("\ninterrupted by user.\n");
     if (target_current) {
         target_current->adapter->close (target_current->adapter, 0);
     }
@@ -258,7 +258,7 @@ static void target_save_state (target_t *t)
             t->nwatchpoints = (dbs >> 24) & 0x0F;
             //fprintf (stderr, "DBS = %08x, %u watchpoints\n", dbs, t->nwatchpoints);
         }
-        printf ("Debug hardware: %u breakpoints, %u watchpoints\n",
+        printf ("hardware: %u breakpoints, %u watchpoints\n",
             t->nbpoints, t->nwatchpoints);
     }
 }
@@ -311,7 +311,7 @@ target_t *target_open ()
     t->cpu_name = pic32mx_dev[i].name;
     t->flash_kbytes = pic32mx_dev[i].flash_kbytes;
     t->boot_kbytes = pic32mx_dev[i].boot_kbytes;
-    printf ("Processor: %s\n", t->cpu_name);
+    printf ("processor: %s\n", t->cpu_name);
 
     /* Stop the processor. */
     t->adapter->stop_cpu (t->adapter);
