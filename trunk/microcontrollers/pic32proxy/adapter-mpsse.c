@@ -510,7 +510,8 @@ static void pracc_exec_read (mpsse_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    //fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
+    if (debug_level > 1)
+        fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
 
     /* Send the data out */
     mpsse_send (a, 1, 1, 5, ETAP_DATA, 0);
@@ -559,7 +560,8 @@ static void pracc_exec_write (mpsse_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    //fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
+    if (debug_level > 1)
+        fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
 }
 
 static void mpsse_exec (adapter_t *adapter, int cycle,
@@ -587,14 +589,16 @@ static void mpsse_exec (adapter_t *adapter, int cycle,
         do {
             mpsse_send (a, 0, 0, 32, a->control, 1);
             ctl = mpsse_recv (a);
-            //fprintf (stderr, "exec: ctl = %08x\n", ctl);
+            if (debug_level > 1)
+                fprintf (stderr, "exec: ctl = %08x\n", ctl);
         } while (! (ctl & CONTROL_PRACC));
 
         /* Read Address register. */
         mpsse_send (a, 1, 1, 5, ETAP_ADDRESS, 0);
         mpsse_send (a, 0, 0, 32, 0, 1);
         address = mpsse_recv (a);
-        //fprintf (stderr, "exec: address = %08x\n", address);
+        if (debug_level > 1)
+            fprintf (stderr, "exec: address = %08x\n", address);
 
         /* Check for read or write */
         if (ctl & CONTROL_PRNW) {
