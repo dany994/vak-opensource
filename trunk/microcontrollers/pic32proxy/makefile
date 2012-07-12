@@ -5,12 +5,16 @@ CFLAGS		= -Wall -g -O -I/opt/local/include -Ihidapi -DSVNVERSION='"$(SVNVERS)"'
 LDFLAGS		=
 
 # Linux
-LIBS            += -lusb-1.0
-HIDSRC          = hidapi/hid-libusb.c
+ifneq (,$(wildcard /lib/i386-linux-gnu))
+    LIBS        += -lusb-1.0
+    HIDSRC      = hidapi/hid-libusb.c
+endif
 
 # Mac OS X
-#LIBS            += -framework IOKit -framework CoreFoundation
-#HIDSRC          = hidapi/hid-mac.c
+ifneq (,$(wildcard /System/Library/Frameworks/CoreFoundation.framework))
+    LIBS        += -framework IOKit -framework CoreFoundation
+    HIDSRC      = hidapi/hid-mac.c
+endif
 
 OBJS		= gdbproxy.o rpmisc.o target-pic32mx.o hid.o \
                   proxy-mips.o adapter-pickit2.o
