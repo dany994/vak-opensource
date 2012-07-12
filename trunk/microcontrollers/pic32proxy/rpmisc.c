@@ -27,7 +27,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *  QQI can be contacted as qqi@world.std.com
+ * QQI can be contacted as qqi@world.std.com
  */
 #include <stdint.h>
 #include <stdio.h>

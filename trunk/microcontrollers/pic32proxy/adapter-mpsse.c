@@ -402,11 +402,34 @@ static unsigned mpsse_get_idcode (adapter_t *adapter)
 static void mpsse_reset_cpu (adapter_t *adapter)
 {
     mpsse_adapter_t *a = (mpsse_adapter_t*) adapter;
-    mpsse_flush_output (a);
+    unsigned ctl;
 
-    /* Toggle /SYSRST for several microseconds. */
-    mpsse_reset (a, 0, 1, 1);
-    mpsse_reset (a, 0, 0, 1);
+    /* Set EJTAGBOOT mode - request a Debug exception on reset.
+     * Clear a 'reset occured' flag. */
+    ctl = (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK;
+
+    mpsse_send (a, 6, 31, 0, 0, 0);                 /* TMS 1-1-1-1-1-0 */
+    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
+    mpsse_send (a, 1, 1, 5, ETAP_EJTAGBOOT, 0);     /* stop on boot vector */
+    mpsse_send (a, 1, 1, 5, TAP_SW_MTAP, 0);
+    mpsse_send (a, 1, 1, 5, MTAP_COMMAND, 0);
+    mpsse_send (a, 0, 0, 8, MCHP_ASSERT_RST, 0);    /* toggle Reset */
+    mpsse_send (a, 0, 0, 8, MCHP_DEASSERT_RST, 0);
+    mpsse_send (a, 0, 0, 8, MCHP_FLASH_ENABLE, 0);
+    mpsse_send (a, 1, 1, 5, TAP_SW_ETAP, 0);
+
+    /* Set EjtagBrk bit - request a Debug exception.
+     * Clear a 'reset occured' flag. */
+    mpsse_send (a, 1, 1, 5, ETAP_CONTROL, 0);
+    mpsse_send (a, 0, 0, 32, (a->control & ~CONTROL_ROCC) |
+                             CONTROL_EJTAGBRK, 1);
+    ctl = mpsse_recv (a);
+    if (debug_level > 0)
+        fprintf (stderr, "mpsse_reset_cpu: control = %08x\n", ctl);
+    if (! (ctl & CONTROL_ROCC)) {
+        fprintf (stderr, "mpsse_reset_cpu: reset failed\n");
+        exit (-1);
+    }
 }
 
 /*

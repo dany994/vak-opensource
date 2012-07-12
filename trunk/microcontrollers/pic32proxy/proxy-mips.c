@@ -2,6 +2,10 @@
  * Interface to MIPS target platform.
  *
  * Copyright (C) 2012 Serge Vakulenko
+ *
+ * This file is part of PIC32PROXY project, which is distributed
+ * under the terms of the GNU General Public License (GPL).
+ * See the accompanying file "COPYING" for more details.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,18 +155,10 @@ static struct {
 /* Local functions */
 static char *mips_out_treg (char *in, unsigned int reg_no);
 
-#ifdef NDEBUG
+#if 1
 #define DEBUG_OUT(...)
 #else
-static void DEBUG_OUT(const char *string,...)
-{
-    va_list args;
-    va_start (args, string);
-    fprintf (stderr, "debug: ");
-    vfprintf (stderr, string, args);
-    fprintf (stderr, "\n");
-    va_end (args);
-}
+#define DEBUG_OUT printf
 #endif
 
 /*
@@ -247,21 +243,22 @@ static int mips_connect(char *status_string,
     target.log(RP_VAL_LOGLEVEL_DEBUG,
                         "%s: mips_connect()",
                         mips_target.name);
-    assert (target.device == 0);
     assert (status_string != NULL);
     assert (status_string_len >= 34);
     assert (can_restart != NULL);
 
     *can_restart = TRUE;
 
-    /* First time - connect to adapter.
-     * Must stop a processor! */
-    target.device = target_open();
     if (! target.device) {
-        target.log(RP_VAL_LOGLEVEL_ERR,
-                        "%s: failed to initialize JTAG adapter",
-                        mips_target.name);
-        return RP_VAL_TARGETRET_ERR;
+        /* First time - connect to adapter.
+         * Must stop a processor! */
+        target.device = target_open();
+        if (! target.device) {
+            target.log(RP_VAL_LOGLEVEL_ERR,
+                            "%s: failed to initialize JTAG adapter",
+                            mips_target.name);
+            return RP_VAL_TARGETRET_ERR;
+        }
     }
 
     /* Fill out the the status string */
@@ -884,21 +881,25 @@ static int tohex(char *s, const char *t)
 }
 
 /*
- * Command: erase flash.
+ * Command: reset to boot vector.
  */
-static int mips_rcmd_erase(int argc, char *argv[], out_func of, data_func df)
+static int mips_rcmd_reset(int argc, char *argv[], out_func of, data_func df)
 {
     char buf[1000 + 1];
 
     target.log(RP_VAL_LOGLEVEL_DEBUG,
-                        "%s: mips_rcmd_erase()",
+                        "%s: mips_rcmd_reset()",
                         mips_target.name);
-    tohex(buf, "Erasing target flash - ");
+    if (! target.device)
+        return RP_VAL_TARGETRET_OK;
+
+    tohex(buf, "Resetting target processor... ");
     of(buf);
 
-    /* TODO: perform the erase. */
+    /* Reset the processor. */
+    target_restart (target.device);
 
-    tohex(buf, " Erased OK\n");
+    tohex(buf, "Done.\n");
     of(buf);
     return RP_VAL_TARGETRET_OK;
 }
@@ -908,10 +909,9 @@ static int mips_rcmd_erase(int argc, char *argv[], out_func of, data_func df)
  */
 static const RCMD_TABLE remote_commands[] =
 {
-    RCMD(help,      "This help text"),
-
-    RCMD(erase,     "Erase target flash memory"),
-    {0,0,0}     //sentinel, end of table marker
+    RCMD (help,     "This help text"),
+    RCMD (reset,    "Reset the target processor"),
+    { 0 }
 };
 
 /*
@@ -925,7 +925,7 @@ static int mips_rcmd_help(int argc, char *argv[], out_func of, data_func df)
 
     tohex(buf, "Remote command help:\n");
     of(buf);
-    for (i = 0;  remote_commands[i].name;  i++)
+    for (i = 0; remote_commands[i].name; i++)
     {
 #ifdef WIN32
         sprintf(buf2, "%-10s %s\n", remote_commands[i].name, remote_commands[i].help);
@@ -948,10 +948,9 @@ static int remote_decode_nibble(const char *in, unsigned int *nibble)
     if ((nib = rp_hex_nibble(*in)) >= 0)
     {
         *nibble = nib;
-        return  TRUE;
+        return TRUE;
     }
-
-    return  FALSE;
+    return FALSE;
 }
 
 
@@ -963,15 +962,14 @@ static int remote_decode_byte(const char *in, unsigned int *byte)
     unsigned int ls_nibble;
     unsigned int ms_nibble;
 
-    if (!remote_decode_nibble(in, &ms_nibble))
-        return  FALSE;
+    if (! remote_decode_nibble(in, &ms_nibble))
+        return FALSE;
 
-    if (!remote_decode_nibble(in + 1, &ls_nibble))
-        return  FALSE;
+    if (! remote_decode_nibble(in + 1, &ls_nibble))
+        return FALSE;
 
     *byte = (ms_nibble << 4) + ls_nibble;
-
-    return  TRUE;
+    return TRUE;
 }
 
 /*
@@ -992,15 +990,13 @@ static int mips_remcmd(char *in_buf, out_func of, data_func df)
     target.log(RP_VAL_LOGLEVEL_DEBUG,
                         "%s: mips_remcmd()",
                         mips_target.name);
-    DEBUG_OUT("command '%s'", in_buf);
+    DEBUG_OUT("command '%s'\n", in_buf);
 
     if (strlen(in_buf))
     {
-        /* There is something to process */
-        /* TODO: Handle target specific commands, such as flash erase, JTAG
-                 control, etc. */
-        /* A single example "flash erase" command is partially implemented
-           here as an example. */
+        /* There is something to process.
+         * Handle target specific commands, such as reset,
+         * flash erase, JTAG control, etc. */
 
         /* Turn the hex into ASCII */
         ptr = in_buf;
@@ -1013,7 +1009,7 @@ static int mips_remcmd(char *in_buf, out_func of, data_func df)
             ptr += 2;
         }
         *s = '\0';
-        DEBUG_OUT("command '%s'", buf);
+        DEBUG_OUT("command '%s'\n", buf);
 
         /* Split string into separate arguments */
         ptr = buf;
@@ -1032,9 +1028,9 @@ static int mips_remcmd(char *in_buf, out_func of, data_func df)
             ptr++;
         }
         /* Search the command table, and execute the function if found */
-        DEBUG_OUT("executing target dependant command '%s'", args[0]);
+        DEBUG_OUT("executing target dependant command '%s'\n", args[0]);
 
-        for (i = 0;  remote_commands[i].name;  i++)
+        for (i = 0; remote_commands[i].name; i++)
         {
             if (strcmp(args[0], remote_commands[i].name) == 0)
                 return remote_commands[i].function(count, args, of, df);
