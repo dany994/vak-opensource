@@ -448,7 +448,8 @@ void target_run (target_t *t, unsigned addr)
 void target_restart (target_t *t)
 {
     t->adapter->reset_cpu (t->adapter);
-    t->is_running = 1;
+    t->is_running = 0;
+    target_save_state (t);
 }
 
 /*

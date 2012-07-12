@@ -137,14 +137,39 @@ static void check_timeout (pickit_adapter_t *a, const char *message)
 static void pickit_reset_cpu (adapter_t *adapter)
 {
     pickit_adapter_t *a = (pickit_adapter_t*) adapter;
+    unsigned ctl;
 
-    /* Reset active low. */
-    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
-        SCRIPT_MCLR_GND_ON);                    // connect /MCLR to ground
-
-    /* Disable reset. */
-    pickit_send (a, 3, CMD_EXECUTE_SCRIPT, 1,
-        SCRIPT_MCLR_GND_OFF);                   // detach /MCLR from ground
+    /* Set EJTAGBOOT mode - request a Debug exception on reset.
+     * Clear a 'reset occured' flag. */
+    ctl = (a->control & ~CONTROL_ROCC) | CONTROL_EJTAGBRK;
+    pickit_send (a, 30, CMD_CLEAR_UPLOAD_BUFFER,
+        CMD_EXECUTE_SCRIPT, 26,
+            SCRIPT_JT2_SETMODE, 6, 0x1f,
+            SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,
+            SCRIPT_JT2_SENDCMD, ETAP_EJTAGBOOT,     // stop on boot vector
+            SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
+            SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+            SCRIPT_JT2_XFERDATA8_LIT, MCHP_ASSERT_RST,
+            SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
+            SCRIPT_JT2_XFERDATA8_LIT, MCHP_FLASH_ENABLE,
+            SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
+            SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
+            SCRIPT_JT2_XFERDATA32_LIT,
+                WORD_AS_BYTES (ctl),            /* write/read Control reg */
+        CMD_UPLOAD_DATA);
+    pickit_recv (a);
+    if (a->reply[0] != 7) {
+        fprintf (stderr, "pickit_reset_cpu: bad reply length = %u\n", a->reply[0]);
+        exit (-1);
+    }
+    ctl = a->reply[4] | (a->reply[5] << 8) |
+          (a->reply[6] << 16) | (a->reply[7] << 24);
+    if (debug_level > 0)
+        fprintf (stderr, "pickit_reset_cpu: control = %08x\n", ctl);
+    if (! (ctl & CONTROL_ROCC)) {
+        fprintf (stderr, "pickit_reset_cpu: reset failed\n");
+        exit (-1);
+    }
 }
 
 static void pickit_finish (pickit_adapter_t *a, int power_on)
@@ -269,7 +294,7 @@ static void pickit_stop_cpu (adapter_t *adapter)
             fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
 
         if (ctl & CONTROL_ROCC) {
-            fprintf (stderr, "stop_cpu: Reset occured\n");
+            fprintf (stderr, "stop_cpu: reset occured\n");
         }
     }
 }
@@ -578,7 +603,7 @@ adapter_t *adapter_open_pickit (void)
     }
 
     /* Enter programming mode. */
-    pickit_send (a, 46+4, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 43+4,
+    pickit_send (a, 52, CMD_CLEAR_UPLOAD_BUFFER, CMD_EXECUTE_SCRIPT, 49,
         SCRIPT_VPP_OFF,                         // disconnect /MCLR from power
         SCRIPT_MCLR_GND_ON,                     // connect /MCLR to ground
         SCRIPT_VPP_PWM_ON,                      // enable power pump
@@ -604,6 +629,7 @@ adapter_t *adapter_open_pickit (void)
         SCRIPT_JT2_SENDCMD, ETAP_EJTAGBOOT,     // stop on boot vector
         SCRIPT_JT2_SENDCMD, TAP_SW_MTAP,
         SCRIPT_JT2_SENDCMD, MTAP_COMMAND,
+        SCRIPT_JT2_XFERDATA8_LIT, MCHP_ASSERT_RST,
         SCRIPT_JT2_XFERDATA8_LIT, MCHP_DEASSERT_RST,
         SCRIPT_JT2_XFERDATA8_LIT, MCHP_FLASH_ENABLE,
         SCRIPT_JT2_XFERDATA8_LIT, MCHP_STATUS);
@@ -611,17 +637,17 @@ adapter_t *adapter_open_pickit (void)
     pickit_recv (a);
     if (debug_level > 1)
         fprintf (stderr, "pickit: got %02x-%02x\n", a->reply[0], a->reply[1]);
-    if (a->reply[0] != 3) {
+    if (a->reply[0] != 4) {
         fprintf (stderr, "pickit: cannot get MCHP STATUS\n");
         pickit_finish (a, 0);
         return 0;
     }
-    if (! (a->reply[1] & MCHP_STATUS_CFGRDY)) {
+    if (! (a->reply[3] & MCHP_STATUS_CFGRDY)) {
         fprintf (stderr, "No device attached.\n");
         pickit_finish (a, 0);
         return 0;
     }
-    if (! (a->reply[1] & MCHP_STATUS_CPS)) {
+    if (! (a->reply[3] & MCHP_STATUS_CPS)) {
         fprintf (stderr, "WARNING: device is code protected.\n");
     }
 
