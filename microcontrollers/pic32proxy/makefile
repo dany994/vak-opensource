@@ -12,18 +12,18 @@ HIDSRC          = hidapi/hid-libusb.c
 #LIBS            += -framework IOKit -framework CoreFoundation
 #HIDSRC          = hidapi/hid-mac.c
 
-REMOTE_OBJS	= gdbproxy.o rpmisc.o target-pic32mx.o hid.o proxy-mips.o \
-                  adapter-pickit2.o adapter-mpsse.o
+OBJS		= gdbproxy.o rpmisc.o target-pic32mx.o hid.o \
+                  proxy-mips.o adapter-pickit2.o
 
 # Olimex ARM-USB-Tiny JTAG adapter.
-CFLAGS         += -DUSE_MPSSE
-PROG_OBJS      += adapter-mpsse.o
-LIBS           += -L/opt/local/lib -lusb
+CFLAGS          += -DUSE_MPSSE
+OBJS            += adapter-mpsse.o
+LIBS            += -L/opt/local/lib -lusb
 
 all:		pic32proxy
 
-pic32proxy:	$(REMOTE_OBJS)
-		$(CC) $(LDFLAGS) -o $@ $(REMOTE_OBJS) $(LIBS)
+pic32proxy:	$(OBJS)
+		$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 hid.o:          $(HIDSRC)
 		$(CC) $(CFLAGS) -c -o $@ $<

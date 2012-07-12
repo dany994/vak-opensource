@@ -72,7 +72,7 @@ typedef struct {
 
 static void pickit_send_buf (pickit_adapter_t *a, unsigned char *buf, unsigned nbytes)
 {
-    if (debug_level > 0) {
+    if (debug_level > 1) {
         int k;
         fprintf (stderr, "---Send");
         for (k=0; k<nbytes; ++k) {
@@ -105,7 +105,7 @@ static void pickit_recv (pickit_adapter_t *a)
         fprintf (stderr, "pickit: error receiving packet\n");
         exit (-1);
     }
-    if (debug_level > 0) {
+    if (debug_level > 1) {
         int k;
         fprintf (stderr, "--->>>>");
         for (k=0; k<64; ++k) {
@@ -333,7 +333,7 @@ static void pracc_exec_read (pickit_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    if (debug_level > 0)
+    if (debug_level > 1)
         fprintf (stderr, "exec: read address %08x -> %08x\n", address, data);
 
     /* Send the data out.
@@ -390,7 +390,7 @@ static void pracc_exec_write (pickit_adapter_t *a, unsigned address)
             a->adapter.name, address);
         exit (-1);
     }
-    if (debug_level > 0)
+    if (debug_level > 1)
         fprintf (stderr, "exec: write address %08x := %08x\n", address, data);
 }
 
@@ -427,7 +427,7 @@ static void pickit_exec (adapter_t *adapter, int cycle,
         }
         ctl = a->reply[1] | (a->reply[2] << 8) |
               (a->reply[3] << 16) | (a->reply[4] << 24);
-        if (debug_level > 0)
+        if (debug_level > 1)
             fprintf (stderr, "exec: ctl = %08x\n", ctl);
 
 	/* Wait for the PrAcc to become "1". */
@@ -449,7 +449,7 @@ static void pickit_exec (adapter_t *adapter, int cycle,
         }
         address = a->reply[1] | (a->reply[2] << 8) |
               (a->reply[3] << 16) | (a->reply[4] << 24);
-        if (debug_level > 0)
+        if (debug_level > 1)
             fprintf (stderr, "exec: address = %08x\n", address);
 
         /* Check for read or write */
