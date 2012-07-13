@@ -3,7 +3,7 @@
  *
  * Copyright (C) 1999-2001 Quality Quorum, Inc.
  * Copyright (C) 2002 Chris Liechti and Steve Underwood.
- * Copyright (C) 2010 Serge Vakulenko
+ * Copyright (C) 2010-2012 Serge Vakulenko
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:

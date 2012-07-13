@@ -1184,7 +1184,7 @@ int main (int argc, char **argv)
     printf("GDB proxy for Microchip PIC32 processors, Version %s\n",
         VERSION);
     printf("Copyright (C) 2012 Serge Vakulenko\n\n");
-    printf("PIC32proxy comes with ABSOLUTELY NO WARRANTY; for details\n");
+    printf("MIPSproxy comes with ABSOLUTELY NO WARRANTY; for details\n");
     printf("use `--warranty' option. This is Open Source software. You are\n");
     printf("welcome to redistribute it under certain conditions. Use the\n");
     printf("'--copying' option for details.\n\n");
@@ -2656,7 +2656,7 @@ void rp_show_copying(void)
 {
     printf("Original rproxy: Copyright (C) 1999-2001 Quality Quorum, Inc.\n");
     printf("GDBproxy adaptation: Copyright (C) 2002 Chris Liechti and Steve Underwood.\n");
-    printf("PIC32proxy for MIPS: Copyright (C) 2012 Serge Vakulenko.\n");
+    printf("MIPSproxy for MIPS: Copyright (C) 2012 Serge Vakulenko.\n");
     printf("\n");
     printf("Redistribution and use in source and binary forms, with or without\n");
     printf("modification, are permitted provided that the following conditions are met:\n");

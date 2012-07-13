@@ -7,9 +7,27 @@
  *
  * Copyright (C) 2011-2012 Serge Vakulenko
  *
- * This file is part of PIC32PROXY project, which is distributed
- * under the terms of the GNU General Public License (GPL).
- * See the accompanying file "COPYING" for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *   3. The name of the author may not be used to endorse or promote products
+ *      derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ * EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +41,7 @@
 #include "hidapi.h"
 #include "pickit2.h"
 #include "mips.h"
-#include "pic32.h"
+#include "ejtag.h"
 
 typedef struct {
     /* Common part */
@@ -55,15 +73,6 @@ typedef struct {
 #define MICROCHIP_VID           0x04d8
 #define PICKIT2_PID             0x0033  /* Microchip PICkit 2 */
 #define PICKIT3_PID             0x900a  /* Microchip PICkit 3 */
-
-/*
- * USB endpoints.
- */
-#define OUT_EP                  0x01
-#define IN_EP                   0x81
-
-#define IFACE                   0
-#define TIMO_MSEC               1000
 
 #define WORD_AS_BYTES(w)  (unsigned char) (w), \
                           (unsigned char) ((w) >> 8), \
@@ -413,15 +422,18 @@ static void pickit_exec (adapter_t *adapter, int cycle,
 
     for (;;) {
         /* Write/read Control register. */
-        pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
-            CMD_EXECUTE_SCRIPT, 9,
+        pickit_send (a, 20, CMD_CLEAR_UPLOAD_BUFFER,
+            CMD_EXECUTE_SCRIPT, 16,
                 SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
                 SCRIPT_JT2_SENDCMD, ETAP_CONTROL,   /* select Control Register */
                 SCRIPT_JT2_XFERDATA32_LIT,
                     WORD_AS_BYTES (a->control),     /* write/read Control reg */
+                SCRIPT_JT2_SENDCMD, ETAP_ADDRESS,   /* select Address Register */
+                SCRIPT_JT2_XFERDATA32_LIT,
+                    0, 0, 0, 0,                     /* read Address reg */
             CMD_UPLOAD_DATA);
         pickit_recv (a);
-        if (a->reply[0] != 4) {
+        if (a->reply[0] != 8) {
             fprintf (stderr, "pickit_exec: bad ctl reply length = %u\n", a->reply[0]);
             exit (-1);
         }
@@ -434,21 +446,9 @@ static void pickit_exec (adapter_t *adapter, int cycle,
         if (! (ctl & CONTROL_PRACC))
             continue;
 
-        /* Read Address register. */
-        pickit_send (a, 13, CMD_CLEAR_UPLOAD_BUFFER,
-            CMD_EXECUTE_SCRIPT, 9,
-                SCRIPT_JT2_SENDCMD, TAP_SW_ETAP,    /* set ETAP mode */
-                SCRIPT_JT2_SENDCMD, ETAP_ADDRESS,   /* select Address Register */
-                SCRIPT_JT2_XFERDATA32_LIT,
-                    0, 0, 0, 0,                     /* read Address reg */
-            CMD_UPLOAD_DATA);
-        pickit_recv (a);
-        if (a->reply[0] != 4) {
-            fprintf (stderr, "pickit_exec: bad address reply length = %u\n", a->reply[0]);
-            exit (-1);
-        }
-        address = a->reply[1] | (a->reply[2] << 8) |
-              (a->reply[3] << 16) | (a->reply[4] << 24);
+        /* Get Address register. */
+        address = a->reply[5] | (a->reply[6] << 8) |
+              (a->reply[7] << 16) | (a->reply[8] << 24);
         if (debug_level > 1)
             fprintf (stderr, "exec: address = %08x\n", address);
 
@@ -594,7 +594,7 @@ adapter_t *adapter_open_pickit (void)
             return 0;
         }
         /* Wait for power to stabilize. */
-        mdelay (500);
+        mdelay (200);
         break;
 
     default:
