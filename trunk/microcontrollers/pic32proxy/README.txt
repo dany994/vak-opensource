@@ -22,6 +22,11 @@ To start a debug session:
     set remote hardware-watchpoint-limit 2
     target remote localhost:2000
 
+When gdb session is closed, ejtagproxy disconnects from the target board.
+You can use other tools, like pic32prog, to update the target software
+and then start a new gdb session.  No need to restart ejtagproxy between
+session.  You can safely run it as a daemon.
+
 To build on Linux or Mac OS X, run:
     make
     make install
