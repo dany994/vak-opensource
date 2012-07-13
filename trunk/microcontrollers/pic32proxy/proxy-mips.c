@@ -19,6 +19,7 @@
 
 #include "gdbproxy.h"
 #include "target.h"
+#include "mips.h"
 
 /*
  * Description of MIPS32 architecture.
@@ -534,9 +535,11 @@ static int mips_read_mem(uint64_t addr,
         addr += nwords * 4;
         buf += nwords * 4;
     }
-    /* Last word, partial. */
-    unsigned data = target_read_word (target.device, addr);
-    memcpy (buf, (unsigned char*) &data, req_size);
+    if (req_size > 0) {
+        /* Last word, partial. */
+        unsigned data = target_read_word (target.device, addr);
+        memcpy (buf, (unsigned char*) &data, req_size);
+    }
     return RP_VAL_TARGETRET_OK;
 }
 
@@ -578,8 +581,20 @@ static int mips_write_mem(uint64_t addr,
                             write_size);
         return RP_VAL_TARGETRET_ERR;
     }
-
     unsigned offset = (addr & 3);
+
+    if (offset == 0 && write_size == 4 &&
+        target_is_rom_address (target.device, addr))
+    {
+        /* Software breakpoint: use hardware breakpoint instead. */
+        unsigned opcode = *(uint32_t*) buf;
+
+        if ((opcode & MIPS_BREAK_MASK) == MIPS_BREAK)
+            target_add_break (target.device, addr, 'b');
+        else
+            target_remove_break (target.device, addr);
+        return RP_VAL_TARGETRET_OK;
+    }
     if (offset != 0) {
         /* Nonaligned address.
          * Read a word and construct the value. */
@@ -631,11 +646,12 @@ static int mips_write_mem(uint64_t addr,
         addr += nwords * 4;
         buf += nwords * 4;
     }
-    /* Last word, partial. */
-    unsigned data = target_read_word (target.device, addr);
-    memcpy ((unsigned char*) &data, buf, write_size);
-    target_write_word (target.device, addr, data);
-
+    if (write_size > 0) {
+        /* Last word, partial. */
+        unsigned data = target_read_word (target.device, addr);
+        memcpy ((unsigned char*) &data, buf, write_size);
+        target_write_word (target.device, addr, data);
+    }
     return RP_VAL_TARGETRET_OK;
 }
 

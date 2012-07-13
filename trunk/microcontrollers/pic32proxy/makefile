@@ -46,6 +46,6 @@ install:	pic32proxy
 adapter-mpsse.o: adapter-mpsse.c adapter.h mips.h pic32.h
 adapter-pickit2.o: adapter-pickit2.c adapter.h hidapi/hidapi.h pickit2.h mips.h pic32.h
 gdbproxy.o: gdbproxy.c gdbproxy.h
-proxy-mips.o: proxy-mips.c gdbproxy.h target.h
+proxy-mips.o: proxy-mips.c gdbproxy.h target.h mips.h
 rpmisc.o: rpmisc.c gdbproxy.h
 target-pic32mx.o: target-pic32mx.c target.h adapter.h mips.h pic32.h
