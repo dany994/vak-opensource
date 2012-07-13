@@ -45,10 +45,12 @@ struct _target_t {
     int         dcr_valid;
     unsigned    nbpoints;               /* Number of hardware breakpoints. */
     unsigned    bp_value [15];
-    int         bp_used [15];
+    unsigned    bp_used [15];
+    unsigned    bp_id;
     unsigned    nwatchpoints;           /* Number of hardware watchpoints. */
     unsigned    watch_value [15];
-    int         watch_used [15];
+    unsigned    watch_used [15];
+    unsigned    watch_id;
 };
 
 static target_t *target_current;        /* For sigint handler */
@@ -336,6 +338,23 @@ const char *target_cpu_name (target_t *t)
 unsigned target_idcode (target_t *t)
 {
     return t->cpuid;
+}
+
+/*
+ * Return 1 if the address is in ROM region.
+ */
+int target_is_rom_address (target_t *t, unsigned addr)
+{
+    /* For Microchip PIC32MX. */
+    if (addr >= 0x9d000000 && addr < 0x9d000000 + t->flash_kbytes * 1024)
+        return 1;
+    if (addr >= 0xbd000000 && addr < 0xbd000000 + t->flash_kbytes * 1024)
+        return 1;
+    if (addr >= 0xbfc00000 && addr < 0xbfc00000 + t->boot_kbytes * 1024)
+        return 1;
+    if (addr >= 0x9fc00000 && addr < 0x9fc00000 + t->boot_kbytes * 1024)
+        return 1;
+    return 0;
 }
 
 /*
@@ -733,51 +752,63 @@ void target_write_register (target_t *t, unsigned regno, unsigned val)
  */
 void target_add_break (target_t *t, unsigned addr, int type)
 {
-    int i, control;
+    int i, control, last;
+    unsigned last_id;
 
     if (type == 'b') {
         /* Instruction breakpoint. */
         if (t->nbpoints <= 0)
             return;
 
-        /* Find free slot. */
+        /* Find free slot, or the oldest used. */
+        last = 0;
+        last_id = t->bp_used[0];
         for (i=0; i<t->nbpoints; i++) {
             if (! t->bp_used[i])
                 break;
+            if (t->bp_used[i] < last_id) {
+                last = i;
+                last_id = t->bp_used[i];
+            }
         }
         if (i >= t->nbpoints) {
             /* All breakpoints used.
              * Forget the oldest one. */
-            for (i=0; i<t->nbpoints-1; i++) {
-                unsigned val = target_read_word (t, EJTAG_IBA(i+1));
-                target_write_word (t, EJTAG_IBA(i), val);
-            }
-            i = t->nbpoints - 1;
+            i = last;
         }
-        t->bp_used[i] = 1;
+        t->bp_used[i] = ++t->bp_id;
         t->bp_value[i] = addr;
+
+	/* Enable breakpoint. */
         target_write_word (t, EJTAG_IBA(i), addr);
         target_write_word (t, EJTAG_IBM(i), 0x00000000);
         target_write_word (t, EJTAG_IBC(i), DBC_BE);
+        if (debug_level > 0)
+            fprintf (stderr, "target_add_break: set breakpoint #%d at %08x\n",
+                     i, addr);
     } else {
         /* Data watchpoint. */
         if (t->nwatchpoints <= 0)
             return;
 
-        /* Find free slot. */
+        /* Find free slot, or the oldest used. */
+        last = 0;
+        last_id = t->watch_used[0];
         for (i=0; i<t->nwatchpoints; i++) {
             if (! t->watch_used[i])
                 break;
+            if (t->watch_used[i] < last_id) {
+                last = i;
+                last_id = t->watch_used[i];
+            }
         }
         if (i >= t->nwatchpoints) {
             /* All watchpoints used.
              * Forget the oldest one. */
-            for (i=0; i<t->nwatchpoints-1; i++) {
-                unsigned val = target_read_word (t, EJTAG_DBA(i+1));
-                target_write_word (t, EJTAG_DBA(i), val);
-            }
-            i = t->nwatchpoints - 1;
+            i = last;
         }
+        t->watch_used[i] = ++t->watch_id;
+        t->watch_value[i] = addr;
 
 	/* Enable watchpoint, ignore all byte lanes in value register
 	 * and exclude both load and store accesses from  watchpoint
@@ -794,14 +825,14 @@ void target_add_break (target_t *t, unsigned addr, int type)
             control &= ~(DBC_NOLB | DBC_NOSB);
             break;
 	}
-
-        t->watch_used[i] = 1;
-        t->watch_value[i] = addr;
         target_write_word (t, EJTAG_DBA(i), addr);
         target_write_word (t, EJTAG_DBM(i), 0x00000000);
         target_write_word (t, EJTAG_DBASID(i), 0x00000000);
         target_write_word (t, EJTAG_DBC(i), control);
         target_write_word (t, EJTAG_DBV(i), 0);
+        if (debug_level > 0)
+            fprintf (stderr, "target_add_break: set %c-watchpoint #%d at %08x\n",
+                     type, i, addr);
     }
 }
 
@@ -815,11 +846,19 @@ void target_remove_break (target_t *t, unsigned addr)
     for (i=0; i<t->nbpoints; i++) {
         if (t->bp_used[i] && t->bp_value[i] == addr) {
             target_write_word (t, EJTAG_IBC(i), 0);
+            t->bp_used[i] = 0;
+            if (debug_level > 0)
+                fprintf (stderr, "target_remove_break: clear breakpoint #%d at %08x\n",
+                         i, addr);
         }
     }
     for (i=0; i<t->nwatchpoints; i++) {
         if (t->watch_used[i] && t->watch_value[i] == addr) {
             target_write_word (t, EJTAG_DBC(i), 0);
+            t->watch_used[i] = 0;
+            if (debug_level > 0)
+                fprintf (stderr, "target_remove_break: clear watchpoint #%d at %08x\n",
+                         i, addr);
         }
     }
 }

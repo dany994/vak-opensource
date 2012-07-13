@@ -14,6 +14,7 @@ void target_close (target_t *t, int power_on);
 
 unsigned target_idcode (target_t *t);
 const char *target_cpu_name (target_t *t);
+int target_is_rom_address (target_t *t, unsigned addr);
 
 unsigned target_read_word (target_t *t, unsigned addr);
 void target_read_block (target_t *t, unsigned addr,

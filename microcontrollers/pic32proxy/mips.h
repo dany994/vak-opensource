@@ -71,6 +71,8 @@
 
 /* ejtag specific instructions */
 #define MIPS_DRET		0x4200001F
+#define MIPS_BREAK              0x0000000D
+#define MIPS_BREAK_MASK         0xFC00003F
 #define MIPS_SDBBP		0x7000003F
 #define MIPS16_SDBBP		0xE801
 
