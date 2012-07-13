@@ -24,9 +24,9 @@ CFLAGS          += -DUSE_MPSSE
 OBJS            += adapter-mpsse.o
 LIBS            += -Llibusb-win32/x86 -lusb0_x86
 
-all:		mipsproxy.exe
+all:		ejtagproxy.exe
 
-mipsproxy.exe:	$(OBJS)
+ejtagproxy.exe:	$(OBJS)
 		$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 hid.o:          $(HIDSRC)

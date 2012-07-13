@@ -24,22 +24,22 @@ CFLAGS          += -DUSE_MPSSE
 OBJS            += adapter-mpsse.o
 LIBS            += -L/opt/local/lib -lusb
 
-all:		mipsproxy
+all:		ejtagproxy
 
-mipsproxy:	$(OBJS)
+ejtagproxy:	$(OBJS)
 		$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 hid.o:          $(HIDSRC)
 		$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-		rm -f *~ *.o core mipsproxy
+		rm -f *~ *.o core ejtagproxy
 
-install:	mipsproxy
-		install -c -s mipsproxy /usr/local/bin/mipsproxy
+install:	ejtagproxy
+		install -c -s ejtagproxy /usr/local/bin/ejtagproxy
 		if [ `uname` = Linux ]; then \
-		    chown root /usr/local/bin/mipsproxy; \
-		    chmod 4755 /usr/local/bin/mipsproxy; \
+		    chown root /usr/local/bin/ejtagproxy; \
+		    chmod 4755 /usr/local/bin/ejtagproxy; \
 		fi
 		install -d /usr/local/share/locale/ru/LC_MESSAGES
 ###

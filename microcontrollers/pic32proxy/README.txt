@@ -1,10 +1,26 @@
 
-MIPSproxy is a utility for debugging PIC32 microcontrollers with GDB
+EJTAGproxy is a utility for debugging PIC32 microcontrollers with GDB
 via JTAG or ICSP adapter.  Supported adapters:
 
  * Microchip PICkit2
  * Microchip PICkit3 with scripting firmware
  * Olimex ARM-USB-Tiny
+
+Usage:
+    ejtagproxy [options]
+
+Options:
+    -d, --daemon        run as daemon
+    -p, --port=PORT     use the specified TCP port (default 2000)
+    -D, --debug         output debug messages
+
+To start a debug session:
+1) Run ejtagproxy.
+2) Attach a USB adapter to target board.
+3) Run gdb and connect to the PIC32 target:
+    set remote hardware-breakpoint-limit 6
+    set remote hardware-watchpoint-limit 2
+    target remote localhost:2000
 
 To build on Linux or Mac OS X, run:
     make
