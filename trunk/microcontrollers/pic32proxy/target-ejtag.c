@@ -1,13 +1,32 @@
 /*
- * Interface to debug port of PIC32 microcontroller.
+ * Interface to a standard MIPS EJTAG debug port.
+ * Currently only PIC32 microcontrollers are supported.
  * This file is independent of any JTAG or ICSP adapter used.
- * Codelets borrowed from OpenOCD project.
+ * Most of codelets borrowed from OpenOCD project.
  *
  * Copyright (C) 2012 Serge Vakulenko
  *
- * This file is part of PIC32PROXY project, which is distributed
- * under the terms of the GNU General Public License (GPL).
- * See the accompanying file "COPYING" for more details.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *   3. The name of the author may not be used to endorse or promote products
+ *      derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ * EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +40,7 @@
 #include "target.h"
 #include "adapter.h"
 #include "mips.h"
-#include "pic32.h"
+#include "ejtag.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
 
@@ -34,7 +53,7 @@ struct _target_t {
     unsigned    boot_kbytes;
 
     unsigned    reg [38];
-#define REG_STATUS      32      /* Should match GDB. */
+#define REG_STATUS      32              /* Should match GDB. */
 #define REG_LO          33
 #define REG_HI          34
 #define REG_BADVADDR    35
@@ -60,8 +79,8 @@ static const struct {
     const char *name;
     unsigned flash_kbytes;
     unsigned boot_kbytes;
-} pic32mx_dev[] = {
-    {0x4A07053, "MX110F016B",  16,  3},
+} devtab[] = {
+    {0x4A07053, "MX110F016B",  16,  3}, /* PIC32MX1xx/2xx family */
     {0x4A09053, "MX110F016C",  16,  3},
     {0x4A0B053, "MX110F016D",  16,  3},
     {0x4A06053, "MX120F032B",  32,  3},
@@ -85,51 +104,51 @@ static const struct {
     {0x4D00053, "MX250F128B", 128,  3},
     {0x4D02053, "MX250F128C", 128,  3},
     {0x4D04053, "MX250F128D", 128,  3},
-    {0x0938053, "MX360F512L", 512, 12},
-    {0x0934053, "MX360F256L", 256, 12},
-    {0x092D053, "MX340F128L", 128, 12},
-    {0x092A053, "MX320F128L", 128, 12},
-    {0x0916053, "MX340F512H", 512, 12},
-    {0x0912053, "MX340F256H", 256, 12},
-    {0x090D053, "MX340F128H", 128, 12},
-    {0x090A053, "MX320F128H", 128, 12},
+    {0x0902053, "MX320F032H",  32, 12}, /* PIC32MX3xx/4xx family */
     {0x0906053, "MX320F064H",  64, 12},
-    {0x0902053, "MX320F032H",  32, 12},
-    {0x0978053, "MX460F512L", 512, 12},
-    {0x0974053, "MX460F256L", 256, 12},
+    {0x090A053, "MX320F128H", 128, 12},
+    {0x092A053, "MX320F128L", 128, 12},
+    {0x090D053, "MX340F128H", 128, 12},
+    {0x092D053, "MX340F128L", 128, 12},
+    {0x0912053, "MX340F256H", 256, 12},
+    {0x0916053, "MX340F512H", 512, 12},
+    {0x0934053, "MX360F256L", 256, 12},
+    {0x0938053, "MX360F512L", 512, 12},
+    {0x0942053, "MX420F032H",  32, 12},
+    {0x094D053, "MX440F128H", 128, 12},
     {0x096D053, "MX440F128L", 128, 12},
     {0x0952053, "MX440F256H", 256, 12},
     {0x0956053, "MX440F512H", 512, 12},
-    {0x094D053, "MX440F128H", 128, 12},
-    {0x0942053, "MX420F032H",  32, 12},
-    {0x4307053, "MX795F512L", 512, 12},
-    {0x430E053, "MX795F512H", 512, 12},
-    {0x4306053, "MX775F512L", 512, 12},
-    {0x430D053, "MX775F512H", 512, 12},
-    {0x4312053, "MX775F256L", 256, 12},
-    {0x4303053, "MX775F256H", 256, 12},
-    {0x4417053, "MX764F128L", 128, 12},
-    {0x440B053, "MX764F128H", 128, 12},
-    {0x4341053, "MX695F512L", 512, 12},
-    {0x4325053, "MX695F512H", 512, 12},
-    {0x4311053, "MX675F512L", 512, 12},
-    {0x430C053, "MX675F512H", 512, 12},
-    {0x4305053, "MX675F256L", 256, 12},
-    {0x430B053, "MX675F256H", 256, 12},
-    {0x4413053, "MX664F128L", 128, 12},
-    {0x4407053, "MX664F128H", 128, 12},
-    {0x4411053, "MX664F064L",  64, 12},
-    {0x4405053, "MX664F064H",  64, 12},
-    {0x430F053, "MX575F512L", 512, 12},
-    {0x4309053, "MX575F512H", 512, 12},
-    {0x4333053, "MX575F256L", 256, 12},
-    {0x4317053, "MX575F256H", 256, 12},
-    {0x440F053, "MX564F128L", 128, 12},
-    {0x4403053, "MX564F128H", 128, 12},
-    {0x440D053, "MX564F064L",  64, 12},
-    {0x4401053, "MX564F064H",  64, 12},
-    {0x4400053, "MX534F064H",  64, 12},
+    {0x0974053, "MX460F256L", 256, 12},
+    {0x0978053, "MX460F512L", 512, 12},
+    {0x4400053, "MX534F064H",  64, 12}, /* PIC32MX5xx/6xx/7xx family */
     {0x440C053, "MX534F064L",  64, 12},
+    {0x4401053, "MX564F064H",  64, 12},
+    {0x440D053, "MX564F064L",  64, 12},
+    {0x4403053, "MX564F128H", 128, 12},
+    {0x440F053, "MX564F128L", 128, 12},
+    {0x4317053, "MX575F256H", 256, 12},
+    {0x4333053, "MX575F256L", 256, 12},
+    {0x4309053, "MX575F512H", 512, 12},
+    {0x430F053, "MX575F512L", 512, 12},
+    {0x4405053, "MX664F064H",  64, 12},
+    {0x4411053, "MX664F064L",  64, 12},
+    {0x4407053, "MX664F128H", 128, 12},
+    {0x4413053, "MX664F128L", 128, 12},
+    {0x430B053, "MX675F256H", 256, 12},
+    {0x4305053, "MX675F256L", 256, 12},
+    {0x430C053, "MX675F512H", 512, 12},
+    {0x4311053, "MX675F512L", 512, 12},
+    {0x4325053, "MX695F512H", 512, 12},
+    {0x4341053, "MX695F512L", 512, 12},
+    {0x440B053, "MX764F128H", 128, 12},
+    {0x4417053, "MX764F128L", 128, 12},
+    {0x4303053, "MX775F256H", 256, 12},
+    {0x4312053, "MX775F256L", 256, 12},
+    {0x430D053, "MX775F512H", 512, 12},
+    {0x4306053, "MX775F512L", 512, 12},
+    {0x430E053, "MX795F512H", 512, 12},
+    {0x4307053, "MX795F512L", 512, 12},
     {0}
 };
 
@@ -302,17 +321,17 @@ target_t *target_open ()
         exit (1);
     }
     unsigned i;
-    for (i=0; (t->cpuid ^ pic32mx_dev[i].devid) & 0x0fffffff; i++) {
-        if (pic32mx_dev[i].devid == 0) {
+    for (i=0; (t->cpuid ^ devtab[i].devid) & 0x0fffffff; i++) {
+        if (devtab[i].devid == 0) {
             /* Device not detected. */
             fprintf (stderr, "Unknown CPUID=%08x.\n", t->cpuid);
             t->adapter->close (t->adapter, 0);
             exit (1);
         }
     }
-    t->cpu_name = pic32mx_dev[i].name;
-    t->flash_kbytes = pic32mx_dev[i].flash_kbytes;
-    t->boot_kbytes = pic32mx_dev[i].boot_kbytes;
+    t->cpu_name = devtab[i].name;
+    t->flash_kbytes = devtab[i].flash_kbytes;
+    t->boot_kbytes = devtab[i].boot_kbytes;
     printf ("processor: %s\n", t->cpu_name);
 
     /* Stop the processor. */
@@ -341,11 +360,12 @@ unsigned target_idcode (target_t *t)
 }
 
 /*
- * Return 1 if the address is in ROM region.
+ * Check that the address is in ROM region.
  */
 int target_is_rom_address (target_t *t, unsigned addr)
 {
-    /* For Microchip PIC32MX. */
+    /* For Microchip PIC32MX.
+     * TODO: put base addresses into devtab[]. */
     if (addr >= 0x9d000000 && addr < 0x9d000000 + t->flash_kbytes * 1024)
         return 1;
     if (addr >= 0xbd000000 && addr < 0xbd000000 + t->flash_kbytes * 1024)
@@ -626,11 +646,10 @@ void target_write_word (target_t *t, unsigned addr, unsigned word)
         MIPS_B (NEG16(11)),			/* b start */
         MIPS_MFC0 (15, 31, 0),                  /* move COP0 DeSave to $15 */
     };
-
     unsigned param_in [2];
+
     param_in[0] = addr;
     param_in[1] = word;
-
     t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code,
         ARRAY_SIZE(param_in), param_in, 0, 0);
 }
@@ -666,16 +685,14 @@ void target_write_block (target_t *t, unsigned addr,
         MIPS_B (NEG16(21)),			/* b start */
         MIPS_MFC0 (15, 31, 0),                  /* move COP0 DeSave to $15 */
     };
+    unsigned param_in [nwords + 2];
 
     if (nwords == 1) {
         target_write_word (t, addr, *data);
         return;
     }
-
-    unsigned param_in [nwords + 2];
     param_in[0] = addr;
     param_in[1] = addr + (nwords * sizeof(unsigned));	/* last address */
-
     memcpy (&param_in[2], data, nwords * sizeof(unsigned));
 
     t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code,
@@ -742,7 +759,6 @@ void target_write_register (target_t *t, unsigned regno, unsigned val)
     default:
         return;
     }
-
     t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code, 0, 0, 0, 0);
     t->reg [regno] = val;
 }
@@ -845,6 +861,7 @@ void target_remove_break (target_t *t, unsigned addr)
 
     for (i=0; i<t->nbpoints; i++) {
         if (t->bp_used[i] && t->bp_value[i] == addr) {
+            /* Disable breakpoint. */
             target_write_word (t, EJTAG_IBC(i), 0);
             t->bp_used[i] = 0;
             if (debug_level > 0)
@@ -854,6 +871,7 @@ void target_remove_break (target_t *t, unsigned addr)
     }
     for (i=0; i<t->nwatchpoints; i++) {
         if (t->watch_used[i] && t->watch_value[i] == addr) {
+            /* Disable watchpoint. */
             target_write_word (t, EJTAG_DBC(i), 0);
             t->watch_used[i] = 0;
             if (debug_level > 0)
