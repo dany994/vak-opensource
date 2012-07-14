@@ -40,23 +40,17 @@ Based on sources of:
 
 List of supported processors:
 * PIC32MX1xx/2xx family:
-    pic32mx110f016b, pic32mx110f016c, pic32mx110f016d, pic32mx120f032b,
-    pic32mx120f032c, pic32mx120f032d, pic32mx130f064b, pic32mx130f064c,
-    pic32mx130f064d, pic32mx150f128b, pic32mx150f128c, pic32mx150f128d,
-    pic32mx210f016b, pic32mx210f016c, pic32mx210f016d, pic32mx220f032b,
-    pic32mx220f032c, pic32mx220f032d, pic32mx230f064b, pic32mx230f064c,
-    pic32mx230f064d, pic32mx250f128b, pic32mx250f128c, pic32mx250f128d.
+    mx110f016b, mx110f016c, mx110f016d, mx120f032b, mx120f032c, mx120f032d,
+    mx130f064b, mx130f064c, mx130f064d, mx150f128b, mx150f128c, mx150f128d,
+    mx210f016b, mx210f016c, mx210f016d, mx220f032b, mx220f032c, mx220f032d,
+    mx230f064b, mx230f064c, mx230f064d, mx250f128b, mx250f128c, mx250f128d.
  * PIC32MX3xx/4xx family:
-    pic32mx320f032h, pic32mx320f064h, pic32mx320f128h, pic32mx320f128l,
-    pic32mx340f128h, pic32mx340f128l, pic32mx340f256h, pic32mx340f512h,
-    pic32mx360f256l, pic32mx360f512l, pic32mx420f032h, pic32mx440f128h,
-    pic32mx440f128l, pic32mx440f256h, pic32mx440f512h, pic32mx460f256l,
-    pic32mx460f512l.
+    mx320f032h, mx320f064h, mx320f128h, mx320f128l, mx340f128h, mx340f128l,
+    mx340f256h, mx340f512h, mx360f256l, mx360f512l, mx420f032h, mx440f128h,
+    mx440f128l, mx440f256h, mx440f512h, mx460f256l, mx460f512l.
 * PIC32MX5xx/6xx/7xx family:
-    pic32mx534f064h, pic32mx534f064l, pic32mx564f064h, pic32mx564f064l,
-    pic32mx564f128h, pic32mx564f128l, pic32mx575f256h, pic32mx575f256l,
-    pic32mx575f512h, pic32mx575f512l, pic32mx664f064h, pic32mx664f064l,
-    pic32mx664f128h, pic32mx664f128l, pic32mx675f256h, pic32mx675f256l,
-    pic32mx675f512h, pic32mx675f512l, pic32mx695f512h, pic32mx695f512l,
-    pic32mx764f128h, pic32mx764f128l, pic32mx775f256h, pic32mx775f256l,
-    pic32mx775f512h, pic32mx775f512l, pic32mx795f512h, pic32mx795f512l.
+    mx534f064h, mx534f064l, mx564f064h, mx564f064l, mx564f128h, mx564f128l,
+    mx575f256h, mx575f256l, mx575f512h, mx575f512l, mx664f064h, mx664f064l,
+    mx664f128h, mx664f128l, mx675f256h, mx675f256l, mx675f512h, mx675f512l,
+    mx695f512h, mx695f512l, mx764f128h, mx764f128l, mx775f256h, mx775f256l,
+    mx775f512h, mx775f512l, mx795f512h, mx795f512l.
