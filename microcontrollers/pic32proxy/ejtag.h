@@ -52,7 +52,7 @@
 #define MTAP_COMMAND    7       // Connect to MCHP command register
 
 /*
- * Microchip DR commands (32-bit).
+ * Microchip DR commands (8-bit).
  */
 #define MCHP_STATUS        0x00 // Return Status
 #define MCHP_ASSERT_RST    0xD1 // Assert device reset
@@ -62,7 +62,7 @@
 #define MCHP_FLASH_DISABLE 0xFD // Disable access from CPU to flash
 
 /*
- * Microchip status value.
+ * Microchip status value (8-bit).
  */
 #define MCHP_STATUS_CPS    0x80 // Device is NOT code-protected
 #define MCHP_STATUS_NVMERR 0x20 // Error occured during NVM operation
