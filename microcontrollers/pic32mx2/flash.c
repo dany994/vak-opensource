@@ -3,6 +3,8 @@
  */
 #include "pic32mx.h"
 
+#define MHZ     40              /* CPU clock is 40 MHz. */
+
 /*
  * Chip configuration.
  */
@@ -11,7 +13,8 @@ PIC32_DEVCFG (
 
     DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
     DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
-    DEVCFG1_FPBDIV_2 |          /* Peripheral bus clock = SYSCLK/2 */
+    DEVCFG1_FPBDIV_1 |          /* Peripheral bus clock = SYSCLK/1 */
+    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
     DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
     DEVCFG1_FCKS_DISABLE,       /* Clock switching disable */
 
@@ -25,7 +28,8 @@ PIC32_DEVCFG (
     DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
 
 /*
- * Boot code.
+ * Boot code at bfc00000.
+ * Setup stack pointer and $gp registers, and jump to main().
  */
 asm ("          .section .exception");
 asm ("          .globl _start");
@@ -35,6 +39,26 @@ asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
 asm ("          jr      $ra");
 asm ("          .text");
+
+/*
+ * Delay for a given number of microseconds.
+ * The processor has a 32-bit hardware Count register,
+ * which increments at half CPU rate.
+ * We use it to get a precise delay.
+ */
+void udelay (unsigned usec)
+{
+    unsigned now = mfc0 (C0_COUNT, 0);
+    unsigned final = now + usec * MHZ / 2;
+
+    for (;;) {
+        now = mfc0 (C0_COUNT, 0);
+
+        /* This comparison is valid only when using a signed type. */
+        if ((int) (now - final) >= 0)
+            break;
+    }
+}
 
 int main()
 {
@@ -52,26 +76,24 @@ int main()
     /* Use all ports as digital. */
     ANSELA = 0;
     ANSELB = 0;
+    LATA = 0;
+    LATB = 0;
 
-    /* Use pin RA4 as output: LED1 control. */
-    TRISACLR = 1 << 4;
-    LATACLR = 1 << 4;
+    /* Use pin RA0 as output: LED1 control. */
+    TRISACLR = 1 << 0;
 
     /* Use pin RB8 as output: LED2 control. */
     TRISBCLR = 1 << 8;
     LATBSET = 1 << 8;
 
-    while (1) {
-
-        /* Invert pin RA4. */
-        LATAINV = 1 << 4;
+    for (;;) {
+        /* Invert pin RA0. */
+        LATAINV = 1 << 0;
 
         /* Invert pin RB8. */
         LATBINV = 1 << 8;
 
         /* Delay. */
-        unsigned i;
-        for (i=0; i<4000000; i++)
-            asm volatile ("");
+        udelay (500000);
     }
 }
