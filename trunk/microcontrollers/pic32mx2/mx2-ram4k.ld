@@ -1,5 +1,5 @@
 /*
- * Linker script for PIC32 firmware.
+ * Linker script for PIC32 MX1/MX2 firmware.
  */
 OUTPUT_FORMAT("elf32-littlemips", "elf32-bigmips",
 	      "elf32-littlemips")
@@ -9,8 +9,8 @@ MEMORY
 {
   flash  (rx)   : ORIGIN = 0x9fc00000,	LENGTH = 3K-16
   devcfg (r)    : ORIGIN = 0x9fc00bf0,	LENGTH = 16
-  prog   (rx)   : ORIGIN = 0x9d000000,	LENGTH = 512K
-  ram    (rw!x) : ORIGIN = 0xa0000000,	LENGTH = 128K
+  prog   (rx)   : ORIGIN = 0x9d000000,	LENGTH = 128K
+  ram    (rw!x) : ORIGIN = 0xa0000000,	LENGTH = 4K
 }
 
 /* higher address of the user mode stack */

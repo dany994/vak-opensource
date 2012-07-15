@@ -70,8 +70,8 @@ int main()
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
-    /* Disable JTAG port, to make all LEDs available. */
-    DDPCON = 0;
+    /* Disable JTAG and Trace ports, to make all LEDs available. */
+    DDPCONCLR = 3 << 2;
 
     /* Use all ports as digital. */
     ANSELA = 0;
@@ -101,7 +101,7 @@ int main()
         else if (value == 1)
             to_left = 1;
 
-        /* Wait 100 msec. */
-        udelay (100000);
+        /* Wait 10 msec. */
+        //udelay (10000);
     }
 }
