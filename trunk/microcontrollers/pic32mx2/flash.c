@@ -70,8 +70,8 @@ int main()
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
-    /* Disable JTAG port, to make all LEDs available. */
-    DDPCON = 0;
+    /* Disable JTAG and Trace ports, to make more pins available. */
+    DDPCONCLR = 3 << 2;
 
     /* Use all ports as digital. */
     ANSELA = 0;

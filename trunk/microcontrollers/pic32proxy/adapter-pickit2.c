@@ -578,6 +578,7 @@ adapter_t *adapter_open_pickit (void)
         break;
 
     case STATUS_VDD_GND_ON | STATUS_VDD_ON | STATUS_VPP_GND_ON:
+    case STATUS_VDD_GND_ON | STATUS_VDD_ON | STATUS_VPP_GND_ON | STATUS_VPP_ON:
         /* Microstick II board: no need to enable power. */
         break;
 
