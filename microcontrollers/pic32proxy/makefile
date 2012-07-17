@@ -37,11 +37,6 @@ clean:
 
 install:	ejtagproxy
 		install -c -s ejtagproxy /usr/local/bin/ejtagproxy
-		if [ `uname` = Linux ]; then \
-		    chown root /usr/local/bin/ejtagproxy; \
-		    chmod 4755 /usr/local/bin/ejtagproxy; \
-		fi
-		install -d /usr/local/share/locale/ru/LC_MESSAGES
 ###
 adapter-mpsse.o: adapter-mpsse.c adapter.h mips.h ejtag.h
 adapter-pickit2.o: adapter-pickit2.c adapter.h hidapi/hidapi.h pickit2.h \

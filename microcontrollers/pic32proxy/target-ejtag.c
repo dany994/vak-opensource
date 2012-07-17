@@ -284,6 +284,99 @@ static void target_save_state (target_t *t)
     }
 }
 
+static void print_oscillator (unsigned osccon,
+    unsigned devcfg1, unsigned devcfg2)
+{
+    static const char pllmult[]  = { 15, 16, 17, 18, 19, 20, 21, 24 };
+    static const char plldiv[]   = { 1, 2, 3, 4, 5, 6, 10, 12 };
+    static const char *poscmod[] = { "external", "XT crystal",
+                                     "HS crystal", "(disabled)" };
+
+    /* COSC: current oscillator selection bits. */
+    unsigned cosc = (osccon >> 12) & 7;
+    printf ("oscillator: ");
+    switch (cosc) {
+    case 0:
+        printf ("internal Fast RC\n");
+        break;
+    case 1:
+        printf ("internal Fast RC, PLL div 1:%d mult x%d\n",
+                plldiv [devcfg2 & 7], pllmult [osccon >> 16 & 7]);
+        break;
+    case 2:
+        printf ("%s\n", poscmod [devcfg1 >> 8 & 3]);
+        break;
+    case 3:
+        printf ("%s, PLL div 1:%d mult x%d\n",
+                poscmod [devcfg1 >> 8 & 3],
+                plldiv [devcfg2 & 7], pllmult [osccon >> 16 & 7]);
+        break;
+    case 4:
+        printf ("secondary\n");
+        break;
+    case 5:
+        printf ("internal Low-Power RC\n");
+        break;
+    case 6:
+        printf ("internal Fast RC, divided 1:16\n");
+        break;
+    case 7:
+        printf ("internal Fast RC, divided\n");
+        break;
+    }
+}
+
+/*
+ * PIC32-specific registers.
+ */
+#define REG_OSCCON      0xbf80f000
+
+/* This does not work yet. */
+#if 0
+static unsigned set_osccon (target_t *t, unsigned osccon)
+{
+    static const unsigned code[] = {            /* start: */
+        MIPS_MTC0 (15, 31, 0),                  /* move $15 to COP0 DeSave */
+        MIPS_LUI (15, UPPER16(PRACC_STACK)),	/* $15 = PRACC_STACK */
+        MIPS_ORI (15, 15, LOWER16(PRACC_STACK)),
+        MIPS_SW (7, 0, 15),			/* sw $7,($15) */
+        MIPS_SW (8, 0, 15),			/* sw $8,($15) */
+        MIPS_SW (9, 0, 15),			/* sw $9,($15) */
+        MIPS_LW (7, NEG16(PRACC_STACK - PRACC_PARAM_IN), 15), /* load R7 @ param_in[0] = osccon */
+
+        MIPS_LUI (9, 0xbf81),                   /* $9 = bf810000 */
+        MIPS_SW (0, 0xf230, 9),			/* sw zero,SYSKEY($9) - lock */
+
+        MIPS_LUI (8, 0xaa99),                   /* $8 = magic key1 */
+        MIPS_ORI (8, 8, 0x6655),
+        MIPS_SW (8, 0xf230, 9),			/* sw $8,SYSKEY($9) - key1 */
+
+        MIPS_LUI (8, 0x5566),                   /* $8 = magic key2 */
+        MIPS_ORI (8, 8, 0x99aa),
+        MIPS_SW (8, 0xf230, 9),			/* sw $8,SYSKEY($9) - key2 */
+
+        MIPS_SW (7, 0xf000, 9),			/* sw $7,OSCCON($9) */
+        MIPS_ORI (7, 7, 1),
+        MIPS_SW (7, 0xf000, 9),			/* sw $7,OSCCON($9) - set OSWEN */
+
+        MIPS_LW (9, 0, 15),			/* lw $9,($15) */
+        MIPS_LW (8, 0, 15),			/* lw $8,($15) */
+        MIPS_LW (7, 0, 15),			/* lw $7,($15) */
+        MIPS_B (NEG16(22)),			/* b start */
+        MIPS_MFC0 (15, 31, 0),                  /* move COP0 DeSave to $15 */
+    };
+    t->adapter->exec (t->adapter, 1, ARRAY_SIZE(code), code,
+        1, &osccon, 0, 0);
+
+    /* Wait for OSWEN to become 0. */
+    do {
+        osccon = target_read_word (t, REG_OSCCON);
+printf ("OSCCON = %08x\n", osccon);
+    } while (osccon & 1);
+    return osccon;
+}
+#endif
+
 /*
  * Connect to JTAG adapter.
  * Must stop a processor, but avoid resetting it, if possible.
@@ -337,6 +430,31 @@ target_t *target_open ()
     /* Stop the processor. */
     t->adapter->stop_cpu (t->adapter);
     target_save_state (t);
+
+#if 1
+    /* PIC32-specific: identify oscillator. */
+    unsigned osccon = target_read_word (t, REG_OSCCON);
+    unsigned devcfg1 = target_read_word (t, 0xbfc00000 + devtab[i].boot_kbytes * 1024 - 8);
+    unsigned devcfg2 = target_read_word (t, 0xbfc00000 + devtab[i].boot_kbytes * 1024 - 12);
+#if 0
+    /* This does not work yet. */
+printf ("OSCCON = %08x\n", osccon);
+printf ("DEVCFG1 = %08x\n", devcfg1);
+printf ("DEVCFG2 = %08x\n", devcfg2);
+
+    /* COSC: current oscillator selection bits */
+    unsigned cosc = (osccon >> 12) & 7;
+    unsigned fnosc = devcfg1 & 7;
+    if (cosc != fnosc) {
+        print_oscillator (osccon, devcfg1, devcfg2);
+        printf ("change oscillator from %u to %u\n", cosc, fnosc);
+        osccon &= ~(7 << 12);
+        osccon |= fnosc << 12;
+        osccon = set_osccon (t, osccon);
+    }
+#endif
+    print_oscillator (osccon, devcfg1, devcfg2);
+#endif
     return t;
 }
 
