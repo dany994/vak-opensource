@@ -15,8 +15,7 @@ PIC32_DEVCFG (
     DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
     DEVCFG1_FPBDIV_1 |          /* Peripheral bus clock = SYSCLK/1 */
     DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
-    DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
-    DEVCFG1_FCKS_DISABLE,       /* Clock switching disable */
+    DEVCFG1_FCKM_DISABLE,       /* Fail-safe clock monitor disable */
 
     DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
     DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
