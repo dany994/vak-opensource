@@ -326,6 +326,7 @@ static unsigned long long mpsse_recv (mpsse_adapter_t *a)
     unsigned long long word;
 
     /* Send a packet. */
+//a->output [a->bytes_to_write++] = 0x87;
     mpsse_flush_output (a);
 
     /* Process a reply: one 64-bit word. */
@@ -489,7 +490,7 @@ static void mpsse_stop_cpu (adapter_t *adapter)
             fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
 
         if (ctl & CONTROL_ROCC) {
-            fprintf (stderr, "stop_cpu: Reset occured\n");
+            fprintf (stderr, "processor: reset occured\n");
         }
     }
 }
