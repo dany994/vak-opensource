@@ -274,7 +274,7 @@ static int mips_connect(char *status_string,
         target.device = target_open();
         if (! target.device) {
             target.log(RP_VAL_LOGLEVEL_ERR,
-                            "%s: failed to initialize JTAG adapter",
+                            "%s: target board not found.  Check cable connection!",
                             mips_target.name);
             return RP_VAL_TARGETRET_ERR;
         }
@@ -386,6 +386,12 @@ static int mips_read_registers(uint8_t *data_buf,
     assert (buf_size >= RP_MIPS_REG_BYTES);
     assert (read_size != NULL);
 
+    /* If target is running, stop it to get registers. */
+    int was_running = ! target_is_stopped (target.device, 0);
+    if (was_running) {
+        target_stop (target.device);
+    }
+
     /* Show only CPU and CP0 registers.
      * A debugger will ask for FPU registers separately. */
     int i;
@@ -395,6 +401,10 @@ static int mips_read_registers(uint8_t *data_buf,
         memset (avail_buf + i*sizeof(unsigned), 1, sizeof(unsigned));
     }
     *read_size = RP_MIPS_REG_BYTES;
+
+    if (was_running) {
+        target_resume (target.device);
+    }
     return RP_VAL_TARGETRET_OK;
 }
 
@@ -442,7 +452,9 @@ static int mips_read_single_register(unsigned int reg_no,
     assert (buf_size >= RP_MIPS_REG_BYTES);
     assert (read_size != NULL);
 
-    if (reg_no >= RP_MIPS_NUM_REGS) {
+    if (reg_no >= RP_MIPS_NUM_REGS ||
+        ! target_is_stopped (target.device, 0))
+    {
         /* Register is not readable. */
         memset (data_buf, 0, sizeof(unsigned));
         memset (avail_buf, 0, sizeof(unsigned));
@@ -939,12 +951,91 @@ static int mips_rcmd_reset(int argc, char *argv[], out_func of, data_func df)
 }
 
 /*
+ * Command: list of registers.
+ */
+static int mips_rcmd_reg(int argc, char *argv[], out_func of, data_func df)
+{
+    char buf[1000 + 1];
+    char buf2[1000 + 1];
+
+    target.log(RP_VAL_LOGLEVEL_DEBUG,
+                        "%s: mips_rcmd_reg()",
+                        mips_target.name);
+    if (! target.device)
+        return RP_VAL_TARGETRET_OK;
+
+    sprintf (buf, "               t0= %8x   s0= %8x   t8= %8x        lo= %8x\n",
+            target_read_register (target.device, 8),
+            target_read_register (target.device, 16),
+            target_read_register (target.device, 24),
+            target_read_register (target.device, 33));
+    tohex(buf2, buf);
+    of(buf2);
+    sprintf (buf, "at= %8x   t1= %8x   s1= %8x   t9= %8x        hi= %8x\n",
+            target_read_register (target.device, 1),
+            target_read_register (target.device, 9),
+            target_read_register (target.device, 17),
+            target_read_register (target.device, 25),
+            target_read_register (target.device, 34));
+    tohex(buf2, buf);
+    of(buf2);
+    sprintf (buf, "v0= %8x   t2= %8x   s2= %8x   k0= %8x    status= %8x\n",
+            target_read_register (target.device, 2),
+            target_read_register (target.device, 10),
+            target_read_register (target.device, 18),
+            target_read_register (target.device, 26),
+            target_read_register (target.device, 32));
+    tohex(buf2, buf);
+    of(buf2);
+    sprintf (buf, "v1= %8x   t3= %8x   s3= %8x   k1= %8x     cause= %8x\n",
+            target_read_register (target.device, 3),
+            target_read_register (target.device, 11),
+            target_read_register (target.device, 19),
+            target_read_register (target.device, 27),
+            target_read_register (target.device, 36));
+    tohex(buf2, buf);
+    of(buf2);
+    sprintf (buf, "a0= %8x   t4= %8x   s4= %8x   gp= %8x  badvaddr= %8x\n",
+            target_read_register (target.device, 4),
+            target_read_register (target.device, 12),
+            target_read_register (target.device, 20),
+            target_read_register (target.device, 28),
+            target_read_register (target.device, 35));
+    tohex(buf2, buf);
+    of(buf2);
+    sprintf (buf, "a1= %8x   t5= %8x   s5= %8x   sp= %8x        pc= %8x\n",
+            target_read_register (target.device, 5),
+            target_read_register (target.device, 13),
+            target_read_register (target.device, 21),
+            target_read_register (target.device, 29),
+            target_read_register (target.device, 37));
+    tohex(buf2, buf);
+    of(buf2);
+    sprintf (buf, "a2= %8x   t6= %8x   s6= %8x   s8= %8x\n",
+            target_read_register (target.device, 6),
+            target_read_register (target.device, 14),
+            target_read_register (target.device, 22),
+            target_read_register (target.device, 30));
+    tohex(buf2, buf);
+    of(buf2);
+    sprintf (buf, "a3= %8x   t7= %8x   s7= %8x   ra= %8x\n",
+            target_read_register (target.device, 7),
+            target_read_register (target.device, 15),
+            target_read_register (target.device, 23),
+            target_read_register (target.device, 31));
+    tohex(buf2, buf);
+    of(buf2);
+    return RP_VAL_TARGETRET_OK;
+}
+
+/*
  * Table of commands.
  */
 static const RCMD_TABLE remote_commands[] =
 {
     RCMD (help,     "This help text"),
     RCMD (reset,    "Reset the target processor"),
+    RCMD (reg,      "List of integer registers and their contents"),
     { 0 }
 };
 
@@ -957,15 +1048,11 @@ static int mips_rcmd_help(int argc, char *argv[], out_func of, data_func df)
     char buf2[1000 + 1];
     int i = 0;
 
-    tohex(buf, "Remote command help:\n");
+    tohex(buf, "List of ejtagproxy monitor commands:\n\n");
     of(buf);
     for (i = 0; remote_commands[i].name; i++)
     {
-#ifdef WIN32
-        sprintf(buf2, "%-10s %s\n", remote_commands[i].name, remote_commands[i].help);
-#else
-        snprintf(buf2, 1000, "%-10s %s\n", remote_commands[i].name, remote_commands[i].help);
-#endif
+        sprintf(buf2, "%s -- %s\n", remote_commands[i].name, remote_commands[i].help);
         tohex(buf, buf2);
         of(buf);
     }
@@ -986,7 +1073,6 @@ static int remote_decode_nibble(const char *in, unsigned int *nibble)
     }
     return FALSE;
 }
-
 
 /*
  * Decode byte.
@@ -1071,7 +1157,7 @@ static int mips_remcmd(char *in_buf, out_func of, data_func df)
         }
         return RP_VAL_TARGETRET_NOSUPP;
     }
-    return RP_VAL_TARGETRET_ERR;
+    return mips_rcmd_help(0, 0, of, df);
 }
 
 /*
@@ -1136,7 +1222,7 @@ static char *mips_out_treg(char *in, unsigned int reg_no)
     *in++ = ':';
 
     reg_val = target_read_register (target.device, reg_no);
-//fprintf (stderr, "reg%d = %08x\n", reg_no, reg_val);
+    //fprintf (stderr, "reg%d = %08x\n", reg_no, reg_val);
 
     /* The register goes into the buffer in little-endian order */
     *in++ = hex[(reg_val >> 4) & 0x0f];  *in++ = hex[reg_val & 0x0f];

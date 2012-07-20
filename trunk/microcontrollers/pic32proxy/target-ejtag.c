@@ -391,7 +391,7 @@ target_t *target_open ()
     t = calloc (1, sizeof (target_t));
     if (! t) {
         fprintf (stderr, "Out of memory\n");
-        exit (-1);
+        return 0;
     }
     t->cpu_name = "Unknown";
 
@@ -402,8 +402,8 @@ target_t *target_open ()
         t->adapter = adapter_open_mpsse ();
 #endif
     if (! t->adapter) {
-        fprintf (stderr, "No target found.\n");
-        exit (-1);
+        //fprintf (stderr, "No target found.\n");
+        return 0;
     }
     target_current = t;
     signal (SIGINT, target_sigint);
@@ -414,7 +414,7 @@ target_t *target_open ()
         /* Device not detected. */
         fprintf (stderr, "Bad CPUID=%08x.\n", t->cpuid);
         t->adapter->close (t->adapter, 0);
-        exit (1);
+        return 0;
     }
     unsigned i;
     for (i=0; (t->cpuid ^ devtab[i].devid) & 0x0fffffff; i++) {
@@ -422,7 +422,7 @@ target_t *target_open ()
             /* Device not detected. */
             fprintf (stderr, "Unknown CPUID=%08x.\n", t->cpuid);
             t->adapter->close (t->adapter, 0);
-            exit (1);
+            return 0;
         }
     }
     t->cpu_name = devtab[i].name;
@@ -548,7 +548,8 @@ void target_stop (target_t *t)
  */
 int target_is_stopped (target_t *t, int *is_aborted)
 {
-    *is_aborted = 0;
+    if (is_aborted != 0)
+        *is_aborted = 0;
 
     /* Tiny delay. */
     mdelay (100);
@@ -562,7 +563,7 @@ int target_is_stopped (target_t *t, int *is_aborted)
     }
 #if 0
     /* TODO: BREAKD instruction detected. */
-    if (t->adapter->oscr & OSCR_SWO)
+    if ((t->adapter->oscr & OSCR_SWO) && is_aborted != 0)
         *is_aborted = 1;
 #endif
     return 1;
