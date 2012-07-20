@@ -736,7 +736,7 @@ failed:
     mpsse_reset (a, 0, 0, 1);
 
     if (debug_level) {
-     int baud = 6000000 / (divisor + 1);
+        int baud = 6000000 / (divisor + 1);
         fprintf (stderr, "%s: speed %d samples/sec\n", a->adapter.name, baud);
     }
     mpsse_speed (a, divisor);
