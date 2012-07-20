@@ -336,6 +336,8 @@ static void print_oscillator (unsigned osccon,
 
 static unsigned set_osccon (target_t *t, unsigned osccon)
 {
+    int retry;
+
     static const unsigned code[] = {            /* start: */
         MIPS_MTC0 (15, 31, 0),                  /* move $15 to COP0 DeSave */
         MIPS_LUI (15, UPPER16(PRACC_STACK)),	/* $15 = PRACC_STACK */
@@ -365,10 +367,16 @@ static unsigned set_osccon (target_t *t, unsigned osccon)
         1, &osccon, 0, 0);
 
     /* Wait for OSWEN to become 0. */
-    do {
+    for (retry=3; retry>0; retry--) {
         osccon = target_read_word (t, REG_OSCCON);
-        //printf ("OSCCON = %08x\n", osccon);
-    } while (osccon & 1);
+        if (! (osccon & 1))
+            break;
+        if (debug_level > 0)
+            printf ("OSCCON = %08x\n", osccon);
+    }
+    if (retry <= 0) {
+        printf ("failed to change oscillator, OSCCON = %08x\n", osccon);
+    }
     return osccon;
 }
 
@@ -430,9 +438,11 @@ target_t *target_open ()
     unsigned osccon = target_read_word (t, REG_OSCCON);
     unsigned devcfg1 = target_read_word (t, 0xbfc00000 + devtab[i].boot_kbytes * 1024 - 8);
     unsigned devcfg2 = target_read_word (t, 0xbfc00000 + devtab[i].boot_kbytes * 1024 - 12);
-    //printf ("OSCCON = %08x\n", osccon);
-    //printf ("DEVCFG1 = %08x\n", devcfg1);
-    //printf ("DEVCFG2 = %08x\n", devcfg2);
+    if (debug_level > 0) {
+        printf ("OSCCON = %08x\n", osccon);
+        printf ("DEVCFG1 = %08x\n", devcfg1);
+        printf ("DEVCFG2 = %08x\n", devcfg2);
+    }
 
     /* COSC: current oscillator selection. */
     unsigned cosc = (osccon >> 12) & 7;
@@ -441,8 +451,10 @@ target_t *target_open ()
     unsigned fnosc = devcfg1 & 7;
     if (cosc != fnosc) {
         /* Switch oscillator. */
-        //print_oscillator (osccon, devcfg1, devcfg2);
-        //printf ("change oscillator from %u to %u\n", cosc, fnosc);
+        if (debug_level > 0) {
+            print_oscillator (osccon, devcfg1, devcfg2);
+            printf ("change oscillator from %u to %u\n", cosc, fnosc);
+        }
         osccon &= ~(7 << 8);
         osccon |= fnosc << 8;
         osccon = set_osccon (t, osccon);
