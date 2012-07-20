@@ -5,4 +5,9 @@ set remote hardware-watchpoint-limit 2
 #set breakpoint always-inserted on
 #set can-use-hw-watchpoints 1
 
+# ejtagproxy
 target remote localhost:2000
+
+# OpenOCD
+#target remote localhost:3333
+#monitor halt

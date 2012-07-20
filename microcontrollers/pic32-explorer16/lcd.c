@@ -3,12 +3,12 @@
  */
 #include "pic32mx.h"
 
-#define MHZ     80              /* CPU clock is 80 MHz. */
+#define MHZ     80              /* CPU clock is 8 MHz. */
 
 #define PMDATA  PMDIN
 
-#define LCDREG_DATA     1       // address of data register
-#define LCDREG_CMD      0       // address of command register
+#define LCDREG_CMD      0       /* Address of LCD command register */
+#define LCDREG_DATA     1       /* Address of LCD data register */
 
 void lcd_init (void);
 void lcd_write (int addr, int c);
@@ -148,14 +148,11 @@ void lcd_puts (char *s)
  * Chip configuration.
  */
 PIC32_DEVCFG (
-    DEVCFG0_DEBUG_ENABLED,      /* ICE debugger enabled */
+    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
 
-    DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
-    DEVCFG1_POSCMOD_HS |        /* HS oscillator */
-    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
-    DEVCFG1_FPBDIV_8 |          /* Peripheral bus clock = SYSCLK/8 */
-    DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
-    DEVCFG1_FCKS_DISABLE,       /* Clock switching disable */
+    DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
+    DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
+    DEVCFG1_FPBDIV_2,           /* Peripheral bus clock = SYSCLK/2 */
 
     DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
     DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
@@ -219,10 +216,10 @@ int main()
             to_left = 1;
 
         lcd_set_col (0x40 + 7 - pos);
-        lcd_putchar ('*');
+        lcd_putchar ('#');
 
-        /* Wait 100 msec. */
-        udelay (100000);
+        /* Wait 200 msec. */
+        udelay (200000);
 
         lcd_set_col (0x40 + 7 - pos);
         lcd_putchar ('-');
