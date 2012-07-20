@@ -303,7 +303,7 @@ static void pickit_stop_cpu (adapter_t *adapter)
             fprintf (stderr, "stop_cpu: control = %08x\n", ctl);
 
         if (ctl & CONTROL_ROCC) {
-            fprintf (stderr, "stop_cpu: reset occured\n");
+            fprintf (stderr, "processor: reset occured\n");
         }
     }
 }
