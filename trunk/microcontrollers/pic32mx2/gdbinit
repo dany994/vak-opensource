@@ -6,5 +6,5 @@ set remote hardware-watchpoint-limit 2
 #set can-use-hw-watchpoints 1
 
 target remote localhost:2000
-b main
-c
+#b main
+#c
