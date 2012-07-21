@@ -2,8 +2,8 @@ CC              = /usr/local/mipsel441/bin/mipsel-elf32-gcc -mips32r2 -g -nostdl
 OBJCOPY         = /usr/local/mipsel441/bin/mipsel-elf32-objcopy
 OBJDUMP         = /usr/local/mipsel441/bin/mipsel-elf32-objdump
 #GDB             = /mips/arch/overflow/codesourcery/mips-sde-elf/lite/release/2012.03-64/Linux/bin/mips-sde-elf-gdb
-#GDB             = mipsel-elf32-gdb
-GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
+GDB             = mipsel-elf32-gdb
+#GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
 CFLAGS          = -O -Wall -Werror -DPIC32MX2
 LDFLAGS         = -T mx2-ram4k.ld -e _start
 
