@@ -6,7 +6,7 @@ OBJDUMP         = /usr/local/mipsel441/bin/mipsel-elf32-objdump
 #GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
 GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
 CFLAGS          = -O -Wall -Werror -DPIC32MX2
-LDFLAGS         = -T mx2-ram4k.ld -e _start
+LDFLAGS         = -T using-bootloader.ld -e _start
 
 PROG            = flash
 

@@ -6,28 +6,7 @@
 #define MHZ     40              /* CPU clock is 40 MHz. */
 
 /*
- * Chip configuration.
- */
-PIC32_DEVCFG (
-    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
-
-    DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
-    DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
-    DEVCFG1_FPBDIV_2 |          /* Peripheral bus clock = SYSCLK/2 */
-    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
-    DEVCFG1_FCKM_DISABLE,       /* Fail-safe clock monitor disable */
-
-    DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
-    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
-    DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
-    DEVCFG2_UPLLDIS |           /* Disable USB PLL */
-    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
-
-    DEVCFG3_USERID(0xffff) |    /* User-defined ID */
-    DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
-
-/*
- * Boot code at bfc00000.
+ * Main entry point at bd003000.
  * Setup stack pointer and $gp registers, and jump to main().
  */
 asm ("          .section .exception");
@@ -36,6 +15,16 @@ asm ("          .type _start, function");
 asm ("_start:   la      $sp, _estack");
 asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
+asm ("          jr      $ra");
+asm ("          .text");
+
+/*
+ * Secondary entry point at bd004000.
+ */
+asm ("          .section .startup");
+asm ("          .globl _init");
+asm ("          .type _init, function");
+asm ("_init:    la      $ra, _start");
 asm ("          jr      $ra");
 asm ("          .text");
 
@@ -78,19 +67,19 @@ int main()
     LATA = 0;
     LATB = 0;
 
-    /* Use pin RA0 as output: LED1 control. */
-    TRISACLR = 1 << 0;
+    /* Use pin RB15 as output: LED1 control. */
+    TRISBCLR = 1 << 15;
 
-    /* Use pin RB8 as output: LED2 control. */
-    TRISBCLR = 1 << 8;
-    LATBSET = 1 << 8;
+    /* Use pin RA10 as output: LED2 control. */
+    TRISACLR = 1 << 10;
+    LATASET = 1 << 10;
 
     for (;;) {
-        /* Invert pin RA0. */
-        LATAINV = 1 << 0;
+        /* Invert pin RB15. */
+        LATBINV = 1 << 15;
 
-        /* Invert pin RB8. */
-        LATBINV = 1 << 8;
+        /* Invert pin RA10. */
+        LATAINV = 1 << 10;
 
         /* Delay. */
         udelay (500000);
