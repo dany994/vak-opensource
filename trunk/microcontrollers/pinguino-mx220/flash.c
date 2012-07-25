@@ -72,16 +72,24 @@ int main()
 
     /* Use pin RA10 as output: LED2 control. */
     TRISACLR = 1 << 10;
-    LATASET = 1 << 10;
 
     for (;;) {
         /* Invert pin RB15. */
-        LATBINV = 1 << 15;
-
-        /* Invert pin RA10. */
-        LATAINV = 1 << 10;
+        LATBINV = 1 << 15; udelay (100000);
+        LATBINV = 1 << 15; udelay (100000);
+        LATBINV = 1 << 15; udelay (100000);
+        LATBINV = 1 << 15; udelay (100000);
 
         /* Delay. */
-        udelay (500000);
+        udelay (300000);
+
+        /* Invert pin RA10. */
+        LATAINV = 1 << 10; udelay (100000);
+        LATAINV = 1 << 10; udelay (100000);
+        LATAINV = 1 << 10; udelay (100000);
+        LATAINV = 1 << 10; udelay (100000);
+
+        /* Delay. */
+        udelay (300000);
     }
 }
