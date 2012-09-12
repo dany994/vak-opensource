@@ -1,6 +1,9 @@
 
-FC              = gfortran -fno-automatic -fsecond-underscore
+FC              = g95 -fsecond-underscore -fsloppy-char
 VERSION         = $(shell $(FC) --version | head -1)
+
+#FC              = gfortran -fno-automatic -fsecond-underscore
+#VERSION         = $(shell $(FC) --version | head -1)
 
 #FC              = fort77
 #VERSION         = $(shell f2c --version)
@@ -22,5 +25,8 @@ $(PROG).o:      $(PROG).f
 clean:
 		rm -f $(PROG) *.o
 
-gwave:          $(PROG) gwave.nec
-		./$(PROG)
+example1:       $(PROG) Example1.nec
+		(echo Example1.nec; echo Example1.out) | ./$(PROG)
+
+gwave:          $(PROG) Gwave.nec
+		(echo Gwave.nec; echo Gwave.out) | ./$(PROG)
