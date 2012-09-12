@@ -8,8 +8,8 @@ C     av04  16-mar-02   Status='NEW', somehow seems not to replace existing file
 C     av05  21-okt-02   Max number of loads (LOADMX) made equal to max-nr of segments.
 C     av06  21-okt-02   Max number of NT cards (NETMX) increased from 30 to 99
 C     av07  21-okt-02   Max number of EX cards (NSMAX) increased from 30 to 99
-C     av08        22-oct-02   Use of VSRC is uncertain, in some sources equal 10 and some 
-C                       equal 30 (=nr EX?). What should be new value ??? 
+C     av08  22-oct-02   Use of VSRC is uncertain, in some sources equal 10 and some
+C                       equal 30 (=nr EX?). What should be new value ???
 C     av09  ??          ??
 C     av010 30-jan-03   Used DGJJ port of G77 compiler which delivers speed increase
 C                       from 30 to 60% for small segment counts
@@ -49,14 +49,15 @@ C     INFRINGE PRIVATELY-OWNED RIGHTS.
 C
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'  ! Declares MAXSEG,MAXMAT,LOADMX,NETMX and NSMAX
+      INCLUDE 'nec2dpar.inc'  ! Declares MAXSEG,MAXMAT,LOADMX,NETMX and NSMAX
                               ! AV05,AV06,AV07
 
       PARAMETER (IRESRV=MAXMAT**2)
 
       IMPLICIT REAL*8(A-H,O-Z)
       CHARACTER AIN*2,ATST*2,INFILE*80,OUTFILE*80
-      
+      CHARACTER G77PORT*32
+
 C***
       REAL*8 HPOL,PNET
 C      CHARACTER INMSG*48,OUTMSG*40
@@ -132,9 +133,9 @@ C***
       DATA TA/1.745329252D-02/,CVEL/299.8/
 
 Cav05-7 DATA LOADMX,NSMAX,NETMX/30,30,30/,NORMF/200/
-      DATA NORMF/200/                                       
+      DATA NORMF/200/
 
-      INCLUDE 'G77PORT.INC'   ! Sets G77 port and version used to compile/link.
+      INCLUDE 'g77port.inc'   ! Sets G77 port and version used to compile/link.
 
       print *, ''
       print *, 'Numerical Electromagnetics Code, ',
@@ -147,11 +148,11 @@ Cav03      & 'Fortran file was created 4/11/80, last changed: Jan 15, 96, by'
 Cav03      Write(*,*)
 Cav03     & 'J. Bergervoet (bergervo@prl.philips.nl)'
       print *, 'Maximum number of segments in core : MAXMAT=',MAXMAT
-      If(MaxSeg.ne.MaxMat) 
+      If(MaxSeg.ne.MaxMat)
      &print *, 'Maximum when using swap files      : MAXSEG=',MAXSEG
 
       print *, ''
-      print *, 
+      print *,
      & 'Merged nec2d/som2d file created by Arie Voors. (4nec2@gmx.net)'
       print *,'Build 2.7  30-jan-08  ',
      & '(maxLD=',loadmx,', MaxEX=',nsmax,', MaxTL=',netmx,')'     ! av011
@@ -1129,7 +1130,7 @@ C     NORMALIZED RECEIVING PATTERN PRINTED
 183   FORMAT (20X,2(F7.2,3X),1X,F7.2,4X,1P,E11.4)
 184   FORMAT (///,36X,32H- - - INPUT IMPEDANCE DATA - - -,/   ,45X,18HSO
      1URCE SEGMENT NO.,I4,/  ,45X,21HNORMALIZATION FACTOR=,1P,E12.5,//
-     2,7X,5HFREQ.,13X,34H-  -  UNNORMALIZED IMPEDANCE  -  -,21X,   32H- 
+     2,7X,5HFREQ.,13X,34H-  -  UNNORMALIZED IMPEDANCE  -  -,21X,   32H-
      3 -  NORMALIZED IMPEDANCE  -  -,/    ,19X,10HRESISTANCE,4X,9HREACTA
      4NCE,6X,9HMAGNITUDE,4X,5HPHASE,7X,10HRESISTANCE,4X,9HREACTANCE,6X,
      5 9HMAGNITUDE,4X,5HPHASE,/    ,8X,3HMHZ,11X,4HOHMS,10X,4HOHMS,11X,
@@ -1961,7 +1962,7 @@ C***********************************************************************
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -2054,7 +2055,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -2160,7 +2161,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     CMNGF FILLS INTERACTION MATRICIES B, C, AND D FOR N.G.F. SOLUTION
@@ -2433,7 +2434,7 @@ C     FILL C(SW) AND C(SS)
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -2550,7 +2551,7 @@ C     WRITE BLOCK FOR OUT-OF-CORE CASES.
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     CMSS COMPUTES MATRIX ELEMENTS FOR SURFACE-SURFACE INTERACTIONS.
@@ -2635,7 +2636,7 @@ C     TRANSPOSED FILL
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     COMPUTES MATRIX ELEMENTS FOR E ALONG WIRES DUE TO PATCH CURRENT
@@ -2785,7 +2786,7 @@ C     OTHER END INTEGRATE SINGULAR COMPONENT (9) OF SURFACE CURRENT ONLY
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -2875,7 +2876,7 @@ C     TRANSPOSED FILL - C(WS) AND D(WS)PRIME (=CW)
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -3001,7 +3002,7 @@ C     TRANS. FILL FOR C(WW) - TEST FOR ELEMENTS FOR D(WW)PRIME.  (=CW)
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -3318,7 +3319,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'                          ! av07
+      INCLUDE 'nec2dpar.inc'                          ! av07
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -3397,7 +3398,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -4104,7 +4105,7 @@ C     EXTENDED THIN WIRE APPROXIMATION.
 
 Cav03 SUBROUTINE ERROR
 C ***
-C     GET REASON FOR FILE ERROR (VAX ONLY).  ERROR SHOULD BE REDUCED TO 
+C     GET REASON FOR FILE ERROR (VAX ONLY).  ERROR SHOULD BE REDUCED TO
 C     "RETURN END" FOR MACINTOSH.
 C
 C      IMPLICIT INTEGER (A-Z)
@@ -4122,7 +4123,7 @@ Cav03 END
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -4512,7 +4513,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -4917,7 +4918,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -5133,7 +5134,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     CALCULATES THE XYZ COMPONENTS OF THE ELECTRIC FIELD DUE TO
@@ -5192,7 +5193,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       PARAMETER (IRESRV=MAXMAT**2)
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
@@ -5233,7 +5234,7 @@ Cav018      write (3, '(2A)') 'Opening NGF-file : ',ngfnam              ! av12
 
 30    write (3, '(2A)') 'ERROR opening NGF-file : ',ngfnam              ! av12
       stop                                                              ! av12
-      
+
 31    REWIND IGFL
       READ (IGFL) N1,NP,M1,MP,WLAM,FMHZ,IPSYM,KSYMP,IPERF,NRADL,EPSR,SIG
      1,SCRWLT,SCRWRT,NLODF,KCOM
@@ -5367,7 +5368,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -5521,7 +5522,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       PARAMETER (IRESRV=MAXMAT**2)
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
@@ -5582,7 +5583,7 @@ C      write (3, '(2A)') 'Writing NGF-file : ',ngfnam             ! av12
       WRITE (IGFL) (BET(I),I=J,LD),(SALP(I),I=J,LD)
 C
 C*** ERROR CORRECTED 11/20/89 *******************************
-                                                             
+
       WRITE (IGFL) (T2X(I),I=J,LD),(T2Y(I),I=J,LD)
       WRITE (IGFL) (T2Z(I),I=J,LD)
 C      WRITE (IGFL) (ICON1(I),I=J,LD),(ICON2(I),I=J,LD)
@@ -5800,7 +5801,7 @@ C     SEGMENT END CONTRIBUTIONS FOR EXT. THIN WIRE APPROX.
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     SUBROUTINE HELIX GENERATES SEGMENT GEOMETRY DATA FOR A HELIX OF NS
@@ -6487,7 +6488,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -6523,7 +6524,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -6635,7 +6636,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -6777,7 +6778,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -6916,7 +6917,7 @@ C     SKIP NB1 LOGICAL RECORDS FORWARD
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -7019,12 +7020,12 @@ C
       IPSYM=0
       RETURN
       END
-         
+
       SUBROUTINE NEFLD (XOB,YOB,ZOB,EX,EY,EZ)
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -7157,7 +7158,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -7196,13 +7197,14 @@ Cav07 &RHS(3*MAXSEG), VSRC(30), RHNX(30)
 Cav08 Keep VSRC dimension to 30 (for now) as it's use is uncertain.
 Cav17 VSRC made equal to netmx as it somehow limited the nr of NT's to 30
 
-      DIMENSION CMN(netmx,netmx), RHNT(netmx), IPNT(netmx), 
-     &NTEQA(netmx), NTSCA(netmx), RHS(3*MAXSEG), VSRC(netmx), 
+      DIMENSION CMN(netmx,netmx), RHNT(netmx), IPNT(netmx),
+     &NTEQA(netmx), NTSCA(netmx), RHS(3*MAXSEG), VSRC(netmx),
      &RHNX(netmx)                                           ! av017
 
 Cav06 DATA NDIMN,NDIMNP/30,31/,TP/6.283185308D+0/
-      DATA NDIMN,NDIMNP/netmx,netmx+1/,TP/6.283185308D+0/   ! av06
+      DATA NDIMN/netmx/,TP/6.283185308D+0/                      ! vak
 
+      NDIMNP=netmx+1                                            ! vak
       NEQZ2=NEQ2
       IF(NEQZ2.EQ.0)NEQZ2=1
       PIN=0.
@@ -7516,7 +7518,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     COMPUTE NEAR E OR H FIELDS OVER A RANGE OF POINTS
@@ -7615,7 +7617,7 @@ C
 C     NHFLD COMPUTES THE NEAR FIELD AT SPECIFIED POINTS IN SPACE AFTER
 C     THE STRUCTURE CURRENTS HAVE BEEN COMPUTED.
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
       COMPLEX*16 HX,HY,HZ,CUR,ACX,BCX,CCX,EXK,EYK,EZK,EXS,EYS,EZS,EXC,
      &EYC,EZC
@@ -7724,7 +7726,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     PATCH GENERATES AND MODIFIES PATCH GEOMETRY DATA
@@ -7917,7 +7919,7 @@ C     DIVIDE PATCH FOR WIRE CONNECTION
       IF (NY.GT.0) Z(MI)=10000.
       RETURN
 C
-14    FORMAT (62H ERROR -- CORNERS OF QUADRILATERAL PATCH DO NOT LIE IN 
+14    FORMAT (62H ERROR -- CORNERS OF QUADRILATERAL PATCH DO NOT LIE IN
      1A PLANE)
       END
       SUBROUTINE PCINT (XI,YI,ZI,CABI,SABI,SALPI,E)
@@ -8051,7 +8053,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     FILL INCIDENT FIELD ARRAY FOR CHARGE DISCONTINUITY VOLTAGE SOURCE
@@ -8192,7 +8194,7 @@ Cav14-CON(10),NPCON
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       PARAMETER(NORMAX=4*MAXSEG)
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
@@ -8758,7 +8760,7 @@ C     TO BLOCKS OF COLUMNS ON TAPE16
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -9088,7 +9090,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     COMPUTE COMPONENT OF BASIS FUNCTION I ON SEGMENT IS.
@@ -9349,7 +9351,7 @@ c          However, we want t=0 to be defined when this routine is first
 c          called.  Hence, define initial CPU time here.
 c          Wall clock timer counts in seconds from 1-Jan-70  Thus,
 c          initial wall clock time is non-zero.  It is obtained here.
-c 
+c
 Cav03           cpuinit  = etime(tarray)
 Cav03           wallinit = time()
 C#endif
@@ -9423,7 +9425,7 @@ c           The input to "lib$cvtf_from_internal_time" goes in the 3rd
 c           argument, the result is returned in the 2nd argument.
 c           input_code = 2 returns elapsed cpu time as an integer in
 c           units of 10msec.  This is converted to seconds here.
-c 
+c
 C        istatus = lib$stat_timer(1,iwall,)
 C        istatus = lib$cvtf_from_internal_time(30,rwall,iwall)
 C        wallnow = rwall
@@ -9464,7 +9466,7 @@ c          "elapsed execution time" = tarray(1) + tarray(2)
 c                                   = user time + system time
 c       I am uncertain whether to let cpunow = return value or
 c       else tarray(1).
-c 
+c
 C        cpunow  = etime(tarray)
 C        wallnow = stime()
 C#endif
@@ -9625,7 +9627,7 @@ C     X,Y,Z FIELDS FOR COSINE CURRENT
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     SOLVE FOR CURRENT IN N.G.F. PROCEDURE
@@ -9750,7 +9752,7 @@ C     REORDER CURRENT ARRAY
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -9797,7 +9799,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
@@ -9919,7 +9921,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     COMPUTE BASIS FUNCTION I
@@ -10089,7 +10091,7 @@ C
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     COMPUTE THE COMPONENTS OF ALL BASIS FUNCTIONS ON SEGMENT J
@@ -10228,7 +10230,7 @@ C     CONST=ETA/(8.*PI**2)
 C ***
 C     DOUBLE PRECISION 6/4/85
 C
-      INCLUDE 'NEC2DPAR.INC'
+      INCLUDE 'nec2dpar.inc'
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C
