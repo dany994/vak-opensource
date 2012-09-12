@@ -56,14 +56,10 @@ C
 
       IMPLICIT REAL*8(A-H,O-Z)
       CHARACTER AIN*2,ATST*2,INFILE*80,OUTFILE*80
-      CHARACTER G77PORT*32
+      CHARACTER G77PORT*72
 
 C***
-      REAL*8 HPOL,PNET
-C      CHARACTER INMSG*48,OUTMSG*40
-C      INTEGER*2 GPWNXY(2)
-C      LOGICAL*4 GetPut,LGTPT
-
+      CHARACTER*8 HPOL,PNET
       integer*2   llneg
 
       COMPLEX*16  CM,FJ,VSANT,ETH,EPH,ZRATI,CUR,CURI,ZARRAY,ZRATI2
@@ -128,8 +124,8 @@ C***
      -(T2Z,ITAG)
       DATA ATST/'CE','FR','LD','GN','EX','NT','XQ','NE','GD','RP','CM',
      -'NX','EN','TL','PT','KH','NH','PQ','EK','WG','CP','PL'/
-      DATA HPOL/6HLINEAR,5HRIGHT,4HLEFT/
-      DATA PNET/6H      ,2H  ,6HSTRAIG,2HHT,6HCROSSE,1HD/
+      DATA HPOL/'LINEAR','RIGHT','LEFT'/
+      DATA PNET/'      ','  ','STRAIG','HT','CROSSE','D'/
       DATA TA/1.745329252D-02/,CVEL/299.8/
 
 Cav05-7 DATA LOADMX,NSMAX,NETMX/30,30,30/,NORMF/200/
@@ -143,10 +139,10 @@ Cav05-7 DATA LOADMX,NSMAX,NETMX/30,30,30/,NORMF/200/
       print *, 'developed at Lawrence Livermore Lab., ',
      &'Livermore, CA., by G. Burke'
       print *, '(burke@icdc.llnl.gov) and A. Poggio.'
-Cav03      Write(*,*)
-Cav03      & 'Fortran file was created 4/11/80, last changed: Jan 15, 96, by'
-Cav03      Write(*,*)
-Cav03     & 'J. Bergervoet (bergervo@prl.philips.nl)'
+Cav03 Write(*,*)
+Cav03& 'Fortran file was created 4/11/80, last changed: Jan 15, 96, by'
+Cav03 Write(*,*)
+Cav03& 'J. Bergervoet (bergervo@prl.philips.nl)'
       print *, 'Maximum number of segments in core : MAXMAT=',MAXMAT
       If(MaxSeg.ne.MaxMat)
      &print *, 'Maximum when using swap files      : MAXSEG=',MAXSEG
@@ -193,7 +189,7 @@ Cav03 704   CALL ERROR
 
 705   CONTINUE
       print *,''
-      CALL SECOND(EXTIM)
+      CALL GET_TIME (EXTIM)
       FJ=(0.,1.)
       LD=MAXSEG
 Cav03 NXA(1)=0          ! NXA is now init by block-data SOMSET
@@ -313,7 +309,7 @@ C***
 C***
       IF (AIN.NE.ATST(13)) GO TO 15 ! EN
 
-      CALL SECOND(TMP1)
+      CALL GET_TIME (TMP1)
       TMP1=TMP1-EXTIM
       WRITE(3,201) TMP1
       STOP
@@ -775,10 +771,10 @@ Cav03      END IF
 C * * *
 C     FILL AND FACTOR PRIMARY INTERACTION MATRIX
 C
-      CALL SECOND (TIM1)
+      CALL GET_TIME (TIM1)
       IF(ICASX.NE.0)GO TO 324
       CALL CMSET(NEQ,CM,RKH,IEXK)
-      CALL SECOND (TIM2)
+      CALL GET_TIME (TIM2)
       TIM=TIM2-TIM1
       CALL FACTRS(NPEQ,NEQ,CM,IP,IX,11,12,13,14)
       GO TO 323
@@ -789,11 +785,11 @@ C ****
 324   IF(NEQ2.EQ.0)GO TO 333
 C ****
       CALL CMNGF(CM(IB11),CM(IC11),CM(ID11),NPBX,NEQ,NEQ2,RKH,IEXK)
-      CALL SECOND (TIM2)
+      CALL GET_TIME (TIM2)
       TIM=TIM2-TIM1
       CALL FACGF(CM,CM(IB11),CM(IC11),CM(ID11),CM(IX11),IP,IX,NP,N1,MP,
      1M1,NEQ,NEQ2)
-323   CALL SECOND (TIM1)
+323   CALL GET_TIME (TIM1)
       TIM2=TIM1-TIM2
       WRITE(3,153)  TIM,TIM2
 333   IGO=3
@@ -1056,7 +1052,6 @@ C     NORMALIZED RECEIVING PATTERN PRINTED
 129   FORMAT (25X,20A4)
 130   FORMAT (///,10X,'INCORRECT LABEL FOR A COMMENT CARD')
 135   FORMAT (/////)
-136   FORMAT (A2,I3,3I5,6E10.3)
 137   FORMAT (1X,'***** DATA CARD NO.',I3,3X,A2,1X,I3,3(1X,I5),
      1 6(1X,1P,E12.5))
 138   FORMAT (///,10X,'FAULTY DATA CARD LABEL AFTER GEOMETRY SECTION')
@@ -1149,7 +1144,7 @@ C     NORMALIZED RECEIVING PATTERN PRINTED
      11HZ,5X,4HMAG.,7X,5HPHASE,3X,4HMAG.,7X,5HPHASE,3(4X,4HREAL,6X,
      1 6HIMAG. ))
 198   FORMAT(1X,I4,/,1X,3F7.3,2(1P,E11.4,0P,F8.2),1P,6E10.2)
-201   FORMAT(/,11H RUN TIME =,F10.3)
+201   FORMAT(/,' RUN TIME =',F10.3)
 315   FORMAT(///,34X,28H- - - CHARGE DENSITIES - - -,//,36X,
      1 24HDISTANCES IN WAVELENGTHS,///,2X,4HSEG.,2X,3HTAG,4X,
      2 21HCOORD. OF SEG. CENTER,5X,4HSEG.,10X,
@@ -1168,7 +1163,7 @@ C     NORMALIZED RECEIVING PATTERN PRINTED
 392   FORMAT(40X,35HFINITE GROUND.  SOMMERFELD SOLUTION)
 393   FORMAT(/,29H ERROR IN GROUND PARAMETERS -,/,41H COMPLEX DIELECTRIC
      1 CONSTANT FROM FILE IS,1P,2E12.5,/,32X,9HREQUESTED,2E12.5)
-900   FORMAT(' ERROR OPENING SOMMERFELD GROUND FILE - SOM2D.NEC')
+C900   FORMAT(' ERROR OPENING SOMMERFELD GROUND FILE - SOM2D.NEC')
       END
 
 Cav03 ################## START OF SOM2D INCLUDE ########################
@@ -1216,7 +1211,7 @@ C***
       GO TO 2
 1     EPSCF=DCMPLX(EPR,SIG)
 2     CONTINUE
-Cav03 2     CALL SECOND (TST)
+Cav03 2     CALL GET_TIME (TST)
       CK2=6.283185308
       CK2SQ=CK2*CK2
 C
@@ -1228,7 +1223,7 @@ C
       CK1=SQRT(CK1SQ)
       CK1R=DREAL(CK1)
       TKMAG=100.*ABS(CK1)
-      TSMAG=100.*CK1*DCONJG(CK1)
+      TSMAG=100.*REAL(CK1*DCONJG(CK1))
       CKSM=CK2SQ/(CK1SQ+CK2SQ)
       CT1=.5*(CK1SQ-CK2SQ)
       ERV=CK1SQ*CK1SQ
@@ -1308,7 +1303,7 @@ C
       AR1(1,ITH,2)=EZV
       AR1(1,ITH,3)=ERH
 9     AR1(1,ITH,4)=EPH
-Cav03 CALL SECOND (TIM)
+Cav03 CALL GET_TIME (TIM)
 C
 C     WRITE GRID ON TAPE21
 C
@@ -1343,15 +1338,15 @@ Cav03 WRITE(*,16) TIM
 Cav03 STOP
 14    return                                                ! av03
 C
-16    FORMAT (6H TIME=,1PE12.5)
+C16   FORMAT (6H TIME=,1PE12.5)
 17    FORMAT (30H1NEC GROUND INTERPOLATION GRID,/,21H DIELECTRIC CONSTAN
      1T=,1P2E12.5)
 18    FORMAT (///,5H GRID,I2,/,4X,5HR(1)=,F7.4,4X,3HDR=,F7.4,4X,3HNR=,I3
      1,/,9H THET(1)=,F7.4,3X,4HDTH=,F7.4,3X,4HNTH=,I3,//)
 19    FORMAT (///,1X,A3)
 20    FORMAT (4H IR=,I3,/,1X,(1P10E12.5))
-21    FORMAT($,' ENTER EPR,SIG,FMHZ,IPT > ')
-22    FORMAT(' STARTING COMPUTATION OF SOMMERFELD INTEGRAL TABLES')
+C21   FORMAT($,' ENTER EPR,SIG,FMHZ,IPT > ')
+C22   FORMAT(' STARTING COMPUTATION OF SOMMERFELD INTEGRAL TABLES')
       END
 
 C***********************************************************************
@@ -1389,7 +1384,7 @@ Cav03     120996,.125,.0732421875/
       DATA POF,INIT/.7853981635,0/,FJX/0.,1./
 
       IF (INIT.EQ.0) GO TO 5
-1     ZMS=Z*DCONJG(Z)
+1     ZMS=REAL(Z*DCONJG(Z))
       IF (ZMS.GT.1.E-12) GO TO 2
       J0=(1.,0.)
       J0P=-.5*Z
@@ -1399,7 +1394,7 @@ Cav03     120996,.125,.0732421875/
       IF (ZMS.GT.37.21) GO TO 4
       IF (ZMS.GT.36.) IB=1
 C     SERIES EXPANSION
-      IZ=1.+ZMS
+      IZ=INT(1.+ZMS)
       MIZ=M(IZ)
       J0=(1.,0.)
       J0P=J0
@@ -1672,7 +1667,7 @@ C
      1,.375,.1025390625/
       DATA POF,INIT/.7853981635,0/,FJX/0.,1./
       IF (INIT.EQ.0) GO TO 5
-1     ZMS=Z*DCONJG(Z)
+1     ZMS=REAL(Z*DCONJG(Z))
       IF (ZMS.NE.0.) GO TO 2
       WRITE(*,9)
       STOP
@@ -1680,7 +1675,7 @@ C
       IF (ZMS.GT.16.81) GO TO 4
       IF (ZMS.GT.16.) IB=1
 C     SERIES EXPANSION
-      IZ=1.+ZMS
+      IZ=INT(1.+ZMS)
       MIZ=M(IZ)
       J0=(1.,0.)
       J0P=J0
@@ -1883,7 +1878,7 @@ C     HANKEL FUNCTION FORM
       COM=XL-CK2
       CGAM2=SQRT(XL+CK2)*SQRT(COM)
       IF (DREAL(COM).LT.0..AND.DIMAG(COM).GE.0.) CGAM2=-CGAM2
-2     XLR=XL*DCONJG(XL)
+2     XLR=REAL(XL*DCONJG(XL))
       IF (XLR.LT.TSMAG) GO TO 3
       IF (DIMAG(XL).LT.0.) GO TO 4
       XLR=DREAL(XL)
@@ -1937,21 +1932,6 @@ Cav03
 Cav031     TR=0.
 Cav03      TI=0.
 Cav03      RETURN
-Cav03      END
-
-Cav03      SUBROUTINE SECOND (CPUSECD)
-C     Purpose:
-C     SECOND returns cpu time in seconds.  Must be customized!!!
-Cav03      REAL*8 CPUSECD
-Cav03      integer Iticks
-Cav03
-C--   Not customized:
-C       Cpusecd = 0.0            ! if we have no clock routine
-C--   MACINTOSH:
-C       CPUSECD= LONG(362)/60.0
-C--   Lahey fortran
-C        Call Timer(Iticks)
-Cav03        cpusecd = Iticks/100.d0
 Cav03      END
 
 Cav03 ################## END OF SOM2D INCLUDE ##########################
@@ -2035,7 +2015,8 @@ C
       DIMENSION AR(1)
       I1=(IX1+1)/2
       I2=(IX2+1)/2
-1     WRITE (NUNIT) (AR(J),J=I1,I2)
+C1    CONTINUE
+      WRITE (NUNIT) (AR(J),J=I1,I2)
       RETURN
       ENTRY BLCKIN(AR,NUNIT,IX1,IX2,NBLKS,NEOF)
       I1=(IX1+1)/2
@@ -3406,6 +3387,7 @@ C     DATAGN IS THE MAIN ROUTINE FOR INPUT OF GEOMETRY DATA.
 C
 C***
       CHARACTER*2 GM,ATST
+      CHARACTER*4 IPT,IFX,IFY,IFZ
 C***
       COMMON /DATA/ X(MAXSEG),Y(MAXSEG),Z(MAXSEG),SI(MAXSEG),BI(MAXSEG),
      &ALP(MAXSEG),BET(MAXSEG),WLAM,ICON1(2*MAXSEG),ICON2(2*MAXSEG),
@@ -3423,8 +3405,8 @@ C***
       DATA ATST/'GW','GX','GR','GS','GE','GM','SP','SM','GF','GA','SC',
      1'GC','GH'/
 C***
-      DATA IFX/1H ,1HX/,IFY/1H ,1HY/,IFZ/1H ,1HZ/
-      DATA TA/0.01745329252D+0/,TD/57.29577951D+0/,IPT/1HP,1HR,1HT,1HQ/
+      DATA IFX/' ','X'/,IFY/' ','Y'/,IFZ/' ','Z'/
+      DATA TA/0.01745329252D+0/,TD/57.29577951D+0/,IPT/'P','R','T','Q'/
       IPSYM=0
       NWIRE=0
       N=0
@@ -3707,7 +3689,7 @@ C
 41    FORMAT (2X,4HWIRE,79X,6HNO. OF,4X,5HFIRST,2X,4HLAST,5X,3HTAG,/,2X,
      13HNO.,8X,2HX1,9X,2HY1,9X,2HZ1,10X,2HX2,9X,2HY2,9X,2HZ2,6X,6HRADIUS
      2,3X,4HSEG.,5X,4HSEG.,3X,4HSEG.,5X,3HNO.)
-42    FORMAT (A2,I3,I5,7F10.5)
+C42   FORMAT (A2,I3,I5,7F10.5)
 43    FORMAT (1X,I5,3F11.5,1X,4F11.5,2X,I5,4X,I5,1X,I5,3X,I5)
 44    FORMAT (6X,34HSTRUCTURE REFLECTED ALONG THE AXES,3(1X,A1),22H.  TA
      1GS INCREMENTED BY,I5)
@@ -3954,7 +3936,7 @@ C
 C     FIELD FROM INTERPOLATION IS INTEGRATED OVER SEGMENT
 C
       ISNOR=1
-      DMIN=EXK*DCONJG(EXK)+EYK*DCONJG(EYK)+EZK*DCONJG(EZK)
+      DMIN=REAL(EXK*DCONJG(EXK)+EYK*DCONJG(EYK)+EZK*DCONJG(EZK))
       DMIN=.01*SQRT(DMIN)
       SHAF=.5*S
       CALL ROM2 (-SHAF,SHAF,EGND,DMIN)
@@ -4485,9 +4467,9 @@ C
       IXBP=IXBLK1+1
       DO 1 IXBLK2=IXBP,NBLSYM
       CALL BLCKIN (A,IFILE3,I3,I4,1,18)
-      CALL SECOND (T1)
+      CALL GET_TIME (T1)
       CALL LFACTR (A,NROW,IXBLK1,IXBLK2,IP(KA))
-      CALL SECOND (T2)
+      CALL GET_TIME (T2)
       TIME=TIME+T2-T1
       IF (IXBLK2.EQ.IXBP) CALL BLCKOT (A,IU2,I1,I2,1,19)
       IF (IXBLK1.EQ.NBM.AND.IXBLK2.EQ.NBLSYM) IFILE4=IU2
@@ -4507,7 +4489,7 @@ C
       WRITE(3,4)  TIME
       RETURN
 C
-4     FORMAT (35H CP TIME TAKEN FOR FACTORIZATION = ,1P,E12.5)
+4     FORMAT (' CP TIME TAKEN FOR FACTORIZATION = ',1P,E13.6)
       END
       SUBROUTINE FACTR (N,A,IP,NDIM)
 C ***
@@ -8199,7 +8181,7 @@ C
       IMPLICIT REAL*8(A-H,O-Z)
 C ***
 C     COMPUTE RADIATION PATTERN, GAIN, NORMALIZED GAIN
-      REAL*8 IGNTP,IGAX,IGTP,HCIR,HBLK,HPOL,HCLIF,ISENS
+      CHARACTER*8 HCLIF,ISENS,HPOL,HBLK,HCIR,IGTP,IGAX,IGNTP
 C     INTEGER HPOL,HBLK,HCIR,HCLIF
       COMPLEX*16 ETH,EPH,ERD,ZRATI,ZRATI2,T1,FRATI
       COMMON /DATA/ X(MAXSEG),Y(MAXSEG),Z(MAXSEG),SI(MAXSEG),BI(MAXSEG),
@@ -8216,11 +8198,11 @@ C***
       COMMON /PLOT/ IPLP1,IPLP2,IPLP3,IPLP4
 C***
       DIMENSION IGTP(4), IGAX(4), IGNTP(10), HPOL(3)
-      DATA HPOL/6HLINEAR,5HRIGHT,4HLEFT/,HBLK,HCIR/1H ,6HCIRCLE/
-      DATA IGTP/6H    - ,6HPOWER ,6H- DIRE,6HCTIVE /
-      DATA IGAX/6H MAJOR,6H MINOR,6H VERT.,6H HOR. /
-      DATA IGNTP/6H MAJOR,6H AXIS ,6H MINOR,6H AXIS ,6H   VER,6HTICAL ,6
-     1H HORIZ,6HONTAL ,6H      ,6HTOTAL /
+      DATA HPOL/'LINEAR','RIGHT','LEFT'/,HBLK,HCIR/' ','CIRCLE'/
+      DATA IGTP/'    - ','POWER ','- DIRE','CTIVE '/
+      DATA IGAX/' MAJOR',' MINOR',' VERT.',' HOR. '/
+      DATA IGNTP/' MAJOR',' AXIS ',' MINOR',' AXIS ','   VER','TICAL ',
+     1' HORIZ','ONTAL ','      ','TOTAL '/
       DATA PI,TA,TD/3.141592654D+0,1.745329252D-02,57.29577951D+0/
       IF (IFAR.LT.2) GO TO 2
       WRITE(3,35)
@@ -9225,286 +9207,6 @@ C
 25    FORMAT (43H SBF - SEGMENT CONNECTION ERROR FOR SEGMENT,I5)
       END
 
-Cav02 SUBROUTINE SECOND (CPUSECD)
-C
-C     Purpose:
-C     SECOND returns cpu time in seconds.  Must be customized!!!
-C
-C     VAX or other (modify subroutine stopwtch):
-C
-Cav02 REAL*8 CPUSECD
-Cav02 CALL STOPWTCH(CPUSECS,WALLTOT,CPUSPLT,WALLSPLT)
-Cav02 CPUSECD=60.*CPUSECS
-C     MACINTOSH:
-C      CPUSECD= LONG(362)/60.0
-Cav02 RETURN
-Cav02 END
-
-c **********************************************************************
-Cav03   subroutine stopwtch(cputot,walltot,cpusplt,wallsplt)
-c
-c       This routine operates as a stopwatch.
-c       When first called, the routine initializes the clock.
-c       On subsequent calls, the routine returns:
-c
-c       Outputs: cputot   -- elapsed CPU time since initialization
-c                walltot  -- elapsed wallclock time since initialization
-c                cpusplt  -- split (delta) CPU time since previous call
-c                wallsplt -- split wallclock time since previous call
-c
-c       These outputs will all be zero (or very close to it) on the
-c       first (initialization) call.
-c
-c       Internal times (cpuinit,wallinit,cpunow,wallnow) are stored in
-c       seconds.  cpuinit  and cpunow  are stored as reals,
-c                 wallinit and wallnow are stored as integers.
-c       Output times are converted to real minutes.
-c
-c History:
-c   Date       Author            Reason
-c   ---------  ----------------  ------------------------------------
-c    early-90  Scott L. Ray      initial version
-c      mid-90  Scott L. Ray      support for additional machines
-c   14-JAN-91                    ---- Version 2.2/release    ----
-c   23-MAY-91  Scott L. Ray      UNICOS branch
-c   29-JAN-92  Scott L. Ray      FPS and NLTSS support dropped
-c   29-JAN-92  Scott L. Ray      switch to cpp conditional compilation
-c   18-SEP-92      Conditional compilation disabled for use in NEC
-c
-c  (C) Copyright 1990, 1992.
-c  The Regents of the University of California.  All rights reserved.
-c ----------------------------------------------------------------------
-c
-c parameter list
-c
-Cav03        real cputot,walltot,cpusplt,wallsplt
-c
-c locals (non sysdep)
-c
-Cav03        logical initiz
-Cav03        integer wallinit,walllast,wallnow
-Cav03        real cpuinit,cpulast,cpunow
-Cav03        save initiz,cpuinit,cpulast,wallinit,walllast
-c
-c locals (sysdep)
-c
-C#include "machines.h"
-C#ifdef VAX_VMS
-C        integer istatus,iwall,icpu
-C        real rwall
-C        dimension iwall(2)
-C#endif
-C#ifdef SUN4TIMER
-Cav03        integer time
-Cav03        real tarray
-Cav03        dimension tarray(2)
-C#endif
-C#ifdef CONVEX
-C        real time, secnds, tarray
-C        dimension tarray(2)
-C        external secnds
-C#endif
-C#ifdef IBM_RISC
-c        integer icpu
-c        integer mclock
-C#endif
-C#ifdef IRIS4D
-C        external time
-C#endif
-C#ifdef STARDENT
-C        integer stime
-C        real tarray
-C        dimension tarray(2)
-C#endif
-C#ifdef UNICOS
-C        real rwall
-C#endif
-c
-c data initialization
-c
-Cav03        data initiz/.false./
-c
-c ----------------------------------------------------------------------
-c
-Cav03        if (.not. initiz) then
-c
-c ...      set the flag showing that the clock has been initialized
-c
-Cav03           initiz = .true.
-c
-c ...      set the initial times to default value of zero.  These may
-c          be changed, depending on how an individual machine handles
-c          its timer.
-c
-Cav03           cpuinit  = 0.0
-Cav03           wallinit = 0
-c
-c ...      initialize the timer (may not be necessary on all machines)
-c
-C#ifdef VAX_VMS
-C           istatus = lib$init_timer()
-C#endif
-c
-C#ifdef SUN4TIMER
-c          CPU timer on SUN4 initializes automatically on job startup.
-c          However, we want t=0 to be defined when this routine is first
-c          called.  Hence, define initial CPU time here.
-c          Wall clock timer counts in seconds from 1-Jan-70  Thus,
-c          initial wall clock time is non-zero.  It is obtained here.
-c
-Cav03           cpuinit  = etime(tarray)
-Cav03           wallinit = time()
-C#endif
-c
-C#ifdef CONVEX
-C           cpuinit = etime(tarray)
-C           time = secnds(0.0)
-C           wallinit = ifix(time)
-C#endif
-c
-C#ifdef IBM_RISC
-c          no known wall clock timer
-c
-c           icpu = mclock( )
-c           cpuinit  = float(icpu)/100.0
-c           wallinit = 0
-C#endif
-c
-C#ifdef STARDENT
-c          CPU timer on STARDENT initializes automatically on job
-c          startup.
-c          However, we want t=0 to be defined when this routine is first
-c          called.  Hence, define initial CPU time here.
-c          Wall clock timer counts in seconds from 1-Jan-70  Thus,
-c          initial wall clock time is non-zero.  It is obtained here.
-c
-C           cpuinit  = etime(tarray)
-C           wallinit = stime()
-C#endif
-c
-C#ifdef UNICOS
-c          I hope that the "second" routine is true UNICOS and not a
-c          local (LLNL) feature that was added on to keep things
-c          consistent with NLTSS.
-c          The "timef" routine returns real milliseconds; first
-c          call initializes the timer and should return zero (not
-c          that we care -- this routine works by taking differences).
-c
-C           call second(cpuinit)
-C           call timef(rwall)
-C           wallinit = ifix(rwall*1.0e-03)
-C#endif
-c
-c ...      since this is the first call to this routine,
-c          initialize the previous call times to the initial time.
-c
-Cav03           cpulast  =  cpuinit
-Cav03           walllast = wallinit
-c
-Cav03        end if
-c
-c ...   Find the current cpu and wall times
-c
-C#ifdef HASTIMER
-C#ifdef VAX_VMS
-c
-c       function "lib$stat_timer" is called as:
-c       error_status = lib$stat_timer(input_code,output_result,junk)
-c       where,
-c        input_code = 1 returns elapsed wall clock time in VAX_VMS
-c           binary internal format.  This format takes 64 bits to store,
-c           hence output_result should be a 32 bit integer array of
-c           length 2.
-c           This internal format is converted to a floating point number
-c           by calling "lib$cvtf_from_internal_time".  This function
-c           is poorly documented in the VAX_VMS manuals.  Here are some
-c           details:  First argument = 28 ==> result in real hours
-c                                    = 29 ==> result in real minutes
-c                                    = 30 ==> result in real seconds
-c           The input to "lib$cvtf_from_internal_time" goes in the 3rd
-c           argument, the result is returned in the 2nd argument.
-c           input_code = 2 returns elapsed cpu time as an integer in
-c           units of 10msec.  This is converted to seconds here.
-c
-C        istatus = lib$stat_timer(1,iwall,)
-C        istatus = lib$cvtf_from_internal_time(30,rwall,iwall)
-C        wallnow = rwall
-C        istatus = lib$stat_timer(2,icpu,)
-C        cpunow = icpu*(10.0e-3)
-C#endif
-c
-C#ifdef SUN4TIMER
-c       there is some ambiguity in the manual as to how to use
-c       etime.  Function returns:
-c          "elapsed execution time" = tarray(1) + tarray(2)
-c                                   = user time + system time
-c       I am uncertain whether to let cpunow = return value or
-c       else tarray(1).
-c
-Cav03        cpunow  = etime(tarray)
-Cav03        wallnow = time()
-C#endif
-c
-C#ifdef CONVEX
-C           cpunow = etime(tarray)
-C           time = secnds(0.0)
-C           wallnow = ifix(time)
-C#endif
-c
-C#ifdef IBM_RISC
-c       no known wall clock timer
-c
-c        icpu = mclock( )
-c        cpunow  = float(icpu)/100.0
-c        wallnow = 0
-C#endif
-c
-C#ifdef STARDENT
-c       there is some ambiguity in the manual as to how to use
-c       etime.  Function returns:
-c          "elapsed execution time" = tarray(1) + tarray(2)
-c                                   = user time + system time
-c       I am uncertain whether to let cpunow = return value or
-c       else tarray(1).
-c
-C        cpunow  = etime(tarray)
-C        wallnow = stime()
-C#endif
-c
-C#ifdef UNICOS
-c       I hope that the "second" routine is true UNICOS and not a
-c       local (LLNL) feature that was added on to keep things
-c       consistent with NLTSS.
-c       The "timef" routine returns real milliseconds.
-c
-C        call second(cpunow)
-C        call timef(rwall)
-C        wallnow = ifix(rwall*1.0e-03)
-C#endif
-C#else
-c       for machines without timers or with unknown timers,
-c       set things to zero now to ensure that something is returned
-C        cpunow  = 0.0
-C        wallnow = 0
-C#endif
-c
-c ...   calculate elapsed and split cpu and wall clock times,
-c       convert to minutes on output.
-c
-Cav03        cputot   = (cpunow  - cpuinit )/60.0
-Cav03        walltot  = float(wallnow - wallinit)/60.0
-Cav03        cpusplt  = (cpunow  - cpulast )/60.0
-Cav03        wallsplt = float(wallnow - walllast)/60.0
-c
-c ...   save "now" times in "last" times
-c
-Cav03        cpulast  = cpunow
-Cav03        walllast = wallnow
-c
-Cav03        return
-c **********************************************************************
-Cav03        end
-
       SUBROUTINE SFLDS (T,E)
 C ***
 C     DOUBLE PRECISION 6/4/85
@@ -10347,151 +10049,3 @@ C
 3     ZINT=FJ*SQRT(CMOTP/SIGL)*BR1/ROLAM
       RETURN
       END
-
-Cav03 logical*4 function GetPut(what,where,message,file,volume,nt,types)
-C
-C      implicit none
-C
-C      integer NEWHANDLE
-C      parameter (NEWHANDLE = Z'122000A8')
-C      integer HLOCK
-C      parameter (HLOCK = Z'02980008')
-C      integer HUNLOCK
-C      parameter (HUNLOCK = Z'02A80008')
-C      integer NEWDIALOG
-C      parameter (NEWDIALOG = Z'97D20002')
-C      integer DISPOSHANDLE
-C      parameter (DISPOSHANDLE = Z'02380008')
-C      integer SFPUTFILE
-C      parameter (SFPUTFILE = Z'9EA16CB1')
-C      integer SFGETFILE
-C      parameter (SFGETFILE = Z'9EA20003')
-C      integer PTR
-C      parameter (PTR = Z'C0000000')
-C      integer DISPOSEDIALOG
-C      parameter (DISPOSEDIALOG = Z'98310000')
-C      integer PBSETVOL
-C      parameter (PBSETVOL = Z'01580010')
-C
-C      integer*4 what                ! 0 SFPUTFILE; 1 SFGETFILE
-C      integer*2 where(2)            ! location of box upper-left corner (y,x)
-C      character*(*) message         ! string to go over dialog box
-C      character*(*) file            ! file name
-C      integer*4 volume              ! volume number
-C      integer*4 nt                  ! number of filter types
-C      character*(*) types           ! filter types
-C
-C      integer*4 toolbx              ! toolbx interface
-C
-C      integer*4 dptr                ! dialog pointer
-C      character*64 fname
-C      logical*1 good                ! result flag
-C      integer*4 i
-C      integer*2 iovrefnum
-C      integer*4 lhdl                      ! handle of item list
-C      integer*4 lptr                      ! pointer to item list
-C      integer*4 nc                        ! number of characters in file name
-C      integer*2 posd(2)                   ! location of standard dialog
-C      integer*2 rect(4)                   ! rectangle
-C      integer*2 vrefnum
-C      integer*1 params(108)                ! partial PBGETVOL parameter block
-C      equivalence (params(23),iovrefnum)
-C      integer*1 reply(76)                 ! reply record
-C      equivalence (reply(1),good)
-C      equivalence (reply(7),vrefnum)
-C      equivalence (reply(11),fname)
-C
-Cav03  GetPut = .false.
-C      volume = 0
-C      good = .true.
-C      if (what .eq. 0) then
-C        lhdl = 0
-C        lhdl = toolbx(NEWHANDLE,72)
-C        if (lhdl .eq. 0) return
-C        call toolbx(HLOCK,lhdl)
-C        lptr = LONG(lhdl)
-C        WORD(lptr) = 1
-C        LONG(lptr + 2) = 0
-C        WORD(lptr + 6) = 0
-C        WORD(lptr + 8) = 0
-C        WORD(lptr + 10) = 32
-C        WORD(lptr + 12) = 32
-C        BYTE(lptr + 14) = 160
-C        BYTE(lptr + 15) = 2
-C        WORD(lptr + 16) = 1
-C        LONG(lptr + 18) = 0
-C        WORD(lptr + 22) = 8
-C        WORD(lptr + 24) = 40
-C        WORD(lptr + 26) = 24
-C        WORD(lptr + 28) = 304
-C        BYTE(lptr + 30) = 136
-C        BYTE(lptr + 31) = 40
-C        do (i = 1, 40)
-C          BYTE(lptr + 31 + i) = ICHAR(message(i:i))
-C        enddo
-C        call toolbx(HUNLOCK,lhdl)
-C        rect(1) = where(1)
-C        rect(2) = where(2)
-C        rect(3) = rect(1) + 32
-C        rect(4) = rect(2) + 304
-C      elseif (what .eq. 1) then
-C        lhdl = 0
-C        lhdl = toolbx(NEWHANDLE,80)
-C        if (lhdl .eq. 0) return
-C        call toolbx(HLOCK,lhdl)
-C        lptr = LONG(lhdl)
-C        WORD(lptr) = 1
-C        LONG(lptr + 2) = 0
-C        WORD(lptr + 6) = 0
-C        WORD(lptr + 8) = 0
-C        WORD(lptr + 10) = 32
-C        WORD(lptr + 12) = 32
-C        BYTE(lptr + 14) = 160
-C        BYTE(lptr + 15) = 2
-C        WORD(lptr + 16) = 1
-C        LONG(lptr + 18) = 0
-C        WORD(lptr + 22) = 8
-C        WORD(lptr + 24) = 40
-C        WORD(lptr + 26) = 24
-C        WORD(lptr + 28) = 348
-C        BYTE(lptr + 30) = 136
-C        BYTE(lptr + 31) = 48
-C        do (i = 1, 48)
-C          BYTE(lptr + 31 + i) = ICHAR(message(i:i))
-C        enddo
-C        call toolbx(HUNLOCK,lhdl)
-C        rect(1) = where(1)
-C        rect(2) = where(2)
-C        rect(3) = rect(1) + 32
-C        rect(4) = rect(2) + 348
-C      else
-C        return
-C      endif
-C      dptr = 0
-C      dptr = toolbx(NEWDIALOG,0,rect,0,.true.,1,-1,.false.,0,lhdl)
-C      if (dptr .eq. 0) then
-C        call toolbx(DISPOSHANDLE,lhdl)
-C        return
-C      endif
-C      posd(1) = where(1) + 50
-C      posd(2) = where(2)
-C      if (what .eq. 0) then
-C        call toolbx(SFPUTFILE,posd,0,0,0,reply,1)
-C      else
-C        call toolbx(SFGETFILE,posd,0,0,nt,toolbx(PTR,types),0,reply,2)
-C      endif
-C      call toolbx(DISPOSEDIALOG,dptr)                 ! Dispose of Header dialog
-C      if (good .eq. .false.) return
-C      nc = ICHAR(fname(1:1))
-C      file = fname(2:nc + 1)
-C      do (i = 1, 108)
-C        params(i) = 0
-C      enddo
-C      iovrefnum = vrefnum
-C      if (toolbx(PBSETVOL,toolbx(PTR,params)) .eq. 0) then
-C        GetPut = .true.
-C        volume = vrefnum
-C      endif
-C
-Cav03 return
-Cav03 end

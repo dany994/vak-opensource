@@ -1,9 +1,9 @@
 #include <sys/time.h>
 
-void second_ (double *sec)
+void get_time__ (double *sec)
 {
     struct timeval tv;
 
     gettimeofday (&tv, 0);
-    *sec = (double) tv.tv_sec;
+    *sec = tv.tv_usec / 1000000.0 + tv.tv_sec;
 }
