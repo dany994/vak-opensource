@@ -1786,7 +1786,7 @@ output = 'the last detected error was on line ' ii previous_error
             || ' cards per minute.';
     end print_summary;
 
-main procedure:
+main_procedure:
     procedure;
         clock(0) = time;  /* keep track of time in execution */
         call initialization;
@@ -1794,10 +1794,10 @@ main procedure:
         call compilation_loop;
         clock(2) = time;
         /* clock(3) gets set in print_summary */
-        call print summary;
-    end main_proctdure;
+        call print_summary;
+    end main_procedure;
 
-call main procedure;
+call main_procedure;
 return severe_errors;
 
 eof eof eof
