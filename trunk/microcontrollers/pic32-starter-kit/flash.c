@@ -57,11 +57,8 @@ int main()
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
-    /* Disable JTAG and Trace ports, to make more pins available. */
-    //DDPCONCLR = 3 << 2;
-
     /* Use all ports as digital. */
-    AD1PCFG = ~0;
+    //AD1PCFG = ~0;
     LATD = 0;
 
     /* Use pins D0, D1, D2 as output: LED control. */
