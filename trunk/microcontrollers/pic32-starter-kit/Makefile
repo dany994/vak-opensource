@@ -5,7 +5,8 @@ OBJCOPY         = $(P)objcopy
 OBJDUMP         = $(P)objdump
 #GDB             = /mips/arch/overflow/codesourcery/mips-sde-elf/lite/release/2012.03-64/Linux/bin/mips-sde-elf-gdb
 #GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
-GDB             = /usr/local/mipsel441/bin/mipsel-elf32-gdb
+#GDB             = /usr/local/mipsel441/bin/mipsel-elf32-gdb
+GDB             = /usr/local/mips/gdb72/bin/mips-elf-gdb
 CFLAGS          = -O -Wall -Werror -DPIC32MX7
 LDFLAGS         = -T using-bootloader.ld -e _start
 
