@@ -150,9 +150,12 @@ void lcd_puts (char *s)
 PIC32_DEVCFG (
     DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
 
-    DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
-    DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
-    DEVCFG1_FPBDIV_2,           /* Peripheral bus clock = SYSCLK/2 */
+    DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
+    DEVCFG1_POSCMOD_HS |        /* HS oscillator */
+    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
+    DEVCFG1_FPBDIV_2 |          /* Peripheral bus clock = SYSCLK/2 */
+    DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
+    DEVCFG1_FCKS_DISABLE,       /* Clock switching disable */
 
     DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
     DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
