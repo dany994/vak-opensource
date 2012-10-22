@@ -21,8 +21,10 @@
 #include <string.h>
 #include <getopt.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <usb.h>
 
@@ -33,22 +35,17 @@
 #define FT232R_PID      0x6001  /* homemade RS232R adapter */
 
 /*
- * Bit 7 (0x80): unused.
- * Bit 6 (0x40): unused.
- * Bit 5 (0x20): unused.
- * Bit 4 (0x10): unused.
- * Bit 3 (0x08): TMS output.
- * Bit 2 (0x04): TDO input.
- * Bit 1 (0x02): TDI output.
- * Bit 0 (0x01): TCK output.
- *
  * Sync bit bang mode is implemented, as described in FTDI Application
  * Note AN232R-01: "Bit Bang Modes for the FT232R and FT245R".
  */
-#define TCK             (1 << 0)
-#define TDI             (1 << 1)
-#define READ_TDO        (1 << 2)
-#define TMS             (1 << 3)
+#define MASK_TXD        (1 << 0)    /* Dbus 0 (0x01) - TXD output */
+#define MASK_RXD        (1 << 1)    /* Dbus 1 (0x02) - RXD input */
+#define MASK_RTS        (1 << 2)    /* Dbus 2 (0x04) - /RTS output */
+#define MASK_CTS        (1 << 3)    /* Dbus 3 (0x08) - /CTS input */
+#define MASK_DTR        (1 << 4)    /* Dbus 4 (0x10) - /DTR output */
+#define MASK_DSR        (1 << 5)    /* Dbus 5 (0x20) - /DSR input */
+#define MASK_DCD        (1 << 6)    /* Dbus 6 (0x40) - /DCD input */
+#define MASK_RI         (1 << 7)    /* Dbus 7 (0x80) - /RI input */
 
 /*
  * USB endpoints.
@@ -83,50 +80,21 @@ extern char *optarg;
 /* Доступ к устройству через libusb. */
 usb_dev_handle *usbdev;
 
-/* Буфер для вывода-ввода в режиме sync bitbang. */
-unsigned char output [128];
-int output_len;
-
-/*
- * Add one sample to send buffer.
- */
-static void adapter_write (unsigned out_value)
-{
-    if (output_len >= (int) sizeof (output)) {
-        fprintf (stderr, "adapter_write: buffer overflow\n");
-        exit (-1);
-    }
-    output [output_len++] = out_value;
-}
-
-/*
- * Extract input data from bitbang buffer.
- */
-static void adapter_read (unsigned offset, unsigned nbits, unsigned char *data)
-{
-    unsigned n;
-
-    for (n=0; n<nbits; n++) {
-        if (output [offset + n*2 + 1] & READ_TDO)
-            data [n/8] |= 1 << (n & 7);
-        else
-            data [n/8] &= ~(1 << (n & 7));
-    }
-}
-
 /*
  * Perform sync bitbang output/input transaction.
- * Befor call, an array output[] should be filled with data to send.
- * Counter output_len contains a number of bytes to send.
- * On return, received data are put back to array output[].
+ * Return a bitmask of input signals.
  */
-static void adapter_send_recv (void)
+static int adapter_poll (unsigned out_value)
 {
+    int output_len;
     int bytes_to_write, bytes_written, n, txdone, rxdone;
     int empty_rxfifo, bytes_to_read, bytes_read;
+    unsigned char output [128];
     unsigned char reply [64];
 
-    adapter_write (0);
+    output_len = 0;
+    output [output_len++] = out_value;
+    output [output_len++] = out_value;
 
     /* First two receive bytes contain modem and line status. */
     empty_rxfifo = sizeof(reply) - 2;
@@ -194,13 +162,25 @@ static void adapter_send_recv (void)
             empty_rxfifo = sizeof(reply) - 2;
         }
     }
-    output_len = 0;
+    return output[1];
 }
 
 static void adapter_close (void)
 {
+    if (! usbdev)
+        return;
+
+    printf ("\nTerminated.\n");
+    adapter_poll (0xff);
     usb_release_interface (usbdev, 0);
     usb_close (usbdev);
+    usbdev = 0;
+}
+
+static void sigint (int sig)
+{
+    adapter_close();
+    exit (-1);
 }
 
 /*
@@ -258,7 +238,7 @@ failed: usb_release_interface (usbdev, 0);
     /* Sync bit bang mode. */
     if (usb_control_msg (usbdev,
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
-        SIO_SET_BITMODE, TCK | TDI | TMS | 0x400,
+        SIO_SET_BITMODE, MASK_TXD | MASK_RTS | MASK_DTR | 0x400,
         0, 0, 0, 1000) != 0) {
         fprintf (stderr, "Can't set sync bitbang mode\n");
         goto failed;
@@ -295,7 +275,18 @@ failed: usb_release_interface (usbdev, 0);
     fprintf (stderr, "Latency timer: %u usec\n", latency_timer);
 }
 
-extern int optind;
+static int get_msec (struct timeval *oldtv)
+{
+    struct timeval tv;
+    unsigned msec = 0;
+
+    gettimeofday (&tv, 0);
+    if (oldtv->tv_sec != 0)
+        msec = (int) (tv.tv_sec - oldtv->tv_sec) * 1000 +
+               (int) (tv.tv_usec - oldtv->tv_usec + 500) / 1000;
+    *oldtv = tv;
+    return msec;
+}
 
 void usage ()
 {
@@ -336,18 +327,25 @@ int main (int argc, char **argv)
         usage ();
 
     adapter_open();
+    atexit (adapter_close);
+    signal (SIGINT, sigint);
 
-    // TODO
+    int oldval = -1;
+    struct timeval tv = {0};
     for (;;) {
-        unsigned char rx;
+        int value = ~adapter_poll (~MASK_DTR) &
+                    (MASK_RXD | MASK_CTS);
+        if (value != oldval) {
+            int msec = get_msec (&tv);
 
-        adapter_write (0);
-        adapter_write (0);
-        adapter_write (0);
-        adapter_send_recv();
-        adapter_read (0, 1, &rx);
-        printf ("%02x \r", rx);
-        fflush (stdout);
+            printf ("%d - %s\n", msec,
+                (value & MASK_RXD) ? "Daah" :
+                (value & MASK_CTS) ? "Dit" :
+                "Newtral");
+            fflush (stdout);
+            oldval = value;
+        }
+        usleep (10000);
     }
     adapter_close();
     return (0);
