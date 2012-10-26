@@ -64,7 +64,7 @@ void audio_callback (void *unused, Uint8 *data, int len)
 	/* printf ("SDL: Full Buffers: %i\n", full_buffers); */
 }
 
-void audio_init (int sample_rate)
+int audio_init ()
 {
 	SDL_AudioSpec aspec, obtained;
 	int channels;
@@ -75,7 +75,7 @@ void audio_init (int sample_rate)
 	aspec.format = AUDIO_S16LSB;
 
 	/* The desired audio frequency in samples-per-second. */
-	aspec.freq = sample_rate;
+	aspec.freq = 22050;
 
 	/* Number of channels (mono/stereo) */
 	aspec.channels = channels;
@@ -143,6 +143,8 @@ void audio_init (int sample_rate)
 	buf_read_pos = 0;
 	buf_write_pos = 0;
 	full_buffers = 0;
+
+	return aspec.freq;
 }
 
 /* close audio device */

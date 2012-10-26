@@ -10,6 +10,6 @@
  * either version 2 of the License, or (at your discretion) any later version.
  * See the accompanying file "COPYING" for more details.
  */
-void audio_init (int sample_rate);
+int audio_init (void);
 void audio_flush (void);
 void audio_output (float data);

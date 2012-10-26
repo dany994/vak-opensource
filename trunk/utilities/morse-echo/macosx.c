@@ -83,7 +83,10 @@ static OSStatus audio_callback (AudioDeviceID inDevice, const AudioTimeStamp *in
 	return 0;
 }
 
-void audio_init (int sample_rate)
+/*
+ * Return sample rate.
+ */
+int audio_init ()
 {
 	AudioStreamBasicDescription outinfo;
 	OSStatus status;
@@ -133,11 +136,6 @@ void audio_init (int sample_rate)
                         outinfo.mFramesPerPacket);
 		exit (-1);
 	}
-	if ((unsigned) outinfo.mSampleRate != sample_rate) {
-		fprintf (stderr, "audio: bad sample rate = %u, expected %u\n",
-                        (unsigned) outinfo.mSampleRate, sample_rate);
-		exit (-1);
-	}
 	if (outinfo.mBytesPerFrame / outinfo.mChannelsPerFrame != sizeof (float)) {
 		fprintf (stderr, "audio: bad sample size = %u, expected %lu\n",
                         outinfo.mBytesPerFrame / outinfo.mChannelsPerFrame, sizeof (float));
@@ -165,6 +163,8 @@ void audio_init (int sample_rate)
 		fprintf (stderr, "audio: cannot add audio i/o procedure\n");
 		exit (-1);
 	}
+
+	return (unsigned) outinfo.mSampleRate;
 }
 
 static void audio_start ()
