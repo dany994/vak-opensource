@@ -1,7 +1,8 @@
-CC		= gcc -Wall -g
+CC		= gcc -Wall -g -Werror
 CFLAGS 		= -O
 PROG		= morse-echo
 ENCODER		= lame -h --tg Speech --ta Morse --abr 16 --silent
+UNAME           = $(shell uname)
 
 OBJS		= main.o wav.o iir.o
 MP3		= Alphabet10.mp3 Alphabet15.mp3 Alphabet20.mp3 \
@@ -10,17 +11,23 @@ MP3		= Alphabet10.mp3 Alphabet15.mp3 Alphabet20.mp3 \
 		  Wish10.mp3 Wish15.mp3 Wish20.mp3
 
 # For Mac OS X
-#LDFLAGS	= -framework CoreAudio
-#OBJS		+= macosx.o
+ifeq ($(UNAME),Darwin)
+    LDFLAGS	= -framework CoreAudio
+    OBJS	+= macosx.o
+endif
 
 # For Linux, FreeBSD using SDL
-#CFLAGS 		+= -I/usr/include/SDL -I/usr/local/include/SDL
-#LIBS		= -lSDL
-#OBJS		+= sdl.o
+ifeq ($(UNAME),Linux)
+    CFLAGS 	+= -I/usr/include/SDL -I/usr/local/include/SDL
+    LIBS	= -lSDL
+    OBJS	+= sdl.o
+endif
 
 # For Windows
-LIBS		= -lwinmm
-OBJS		+= win32.o
+ifeq ($(UNAME),MinGW)
+    LIBS	= -lwinmm
+    OBJS	+= win32.o
+endif
 
 all:		$(PROG)
 
