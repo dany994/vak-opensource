@@ -19,8 +19,6 @@
 #include "wav.h"
 #include "iir.h"
 
-#define SAMPLE_RATE	44100
-
 const char version[] = "1.2";
 const char copyright[] = "Copyright (C) 2005-2012 Serge Vakulenko";
 
@@ -32,6 +30,7 @@ int dot_msec;
 int dash_msec;
 int pause_msec;
 int fade_msec = 2;
+int sample_rate;
 iir_t filter_low;
 iir_t filter_high;
 
@@ -41,7 +40,7 @@ double fade (double sample, int n, int nsamples)
 {
 	int nfade;
 
-	nfade = fade_msec * SAMPLE_RATE / 1000;
+	nfade = fade_msec * sample_rate / 1000;
 	if (n < nfade)
 		return sample * n / nfade;
 	if (n > nsamples - nfade)
@@ -55,17 +54,17 @@ void play_sound (int msec, int freq)
 	int n, nsamples;
 	double sample;
 
-	nsamples = msec * SAMPLE_RATE / 1000;
+	nsamples = msec * sample_rate / 1000;
 
 	phase = 0;
 	for (n=0; n<nsamples; ++n) {
 		if (freq) {
 			phase += freq;
-			if (phase > SAMPLE_RATE)
-				phase -= SAMPLE_RATE;
+			if (phase > sample_rate)
+				phase -= sample_rate;
 
-			/* sample = 0.6 * sin (2*M_PI * phase/SAMPLE_RATE); */
-			sample = (phase < SAMPLE_RATE/2) ? 0.6 : -0.6;
+			/* sample = 0.6 * sin (2*M_PI * phase/sample_rate); */
+			sample = (phase < sample_rate/2) ? 0.6 : -0.6;
 			sample = fade (sample, n, nsamples);
 		} else
 			sample = 0;
@@ -248,10 +247,11 @@ int main (int argc, char **argv)
 
 	/* Open audio device. */
 	if (outfile) {
-		wav_init (outfile, SAMPLE_RATE);
+	        sample_rate = 22050;
+		wav_init (outfile, sample_rate);
 		output = wav_output;
 	} else {
-		audio_init (SAMPLE_RATE);
+		sample_rate = audio_init ();
 		output = audio_output;
 	}
 

@@ -36,7 +36,7 @@ static void CALLBACK audio_callback (HWAVEOUT outdev, UINT msg,
 		--full_buffers;
 }
 
-void audio_init (int sample_rate)
+int audio_init ()
 {
 	int channels;
 	WAVEFORMATEX wformat;
@@ -50,7 +50,7 @@ void audio_init (int sample_rate)
 	wformat.cbSize = 0;	/* size of _extra_ info */
 	wformat.wFormatTag = WAVE_FORMAT_PCM;
 	wformat.nChannels = channels;
-	wformat.nSamplesPerSec = sample_rate;
+	wformat.nSamplesPerSec = 22050;
 	wformat.wBitsPerSample = 16; /* 2 bytes per sample */
 	wformat.nBlockAlign = wformat.nChannels * wformat.wBitsPerSample / 8;
 	wformat.nAvgBytesPerSec = wformat.nSamplesPerSec * wformat.nBlockAlign;
@@ -76,6 +76,8 @@ void audio_init (int sample_rate)
 	buf_index = 0;
 	buf_write_pos = 0;
 	full_buffers = 0;
+
+	return wformat.nSamplesPerSec;
 }
 
 void audio_flush ()
