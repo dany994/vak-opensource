@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Serge Vakulenko, <vak@cronyx.ru>
+ * Copyright (C) 2005-2012 Serge Vakulenko, <serge@vak.ru>
  *
  * This file is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -19,14 +19,14 @@
 #include "wav.h"
 #include "iir.h"
 
-#define SAMPLE_RATE	22050
+#define SAMPLE_RATE	44100
 
-const char version[] = "1.1";
-const char copyright[] = "Copyright (C) 2005 Serge Vakulenko";
+const char version[] = "1.2";
+const char copyright[] = "Copyright (C) 2005-2012 Serge Vakulenko";
 
 char *progname;
 int wpm = 10;
-int tone = 500;
+int tone = 800;
 int space_seen;
 int dot_msec;
 int dash_msec;

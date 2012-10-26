@@ -21,6 +21,7 @@ static int audio_channels;
 static int buffer_size;
 static int device_started;
 static AudioDeviceID outdev;
+static AudioDeviceIOProcID audio_callback_id;
 
 /*
  * Ring buffer
@@ -86,41 +87,68 @@ void audio_init (int sample_rate)
 {
 	AudioStreamBasicDescription outinfo;
 	OSStatus status;
-	unsigned long size;
+	unsigned size;
 	unsigned int buflen;
+        AudioObjectPropertyAddress property_address = {
+                0,                                  // mSelector
+                kAudioObjectPropertyScopeGlobal,    // mScope
+                kAudioObjectPropertyElementMaster   // mElement
+        };
 
 	pthread_mutex_init (&buffer_mutex, 0);
 	pthread_cond_init (&buffer_mailbox, 0);
 
-	size = sizeof (outdev);
-	status = AudioHardwareGetProperty (kAudioHardwarePropertyDefaultOutputDevice,
-		&size, &outdev);
-	if (status || outdev == kAudioDeviceUnknown) {
+	/* Get default output device */
+        property_address.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+        outdev = kAudioObjectUnknown;
+        size = sizeof(outdev);
+        status = AudioObjectGetPropertyData (kAudioObjectSystemObject,
+                &property_address, 0, 0, &size, &outdev);
+	if (status || outdev == kAudioObjectUnknown) {
 		fprintf (stderr, "audio: cannot get audio device\n");
 		exit (-1);
 	}
 
-	/* get default output format */
+	/* Get default output format */
+        property_address.mSelector = kAudioDevicePropertyStreamFormat;
 	size = sizeof (outinfo);
-	status = AudioDeviceGetProperty (outdev, 0, false,
-		kAudioDevicePropertyStreamFormat, &size, &outinfo);
+        status = AudioObjectGetPropertyData (outdev, &property_address,
+            0, 0, &size, &outinfo);
 	if (status) {
 		fprintf (stderr, "audio: cannot get audio stream format\n");
 		exit (-1);
 	}
-	if (outinfo.mFormatID != kAudioFormatLinearPCM ||
-	    ! (outinfo.mFormatFlags & kAudioFormatFlagIsFloat) ||
-	    outinfo.mFramesPerPacket != 1 ||
-	    outinfo.mSampleRate != sample_rate ||
-	    outinfo.mBytesPerFrame / outinfo.mChannelsPerFrame != sizeof (float)) {
-		fprintf (stderr, "audio: unsupported audio format\n");
+	if (outinfo.mFormatID != kAudioFormatLinearPCM) {
+		fprintf (stderr, "audio: unsupported audio format = %u\n",
+                        outinfo.mFormatID);
+		exit (-1);
+	}
+	if (! (outinfo.mFormatFlags & kAudioFormatFlagIsFloat)) {
+		fprintf (stderr, "audio: no support for float audio format, flags = %#x\n",
+                        outinfo.mFormatFlags);
+		exit (-1);
+	}
+	if (outinfo.mFramesPerPacket != 1) {
+		fprintf (stderr, "audio: too many frames per packet = %u\n",
+                        outinfo.mFramesPerPacket);
+		exit (-1);
+	}
+	if ((unsigned) outinfo.mSampleRate != sample_rate) {
+		fprintf (stderr, "audio: bad sample rate = %u, expected %u\n",
+                        (unsigned) outinfo.mSampleRate, sample_rate);
+		exit (-1);
+	}
+	if (outinfo.mBytesPerFrame / outinfo.mChannelsPerFrame != sizeof (float)) {
+		fprintf (stderr, "audio: bad sample size = %u, expected %lu\n",
+                        outinfo.mBytesPerFrame / outinfo.mChannelsPerFrame, sizeof (float));
 		exit (-1);
 	}
 
 	/* get requested buffer length */
+        property_address.mSelector = kAudioDevicePropertyBufferSize;
 	size = sizeof (buflen);
-	status = AudioDeviceGetProperty (outdev, 0, false,
-		kAudioDevicePropertyBufferSize, &size, &buflen);
+        status = AudioObjectGetPropertyData (outdev, &property_address,
+            0, 0, &size, &buflen);
 	if (status) {
 		fprintf (stderr, "audio: cannot get audio buffer length\n");
 		exit (-1);
@@ -130,7 +158,9 @@ void audio_init (int sample_rate)
 	buffer_size = buflen;
 
 	/* Set the IO proc that CoreAudio will call when it needs data */
-	status = AudioDeviceAddIOProc (outdev, audio_callback, 0);
+        audio_callback_id = 0;
+        status = AudioDeviceCreateIOProcID (outdev, audio_callback,
+            0, &audio_callback_id);
 	if (status) {
 		fprintf (stderr, "audio: cannot add audio i/o procedure\n");
 		exit (-1);
