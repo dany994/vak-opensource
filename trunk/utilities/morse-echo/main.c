@@ -23,7 +23,7 @@ const char version[] = "1.2";
 const char copyright[] = "Copyright (C) 2005-2012 Serge Vakulenko";
 
 char *progname;
-int wpm = 10;
+int wpm = 12;
 int tone = 800;
 int space_seen;
 int dot_msec;
@@ -63,8 +63,7 @@ void play_sound (int msec, int freq)
 			if (phase > sample_rate)
 				phase -= sample_rate;
 
-			/* sample = 0.6 * sin (2*M_PI * phase/sample_rate); */
-			sample = (phase < sample_rate/2) ? 0.6 : -0.6;
+			sample = 0.6 * sin (2*M_PI * phase/sample_rate);
 			sample = fade (sample, n, nsamples);
 		} else
 			sample = 0;
