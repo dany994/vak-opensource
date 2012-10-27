@@ -730,10 +730,10 @@ dj i=0 to 30; code(i+2845)=float(i); end;
 do i=0 to 27; code(i+2876)=write_string(i); end;
 do i=0 to 39; code(i+2904)=integer io(1); end;
 do 1=0 to 127; /* l3ad floating potnt package */
-code(i+2944)=a56(1); code(i+3072)=a60(i);
-code(i+3200)=a62(i); code(i+3328)=a64(1);
-code(i+3456)=a66(i); code(1+3584)=a70(1);
-code(i+3712)=a72(1); code(i+3840)=a74(i); end;
+code(i+2944)=a56(i); code(i+3072)=a60(i);
+code(i+3200)=a62(i); code(i+3328)=a64(i);
+code(i+3456)=a66(i); code(1+3584)=a70(i);
+code(i+3712)=a72(i); code(i+3840)=a74(i); end;
 do i=0 to 109; code(i+3968)=subprogs(i); end;
 /* set initial jump to main program */
 code(128)=2945; /* jmp i 201 */ code(129)=130; cb=c8+2; . call scan;
