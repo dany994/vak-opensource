@@ -127,7 +127,7 @@ int audio_init ()
 		exit (-1);
 	}
 	/* did we got what we wanted ? */
-	if (obtained.channels != 1 || obtained.freq != sample_rate ||
+	if (obtained.channels != 1 || obtained.freq != aspec.freq ||
 	    obtained.format != AUDIO_S16LSB) {
 		fprintf (stderr, "audio: unsupported audio format\n");
 		exit (-1);
