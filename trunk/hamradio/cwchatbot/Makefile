@@ -4,6 +4,8 @@ PROG            = dump-paddle
 CFLAGS		= -O -Wall
 UNAME           = $(shell uname)
 
+OBJS            = paddle.o
+
 # Linux
 ifeq ($(UNAME),Linux)
     LDLIBS	+= -lusb
@@ -19,3 +21,6 @@ all:		$(PROG)
 
 clean:
 		rm -f $(PROG) *.o *~ a.out
+
+dump-paddle:    dump-paddle.o $(OBJS)
+		$(CC) $(LDFLAGS) dump-paddle.o $(OBJS) -o $@ $(LDLIBS)
