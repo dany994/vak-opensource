@@ -23,8 +23,6 @@
 #include "paddle.h"
 
 char *progname;
-int verbose;
-int trace;
 
 static void sigint (int sig)
 {
@@ -48,10 +46,8 @@ static int get_msec (struct timeval *oldtv)
 void usage ()
 {
     fprintf (stderr, "Dump Morse paddle state.\n");
-    fprintf (stderr, "Usage:\n\t%s [-vtd] file...\n", progname);
+    fprintf (stderr, "Usage:\n\t%s [-d] file...\n", progname);
     fprintf (stderr, "Options:\n");
-    fprintf (stderr, "\t-v\tverbose mode\n");
-    fprintf (stderr, "\t-t\ttrace mode\n");
     fprintf (stderr, "\t-d\tdebug\n");
     exit (-1);
 }
@@ -60,15 +56,9 @@ int main (int argc, char **argv)
 {
     progname = *argv;
     for (;;) {
-        switch (getopt (argc, argv, "vtd")) {
+        switch (getopt (argc, argv, "d")) {
         case EOF:
             break;
-        case 'v':
-            ++verbose;
-            continue;
-        case 't':
-            ++trace;
-            continue;
         case 'd':
             ++paddle_debug;
             continue;
