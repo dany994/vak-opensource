@@ -11,5 +11,10 @@
  * See the accompanying file "COPYING" for more details.
  */
 int audio_init (void);
-void audio_flush (void);
-void audio_output (float data);
+void audio_start (void);
+void audio_stop (void);
+
+/*
+ * User should provide the following function:
+ */
+int audio_output (short *data, int maxsamples);

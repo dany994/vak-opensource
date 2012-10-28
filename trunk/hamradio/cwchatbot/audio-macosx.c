@@ -19,18 +19,17 @@
 
 static int audio_channels;
 static int buffer_size;
-static int device_started;
 static AudioDeviceID outdev;
 static AudioDeviceIOProcID audio_callback_id;
 
 /*
  * Ring buffer
  */
-#define MAXSAMPLES 10000
+#define MAXSAMPLES 50000
 
-static float buffer [MAXSAMPLES];
+static short buffer [MAXSAMPLES];
 static unsigned int buf_read_pos;
-static unsigned int buf_write_pos;
+static unsigned int buf_count;
 
 static pthread_mutex_t buffer_mutex; /* mutex covering buffer variables */
 static pthread_cond_t buffer_mailbox;
@@ -56,16 +55,15 @@ static OSStatus audio_callback (
 
 	/* Accessing common variables, locking mutex */
 	pthread_mutex_lock (&buffer_mutex);
-	while (output_ptr + audio_channels <= limit) {
-
-		if (buf_read_pos == buf_write_pos) {
-			/* buffer empty */
-			sample = 0.0;
-		} else {
-			sample = buffer [buf_read_pos++];
-			if (buf_read_pos >= MAXSAMPLES)
-				buf_read_pos = 0;
-		}
+	while (output_ptr < limit) {
+                if (buf_read_pos >= buf_count) {
+                    buf_read_pos = 0;
+                    buf_count = audio_output (buffer, MAXSAMPLES);
+//printf ("[%d] ", buf_count); fflush (stdout);
+                    if (buf_count == 0)
+                        break;
+                }
+                sample = buffer [buf_read_pos++] / 32767.0;
 
 		*output_ptr++ = sample;
 		if (audio_channels > 1)
@@ -75,9 +73,10 @@ static OSStatus audio_callback (
 	pthread_cond_signal (&buffer_mailbox);
 
 	/* Return the number of prepared bytes. */
-	output_data->mBuffers[0].mDataByteSize =
-                (char*) output_ptr -
-		(char*) output_data->mBuffers[0].mData;
+	int nbytes = (char*) output_ptr -
+                     (char*) output_data->mBuffers[0].mData;
+	output_data->mBuffers[0].mDataByteSize = nbytes;
+//printf ("%d ", nbytes); fflush (stdout);
 	return 0;
 }
 
@@ -173,7 +172,7 @@ printf ("%lu buffers per second\n",
 /*
  * Start audio output.
  */
-static void audio_start ()
+void audio_start ()
 {
 	OSStatus status;
 
@@ -183,9 +182,24 @@ static void audio_start ()
 		fprintf (stderr, "audio: cannot start audio device\n");
 		exit (-1);
 	}
-	device_started = 1;
 }
 
+/*
+ * Stop audio output.
+ */
+void audio_stop ()
+{
+	OSStatus status;
+
+	/* Start callback */
+	status = AudioDeviceStop (outdev, audio_callback);
+	if (status) {
+		fprintf (stderr, "audio: cannot stop audio device\n");
+		exit (-1);
+	}
+}
+
+#if 0
 /*
  * Wait until all the audio output data are played.
  */
@@ -195,7 +209,7 @@ void audio_flush ()
 		audio_start ();
 
 	pthread_mutex_lock (&buffer_mutex);
-	while (buf_write_pos != buf_read_pos) {
+	while (buf_count != buf_read_pos) {
 		pthread_mutex_unlock (&buffer_mutex);
 		pthread_cond_wait (&buffer_mailbox, &buffer_mutex);
 	}
@@ -211,7 +225,7 @@ void audio_output (float sample)
 
 	pthread_mutex_lock (&buffer_mutex);
 again:
-	next_write_pos = buf_write_pos + 1;
+	next_write_pos = buf_count + 1;
 	if (next_write_pos >= MAXSAMPLES)
 		next_write_pos = 0;
 
@@ -224,8 +238,9 @@ again:
 		goto again;
 	}
 
-	buffer [buf_write_pos] = sample;
-	buf_write_pos = next_write_pos;
+	buffer [buf_count] = sample;
+	buf_count = next_write_pos;
 
 	pthread_mutex_unlock (&buffer_mutex);
 }
+#endif
