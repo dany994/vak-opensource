@@ -53,7 +53,16 @@ static void fill_data (short *data, int len, int samples_per_cycle)
         memcpy (data + n, data, samples_per_cycle * sizeof(data[0]));
     }
 
-    // TODO: slow fade
+    /* Make slow rising and falling edges. */
+    int ncycles = 3 * samples_per_cycle;
+    double phi = M_PI / ncycles;
+
+    for (n=0; n<ncycles; ++n) {
+        double factor = (1 - cos (n * phi)) / 2;
+
+        data [n] = lround (data [n] * factor);
+        data [len - 1 - n + ncycles] = lround (data [len - 1 - n] * factor);
+    }
 }
 
 static void sigint (int sig)
