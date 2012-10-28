@@ -97,6 +97,8 @@ void paddle_poll (int *left_key, int *right_key)
 
     /* Get reply. */
     n = usb_bulk_read (usbdev, OUT_EP, (char*) reply, 4, 1000);
+    if (n == 2)
+        n += usb_bulk_read (usbdev, OUT_EP, (char*) reply+2, 2, 1000);
     if (n != 4) {
         fprintf (stderr, "usb bulk read failed, error = %d\n", n);
         exit (-1);
