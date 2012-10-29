@@ -152,10 +152,8 @@ int audio_init ()
 
 	audio_channels = outinfo.mChannelsPerFrame;
 	buffer_size = buflen;
-printf ("%lu samples per buffer\n",
-buffer_size / sizeof (float) / audio_channels);
-printf ("%lu buffers per second\n",
-(unsigned) outinfo.mSampleRate * sizeof (float) * audio_channels / buffer_size);
+//printf ("%lu samples per buffer\n", buffer_size / sizeof (float) / audio_channels);
+//printf ("%lu buffers per second\n", (unsigned) outinfo.mSampleRate * sizeof (float) * audio_channels / buffer_size);
 
 	/* Set the IO proc that CoreAudio will call when it needs data */
         audio_callback_id = 0;
