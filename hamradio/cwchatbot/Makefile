@@ -4,8 +4,6 @@ PROG            = test-keyer
 CFLAGS		= -O -Wall
 UNAME           = $(shell uname)
 
-OBJS            = paddle.o
-
 # Linux
 ifeq ($(UNAME),Linux)
     CFLAGS 	+= -I/usr/include/SDL -I/usr/local/include/SDL
@@ -32,8 +30,8 @@ all:		$(PROG)
 clean:
 		rm -f $(PROG) *.o *~ a.out test-paddle test-keyer
 
-test-paddle:    test-paddle.o $(OBJS)
-		$(CC) $(LDFLAGS) test-paddle.o $(OBJS) -o $@ $(LDLIBS)
+test-paddle:    test-paddle.o paddle.o
+		$(CC) $(LDFLAGS) test-paddle.o paddle.o -o $@ $(LDLIBS)
 
-test-keyer:     test-keyer.o $(OBJS) $(AOBJS)
-		$(CC) $(LDFLAGS) test-keyer.o $(OBJS) $(AOBJS) -o $@ $(LDLIBS)
+test-keyer:     test-keyer.o paddle.o keyer.o $(AOBJS)
+		$(CC) $(LDFLAGS) test-keyer.o paddle.o keyer.o $(AOBJS) -o $@ $(LDLIBS)
