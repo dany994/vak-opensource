@@ -15,53 +15,41 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <math.h>
 #include <SDL.h>
 #include "audio.h"
 
-#define BUFFSIZE	4096
-#define NUM_BUFS	16
+#define MAXSAMPLES 50000
 
-static unsigned char buffer [NUM_BUFS] [BUFFSIZE];
+static short buffer [MAXSAMPLES];
 
-static unsigned int buf_read = 0;
-static unsigned int buf_write = 0;
 static unsigned int buf_read_pos = 0;
-static unsigned int buf_write_pos = 0;
-static int full_buffers = 0;
+static unsigned int buf_count = 0;
 
 static unsigned int volume = 127;
 
-/* SDL Callback function */
-void audio_callback (void *unused, Uint8 *data, int len)
+/*
+ * SDL Callback function
+ */
+void audio_callback (void *unused, Uint8 *data, int buffer_size)
 {
-	int offset, x;
+	while (buffer_size > 0) {
+                if (buf_read_pos >= buf_count) {
+                    buf_read_pos = 0;
+                    buf_count = audio_output (buffer, MAXSAMPLES);
+//printf ("[%d] ", buf_count); fflush (stdout);
+                    if (buf_count == 0)
+                        break;
+                }
+                int x = buf_count - buf_read_pos;
+                if (x > buffer_size)
+                    x = buffer_size;
 
-	/* SDL_MixAudio (stream, read_buffer (buffers, len), len, SDL_MIX_MAXVOLUME); */
-	/* if (! full_buffers)
-		printf ("SDL: Buffer underrun!\n"); */
-	offset = 0;
-	while (len > 0) {
-		if (full_buffers == 0)
-			break;
-
-		/* no more data buffered! */
-		x = BUFFSIZE - buf_read_pos;
-		if (x > len)
-			x = len;
-		memcpy (data + offset, buffer[buf_read] + buf_read_pos, x);
-		SDL_MixAudio (data + offset, data + offset, x, volume);
-		offset += x;
-		len -= x;
+		memcpy (data, buffer + buf_read_pos, x);
+		SDL_MixAudio (data, data, x, volume);
+		buffer_size -= x;
 		buf_read_pos += x;
-		if (buf_read_pos >= BUFFSIZE) {
-			/* block is empty, find next! */
-			buf_read = (buf_read + 1) % NUM_BUFS;
-			--full_buffers;
-			buf_read_pos = 0;
-		}
+		data += x;
 	}
-	/* printf ("SDL: Full Buffers: %i\n", full_buffers); */
 }
 
 int audio_init ()
@@ -134,26 +122,40 @@ int audio_init ()
 	}
 	/* printf ("SDL: buf size = %d\n", obtained.size); */
 
-	/* unsilence audio, if callback is ready */
-	SDL_PauseAudio (0);
-
 	/* Reset ring-buffer state */
-	buf_read = 0;
-	buf_write = 0;
 	buf_read_pos = 0;
-	buf_write_pos = 0;
-	full_buffers = 0;
+	buf_count = 0;
 
 	return aspec.freq;
 }
 
-/* close audio device */
+/*
+ * Start audio output.
+ */
+void audio_start ()
+{
+	/* unsilence audio, if callback is ready */
+	SDL_PauseAudio (0);
+}
+
+/*
+ * Stop audio output.
+ */
+void audio_stop ()
+{
+	SDL_PauseAudio (1);
+}
+
+#if 0
+/*
+ * Wait until all the audio output data are played.
+ */
 void audio_flush ()
 {
 	if (buf_write_pos > 0) {
 		/* Flush last buffer. */
-		memset (buffer[buf_write] + buf_write_pos, 0,
-			BUFFSIZE - buf_write_pos);
+		memset (buffer + buf_write_pos, 0,
+			MAXSAMPLES - buf_write_pos);
 		++full_buffers;
 	}
 
@@ -170,13 +172,12 @@ void audio_output (float sample)
 	while (full_buffers >= NUM_BUFS)
 		usleep (50000);
 
-	*(short*) (buffer[buf_write] + buf_write_pos) = (short) (sample * 0x7fff);
+	*(short*) (buffer + buf_write_pos) = (short) (sample * 0x7fff);
 	buf_write_pos += sizeof (short);
 
-	if (buf_write_pos >= BUFFSIZE) {
-		/* block is full, find next! */
-		buf_write = (buf_write + 1) % NUM_BUFS;
+	if (buf_write_pos >= MAXSAMPLES) {
 		++full_buffers;
 		buf_write_pos = 0;
 	}
 }
+#endif
