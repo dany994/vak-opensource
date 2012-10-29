@@ -177,6 +177,7 @@ int audio_output (short *data, int maxdata)
         return dit_len + dit_len;
     }
     if (daah_active) {
+        /* Play a daah and one inter-sign interval. */
         action = '-';
         idle_count = 0;
         memcpy (data, daah_data, (daah_len + dit_len) * sizeof(data[0]));
@@ -184,11 +185,13 @@ int audio_output (short *data, int maxdata)
     }
     idle_count++;
     if (idle_count == 1) {
+        /* Inter-word interval. */
         action = ' ';
         idle_count++;
         memset (data, 0, (dit_len + dit_len) * sizeof(data[0]));
         return dit_len + dit_len;
     }
+    /* Pause. */
     memset (data, 0, dit_len * sizeof(data[0]));
     return dit_len;
 }
