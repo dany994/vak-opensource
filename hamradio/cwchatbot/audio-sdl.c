@@ -18,10 +18,7 @@
 #include <SDL.h>
 #include "audio.h"
 
-#define MAXSAMPLES 50000
-
-static short buffer [MAXSAMPLES];
-
+static short *buffer;
 static unsigned int buf_read_pos = 0;
 static unsigned int buf_count = 0;
 
@@ -35,8 +32,7 @@ void audio_callback (void *unused, Uint8 *data, int buffer_size)
 	while (buffer_size > 0) {
                 if (buf_read_pos >= buf_count) {
                     buf_read_pos = 0;
-                    buf_count = audio_output (buffer, MAXSAMPLES);
-//printf ("[%d] ", buf_count); fflush (stdout);
+                    buf_count = audio_output (&buffer);
                     if (buf_count == 0)
                         break;
                 }
@@ -145,39 +141,3 @@ void audio_stop ()
 {
 	SDL_PauseAudio (1);
 }
-
-#if 0
-/*
- * Wait until all the audio output data are played.
- */
-void audio_flush ()
-{
-	if (buf_write_pos > 0) {
-		/* Flush last buffer. */
-		memset (buffer + buf_write_pos, 0,
-			MAXSAMPLES - buf_write_pos);
-		++full_buffers;
-	}
-
-	/* Wait until playing finishes. */
-	while (full_buffers > 0)
-		usleep (50000);
-
-	SDL_CloseAudio ();
-	SDL_QuitSubSystem (SDL_INIT_AUDIO);
-}
-
-void audio_output (float sample)
-{
-	while (full_buffers >= NUM_BUFS)
-		usleep (50000);
-
-	*(short*) (buffer + buf_write_pos) = (short) (sample * 0x7fff);
-	buf_write_pos += sizeof (short);
-
-	if (buf_write_pos >= MAXSAMPLES) {
-		++full_buffers;
-		buf_write_pos = 0;
-	}
-}
-#endif
