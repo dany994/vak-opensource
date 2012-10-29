@@ -23,9 +23,9 @@
 #include "audio.h"
 #include "keyer.h"
 
-char *progname;
-int wpm = 12;
+int wpm = 18;
 int tone = 800;
+char *progname;
 
 static void quit ()
 {
@@ -86,8 +86,13 @@ int main (int argc, char **argv)
     audio_start();
 
     for (;;) {
-        int daah = 0, dit = 0;
+        int daah = 0, dit = 0, c;
+
         paddle_poll (&daah, &dit);
-        keyer_decode (daah, dit);
+        c = keyer_decode (daah, dit);
+        if (c) {
+            printf ("%c", c);
+            fflush (stdout);
+        }
     }
 }

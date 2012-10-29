@@ -65,7 +65,10 @@ static const cw_entry_t cw_table[] = {
 
 static const int cw_table_size = sizeof(cw_table) / sizeof(cw_entry_t);
 
-static void decode (int element)
+/*
+ * Decode a morse character.
+ */
+static int decode (int element)
 {
     static char word [16];
     static int nbits = 0;
@@ -74,11 +77,11 @@ static void decode (int element)
     if (element != ' ' && nbits < sizeof(word)-1) {
         /* Append element to the word. */
         word [nbits++] = element;
-        printf ("%c", action);
-        return;
+        //printf ("%c", action);
+        return 0;
     }
     if (nbits == 0)
-        return;
+        return 0;
 
     /* Compare with morse table. */
     word[nbits] = '\0';
@@ -86,11 +89,14 @@ static void decode (int element)
     for (i=0; i<cw_table_size; i++) {
         //printf ("comparing sign %d...\n", i);
         if (strcmp (cw_table[i].representation, word) == 0) {
-            printf ("[%c]", cw_table[i].character);
-            return;
+            /* Recognized a valid character. */
+            //printf ("[%c]", cw_table[i].character);
+            return cw_table[i].character;
         }
     }
-    printf ("[??]");
+    /* Unknown character. */
+    //printf ("[??]");
+    return '%';
 }
 
 /*
@@ -133,21 +139,28 @@ void keyer_init (int tone, int wpm)
     fill_data (daah_data, daah_len, samples_per_cycle);
 }
 
-void keyer_decode (int daah, int dit)
+/*
+ * Handle a morse element: dit ot daah.
+ * Return a decoded character.
+ */
+int keyer_decode (int daah, int dit)
 {
+    int character;
+
     dit_active = dit;
     daah_active = daah;
 
     if (action) {
-        decode (action);
-        fflush (stdout);
+        character = decode (action);
         action = 0;
+        return character;
     }
     if (idle_count == 5) {
+        /* Inter-word spacing. */
         idle_count++;
-        printf (" ");
-        fflush (stdout);
+        return ' ';
     }
+    return 0;
 }
 
 /*
