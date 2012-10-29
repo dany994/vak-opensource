@@ -28,6 +28,7 @@ static volatile int idle_count = 6;
 
 static short dit_data [22000];
 static short daah_data [44000];
+static short pause_data [22000];
 static int dit_len;
 static int daah_len;
 
@@ -167,20 +168,20 @@ int keyer_decode (int daah, int dit)
  * Fill the data array with audio samples.
  * Return the number of samples.
  */
-int audio_output (short *data, int maxdata)
+int audio_output (short **data)
 {
     if (dit_active) {
         /* Play a dot and one inter-sign interval. */
         action = '.';
         idle_count = 0;
-        memcpy (data, dit_data, (dit_len + dit_len) * sizeof(data[0]));
+        *data = dit_data;
         return dit_len + dit_len;
     }
     if (daah_active) {
         /* Play a daah and one inter-sign interval. */
         action = '-';
         idle_count = 0;
-        memcpy (data, daah_data, (daah_len + dit_len) * sizeof(data[0]));
+        *data = daah_data;
         return daah_len + dit_len;
     }
     idle_count++;
@@ -188,10 +189,10 @@ int audio_output (short *data, int maxdata)
         /* Inter-word interval. */
         action = ' ';
         idle_count++;
-        memset (data, 0, (dit_len + dit_len) * sizeof(data[0]));
+        *data = pause_data;
         return dit_len + dit_len;
     }
     /* Pause. */
-    memset (data, 0, dit_len * sizeof(data[0]));
+    *data = pause_data;
     return dit_len;
 }

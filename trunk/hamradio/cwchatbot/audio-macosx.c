@@ -23,16 +23,11 @@ static AudioDeviceID outdev;
 static AudioDeviceIOProcID audio_callback_id;
 
 /*
- * Ring buffer
+ * Buffer provided by user.
  */
-#define MAXSAMPLES 50000
-
-static short buffer [MAXSAMPLES];
+static short *buffer;
 static unsigned int buf_read_pos;
 static unsigned int buf_count;
-
-static pthread_mutex_t buffer_mutex; /* mutex covering buffer variables */
-static pthread_cond_t buffer_mailbox;
 
 /*
  * The function that the CoreAudio thread calls when it wants more data
@@ -54,12 +49,10 @@ static OSStatus audio_callback (
 	limit = output_ptr + buffer_size / sizeof (float);
 
 	/* Accessing common variables, locking mutex */
-	pthread_mutex_lock (&buffer_mutex);
 	while (output_ptr < limit) {
                 if (buf_read_pos >= buf_count) {
                     buf_read_pos = 0;
-                    buf_count = audio_output (buffer, MAXSAMPLES);
-//printf ("[%d] ", buf_count); fflush (stdout);
+                    buf_count = audio_output (&buffer);
                     if (buf_count == 0)
                         break;
                 }
@@ -69,14 +62,11 @@ static OSStatus audio_callback (
 		if (audio_channels > 1)
 			*output_ptr++ = sample;
 	}
-	pthread_mutex_unlock (&buffer_mutex);
-	pthread_cond_signal (&buffer_mailbox);
 
 	/* Return the number of prepared bytes. */
 	int nbytes = (char*) output_ptr -
                      (char*) output_data->mBuffers[0].mData;
 	output_data->mBuffers[0].mDataByteSize = nbytes;
-//printf ("%d ", nbytes); fflush (stdout);
 	return 0;
 }
 
@@ -95,9 +85,6 @@ int audio_init ()
                 kAudioObjectPropertyScopeGlobal,    // mScope
                 kAudioObjectPropertyElementMaster   // mElement
         };
-
-	pthread_mutex_init (&buffer_mutex, 0);
-	pthread_cond_init (&buffer_mailbox, 0);
 
 	/* Get default output device */
         property_address.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
@@ -196,49 +183,3 @@ void audio_stop ()
 		exit (-1);
 	}
 }
-
-#if 0
-/*
- * Wait until all the audio output data are played.
- */
-void audio_flush ()
-{
-	if (! device_started)
-		audio_start ();
-
-	pthread_mutex_lock (&buffer_mutex);
-	while (buf_count != buf_read_pos) {
-		pthread_mutex_unlock (&buffer_mutex);
-		pthread_cond_wait (&buffer_mailbox, &buffer_mutex);
-	}
-	pthread_mutex_unlock (&buffer_mutex);
-}
-
-/*
- * Add a sample to output data.
- */
-void audio_output (float sample)
-{
-	int next_write_pos;
-
-	pthread_mutex_lock (&buffer_mutex);
-again:
-	next_write_pos = buf_count + 1;
-	if (next_write_pos >= MAXSAMPLES)
-		next_write_pos = 0;
-
-	if (next_write_pos == buf_read_pos) {
-		/* buffer is full */
-		pthread_mutex_unlock (&buffer_mutex);
-		if (! device_started)
-			audio_start ();
-		pthread_cond_wait (&buffer_mailbox, &buffer_mutex);
-		goto again;
-	}
-
-	buffer [buf_count] = sample;
-	buf_count = next_write_pos;
-
-	pthread_mutex_unlock (&buffer_mutex);
-}
-#endif

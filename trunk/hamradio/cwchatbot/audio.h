@@ -17,4 +17,4 @@ void audio_stop (void);
 /*
  * User should provide the following function:
  */
-int audio_output (short *data, int maxsamples);
+int audio_output (short **data);
