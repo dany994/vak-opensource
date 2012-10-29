@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <signal.h>
 
 #include "paddle.h"
 #include "audio.h"

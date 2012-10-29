@@ -12,7 +12,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+//#include <math.h>
 #include <pthread.h>
 #include <CoreAudio/AudioHardware.h>
 #include "audio.h"
