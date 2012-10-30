@@ -83,7 +83,9 @@ int main (int argc, char **argv)
     atexit (quit);
     signal (SIGINT, sigint);
 
-    printf ("Keyer ready at %d wpm, tone %d Hz.\n", wpm, tone);
+    printf ("Speed: %d wpm\n", wpm);
+    printf ("Tone: %d Hz\n", tone);
+    printf ("Keyer ready.\n");
     audio_start();
 
     for (;;) {
