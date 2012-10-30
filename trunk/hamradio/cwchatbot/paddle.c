@@ -194,9 +194,9 @@ failed: usb_release_interface (usbdev, 0);
     /* Exactly 500nsec between samples. */
     unsigned divisor = 0;
     unsigned char latency_timer = 1;
-    int baud = (divisor == 0) ? 3000000 :
-        (divisor == 1) ? 2000000 : 3000000 / divisor;
-    fprintf (stderr, "Speed %d samples/sec\n", baud);
+    //int baud = (divisor == 0) ? 3000000 :
+    //    (divisor == 1) ? 2000000 : 3000000 / divisor;
+    //fprintf (stderr, "Speed %d samples/sec\n", baud);
 
     /* Frequency divisor is 14-bit non-zero value. */
     if (usb_control_msg (usbdev,
@@ -219,5 +219,5 @@ failed: usb_release_interface (usbdev, 0);
         fprintf (stderr, "unable to get latency timer\n");
         goto failed;
     }
-    fprintf (stderr, "Latency timer: %u usec\n", latency_timer);
+    //fprintf (stderr, "Latency timer: %u usec\n", latency_timer);
 }

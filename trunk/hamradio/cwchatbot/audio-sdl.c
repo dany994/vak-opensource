@@ -36,15 +36,15 @@ void audio_callback (void *unused, Uint8 *data, int buffer_size)
                     if (buf_count == 0)
                         break;
                 }
-                int x = buf_count - buf_read_pos;
-                if (x > buffer_size)
-                    x = buffer_size;
+                int nbytes = (buf_count - buf_read_pos) * sizeof(short);
+                if (nbytes > buffer_size)
+                    nbytes = buffer_size;
 
-		memcpy (data, buffer + buf_read_pos, x);
-		SDL_MixAudio (data, data, x, volume);
-		buffer_size -= x;
-		buf_read_pos += x;
-		data += x;
+		memcpy (data, buffer + buf_read_pos, nbytes);
+		SDL_MixAudio (data, data, nbytes, volume);
+		buffer_size -= nbytes;
+		buf_read_pos += nbytes / sizeof(short);
+		data += nbytes;
 	}
 }
 
@@ -111,18 +111,27 @@ int audio_init ()
 		exit (-1);
 	}
 	/* did we got what we wanted ? */
-	if (obtained.channels != 1 || obtained.freq != aspec.freq ||
-	    obtained.format != AUDIO_S16LSB) {
-		fprintf (stderr, "audio: unsupported audio format\n");
+	if (obtained.format != AUDIO_S16LSB) {
+		fprintf (stderr, "audio: unsupported audio format = %u\n",
+                        obtained.format);
 		exit (-1);
 	}
-	/* printf ("SDL: buf size = %d\n", obtained.size); */
+	if (obtained.channels != 1) {
+		fprintf (stderr, "audio: single-channel format not supported\n");
+		exit (-1);
+	}
+
+	//printf ("Audio format: %d (need %d)\n", obtained.format, aspec.format);
+	//printf ("        Rate: %d samples/sec\n", obtained.freq);
+	//printf ("    Channels: %d\n", obtained.channels);
+	//printf (" Buf samples: %d\n", obtained.samples);
+	//printf (" Buffer size: %d\n", obtained.size);
 
 	/* Reset ring-buffer state */
 	buf_read_pos = 0;
 	buf_count = 0;
 
-	return aspec.freq;
+	return obtained.freq;
 }
 
 /*
