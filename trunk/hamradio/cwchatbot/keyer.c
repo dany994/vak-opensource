@@ -33,35 +33,39 @@ static int dit_len;
 static int daah_len;
 
 typedef struct {
-    const int character;	/* The character represented */
+    const char *character;	/* The character represented */
     const char *representation; /* Dot-dash shape of the character */
 } cw_entry_t;
 
 static const cw_entry_t cw_table[] = {
     /* ASCII 7bit letters */
-    { 'A', ".-"     }, { 'B', "-..."   }, { 'C', "-.-."   },
-    { 'D', "-.."    }, { 'E', "."      }, { 'F', "..-."   },
-    { 'G', "--."    }, { 'H', "...."   }, { 'I', ".."     },
-    { 'J', ".---"   }, { 'K', "-.-"    }, { 'L', ".-.."   },
-    { 'M', "--"     }, { 'N', "-."     }, { 'O', "---"    },
-    { 'P', ".--."   }, { 'Q', "--.-"   }, { 'R', ".-."    },
-    { 'S', "..."    }, { 'T', "-"      }, { 'U', "..-"    },
-    { 'V', "...-"   }, { 'W', ".--"    }, { 'X', "-..-"   },
-    { 'Y', "-.--"   }, { 'Z', "--.."   },
+    { "A",   ".-"      }, { "B",    "-..."   }, { "C",   "-.-."   },
+    { "D",   "-.."     }, { "E",    "."      }, { "F",   "..-."   },
+    { "G",   "--."     }, { "H",    "...."   }, { "I",   ".."     },
+    { "J",   ".---"    }, { "K",    "-.-"    }, { "L",   ".-.."   },
+    { "M",   "--"      }, { "N",    "-."     }, { "O",   "---"    },
+    { "P",   ".--."    }, { "Q",    "--.-"   }, { "R",   ".-."    },
+    { "S",   "..."     }, { "T",    "-"      }, { "U",   "..-"    },
+    { "V",   "...-"    }, { "W",    ".--"    }, { "X",   "-..-"   },
+    { "Y",   "-.--"    }, { "Z",    "--.."   },
 
     /* Numerals */
-    { '0', "-----"  }, { '1', ".----"  }, { '2', "..---"  },
-    { '3', "...--"  }, { '4', "....-"  }, { '5', "....."  },
-    { '6', "-...."  }, { '7', "--..."  }, { '8', "---.."  },
-    { '9', "----."  },
+    { "0",    "-----"  }, { "1",    ".----"  }, { "2",   "..---"  },
+    { "3",    "...--"  }, { "4",    "....-"  }, { "5",   "....."  },
+    { "6",    "-...."  }, { "7",    "--..."  }, { "8",   "---.."  },
+    { "9",    "----."  },
 
     /* Punctuation */
-    { '"', ".-..-." }, { '\'',".----." }, { '$', "...-..-"},
-    { '(', "-.--."  }, { ')', "-.--.-" }, { '+', ".-.-."  },
-    { ',', "--..--" }, { '-', "-....-" }, { '.', ".-.-.-" },
-    { '/', "-..-."  }, { ':', "---..." }, { ';', "-.-.-." },
-    { '=', "-...-"  }, { '?', "..--.." }, { '_', "..--.-" },
-    { '@', ".--.-." },
+    { ".",    ".-.-.-" },
+    { ",",    "--..--" },
+    { "?",    "..--.." },
+    { "/",    "-..-."  },
+    { "+",    ".-.-."  },   /* [AR] end of message */
+    { "=",    "-...-"  },   /* [BT] break between paragraphs  */
+
+    /* Prosigns */
+    { "<SK>", "...-.-" },   /* end of contact */
+    { "<KN>", "-.--."  },   /* invite a specific station to transmit */
 };
 
 static const int cw_table_size = sizeof(cw_table) / sizeof(cw_entry_t);
@@ -69,7 +73,7 @@ static const int cw_table_size = sizeof(cw_table) / sizeof(cw_entry_t);
 /*
  * Decode a morse character.
  */
-static int decode (int element)
+static const char *decode (int element)
 {
     static char word [16];
     static int nbits = 0;
@@ -97,7 +101,7 @@ static int decode (int element)
     }
     /* Unknown character. */
     //printf ("[??]");
-    return '%';
+    return "%";
 }
 
 /*
@@ -144,9 +148,9 @@ void keyer_init (int tone, int wpm)
  * Handle a morse element: dit ot daah.
  * Return a decoded character.
  */
-int keyer_decode (int daah, int dit)
+const char *keyer_decode (int daah, int dit)
 {
-    int character;
+    const char *character;
 
     dit_active = dit;
     daah_active = daah;
@@ -159,7 +163,7 @@ int keyer_decode (int daah, int dit)
     if (idle_count == 5) {
         /* Inter-word spacing. */
         idle_count++;
-        return ' ';
+        return " ";
     }
     return 0;
 }

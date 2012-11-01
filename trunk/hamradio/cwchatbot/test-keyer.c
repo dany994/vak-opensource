@@ -89,12 +89,13 @@ int main (int argc, char **argv)
     audio_start();
 
     for (;;) {
-        int daah = 0, dit = 0, c;
+        int daah = 0, dit = 0;
+        const char *c;
 
         paddle_poll (&daah, &dit);
         c = keyer_decode (daah, dit);
         if (c) {
-            printf ("%c", c);
+            printf ("%s", c);
             fflush (stdout);
         }
     }
