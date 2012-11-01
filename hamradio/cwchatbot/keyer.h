@@ -21,4 +21,4 @@ void keyer_init (int tone, int wpm);
 /*
  * Decode the key action.
  */
-int keyer_decode (int daah_key, int dit_key);
+const char *keyer_decode (int daah_key, int dit_key);
