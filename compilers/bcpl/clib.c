@@ -1,15 +1,60 @@
-/* Copyright (c) 2004 Robert Nordier.  All rights reserved. */
-
 #include <stdio.h>
 #include <stdlib.h>
-#include "blib.h"
+
+extern void *G[];
 
 #define FTSZ 20
 
-extern int *M;
-
 static FILE *ft[FTSZ];
 static int fi, fo;
+
+void finish()
+{
+    exit(0);
+}
+
+int main(argc, argv, envv)
+    int argc;
+    char **argv;
+    char **envv;
+{
+    // Allocate BCPL stack area.
+    void **stack = calloc (64, 1024);
+    if (! stack) {
+        perror("BCPL stack");
+        return(-1);
+    }
+
+    stack[0] = stack;
+    stack[1] = finish;
+    stack[2] = (void*) argc;
+    stack[3] = argv;
+    stack[4] = envv;
+
+    ft[0] = stdin;
+    ft[1] = stdout;
+    ft[2] = stderr;
+    fi = 0;
+    fo = 1;
+
+    asm volatile (
+    "   mov     %0, %%ebp \n"
+    "   mov     %1, %%edi \n"
+    "	mov	4(%%edi), %%eax \n"
+    "	jmp	*%%eax \n"
+    : : "r" (stack), "r" (G) : "ax");
+
+    return 0;
+}
+
+void stop(status)
+    int status;
+{
+    exit(status);
+}
+
+#if 0
+extern int *M;
 
 int
 getbyte(s, i)
@@ -62,21 +107,16 @@ ftslot()
             return i;
     return -1;
 }
-
-void
-initio()
-{
-    ft[0] = stdin;
-    ft[1] = stdout;
-    ft[2] = stderr;
-    fi = 0;
-    fo = 1;
-}
+#endif
 
 int
 findinput(s)
     int s;
 {
+#if 1
+    printf("--- %s() called\n", __func__);
+    return 0;
+#else
     char *st = cstr(s);
     int x;
 
@@ -88,12 +128,17 @@ findinput(s)
     }
     free(st);
     return x + 1;
+#endif
 }
 
 int
 findoutput(s)
     int s;
 {
+#if 1
+    printf("--- %s() called\n", __func__);
+    return 0;
+#else
     char *st = cstr(s);
     int x;
 
@@ -105,6 +150,7 @@ findoutput(s)
     }
     free(st);
     return x + 1;
+#endif
 }
 
 void
@@ -140,10 +186,20 @@ rdch()
 }
 
 void
-wrch(c)
+wrch()
+{
+    int c;
+
+    /* Assign c = AX */
+    asm volatile ("" : "=a" (c));
+
+    fputc(c, ft[fo]);
+}
+
+void unrdch(c)
     int c;
 {
-    fputc(c, ft[fo]);
+    ungetc(c, ft[fo]);
 }
 
 void

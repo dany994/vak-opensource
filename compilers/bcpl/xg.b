@@ -93,7 +93,7 @@ $(
     EMIT(".align 4")
     EMIT("G:")
     FOR I=0 TO GSZ - 1
-        EMIT(".long %S%N // %N", G!I=0 -> "", "L", G!I, I)
+        EMIT(".long %S%N # %N", G!I=0 -> "", "L", G!I, I)
 $)
 
 AND GENER(F1, A1, I1, K1) BE
@@ -117,29 +117,29 @@ $(
             TEST (5 <= A1 <= 21)
                 ENDCASE
             OR IF A1=32 | (35 <= A1 <= 37)
-                EMIT("movl eax,ebx")
+                EMIT("movl %%eax,%%ebx")
     CASE 'A':
         TEST NOT I $(
-            EMIT("%S %S,e%Sx",
+            EMIT("%S %S,%%e%Sx",
                  (F='L' & (K=M.P | K=M.G) -> "lea",
                  (F='A' & NOT I & K=M.N -> "addl", "movl")),
                  ADDR(A, I, K),
                  (F='A' & K NE M.N -> "b", "a"))
             UNLESS K=M.N THEN $(
-                EMIT("shrl $2,e%Sx", (F='A' -> "b", "a"))
+                EMIT("shrl $2,%%e%Sx", (F='A' -> "b", "a"))
                 IF F='A' THEN
-                    EMIT("addl ebx,eax")
+                    EMIT("addl %%ebx,%%eax")
             $)
         $) OR
-               EMIT("%S %S,eax", (F='A' -> "addl", "movl"),
+               EMIT("%S %S,%%eax", (F='A' -> "addl", "movl"),
                      ADDR(A, TRUE, K))
         ENDCASE
     CASE 'S':
         TEST NOT I THEN
-            EMIT("movl eax,%S", ADDR(A, TRUE, K))
+            EMIT("movl %%eax,%S", ADDR(A, TRUE, K))
         OR $(
-            EMIT("movl %S,ebx", ADDR(A, I, K))
-            EMIT("movl eax,(,ebx,4)")
+            EMIT("movl %S,%%ebx", ADDR(A, I, K))
+            EMIT("movl %%eax,(,%%ebx,4)")
         $)
         ENDCASE
     CASE 'J':CASE 'T':CASE 'F':
@@ -165,7 +165,7 @@ $(
                           (I -> "**", ""), A)
                 ENDCASE
             $)
-            EMIT("testl eax,eax")
+            EMIT("testl %%eax,%%eax")
         $)
         EMIT("j%S %SL%N", (F='T' -> "nz" , F='F' -> "z" , "mp"),
              (I -> "**" , ""), A)
@@ -173,11 +173,11 @@ $(
     CASE 'K':
         IF I | K NE M.N THEN
             ERROR(8)
-        EMIT("movl ebp,ebx")
-        EMIT("addl $%N,ebp", A << 2)
-        EMIT("movl ebx,(ebp)")
-        EMIT("movl $1f,4(ebp)")
-        EMIT("jmp **eax")
+        EMIT("movl %%ebp,%%ebx")
+        EMIT("addl $%N,%%ebp", A << 2)
+        EMIT("movl %%ebx,(%%ebp)")
+        EMIT("movl $1f,4(%%ebp)")
+        EMIT("jmp **%%eax")
         EMIT("1:")
         ENDCASE
     CASE 'X':
@@ -185,162 +185,162 @@ $(
         DEFAULT:
             ERROR(9)
         CASE 1:
-            EMIT("movl (,eax,4),eax")
+            EMIT("movl (,%%eax,4),%%eax")
             ENDCASE
         CASE 2:
-            EMIT("negl eax")
+            EMIT("negl %%eax")
             ENDCASE
         CASE 3:
-            EMIT("xorl $-1,eax")
+            EMIT("xorl $-1,%%eax")
             ENDCASE
         CASE 4:
-            EMIT("movl 4(ebp),ebx")
-            EMIT("movl (ebp),ebp")
-            EMIT("jmp **ebx")
+            EMIT("movl 4(%%ebp),%%ebx")
+            EMIT("movl (%%ebp),%%ebp")
+            EMIT("jmp **%%ebx")
             ENDCASE
         CASE 5:CASE 6:CASE 7:
             UNLESS A=5 DO EMIT("cltd")
             TEST NOT I0 & K0=M.N DO $(
-                EMIT("movl %S,ecx", ADDR(A0, I0, K0))
-                EMIT("i%Sl ecx", (A=5 -> "mul", "div"))
+                EMIT("movl %S,%%ecx", ADDR(A0, I0, K0))
+                EMIT("i%Sl %%ecx", (A=5 -> "mul", "div"))
             $) OR
                 EMIT("i%Sl %S", (A=5 -> "mul", "div"),
                      ADDR(A0, I0, K0))
-            IF A=7 DO EMIT("movl edx,eax")
+            IF A=7 DO EMIT("movl %%edx,%%eax")
             ENDCASE
         CASE 8:
-            EMIT("addl %S,eax", ADDR(A0, I0, K0))
+            EMIT("addl %S,%%eax", ADDR(A0, I0, K0))
             ENDCASE
         CASE 9:
-            EMIT("subl %S,eax", ADDR(A0, I0, K0))
+            EMIT("subl %S,%%eax", ADDR(A0, I0, K0))
             ENDCASE
         CASE 10:CASE 11:CASE 12:CASE 13:CASE 14:CASE 15:
-            EMIT("cmpl %S,eax", ADDR(A0, I0, K0))
+            EMIT("cmpl %S,%%eax", ADDR(A0, I0, K0))
             IF F1='F' | F1='T' ENDCASE
-            EMIT("set%S al",
+            EMIT("set%S %%al",
                  A=10 -> "ne",
                  A=11 -> "e",
                  A=12 -> "ge",
                  A=13 -> "l",
                  A=14 -> "le", "g")
-            EMIT("movzbl al,eax")
-            EMIT("decl eax")
+            EMIT("movzbl %%al,%%eax")
+            EMIT("decl %%eax")
             ENDCASE
         CASE 16:CASE 17:
             TEST NOT I0 & K0=M.N & A0<32 DO
-                EMIT("sh%Cl $%N,eax", A=16 -> 'l', 'r', A0)
+                EMIT("sh%Cl $%N,%%eax", A=16 -> 'l', 'r', A0)
             ELSE $(
-                EMIT("movl %S,ecx", ADDR(A0, I0, K0))
+                EMIT("movl %S,%%ecx", ADDR(A0, I0, K0))
                 EMIT("jecxz 1f")
-                EMIT("decl ecx")
-                EMIT("sh%Cl $1,eax", A=16 -> 'l', 'r')
-                EMIT("sh%Cl cl,eax", A=16 -> 'l', 'r')
+                EMIT("decl %%ecx")
+                EMIT("sh%Cl $1,%%eax", A=16 -> 'l', 'r')
+                EMIT("sh%Cl cl,%%eax", A=16 -> 'l', 'r')
                 EMIT("1:")
             $)
             ENDCASE
         CASE 18:CASE 19:CASE 20:
-            EMIT("%Sl %S,eax",
+            EMIT("%Sl %S,%%eax",
                  (A=18 -> "and", A=19 -> "or", "xor"),
                  ADDR(A0, I0, K0))
             ENDCASE
         CASE 21:
-            EMIT("xorl $-1,eax")
-            EMIT("xorl %S,eax", ADDR(A0, I0, K0))
+            EMIT("xorl $-1,%%eax")
+            EMIT("xorl %S,%%eax", ADDR(A0, I0, K0))
             ENDCASE
         CASE 22:
             EMIT("jmp finish")
             ENDCASE
         CASE 23:
-            EMIT("movl $L%N,esi", XL)
-            EMIT("movl (esi),ecx")
-            EMIT("movl 4(esi),edx")
+            EMIT("movl $L%N,%%esi", XL)
+            EMIT("movl (%%esi),%%ecx")
+            EMIT("movl 4(%%esi),%%edx")
             EMIT("jecxz 2f")
             EMIT("1:")
-            EMIT("addl $8,esi")
-            EMIT("cmpl (esi),eax")
+            EMIT("addl $8,%%esi")
+            EMIT("cmpl (%%esi),%%eax")
             EMIT("je 3f")
             EMIT("loop 1b")
             EMIT("2:")
-            EMIT("jmp **edx")
+            EMIT("jmp **%%edx")
             EMIT("3:")
-            EMIT("jmp **4(esi)")
+            EMIT("jmp **4(%%esi)")
             L!LN := XL
             LN := LN + 1
             XL := XL + 1
             ENDCASE
         CASE 24:
-            EMIT("call _selectinput")
+            EMIT("call selectinput")
             ENDCASE
         CASE 25:
-            EMIT("call _selectoutput")
+            EMIT("call selectoutput")
             ENDCASE
         CASE 26:
-            EMIT("call _rdch")
+            EMIT("call rdch")
             ENDCASE
         CASE 27:
-            EMIT("call _wrch")
+            EMIT("call wrch")
             ENDCASE
         CASE 28:
-            EMIT("call _findinput")
+            EMIT("call findinput")
             ENDCASE
         CASE 29:
-            EMIT("call _findoutput")
+            EMIT("call findoutput")
             ENDCASE
         CASE 30:
             EMIT("jmp stop")
             ENDCASE
         CASE 31:
-            EMIT("movl (ebp),eax")
+            EMIT("movl (%%ebp),%%eax")
             ENDCASE
         CASE 32:
-            EMIT("movl eax,ebp")
-            EMIT("jmp **ebx")
+            EMIT("movl %%eax,%%ebp")
+            EMIT("jmp **%%ebx")
             ENDCASE
         CASE 33:
-            EMIT("call _endread")
+            EMIT("call endread")
             ENDCASE
         CASE 34:
-            EMIT("call _endwrite")
+            EMIT("call endwrite")
             ENDCASE
         CASE 35:
-            EMIT("movl ebp,esi")
-            EMIT("movl ebx,ecx")
-            EMIT("incl ecx")
-            EMIT("shll $2,ecx")
-            EMIT("addl ecx,esi")
-            EMIT("movl (ebp),ecx")
-            EMIT("movl ecx,(esi)")
-            EMIT("movl 4(ebp),ecx")
-            EMIT("movl ecx,4(esi)")
-            EMIT("movl ebp,ecx")
-            EMIT("shrl $2,ecx")
-            EMIT("movl ecx,8(esi)")
-            EMIT("movl ebx,12(esi)")
-            EMIT("movl esi,ebp")
-            EMIT("jmp **eax")
+            EMIT("movl %%ebp,%%esi")
+            EMIT("movl %%ebx,%%ecx")
+            EMIT("incl %%ecx")
+            EMIT("shll $2,%%ecx")
+            EMIT("addl %%ecx,%%esi")
+            EMIT("movl (%%ebp),%%ecx")
+            EMIT("movl %%ecx,(%%esi)")
+            EMIT("movl 4(%%ebp),%%ecx")
+            EMIT("movl %%ecx,4(%%esi)")
+            EMIT("movl %%ebp,%%ecx")
+            EMIT("shrl $2,%%ecx")
+            EMIT("movl %%ecx,8(%%esi)")
+            EMIT("movl %%ebx,12(%%esi)")
+            EMIT("movl %%esi,%%ebp")
+            EMIT("jmp **%%eax")
             ENDCASE
         CASE 36:
-            EMIT("shll $2,eax")
-            EMIT("addl ebx,eax")
-            EMIT("movzbl (eax),eax")
+            EMIT("shll $2,%%eax")
+            EMIT("addl %%ebx,%%eax")
+            EMIT("movzbl (%%eax),%%eax")
             ENDCASE
         CASE 37:
-            EMIT("shll $2,eax")
-            EMIT("addl ebx,eax")
-            EMIT("movl 16(ebp),ebx")
-            EMIT("movb bl,(eax)")
+            EMIT("shll $2,%%eax")
+            EMIT("addl %%ebx,%%eax")
+            EMIT("movl 16(%%ebp),%%ebx")
+            EMIT("movb %%bl,(%%eax)")
             ENDCASE
         CASE 38:
-            EMIT("call _input")
+            EMIT("call input")
             ENDCASE
         CASE 39:
-            EMIT("call _output")
+            EMIT("call output")
             ENDCASE
         CASE 40:
-            EMIT("call _unrdch")
+            EMIT("call unrdch")
             ENDCASE
         CASE 41:
-            EMIT("call _rewind")
+            EMIT("call rewind")
         $)
         ENDCASE
     CASE 'D':
@@ -388,7 +388,7 @@ $(
         ADDBYTE(T, 'L')
     WRN(T, K=M.L -> A, NOT I & K=M.N -> A, A << 2)
     IF K=M.P | K=M.G THEN
-        APPEND(T, K=M.P -> "(ebp)", "(edi)")
+        APPEND(T, K=M.P -> "(%ebp)", "(%edi)")
     RESULTIS T
 $)
 
@@ -400,7 +400,7 @@ $(
         PSECT := SECT
     $)
     UNLESS LN=0 $(
-        EMIT1("//.align 4")
+        EMIT1("#.align 4")
         FOR I = 0 TO LN - 1 DO
             WRITEF("L%N:*N", L!I)
         LN := 0
