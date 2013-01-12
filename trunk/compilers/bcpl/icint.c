@@ -1,26 +1,27 @@
 /* Copyright (c) 2004 Robert Nordier.  All rights reserved. */
 
 #include <stdio.h>
+#include "blib.h"
 
-#define VSIZE 32000
-#define MGLOB 1
-#define MPROG 402
+#define VSIZE       32000
+#define MGLOB       1
+#define MPROG       402
 
-#define FALSE 0
-#define TRUE 1
+#define FALSE       0
+#define TRUE        1
 
-#define FSHIFT 13
-#define IBIT 010000
-#define PBIT 04000
-#define GBIT 02000
-#define DBIT 01000
-#define ABITS 0777
-#define WORDSIZE 32
-#define BYTESIZE 8
+#define FSHIFT      13
+#define IBIT        010000
+#define PBIT        04000
+#define GBIT        02000
+#define DBIT        01000
+#define ABITS       0777
+#define WORDSIZE    32
+#define BYTESIZE    8
 
-#define LIG1 0012001
-#define K2 0140002
-#define X22 0160026
+#define LIG1        0012001
+#define K2          0140002
+#define X22         0160026
 
 int *M;
 FILE *fp;
@@ -37,10 +38,73 @@ static int C;
 static int D;
 static int W;
 
-static assemble(), stw(), stc(), rch(), setlab(), labref(), icputbyte;
-static int rdn(), interpret(), icgetbyte();
+static void
+rch()
+{
+    for (;;) {
+        Ch = fgetc(fp);
+        if (Ch != '/')
+            return;
+        do {
+            Ch = fgetc(fp);
+        } while (Ch != '\n');
+    }
+}
 
-static
+static void
+setlab(n)
+{
+    int k = Labv[n];
+    if (k < 0)
+        printf("L%d ALREADY SET TO %d AT P = %d\n", n, -k, P);
+    while (k > 0) {
+        int n = M[k];
+        M[k] = P;
+        k = n;
+    }
+    Labv[n] = -P;
+}
+
+static void
+labref(n, a)
+{
+    int k = Labv[n];
+    if (k < 0)
+        k = -k;
+    else
+        Labv[n] = a;
+    M[a] += k;
+}
+
+static int
+rdn()
+{
+    int a = 0, b = FALSE;
+    if (Ch == '-') { b = TRUE; rch(); }
+    while ('0' <= Ch && Ch <= '9') { a = 10 * a + Ch - '0'; rch(); }
+    if (b) a = -a;
+    return a;
+}
+
+static void
+stw(w)
+{
+    M[P++] = w;
+    Cp = 0;
+}
+
+static void
+stc(c)
+{
+    if (Cp == 0) {
+        stw(0);
+        Cp = WORDSIZE;
+    }
+    Cp -= BYTESIZE;
+    M[P - 1] += c << Cp;
+}
+
+static void
 assemble()
 {
     int v[501];
@@ -117,62 +181,6 @@ sw:
         else { stw(W + DBIT); stw(a); }
     }
     goto sw;
-}
-
-static
-stw(w)
-{
-    M[P++] = w;
-    Cp = 0;
-}
-
-static
-stc(c)
-{
-    if (Cp == 0) { stw(0); Cp = WORDSIZE; }
-    Cp -= BYTESIZE;
-    M[P - 1] += c << Cp;
-}
-
-static
-rch()
-{
-    for (;;) {
-        Ch = fgetc(fp);
-        if (Ch != '/') return;
-        do Ch = fgetc(fp); while (Ch != '\n');
-    }
-}
-
-static int
-rdn()
-{
-    int a = 0, b = FALSE;
-    if (Ch == '-') { b = TRUE; rch(); }
-    while ('0' <= Ch && Ch <= '9') { a = 10 * a + Ch - '0'; rch(); }
-    if (b) a = -a;
-    return a;
-}
-
-static
-setlab(n)
-{
-    int k = Labv[n];
-    if (k < 0) printf("L%d ALREADY SET TO %d AT P = %d\n", n, -k, P);
-    while (k > 0) {
-        int n = M[k];
-        M[k] = P;
-        k = n;
-    }
-    Labv[n] = -P;
-}
-
-static
-labref(n, a)
-{
-    int k = Labv[n];
-    if (k < 0) k = -k; else Labv[n] = a;
-    M[a] += k;
 }
 
 static int
@@ -266,7 +274,7 @@ fetch:
 
 int
 main(argc, argv)
-char **argv;
+    char **argv;
 {
     int pgvec[VSIZE];
 
@@ -286,14 +294,13 @@ char **argv;
     M[P++] = K2;
     M[P++] = X22;
     initio();
-    printf("INTCODE SYSTEM ENTERED\n");
+    //printf("INTCODE SYSTEM ENTERED\n");
     assemble();
     fclose(fp);
-    printf("\nPROGRAM SIZE = %d\n", P - MPROG);
+    printf("INTCODE SIZE = %d\n", P - MPROG);
     C = MPROG;
     Cyclecount = 0;
     A = interpret();
-    printf("\nEXECUTION CYCLES = %d, CODE = %d\n", Cyclecount, A);
-    if (A < 0) mapstore();
+    printf("EXECUTION CYCLES = %d, STATUS = %d\n", Cyclecount, A);
     return A;
 }
