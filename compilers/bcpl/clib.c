@@ -3,9 +3,15 @@
 
 extern void *G[];
 
-#define FTSZ 20
+#define STKSZ   (16*1024)       // Number of words reserved for BCPL stack.
+#define FTSZ    20              // Max number of opened files.
 
-static FILE *ft[FTSZ];
+/* Assign x = AX */
+#define GET_A(x)   asm volatile("" : "=a" (x))
+#define SET_A(x)   asm volatile("" : : "a" (x))
+
+static void *stack [STKSZ];     // BCPL stack area.
+static FILE *ft [FTSZ];
 static int fi, fo;
 
 void finish()
@@ -18,13 +24,6 @@ int main(argc, argv, envv)
     char **argv;
     char **envv;
 {
-    // Allocate BCPL stack area.
-    void **stack = calloc (64, 1024);
-    if (! stack) {
-        perror("BCPL stack");
-        return(-1);
-    }
-
     stack[0] = stack;
     stack[1] = finish;
     stack[2] = (void*) argc;
@@ -47,9 +46,11 @@ int main(argc, argv, envv)
     return 0;
 }
 
-void stop(status)
-    int status;
+void stop()
 {
+    int status;
+
+    GET_A(status);
     exit(status);
 }
 
@@ -109,13 +110,15 @@ ftslot()
 }
 #endif
 
-int
-findinput(s)
-    int s;
+void
+findinput()
 {
+    int s;
+
+    GET_A(s);
 #if 1
     printf("--- %s() called\n", __func__);
-    return 0;
+    SET_A(0);
 #else
     char *st = cstr(s);
     int x;
@@ -127,17 +130,19 @@ findinput(s)
             x = -1;
     }
     free(st);
-    return x + 1;
+    SET_A(x + 1);
 #endif
 }
 
-int
-findoutput(s)
-    int s;
+void
+findoutput()
 {
+    int s;
+
+    GET_A(s);
 #if 1
     printf("--- %s() called\n", __func__);
-    return 0;
+    SET_A(0);
 #else
     char *st = cstr(s);
     int x;
@@ -149,40 +154,44 @@ findoutput(s)
             x = -1;
     }
     free(st);
-    return x + 1;
+    SET_A(x + 1);
 #endif
 }
 
 void
-selectinput(x)
-    int x;
+selectinput()
 {
+    int x;
+
+    GET_A(x);
     fi = x - 1;
 }
 
 void
-selectoutput(x)
-    int x;
+selectoutput()
 {
+    int x;
+
+    GET_A(x);
     fo = x - 1;
 }
 
-int
+void
 input()
 {
-    return fi + 1;
+    SET_A(fi + 1);
 }
 
-int
+void
 output()
 {
-    return fo + 1;
+    SET_A(fo + 1);
 }
 
-int
+void
 rdch()
 {
-    return fgetc(ft[fi]);
+    SET_A(fgetc(ft[fi]));
 }
 
 void
@@ -190,15 +199,16 @@ wrch()
 {
     int c;
 
-    /* Assign c = AX */
-    asm volatile ("" : "=a" (c));
-
+    GET_A(c);
     fputc(c, ft[fo]);
 }
 
-void unrdch(c)
-    int c;
+void
+unrdch()
 {
+    int c;
+
+    GET_A(c);
     ungetc(c, ft[fo]);
 }
 

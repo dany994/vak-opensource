@@ -18,7 +18,7 @@ xg: su.o xg.o rt.o sys.o
 xg.o: xg.s
 	$(AS) $(AFLAGS) -o xg.o xg.s
 
-xg.s: xg1 xg.int xg.int
+xg.s: xg1 xg.int
 	./xg1 < xg.int
 	mv ASM xg.s
 
@@ -36,7 +36,7 @@ cg: su.o cg.o rt.o sys.o
 cg.o: cg.s
 	$(AS) $(AFLAGS) -o cg.o cg.s
 
-cg.s: xg1 xg.int cg.int
+cg.s: xg1 cg.int
 	./xg1 < cg.int
 	mv ASM cg.s
 
@@ -54,7 +54,7 @@ st: su.o st.o rt.o sys.o
 st.o: st.s
 	$(AS) $(AFLAGS) -o st.o st.s
 
-st.s: xg1 xg.int st.int
+st.s: xg1 st.int
 	./xg1 < st.int
 	mv ASM st.s
 
@@ -75,7 +75,7 @@ xg1: su.o xg1.o rt.o sys.o
 xg1.o: xg1.s
 	$(AS) $(AFLAGS) -o xg1.o xg1.s
 
-xg1.s: xg0 xg1.int xg1.int
+xg1.s: xg0 xg1.int
 	./xg0 < xg1.int
 	mv ASM xg1.s
 
@@ -93,7 +93,7 @@ cg1: su.o cg1.o rt.o sys.o
 cg1.o: cg1.s
 	$(AS) $(AFLAGS) -o cg1.o cg1.s
 
-cg1.s: xg0 xg1.int cg1.int
+cg1.s: xg0 cg1.int
 	./xg0 < cg1.int
 	mv ASM cg1.s
 
@@ -111,7 +111,7 @@ st1: su.o st1.o rt.o sys.o
 st1.o: st1.s
 	$(AS) $(AFLAGS) -o st1.o st1.s
 
-st1.s: xg0 xg1.int st1.int
+st1.s: xg0 st1.int
 	./xg0 < st1.int
 	mv ASM st1.s
 
@@ -132,7 +132,7 @@ xg0: su.o xg0.o rt.o sys.o
 xg0.o: xg0.s
 	$(AS) $(AFLAGS) -o xg0.o xg0.s
 
-xg0.s: icint xg0.int xg0.int
+xg0.s: icint xg0.int
 	./icint xg0.int < xg0.int
 	mv ASM xg0.s
 
