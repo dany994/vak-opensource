@@ -3,58 +3,23 @@
 GET "LIBHDR"
 
 GLOBAL $(
-CHBUF:100; PRSOURCE:110
-PPTRACE:127; OPTION:128
-FORMTREE:150; PLIST:152
-TREEP:167; TREEVEC:168
-CHARCODE:190; REPORTCOUNT:191; REPORTMAX:192
-SOURCESTREAM:193; SYSPRINT:194; OCODE:195; SYSIN:196
-COMPILEAE:245
-SAVESPACESIZE:282
+    CHBUF:100; PRSOURCE:110
+    PPTRACE:127; OPTION:128
+    FORMTREE:150; PLIST:152
+    TREEP:167; TREEVEC:168
+    REPORTCOUNT:191; REPORTMAX:192
+    SOURCESTREAM:193; SYSPRINT:194; OCODE:195; SYSIN:196
+    COMPILEAE:245
+    SAVESPACESIZE:282
 $)
 
-LET CHARCODE(CH) = CH  // THE DEFAULT SETTING OF CHARCODE
-
-AND EBCDICTOASCII(CH) = CH!TABLE
-      0,   0,   0,   0,   0, #11,   0,   0,
-      0,   0,   0, #13, #14, #15,   0,   0,
-      0,   0,   0,   0,   0, #12,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0,
-      0,   0,   0,   0,   0, #12,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0,
-    #40,   0,#133,#135,   0,   0,   0,   0,
-      0,   0,   0, #56, #74, #50, #53,#174,
-    #46,   0,   0,   0,   0,   0,   0,   0,
-      0,   0, #41, #44, #52, #51, #73,#176,
-    #55, #57,#134,   0,   0,#136,#137,   0,
-      0,   0,   0, #54, #45,#140, #76, #77,
-      0,   0,   0,   0,   0,   0,   0,   0,
-      0,   0, #72, #43,#100, #47, #75, #42,
-      0,#141,#142,#143,#144,#145,#146,#147,
-   #150,#151,   0,   0,   0,   0,   0,   0,
-      0,#152,#153,#154,#155,#156,#157,#160,
-   #161,#162,   0,   0,   0,   0,   0,   0,
-      0,   0,#163,#164,#165,#166,#167,#170,
-   #171,#172,   0,   0,   0,   0,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0,
-      0,#101,#102,#103,#104,#105,#106,#107,
-   #110,#111,   0,   0,   0,   0,   0,   0,
-      0,#112,#113,#114,#115,#116,#117,#120,
-   #121,#122,   0,   0,   0,   0,   0,   0,
-      0,   0,#123,#124,#125,#126,#127,#130,
-   #131,#132,   0,   0,   0,   0,   0,   0,
-    #60, #61, #62, #63, #64, #65, #66, #67,
-    #70, #71,   0,   0,   0,   0,   0,   0
-LET START(PARM) BE
+LET start(PARM) BE
 $(1
-SYSIN := INPUT()
-SYSPRINT := OUTPUT()
-SELECTOUTPUT(SYSPRINT)
+SYSIN := input()
+SYSPRINT := output()
+selectoutput(SYSPRINT)
 
-WRITEF("*NBCPL %N*N", @START)
+writef("*NBCPL %N*N", @start)
 
 $( LET OPT = VEC 20
    AND TREESIZE = 5500
@@ -64,35 +29,34 @@ $( LET OPT = VEC 20
    PRSOURCE := FALSE
    FOR I = 0 TO 20 DO OPT!I := FALSE
 
-SOURCESTREAM := FINDINPUT("OPTIONS")
+SOURCESTREAM := findinput("OPTIONS")
 
 UNLESS SOURCESTREAM=0 DO
 $(P LET CH = 0
     AND N = 0
-    SELECTINPUT(SOURCESTREAM)
-    WRITES("OPTIONS  ")
+    selectinput(SOURCESTREAM)
+    writes("OPTIONS  ")
 
-    $( CH := RDCH()
+    $( CH := rdch()
     L: IF CH='*N' \/ CH=ENDSTREAMCH BREAK
-       WRCH(CH)
+       wrch(CH)
        IF CH='P' DO N := 1
        IF CH='T' DO N := 2
        IF CH='C' DO N := 3
        IF CH='M' DO N := 4
        IF CH='N' DO N := 5
-       IF CH='A' DO CHARCODE := EBCDICTOASCII
        IF CH='S' DO PRSOURCE := TRUE
        IF CH='E' DO PPTRACE := TRUE
-       IF CH='L' DO  $( TREESIZE := READN()
-                        WRITEN(TREESIZE)
-                        CH := TERMINATOR
+       IF CH='L' DO  $( TREESIZE := readn()
+                        writen(TREESIZE)
+                        CH := terminator
                         GOTO L  $)
        IF CH='3' DO SAVESPACESIZE := 3
        OPTION!N := TRUE
                  $) REPEAT
 
-    NEWLINE()
-    ENDREAD()  $)P
+    newline()
+    endread()  $)P
 
    REPORTMAX := 20
    REPORTCOUNT := 0
@@ -100,9 +64,9 @@ $(P LET CH = 0
 
 
 SOURCESTREAM := SYSIN
-SELECTINPUT(SOURCESTREAM)
+selectinput(SOURCESTREAM)
 
-OCODE := FINDOUTPUT("OCODE")
+OCODE := findoutput("OCODE")
 IF OCODE=0 DO OCODE := SYSPRINT
 
 $(2 LET COMP(V, TREEMAX) BE
@@ -114,29 +78,29 @@ $(2 LET COMP(V, TREEMAX) BE
         $( LET A = FORMTREE()
            IF A=0 BREAK
 
-           WRITEF("*NTREE SIZE %N*N", TREEMAX+TREEVEC-TREEP)
+           writef("*NTREE SIZE %N*N", TREEMAX+TREEVEC-TREEP)
 
-           IF OPTION!2 DO $( WRITES('AE TREE*N')
+           IF OPTION!2 DO $( writes('AE TREE*N')
                              PLIST(A, 0, 20)
-                             NEWLINE()  $)
+                             newline()  $)
 
 
-           UNLESS REPORTCOUNT=0 DO STOP(8)
+           UNLESS REPORTCOUNT=0 DO stop(8)
 
            UNLESS OPTION!3 DO
-                  $( SELECTOUTPUT(OCODE)
+                  $( selectoutput(OCODE)
                      COMPILEAE(A)
-                     SELECTOUTPUT(SYSPRINT)  $)
+                     selectoutput(SYSPRINT)  $)
 
       $)3 REPEAT
     $)C
 
-   APTOVEC(COMP, TREESIZE)
+   aptovec(COMP, TREESIZE)
 
-   ENDREAD()
-   //IF OPTION!4 DO MAPSTORE()
-   WRITES('*NPHASE 1 COMPLETE*N')
-   UNLESS REPORTCOUNT=0 DO STOP(8)
+   endread()
+   //IF OPTION!4 DO mapstore()
+   writes('*NPHASE 1 COMPLETE*N')
+   UNLESS REPORTCOUNT=0 DO stop(8)
    FINISH   $)1
 .
 
@@ -148,7 +112,7 @@ GET "SYNHDR"
 LET NEXTSYMB() BE
 $(1   NLPENDING := FALSE
 
-NEXT: IF PPTRACE DO WRCH(CH)
+NEXT: IF PPTRACE DO wrch(CH)
 
     SWITCHON CH INTO
 
@@ -162,7 +126,7 @@ NEXT: IF PPTRACE DO WRCH(CH)
        CASE '0':CASE '1':CASE '2':CASE '3':CASE '4':
        CASE '5':CASE '6':CASE '7':CASE '8':CASE '9':
             SYMB := S.NUMBER
-            READNUMBER(10)
+            readnumber(10)
             RETURN
 
        CASE 'A':CASE 'B':CASE 'C':CASE 'D':CASE 'E':
@@ -171,6 +135,12 @@ NEXT: IF PPTRACE DO WRCH(CH)
        CASE 'P':CASE 'Q':CASE 'R':CASE 'S':CASE 'T':
        CASE 'U':CASE 'V':CASE 'W':CASE 'X':CASE 'Y':
        CASE 'Z':
+       CASE 'a':CASE 'b':CASE 'c':CASE 'd':CASE 'e':
+       CASE 'f':CASE 'g':CASE 'h':CASE 'i':CASE 'j':
+       CASE 'k':CASE 'l':CASE 'm':CASE 'n':CASE 'o':
+       CASE 'p':CASE 'q':CASE 'r':CASE 's':CASE 't':
+       CASE 'u':CASE 'v':CASE 'w':CASE 'x':CASE 'y':
+       CASE 'z':
               RDTAG(CH)
               SYMB := LOOKUPWORD()
               IF SYMB=S.GET DO $( PERFORMGET(); GOTO NEXT  $)
@@ -190,10 +160,10 @@ NEXT: IF PPTRACE DO WRCH(CH)
 
        CASE '#': SYMB := S.NUMBER
                  RCH()
-                 IF '0'<=CH<='7' DO $( READNUMBER(8); RETURN  $)
-                 IF CH='B' DO $( RCH(); READNUMBER(2); RETURN  $)
-                 IF CH='O' DO $( RCH(); READNUMBER(8); RETURN  $)
-                 IF CH='X' DO $( RCH(); READNUMBER(16); RETURN  $)
+                 IF '0'<=CH<='7' DO $( readnumber(8); RETURN  $)
+                 IF CH='B' DO $( RCH(); readnumber(2); RETURN  $)
+                 IF CH='O' DO $( RCH(); readnumber(8); RETURN  $)
+                 IF CH='X' DO $( RCH(); readnumber(16); RETURN  $)
                  CAEREPORT(33)
 
        CASE '?': SYMB := S.QUERY; GOTO L
@@ -272,10 +242,9 @@ NEXT: IF PPTRACE DO WRCH(CH)
                         $( UNLESS CH=QUOTE DO CAEREPORT(95)
                            IF CHARP=1 & CH='*'' DO
                                    $( SYMB := S.NUMBER
-                                      DECVAL := CHARCODE(DECVAL)
                                       GOTO L  $)
                            CHARV!0 := CHARP
-                           WORDSIZE := PACKSTRING(CHARV, WORDV)
+                           WORDSIZE := packstring(CHARV, WORDV)
                            SYMB := S.STRING
                            GOTO L   $)
 
@@ -305,10 +274,10 @@ NEXT: IF PPTRACE DO WRCH(CH)
                              $( SYMB := S.END
                                 RETURN   $)
 
-                       ENDREAD()
+                       endread()
                        GETP := GETP - 3
                        SOURCESTREAM := GETV!GETP
-                       SELECTINPUT(SOURCESTREAM)
+                       selectinput(SOURCESTREAM)
                        LINECOUNT := GETV!(GETP+1)
                        CH := GETV!(GETP+2)
                        GOTO NEXT  $)
@@ -320,7 +289,7 @@ NEXT: IF PPTRACE DO WRCH(CH)
 
        L: RCH()   $)1
 
-AND READNUMBER(RADIX) BE
+AND readnumber(RADIX) BE
     $( LET D = VALUE(CH)
        DECVAL := D
        IF D>=RADIX DO CAEREPORT(33)
@@ -343,8 +312,8 @@ AND VALUE(CH) = '0'<=CH<='9' -> CH-'0',
 
 GET "SYNHDR"
 
-LET D(S, ITEM) BE $( UNPACKSTRING(S, CHARV)
-                     WORDSIZE := PACKSTRING(CHARV, WORDV)
+LET D(S, ITEM) BE $( unpackstring(S, CHARV)
+                     WORDSIZE := packstring(CHARV, WORDV)
                      LOOKUPWORD()
                      WORDNODE!0 := ITEM  $)
 
@@ -451,22 +420,22 @@ $)1
 GET "SYNHDR"
 
 LET RCH() BE
-    $( CH := RDCH()
+    $( CH := rdch()
 
        IF PRSOURCE DO IF GETP=0 /\ CH NE ENDSTREAMCH DO
-          $( UNLESS LINECOUNT=PRLINE DO $( WRITEF("%I4  ", LINECOUNT)
+          $( UNLESS LINECOUNT=PRLINE DO $( writef("%I4  ", LINECOUNT)
                                            PRLINE := LINECOUNT  $)
-             WRCH(CH)  $)
+             wrch(CH)  $)
 
        CHCOUNT := CHCOUNT + 1
        CHBUF!(CHCOUNT&63) := CH  $)
 
-AND WRCHBUF() BE
-    $( WRITES("*N...")
+AND wrchbuf() BE
+    $( writes("*N...")
        FOR P = CHCOUNT-63 TO CHCOUNT DO
                 $( LET K = CHBUF!(P&63)
-                   UNLESS K=0 DO WRCH(K)  $)
-       NEWLINE()  $)
+                   UNLESS K=0 DO wrch(K)  $)
+       newline()  $)
 
 
 AND RDTAG(X) BE
@@ -474,13 +443,14 @@ AND RDTAG(X) BE
 
         $(  RCH()
             UNLESS 'A'<=CH<='Z' \/
+                   'a'<=CH<='z' \/
                    '0'<=CH<='9' \/
                     CH='.' BREAK
             CHARP := CHARP+1
             CHARV!CHARP := CH  $) REPEAT
 
        CHARV!0 := CHARP
-       WORDSIZE := PACKSTRING(CHARV, WORDV)  $)
+       WORDSIZE := packstring(CHARV, WORDV)  $)
 
 
 AND PERFORMGET() BE
@@ -494,30 +464,30 @@ AND PERFORMGET() BE
        GETV!(GETP+2) := CH
        GETP := GETP + 3
        LINECOUNT := 1
-       SOURCESTREAM := FINDINPUT(WORDV)
+       SOURCESTREAM := findinput(WORDV)
        IF SOURCESTREAM=0 THEN
-           SOURCESTREAM := FINDLIBINPUT(WORDV)
+           SOURCESTREAM := findlibinput(WORDV)
        IF SOURCESTREAM=0 THEN CAEREPORT(96,WORDV)
-       SELECTINPUT(SOURCESTREAM)
+       selectinput(SOURCESTREAM)
        RCH()   $)
 
 AND APPEND(D, S) BE
-    $( LET ND = GETBYTE(D, 0)
-       AND NS = GETBYTE(S, 0)
+    $( LET ND = getbyte(D, 0)
+       AND NS = getbyte(S, 0)
        FOR I = 1 TO NS DO $(
            ND := ND + 1
-           PUTBYTE(D, ND, GETBYTE(S, I)) $)
-       PUTBYTE(D, 0, ND) $)
+           putbyte(D, ND, getbyte(S, I)) $)
+       putbyte(D, 0, ND) $)
 
-AND FINDLIBINPUT(NAME) = VALOF
+AND findlibinput(NAME) = VALOF
     $( LET PATH = VEC 64
        AND DIR = "/usr/lib/bcpl/"
-       TEST GETBYTE(DIR, 0) + GETBYTE(NAME, 0) > 255
+       TEST getbyte(DIR, 0) + getbyte(NAME, 0) > 255
        THEN RESULTIS 0
-         OR $( PUTBYTE(PATH, 0, 0)
+         OR $( putbyte(PATH, 0, 0)
                APPEND(PATH, DIR)
                APPEND(PATH, NAME)
-               RESULTIS FINDINPUT(PATH) $)
+               RESULTIS findinput(PATH) $)
     $)
 
 
@@ -567,18 +537,18 @@ AND LIST6(X, Y, Z, T, U, V) = VALOF
 
 AND CAEREPORT(N, A) BE
      $( REPORTCOUNT := REPORTCOUNT + 1
-        WRITEF("*NSYNTAX ERROR NEAR LINE %N:  ", LINECOUNT)
+        writef("*NSYNTAX ERROR NEAR LINE %N:  ", LINECOUNT)
         CAEMESSAGE(N, A)
-        WRCHBUF()
+        wrchbuf()
         IF REPORTCOUNT GR REPORTMAX DO
-                    $( WRITES('*NCOMPILATION ABORTED*N')
-                       STOP(8)   $)
+                    $( writes('*NCOMPILATION ABORTED*N')
+                       stop(8)   $)
         NLPENDING := FALSE
 
         UNTIL SYMB=S.LSECT \/ SYMB=S.RSECT \/
               SYMB=S.LET \/ SYMB=S.AND \/
               SYMB=S.END \/ NLPENDING DO NEXTSYMB()
-        LONGJUMP(REC.P, REC.L)   $)
+        longjump(REC.P, REC.L)   $)
 
 AND FORMTREE() =  VALOF
     $(1 CHCOUNT := 0
@@ -597,7 +567,7 @@ AND FORMTREE() =  VALOF
         NAMETABLE, NAMETABLESIZE := V, 100
         FOR I = 0 TO 100 DO NAMETABLE!I := 0
 
-        REC.P, REC.L := LEVEL(), L
+        REC.P, REC.L := level(), L
 
         LINECOUNT, PRLINE := 1, 0
         RCH()
@@ -608,7 +578,7 @@ AND FORMTREE() =  VALOF
      L: NEXTSYMB()
 
         IF OPTION!1 DO   //   PP DEBUGGING OPTION
-             $( WRITEF("%N %S*N", SYMB, WORDV)
+             $( writef("%N %S*N", SYMB, WORDV)
                 IF SYMB=S.END RESULTIS 0
                 GOTO L  $)
 
@@ -624,7 +594,7 @@ AND CAEMESSAGE(N, A) BE
 
          SWITCHON N INTO
 
-         $( DEFAULT:  WRITEN(N); RETURN
+         $( DEFAULT:  writen(N); RETURN
 
             CASE 91: RESULTIS "'8'  '(' OR ')' EXPECTED"
             CASE 94: RESULTIS "ILLEGAL CHARACTER"
@@ -656,7 +626,7 @@ AND CAEMESSAGE(N, A) BE
             CASE 63: RESULTIS "'**/' MISSING"
                        $)
 
-         WRITEF(S, A)  $)
+         writef(S, A)  $)
 
 
 .
@@ -670,7 +640,7 @@ LET RDBLOCKBODY() = VALOF
     $(1 LET P, L = REC.P, REC.L
         LET A = 0
 
-        REC.P, REC.L := LEVEL(), RECOVER
+        REC.P, REC.L := level(), RECOVER
 
         IGNORE(S.SEMICOLON)
 
@@ -714,7 +684,7 @@ AND RDCDEFS() = VALOF
     $(1 LET A, B = 0, 0
         LET PTR = @A
         LET P, L = REC.P, REC.L
-        REC.P, REC.L := LEVEL(), RECOVER
+        REC.P, REC.L := level(), RECOVER
 
         $( B := RNAME()
            TEST SYMB=S.EQ \/ SYMB=S.COLON THEN NEXTSYMB()
@@ -1052,14 +1022,14 @@ LET PLIST(X, N, D) BE
     $(1 LET SIZE = 0
         LET V = TABLE 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-        IF X=0 DO $( WRITES("NIL"); RETURN  $)
+        IF X=0 DO $( writes("NIL"); RETURN  $)
 
         SWITCHON H1!X INTO
-    $(  CASE S.NUMBER: WRITEN(H2!X); RETURN
+    $(  CASE S.NUMBER: writen(H2!X); RETURN
 
-        CASE S.NAME: WRITES(X+2); RETURN
+        CASE S.NAME: writes(X+2); RETURN
 
-        CASE S.STRING: WRITEF("*"%S*"", X+1); RETURN
+        CASE S.STRING: writef("*"%S*"", X+1); RETURN
 
         CASE S.FOR:
                 SIZE := SIZE + 2
@@ -1092,15 +1062,15 @@ LET PLIST(X, N, D) BE
         DEFAULT:
                 SIZE := SIZE + 1
 
-                IF N=D DO $( WRITES("ETC")
+                IF N=D DO $( writes("ETC")
                              RETURN  $)
 
-                WRITES ("OP")
-                WRITEN(H1!X)
+                writes ("OP")
+                writen(H1!X)
                 FOR I = 2 TO SIZE DO
-                     $( NEWLINE()
-                        FOR J=0 TO N-1 DO WRITES( V!J )
-                        WRITES("**-")
+                     $( newline()
+                        FOR J=0 TO N-1 DO writes( V!J )
+                        writes("**-")
                         V!N := I=SIZE->"  ","! "
                         PLIST(H1!(X+I-1), N+1, D)  $)
                 RETURN  $)1

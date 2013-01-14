@@ -6,25 +6,34 @@
 GET "LIBHDR"
 
 GLOBAL $(
-SYSPRINT:100; SOURCE:101
-ETOA:102; ATOE:103
+    SYSPRINT:100; SOURCE:101
+    ETOA:102; ATOE:103
 $)
 
 MANIFEST $(
-FSHIFT=13
-IBIT=#10000; PBIT=#4000; GBIT=#2000; DBIT=#1000
-ABITS=#777
-WORDSIZE=16; BYTESIZE=8
-LIG1=#012001
-K2  =#140002
-X22 =#160026
+    FSHIFT = 13
+
+    IBIT = #10000
+    PBIT =  #4000
+    GBIT =  #2000
+    DBIT =  #1000
+
+    ABITS = #777
+
+    WORDSIZE = 16
+    BYTESIZE = 8
+
+    LIG1= #012001
+
+    K2  = #140002
+
+    X22 = #160026
 $)
 
 GLOBAL $(
-G:110; P:111; CH:112; CYCLECOUNT:113
-LABV:120; CP:121; A:122; B:123; C:124; D:125; W:126  $)
-
-
+    G:110; P:111; CH:112; CYCLECOUNT:113
+    LABV:120; CP:121; A:122; B:123; C:124; D:125; W:126
+$)
 
 LET ASSEMBLE() BE
 $(1   LET V = VEC 500
@@ -38,7 +47,7 @@ NEXT: RCH()
 SW:   SWITCHON CH INTO
 
 $(S   DEFAULT: IF CH=ENDSTREAMCH RETURN
-               WRITEF("*NBAD CH %C AT P = %N*N", CH, P)
+               writef("*NBAD CH %C AT P = %N*N", CH, P)
                GOTO NEXT
 
       CASE '0':CASE '1':CASE '2':CASE '3':CASE '4':
@@ -71,13 +80,13 @@ $(S   DEFAULT: IF CH=ENDSTREAMCH RETURN
       CASE 'G': RCH()
                 A := RDN() + G
                 TEST CH='L' THEN RCH()
-                      OR WRITEF("*NBAD CODE AT P = %N*N", P)
+                      OR writef("*NBAD CODE AT P = %N*N", P)
                 !A := 0
                 LABREF(RDN(), A)
                 GOTO SW
 
       CASE 'Z': FOR I = 0 TO 500 DO
-                   IF LABV!I>0 DO WRITEF("L%N UNSET*N", I)
+                   IF LABV!I>0 DO writef("L%N UNSET*N", I)
                 GOTO CLEAR  $)S
 
 
@@ -108,9 +117,9 @@ AND STC(C) BE $( IF CP=0 DO $( STW(0); CP := WORDSIZE  $)
                  CP := CP - BYTESIZE
                  !(P-1) := !(P-1) + (C<<CP)  $)
 
-AND RCH() BE $(1 CH := RDCH()
+AND RCH() BE $(1 CH := rdch()
                  UNLESS CH='/' RETURN
-                 UNTIL CH='*N' DO CH := RDCH()  $)1 REPEAT
+                 UNTIL CH='*N' DO CH := rdch()  $)1 REPEAT
 
 AND RDN() = VALOF
     $( LET A, B = 0, FALSE
@@ -121,7 +130,7 @@ AND RDN() = VALOF
 
 AND SETLAB(N) BE
      $( LET K = LABV!N
-        IF K<0 DO WRITEF("L%N ALREADY SET TO %N AT P = %N*N",N,-K,P)
+        IF K<0 DO writef("L%N ALREADY SET TO %N AT P = %N*N",N,-K,P)
         WHILE K>0 DO $( LET N = !K
                         !K := P
                         K := N  $)
@@ -152,8 +161,8 @@ FETCH: CYCLECOUNT := CYCLECOUNT + 1
        SWITCHON W>>FSHIFT INTO
 
    $(  ERROR:
-       DEFAULT: SELECTOUTPUT(SYSPRINT)
-                WRITEF("*NINTCODE ERROR AT C = %N*N", C-1)
+       DEFAULT: selectoutput(SYSPRINT)
+                writef("*NINTCODE ERROR AT C = %N*N", C-1)
                 RESULTIS -1
 
        CASE 0: B := A; A := D; GOTO FETCH
@@ -215,41 +224,41 @@ FETCH: CYCLECOUNT := CYCLECOUNT + 1
 // CASES 24 UPWARDS ARE ONLY CALLED FROM THE FOLLOWING
 // HAND WRITTEN INTCODE LIBRARY - ICLIB:
 
-//    11 LIP2 X24 X4 G11L11 /SELECTINPUT
-//    12 LIP2 X25 X4 G12L12 /SELECTOUTPUT
-//    13 X26 X4      G13L13 /RDCH
-//    14 LIP2 X27 X4 G14L14 /WRCH
-//    42 LIP2 X28 X4 G42L42 /FINDINPUT
-//    41 LIP2 X29 X4 G41L41 /FINDOUTPUT
-//    30 LIP2 X30 X4 G30L30 /STOP
-//    31 X31 X4 G31L31 /LEVEL
-//    32 LIP3 LIP2 X32 G32L32 /LONGJUMP
-//    46 X33 X4 G46L46 /ENDREAD
-//    47 X34 X4 G47L47 /ENDWRITE
-//    40 LIP3 LIP2 X35 G40L40 /APTOVEC
-//    85 LIP3 LIP2 X36 X4 G85L85 / GETBYTE
-//    86 LIP3 LIP2 X37 X4 G86L86 / PUTBYTE
+//    11 LIP2 X24 X4 G11L11 /selectinput
+//    12 LIP2 X25 X4 G12L12 /selectoutput
+//    13 X26 X4      G13L13 /rdch
+//    14 LIP2 X27 X4 G14L14 /wrch
+//    42 LIP2 X28 X4 G42L42 /findinput
+//    41 LIP2 X29 X4 G41L41 /findoutput
+//    30 LIP2 X30 X4 G30L30 /stop
+//    31 X31 X4 G31L31 /level
+//    32 LIP3 LIP2 X32 G32L32 /longjump
+//    46 X33 X4 G46L46 /endread
+//    47 X34 X4 G47L47 /endwrite
+//    40 LIP3 LIP2 X35 G40L40 /aptovec
+//    85 LIP3 LIP2 X36 X4 G85L85 / getbyte
+//    86 LIP3 LIP2 X37 X4 G86L86 / putbyte
 //    Z
 
-           CASE 24: SELECTINPUT(A); GOTO FETCH
-           CASE 25: SELECTOUTPUT(A); GOTO FETCH
-           CASE 26: A := ETOA!RDCH(); GOTO FETCH
-           CASE 27: WRCH(ATOE!A); GOTO FETCH
-           CASE 28: A := FINDINPUT(STRING370(A)); GOTO FETCH
-           CASE 29: A := FINDOUTPUT(STRING370(A)); GOTO FETCH
-           CASE 30: RESULTIS A  // STOP(A)
-           CASE 31: A := P!0; GOTO FETCH  // USED IN LEVEL()
-           CASE 32: P, C := A, B;         // USED IN LONGJUMP(P,L)
+           CASE 24: selectinput(A); GOTO FETCH
+           CASE 25: selectoutput(A); GOTO FETCH
+           CASE 26: A := ETOA!rdch(); GOTO FETCH
+           CASE 27: wrch(ATOE!A); GOTO FETCH
+           CASE 28: A := findinput(STRING370(A)); GOTO FETCH
+           CASE 29: A := findoutput(STRING370(A)); GOTO FETCH
+           CASE 30: RESULTIS A  // stop(A)
+           CASE 31: A := P!0; GOTO FETCH  // USED IN level()
+           CASE 32: P, C := A, B;         // USED IN longjump(P,L)
                     GOTO FETCH
-           CASE 33: ENDREAD(); GOTO FETCH
-           CASE 34: ENDWRITE(); GOTO FETCH
-           CASE 35: D := P+B+1        // USED IN APTOVEC(F, N)
+           CASE 33: endread(); GOTO FETCH
+           CASE 34: endwrite(); GOTO FETCH
+           CASE 35: D := P+B+1        // USED IN aptovec(F, N)
                     D!0, D!1, D!2, D!3 := P!0, P!1, P, B
                     P, C := D, A
                     GOTO FETCH
-           CASE 36: A := ICGETBYTE(A, B)  // GETBYTE(S, I)
+           CASE 36: A := icgetbyte(A, B)  // getbyte(S, I)
                     GOTO FETCH
-           CASE 37: ICPUTBYTE(A, B, P!4)  // PUTBYTE(S, I, CH)
+           CASE 37: icputbyte(A, B, P!4)  // putbyte(S, I, CH)
                     GOTO FETCH
       $)  $)  $)1
 
@@ -257,24 +266,24 @@ FETCH: CYCLECOUNT := CYCLECOUNT + 1
 AND STRING370(S) = VALOF
      $( LET T = TABLE 0,0,0,0,0,0,0,0
 
-        PUTBYTE(T, 0, ICGETBYTE(S, 0))
-        FOR I = 1 TO ICGETBYTE(S,0) DO
-                  PUTBYTE(T,I,ATOE!ICGETBYTE(S,I))
+        putbyte(T, 0, icgetbyte(S, 0))
+        FOR I = 1 TO icgetbyte(S,0) DO
+                  putbyte(T,I,ATOE!icgetbyte(S,I))
 
         RESULTIS T  $)
 
-AND ICGETBYTE(S, I) = VALOF
+AND icgetbyte(S, I) = VALOF
      $( LET W = S!(I/2)
         IF (I&1)=0 DO W := W>>8
         RESULTIS W&255  $)
 
-AND ICPUTBYTE(S, I, CH) BE
+AND icputbyte(S, I, CH) BE
      $( LET P = @S!(I/2)
         LET W = !P
         TEST (I&1)=0 THEN !P := W&#X00FF \/ CH<<8
                      OR   !P := W&#XFF00 \/ CH    $)
 
-LET START(PARM) BE
+LET start(PARM) BE
 $(1
 
 LET PROGVEC = VEC 20000
@@ -282,18 +291,18 @@ LET GLOBVEC = VEC 400
 
 G, P := GLOBVEC, PROGVEC
 
-SYSPRINT := FINDOUTPUT("SYSPRINT")
-SELECTOUTPUT(SYSPRINT)
+SYSPRINT := findoutput("SYSPRINT")
+selectoutput(SYSPRINT)
 
-WRITES("INTCODE SYSTEM ENTERED*N")
+writes("INTCODE SYSTEM ENTERED*N")
 
-SOURCE := FINDINPUT("INTIN")
-SELECTINPUT(SOURCE)
+SOURCE := findinput("INTIN")
+selectinput(SOURCE)
 ASSEMBLE()
-SOURCE := FINDINPUT("SYSIN")
-UNLESS SOURCE=0 DO SELECTINPUT(SOURCE)
+SOURCE := findinput("SYSIN")
+UNLESS SOURCE=0 DO selectinput(SOURCE)
 
-WRITEF("*NPROGRAM SIZE = %N*N", P-PROGVEC)
+writef("*NPROGRAM SIZE = %N*N", P-PROGVEC)
 
 ATOE := 1+TABLE -1,
           0,  0,  0,  0,  0,  0,  0,  0,  // ASCII TO EBCDIC
@@ -356,7 +365,7 @@ C := TABLE LIG1, K2, X22
 CYCLECOUNT := 0
 A := INTERPRET()
 
-SELECTOUTPUT(SYSPRINT)
-WRITEF("*N*NEXECUTION CYCLES = %N, CODE = %N*N", CYCLECOUNT, A)
-//IF A<0 DO MAPSTORE()
+selectoutput(SYSPRINT)
+writef("*N*NEXECUTION CYCLES = %N, CODE = %N*N", CYCLECOUNT, A)
+//IF A<0 DO mapstore()
 FINISH  $)1

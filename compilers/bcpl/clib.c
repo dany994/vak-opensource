@@ -14,7 +14,7 @@ static void *stack [STKSZ];     // BCPL stack area.
 static FILE *ft [FTSZ];
 static int fi, fo;
 
-void finish()
+static void finish()
 {
     exit(0);
 }
@@ -37,9 +37,9 @@ int main(argc, argv, envv)
     fo = 1;
 
     asm volatile (
-    "   mov     %0, %%ebp \n"
-    "   mov     %1, %%edi \n"
-    "	mov	4(%%edi), %%eax \n"
+    "   movl    %0, %%ebp \n"
+    "   movl    %1, %%edi \n"
+    "	movl	4(%%edi), %%eax \n"
     "	jmp	*%%eax \n"
     : : "r" (stack), "r" (G) : "ax");
 
@@ -54,48 +54,40 @@ void stop()
     exit(status);
 }
 
-#if 0
-extern int *M;
-
-int
+static unsigned char
 getbyte(s, i)
-    int s, i;
+    unsigned *s;
+    int i;
 {
-    int w = M[s + i / 4];
-    int m = (i % 4) ^ 3;
-    w = w >> (8 * m);
-    return w & 255;
+    unsigned shift = ((i & 3) ^ 3) << 3;
+    s += i >> 2;
+    return *s >> shift;
 }
 
-void
+#if 0
+static void
 putbyte(s, i, ch)
+    unsigned *s;
+    unsigned char ch;
 {
-    int p = s + i / 4;
-    int m = (i % 4) ^ 3;
-    int w = M[p];
-    int x = 0xff;
-    x = x << (8 * m);
-    x = x ^ 0xffffffff;
-    w = w & x;
-    x = ch;
-    x = x & 0xff;
-    x = x << (8 * m);
-    w = w | x;
-    M[p] = w;
+    unsigned shift = ((i & 3) ^ 3) << 3;
+    s += i >> 2;
+    unsigned w = *s & ~(0xff << shift);
+    *s = w | (ch << shift);
 }
+#endif
 
-static char *
-cstr(s)
+static void
+get_cstr(s, buf)
+    unsigned *s;
+    char *buf;
 {
-    char *st;
     int n, i;
 
     n = getbyte(s, 0);
-    st = malloc(n + 1);
     for (i = 1; i <= n; i++)
-        st[i - 1] = getbyte(s, i);
-    st[n] = 0;
-    return st;
+        *buf++ = getbyte(s, i);
+    *buf = 0;
 }
 
 static int
@@ -108,54 +100,43 @@ ftslot()
             return i;
     return -1;
 }
-#endif
 
 void
 findinput()
 {
-    int s;
+    char filename[256];
+    int s, x;
 
     GET_A(s);
-#if 1
-    printf("--- %s() called\n", __func__);
-    SET_A(0);
-#else
-    char *st = cstr(s);
-    int x;
-
+    get_cstr((unsigned*) s, filename);
     x = ftslot();
     if (x != -1) {
-        ft[x] = fopen(st, "r");
-        if (ft[x] == NULL)
-            x = -1;
+        ft[x] = fopen(filename, "r");
+        if (! ft[x]) {
+            SET_A(0);
+            return;
+        }
     }
-    free(st);
     SET_A(x + 1);
-#endif
 }
 
 void
 findoutput()
 {
-    int s;
+    char filename[256];
+    int s, x;
 
     GET_A(s);
-#if 1
-    printf("--- %s() called\n", __func__);
-    SET_A(0);
-#else
-    char *st = cstr(s);
-    int x;
-
+    get_cstr((unsigned*) s, filename);
     x = ftslot();
     if (x != -1) {
-        ft[x] = fopen(st, "w");
-        if (ft[x] == NULL)
-            x = -1;
+        ft[x] = fopen(filename, "w");
+        if (! ft[x]) {
+            SET_A(0);
+            return;
+        }
     }
-    free(st);
     SET_A(x + 1);
-#endif
 }
 
 void
