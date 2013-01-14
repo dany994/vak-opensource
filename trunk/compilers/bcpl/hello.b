@@ -1,3 +1,3 @@
 GET "LIBHDR"
 
-LET START() BE WRITES("Hello, World!*N")
+LET start() BE writes("Hello, World!*N")

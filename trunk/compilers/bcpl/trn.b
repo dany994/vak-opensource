@@ -7,21 +7,21 @@ LET NEXTPARAM() = VALOF
        RESULTIS PARAMNUMBER  $)
 
 AND TRANSREPORT(N, X) BE
-    $( SELECTOUTPUT(SYSPRINT)
+    $( selectoutput(SYSPRINT)
        REPORTCOUNT := REPORTCOUNT + 1
        IF REPORTCOUNT GE REPORTMAX DO
-                $( WRITES("*NCOMPILATION ABORTED*N")
-                   STOP(8)  $)
-       WRITES("*NREPORT:   "); TRNMESSAGE(N)
-       WRITEF("*NCOMMANDS COMPILED %N*N", COMCOUNT)
-       PLIST(X, 0, 4); NEWLINE()
-       SELECTOUTPUT(OCODE)  $)
+                $( writes("*NCOMPILATION ABORTED*N")
+                   stop(8)  $)
+       writes("*NREPORT:   "); TRNMESSAGE(N)
+       writef("*NCOMMANDS COMPILED %N*N", COMCOUNT)
+       PLIST(X, 0, 4); newline()
+       selectoutput(OCODE)  $)
 
 AND TRNMESSAGE(N) BE
 $( LET S = VALOF
     SWITCHON N INTO
 
-    $( DEFAULT: WRITEF("COMPILER ERROR  %N", N); RETURN
+    $( DEFAULT: writef("COMPILER ERROR  %N", N); RETURN
 
        CASE 141: RESULTIS "TOO MANY CASES"
        CASE 104: RESULTIS "ILLEGAL USE OF BREAK, LOOP OR RESULTIS"
@@ -41,7 +41,7 @@ $( LET S = VALOF
                  RESULTIS "LTYPE EXPRESSION EXPECTED"
                    $)
 
-   WRITES(S)   $)
+   writes(S)   $)
 
 
 LET COMPILEAE(X) BE
@@ -626,8 +626,8 @@ LET LOAD(X) BE
 
         CASE S.STRING:
          $( LET S = @H2!X
-            OUT2(S.LSTR, GETBYTE(S, 0))
-            FOR I = 1 TO GETBYTE(S, 0) DO OUTC(GETBYTE(S, I))
+            OUT2(S.LSTR, getbyte(S, 0))
+            FOR I = 1 TO getbyte(S, 0) DO OUTC(getbyte(S, I))
             WRC('*S')
             SSP := SSP + 1
             RETURN   $)
@@ -816,8 +816,8 @@ LET COMPLAB(L) BE OUT2P(S.LAB, L)
 
 AND COMPENTRY(N, L) BE
     $(  LET S = @N!2
-        OUT3P(S.ENTRY, GETBYTE(S, 0), L)
-        FOR I = 1 TO GETBYTE(S, 0) DO OUTC(GETBYTE(S, I))
+        OUT3P(S.ENTRY, getbyte(S, 0), L)
+        FOR I = 1 TO getbyte(S, 0) DO OUTC(getbyte(S, I))
         WRC('*S')  $)
 
 AND COMPDATALAB(L) BE OUT2P(S.DATALAB, L)
@@ -920,7 +920,7 @@ AND WRITEOP(X) BE
            CASE S.ITEML:   RESULTIS "ITEML"
            CASE S.ITEMN:   RESULTIS "ITEMN"   $)
 
-        FOR I = 1 TO GETBYTE(S, 0) DO WRC(GETBYTE(S, I))   $)1
+        FOR I = 1 TO getbyte(S, 0) DO WRC(getbyte(S, I))   $)1
 
 
 AND WRN(N) BE $( IF N<0 DO $( WRC('-'); N := - N  $)
@@ -929,10 +929,10 @@ AND WRN(N) BE $( IF N<0 DO $( WRC('-'); N := - N  $)
 AND WRPN(N) BE $( IF N>9 DO WRPN(N/10)
                   WRC(N REM 10 + '0')  $)
 
-AND ENDOCODE() BE $( WRCH('*N'); OCOUNT := 0  $)
+AND ENDOCODE() BE $( wrch('*N'); OCOUNT := 0  $)
 
 
 AND WRC(CH) BE $( OCOUNT := OCOUNT + 1
                   IF OCOUNT>62 /\ CH='*S' DO
-                            $( WRCH('*N'); OCOUNT := 0; RETURN  $)
-                  WRCH(CH)  $)
+                            $( wrch('*N'); OCOUNT := 0; RETURN  $)
+                  wrch(CH)  $)

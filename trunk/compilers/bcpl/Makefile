@@ -1,8 +1,8 @@
-AS      = as
+AS      = cc -m32 -c
 AFLAGS  = -g
-CC      = cc
+CC      = cc -m32
 CFLAGS  = -g -O0 -Wall -Werror
-LD      = ld
+LD      = ld -m32
 LDFLAGS = -g
 
 PREFIX  = /usr/local

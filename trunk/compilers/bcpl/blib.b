@@ -2,100 +2,118 @@
 
 GET "LIBHDR"
 
-LET WRITES(S) BE  FOR I = 1 TO GETBYTE(S, 0) DO WRCH(GETBYTE(S, I))
+LET writes(s) BE
+    FOR i = 1 TO getbyte(s, 0) DO wrch(getbyte(s, i))
 
-AND UNPACKSTRING(S, V) BE
-         FOR I = 0 TO GETBYTE(S, 0) DO V!I := GETBYTE(S, I)
+AND unpackstring(s, v) BE
+    FOR i = 0 TO getbyte(s, 0) DO
+        v!i := getbyte(s, i)
 
-AND PACKSTRING(V, S) = VALOF
-    $( LET N = V!0 & 255
-       LET I = N/4
-       FOR P = 0 TO N DO PUTBYTE(S, P, V!P)
-       SWITCHON N&3 INTO
-       $( CASE 0: PUTBYTE(S, N+3, 0)
-          CASE 1: PUTBYTE(S, N+2, 0)
-          CASE 2: PUTBYTE(S, N+1, 0)
-          CASE 3: $)
-       RESULTIS I  $)
+AND packstring(v, s) = VALOF
+$(
+    LET n = v!0 & 255
+    LET i = n/4
+    FOR p = 0 TO n DO putbyte(s, p, v!p)
+    SWITCHON n&3 INTO $(
+        CASE 0: putbyte(s, n+3, 0)
+        CASE 1: putbyte(s, n+2, 0)
+        CASE 2: putbyte(s, n+1, 0)
+        CASE 3:
+    $)
+    RESULTIS i
+$)
 
 // THE DEFINITIONS THAT FOLLOW ARE MACHINE INDEPENDENT
 
-AND WRITED(N, D) BE
+AND writed(n, d) BE
+$(1
+    LET t = VEC 20
+    AND i, k = 0, n
+    IF n<0 DO
+        d, k := d-1, -n
+    t!i, k, i := k REM 10, k/10, i+1 REPEATUNTIL k=0
+    FOR j = i+1 TO d DO
+        wrch('*S')
+    IF n<0 DO
+        wrch('-')
+    FOR j = i-1 TO 0 BY -1 DO
+        wrch(t!j+'0')
+$)1
 
-$(1 LET T = VEC 20
-    AND I, K = 0, N
-    IF N<0 DO D, K := D-1, -N
-    T!I, K, I := K REM 10, K/10, I+1 REPEATUNTIL K=0
-    FOR J = I+1 TO D DO WRCH('*S')
-    IF N<0 DO WRCH('-')
-    FOR J = I-1 TO 0 BY -1 DO WRCH(T!J+'0')  $)1
+AND writen(n) BE writed(n, 0)
 
-AND WRITEN(N) BE WRITED(N, 0)
+AND newline() BE wrch('*N')
 
+AND newpage() BE wrch('*P')
 
-AND NEWLINE() BE WRCH('*N')
+AND readn() = VALOF
+$(1
+    LET sum = 0
+    AND neg = FALSE
 
-AND NEWPAGE() BE WRCH('*P')
-
-AND READN() = VALOF
-
-$(1 LET SUM = 0
-    AND NEG = FALSE
-
-L: TERMINATOR := RDCH()
-    SWITCHON TERMINATOR INTO
-    $(  CASE '*S':
+L:  terminator := rdch()
+    SWITCHON terminator INTO $(
+        CASE '*S':
         CASE '*T':
-        CASE '*N':    GOTO L
+        CASE '*N': GOTO L
 
-        CASE '-':     NEG := TRUE
-        CASE '+':     TERMINATOR := RDCH()   $)
-    WHILE '0'<=TERMINATOR<='9' DO
-                 $( SUM := 10*SUM + TERMINATOR - '0'
-                    TERMINATOR := RDCH()  $)
-    IF NEG DO SUM := -SUM
-    RESULTIS SUM   $)1
+        CASE '-':  neg := TRUE
+        CASE '+':  terminator := rdch()
+    $)
+    WHILE '0'<=terminator<='9' DO $(
+        sum := 10*sum + terminator - '0'
+        terminator := rdch()
+    $)
+    IF neg DO
+        sum := -sum
+    RESULTIS sum
+$)1
 
-AND WRITEOCT(N, D) BE
-    $( IF D>1 DO WRITEOCT(N>>3, D-1)
-       WRCH((N/\7)+'0')  $)
+AND writeoct(n, d) BE
+$(
+    IF d>1 DO
+        writeoct(n>>3, d-1)
+    wrch((n/\7)+'0')
+$)
 
-AND WRITEHEX(N, D) BE
-    $( IF D>1 DO WRITEHEX(N>>4, D-1)
-       WRCH((N&15)!TABLE
-            '0','1','2','3','4','5','6','7',
-            '8','9','A','B','C','D','E','F')  $)
+AND writehex(n, d) BE
+$(
+    IF d>1 DO
+        writehex(n>>4, d-1)
+    wrch((n&15)!TABLE
+        '0','1','2','3','4','5','6','7',
+        '8','9','A','B','C','D','E','F')
+$)
 
+AND writef(format, a, b, c, d, e, f, g, h, i, j, k) BE
+$(1
+    LET t = @a
 
-AND WRITEF(FORMAT, A, B, C, D, E, F, G, H, I, J, K) BE
+    FOR p = 1 TO getbyte(format, 0) DO $(2
+        LET k = getbyte(format, p)
 
-$(1 LET T = @A
+        TEST k='%' THEN $(3
+            LET f, q, n = 0, t!0, 0
+            AND TYPE = getbyte(format, p+1)
+            p := p + 1
+            SWITCHON TYPE INTO $(
+                DEFAULT: wrch(TYPE); ENDCASE
 
-    FOR P = 1 TO GETBYTE(FORMAT, 0) DO
-    $(2 LET K = GETBYTE(FORMAT, P)
+                CASE 'S': f := writes; GOTO L
+                CASE 'C': f := wrch; GOTO L
+                CASE 'O': f := writeoct; GOTO M
+                CASE 'X': f := writehex; GOTO M
+                CASE 'I': f := writed; GOTO M
+                CASE 'N': f := writed; GOTO L
 
-        TEST K='%'
+                M: p := p + 1
+                   n := getbyte(format, p)
+                   n := '0'<=n<='9' -> n-'0', n-'A'+10
 
-          THEN $(3 LET F, Q, N = 0, T!0, 0
-                   AND TYPE = GETBYTE(FORMAT, P+1)
-                   P := P + 1
-                   SWITCHON TYPE INTO
-                $( DEFAULT: WRCH(TYPE); ENDCASE
+                L: f(q, n); t := t + 1
+        $)3
+        OR wrch(k)
+    $)2
+$)1
 
-                   CASE 'S': F := WRITES; GOTO L
-                   CASE 'C': F := WRCH; GOTO L
-                   CASE 'O': F := WRITEOCT; GOTO M
-                   CASE 'X': F := WRITEHEX; GOTO M
-                   CASE 'I': F := WRITED; GOTO M
-                   CASE 'N': F := WRITED; GOTO L
-
-                M: P := P + 1
-                   N := GETBYTE(FORMAT, P)
-                   N := '0'<=N<='9' -> N-'0', N-'A'+10
-
-                L: F(Q, N); T := T + 1  $)3
-
-            OR WRCH(K)  $)2  $)1
-
-
-//AND MAPSTORE() BE WRITES("*NMAPSTORE NOT IMPLEMENTED*N")
+//AND mapstore() BE writes("*Nmapstore NOT IMPLEMENTED*N")
