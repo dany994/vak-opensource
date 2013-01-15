@@ -108,9 +108,9 @@ $) REPEAT
 AND epilog() BE
 $(
     sect := 1
-    emit(".globl _G")
+    emit(".globl G")
     emit(".align 4")
-    emit("_G:")
+    emit("G:")
     FOR i=0 TO GSZ - 1
         emit(".long %S%N # %N", G!i=0 -> "", "L", G!i, i)
 $)
@@ -295,25 +295,27 @@ $(
             XL := XL + 1
             ENDCASE
         CASE 24:
-            emit("call _selectinput")
+            emit("movl %%eax,(%%esp)")
+            emit("call selectinput")
             ENDCASE
         CASE 25:
-            emit("call _selectoutput")
+            emit("call selectoutput")
             ENDCASE
         CASE 26:
-            emit("call _rdch")
+            emit("call rdch")
             ENDCASE
         CASE 27:
-            emit("call _wrch")
+            emit("call wrch")
             ENDCASE
         CASE 28:
-            emit("call _findinput")
+            emit("movl %%eax,(%%esp)")
+            emit("call findinput")
             ENDCASE
         CASE 29:
-            emit("call _findoutput")
+            emit("call findoutput")
             ENDCASE
         CASE 30:
-            emit("jmp _stop")
+            emit("jmp stop")
             ENDCASE
         CASE 31:
             emit("movl (%%ebp),%%eax")
@@ -323,10 +325,10 @@ $(
             emit("jmp **%%ebx")
             ENDCASE
         CASE 33:
-            emit("call _endread")
+            emit("call endread")
             ENDCASE
         CASE 34:
-            emit("call _endwrite")
+            emit("call endwrite")
             ENDCASE
         CASE 35:
             emit("movl %%ebp,%%esi")
@@ -357,16 +359,16 @@ $(
             emit("movb %%bl,(%%eax)")
             ENDCASE
         CASE 38:
-            emit("call _input")
+            emit("call input")
             ENDCASE
         CASE 39:
-            emit("call _output")
+            emit("call output")
             ENDCASE
         CASE 40:
-            emit("call _unrdch")
+            emit("call unrdch")
             ENDCASE
         CASE 41:
-            emit("call _rewind")
+            emit("call rewind")
         $)
         ENDCASE
     CASE 'D':

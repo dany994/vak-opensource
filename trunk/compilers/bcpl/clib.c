@@ -7,14 +7,14 @@ extern void *G[];
 #define FTSZ    20              // Max number of opened files.
 
 /* Assign x = AX */
-#define GET_A(x)   asm volatile("" : "=a" (x))
+#define GET_A(x)   asm volatile("mov %%eax,%0" : "=r" (x))
 #define SET_A(x)   asm volatile("" : : "a" (x))
 
 static void *stack [STKSZ];     // BCPL stack area.
 static FILE *ft [FTSZ];
 static int fi, fo;
 
-static void finish()
+void finish()
 {
     exit(0);
 }
@@ -102,12 +102,12 @@ ftslot()
 }
 
 void
-findinput()
+findinput(s)
 {
     char filename[256];
-    int s, x;
+    int x;
 
-    GET_A(s);
+//  GET_A(s);
     get_cstr((unsigned*) s, filename);
     x = ftslot();
     if (x != -1) {

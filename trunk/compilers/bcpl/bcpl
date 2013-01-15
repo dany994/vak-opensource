@@ -1,4 +1,5 @@
-d=/usr/lib/bcpl
+#!/bin/sh
+d=/usr/local/lib/bcpl
 oflag=0
 
 while true
