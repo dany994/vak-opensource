@@ -1,19 +1,19 @@
 AS      = cc -m32 -c
 AFLAGS  = -g
 CC      = cc -m32
-CFLAGS  = -g -O0 -Wall -Werror
-LD      = ld -m32
+CFLAGS  = -g -O1 -Wall -Werror
+LD      = ld -melf_i386
 LDFLAGS = -g
 
 PREFIX  = /usr/local
 
-all: hello st #cg xg
+all: hello #st cg xg
 
 #
 # X86 code generator, native (pass 2)
 #
-xg: su.o xg.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o xg su.o xg.o rt.o sys.o
+xg: xg.o clib.o
+	$(CC) $(LDFLAGS) -o xg xg.o clib.o
 
 xg.o: xg.s
 	$(AS) $(AFLAGS) -o xg.o xg.s
@@ -30,8 +30,8 @@ xg.int: st1 cg1 iclib.i blib.i xg.b
 #
 # Intcode generator, native (pass 2)
 #
-cg: su.o cg.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o cg su.o cg.o rt.o sys.o
+cg: cg.o clib.o
+	$(CC) $(LDFLAGS) -o cg cg.o clib.o
 
 cg.o: cg.s
 	$(AS) $(AFLAGS) -o cg.o cg.s
@@ -48,8 +48,8 @@ cg.int: st1 cg1 iclib.i blib.i cg.b
 #
 # Syntax translator, native (pass 2)
 #
-st: su.o st.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o st su.o st.o rt.o sys.o
+st: st.o clib.o
+	$(CC) $(LDFLAGS) -o st st.o clib.o
 
 st.o: st.s
 	$(AS) $(AFLAGS) -o st.o st.s
@@ -69,8 +69,8 @@ st.int: st1 cg1 iclib.i blib.i syn.b trn.b
 #
 # X86 code generator, native (pass 1)
 #
-xg1: su.o xg1.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o xg1 su.o xg1.o rt.o sys.o
+xg1: xg1.o clib.o
+	$(CC) $(LDFLAGS) -o xg1 xg1.o clib.o
 
 xg1.o: xg1.s
 	$(AS) $(AFLAGS) -o xg1.o xg1.s
@@ -87,8 +87,8 @@ xg1.int: st0 cg0 iclib.i blib.i xg.b
 #
 # Intcode generator, native (pass 1)
 #
-cg1: su.o cg1.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o cg1 su.o cg1.o rt.o sys.o
+cg1: cg1.o clib.o
+	$(CC) $(LDFLAGS) -o cg1 cg1.o clib.o
 
 cg1.o: cg1.s
 	$(AS) $(AFLAGS) -o cg1.o cg1.s
@@ -105,8 +105,8 @@ cg1.int: st0 cg0 iclib.i blib.i cg.b
 #
 # Syntax translator, native (pass 1)
 #
-st1: su.o st1.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o st1 su.o st1.o rt.o sys.o
+st1: st1.o clib.o
+	$(CC) $(LDFLAGS) -o st1 st1.o clib.o
 
 st1.o: st1.s
 	$(AS) $(AFLAGS) -o st1.o st1.s
@@ -126,8 +126,8 @@ st1.int: st0 cg0 iclib.i blib.i syn.b trn.b
 #
 # X86 code generator, native (pass 0)
 #
-xg0: su.o xg0.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o xg0 su.o xg0.o rt.o sys.o
+xg0: xg0.o clib.o
+	$(CC) $(LDFLAGS) -o xg0 xg0.o clib.o
 
 xg0.o: xg0.s
 	$(AS) $(AFLAGS) -o xg0.o xg0.s
@@ -139,8 +139,8 @@ xg0.s: icint xg0.int
 #
 # Intcode generator, native (pass 0)
 #
-cg0: su.o cg0.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o cg0 su.o cg0.o rt.o sys.o
+cg0: cg0.o clib.o
+	$(CC) $(LDFLAGS) -o cg0 cg0.o clib.o
 
 cg0.o: cg0.s
 	$(AS) $(AFLAGS) -o cg0.o cg0.s
@@ -152,8 +152,8 @@ cg0.s: icint xg0.int cg0.int
 #
 # Syntax translator, native (pass 0)
 #
-st0: su.o st0.o rt.o sys.o
-	$(LD) $(LDFLAGS) -o st0 su.o st0.o rt.o sys.o
+st0: st0.o clib.o
+	$(CC) $(LDFLAGS) -o st0 st0.o clib.o
 
 st0.o: st0.s
 	$(AS) $(AFLAGS) -o st0.o st0.s
@@ -232,9 +232,7 @@ cp: st cg xg LIBHDR iclib.i blib.i rules su.o rt.o sys.o bcpl icint
 	cp iclib.i   $(PREFIX)/lib/bcpl/
 	cp blib.i    $(PREFIX)/lib/bcpl/
 	cp rules     $(PREFIX)/lib/bcpl/
-	cp su.o      $(PREFIX)/lib/bcpl/
-	cp rt.o      $(PREFIX)/lib/bcpl/
-	cp sys.o     $(PREFIX)/lib/bcpl/
+	cp clib.o    $(PREFIX)/lib/bcpl/
 	cp bcpl      $(PREFIX)/bin/
 	cp icint     $(PREFIX)/bin/
 	make clean
