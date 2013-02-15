@@ -23,10 +23,10 @@ public:
     virtual int num_available() = 0;
 };
 
-class fifo : public sc_channel, public write_if, public read_if
+class fifo_ch : public sc_channel, public write_if, public read_if
 {
 public:
-    fifo(sc_module_name name) : sc_channel(name), num_elements(0), first(0) {}
+    fifo_ch(sc_module_name name) : sc_channel(name), num_elements(0), first(0) {}
 
     void write(char c)
     {
@@ -66,14 +66,14 @@ private:
     sc_event write_event, read_event;
 };
 
-class producer : public sc_module
+class producer_m : public sc_module
 {
 public:
     sc_port<write_if> out;
 
-    SC_HAS_PROCESS(producer);
+    SC_HAS_PROCESS(producer_m);
 
-    producer(sc_module_name name) : sc_module(name)
+    producer_m(sc_module_name name) : sc_module(name)
     {
         SC_THREAD(main);
     }
@@ -88,14 +88,14 @@ public:
     }
 };
 
-class consumer : public sc_module
+class consumer_m : public sc_module
 {
 public:
     sc_port<read_if> in;
 
-    SC_HAS_PROCESS(consumer);
+    SC_HAS_PROCESS(consumer_m);
 
-    consumer(sc_module_name name) : sc_module(name)
+    consumer_m(sc_module_name name) : sc_module(name)
     {
         SC_THREAD(main);
     }
@@ -117,28 +117,29 @@ public:
     }
 };
 
-class top : public sc_module
+class top_m : public sc_module
 {
 public:
-    fifo *fifo_inst;
-    producer *prod_inst;
-    consumer *cons_inst;
+    fifo_ch *fifo;
+    producer_m *producer;
+    consumer_m *consumer;
 
-    top(sc_module_name name) : sc_module(name)
+    top_m(sc_module_name name) : sc_module(name)
     {
-        fifo_inst = new fifo("Fifo1");
+        fifo = new fifo_ch("Fifo1");
 
-        prod_inst = new producer("Producer1");
-        prod_inst->out(*fifo_inst);
+        producer = new producer_m("Producer1");
+        producer->out(*fifo);
 
-        cons_inst = new consumer("Consumer1");
-        cons_inst->in(*fifo_inst);
+        consumer = new consumer_m("Consumer1");
+        consumer->in(*fifo);
     }
 };
 
 int sc_main (int, char *[])
 {
-    top top1("Top1");
+    top_m top("Top1");
+
     sc_start();
     return 0;
 }
