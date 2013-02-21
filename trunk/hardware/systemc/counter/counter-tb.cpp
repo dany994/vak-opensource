@@ -20,6 +20,7 @@ int sc_main (int argc, char* argv[])
 
     // Open VCD file
     sc_trace_file *wf = sc_create_vcd_trace_file("counter");
+    wf->set_time_unit(1, SC_NS);
 
     // Dump the desired signals
     sc_trace(wf, clock, "clock");
@@ -37,7 +38,7 @@ int sc_main (int argc, char* argv[])
         sc_start(10, SC_NS);
     }
     reset = 1;    // Assert the reset
-    cout << "@" << sc_time_stamp() <<" Asserting reset\n" << endl;
+    cout << "(" << sc_time_stamp() <<") Asserting reset\n";
     for (i=0;i<10;i++) {
         clock = 0;
         sc_start(10, SC_NS);
@@ -45,14 +46,14 @@ int sc_main (int argc, char* argv[])
         sc_start(10, SC_NS);
     }
     reset = 0;    // De-assert the reset
-    cout << "@" << sc_time_stamp() <<" De-Asserting reset\n" << endl;
+    cout << "(" << sc_time_stamp() <<") De-Asserting reset\n";
     for (i=0;i<5;i++) {
         clock = 0;
         sc_start(10, SC_NS);
         clock = 1;
         sc_start(10, SC_NS);
     }
-    cout << "@" << sc_time_stamp() <<" Asserting Enable\n" << endl;
+    cout << "(" << sc_time_stamp() <<") Asserting Enable\n";
     enable = 1;  // Assert enable
     for (i=0;i<20;i++) {
         clock = 0;
@@ -60,10 +61,10 @@ int sc_main (int argc, char* argv[])
         clock = 1;
         sc_start(10, SC_NS);
     }
-    cout << "@" << sc_time_stamp() <<" De-Asserting Enable\n" << endl;
+    cout << "(" << sc_time_stamp() <<") De-Asserting Enable\n";
     enable = 0; // De-assert enable
 
-    cout << "@" << sc_time_stamp() <<" Terminating simulation\n" << endl;
+    cout << "(" << sc_time_stamp() <<") Terminating simulation\n";
     sc_close_vcd_trace_file(wf);
 
     // Terminate simulation

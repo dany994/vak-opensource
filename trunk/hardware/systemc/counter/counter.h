@@ -27,8 +27,8 @@ SC_MODULE (counter_m)
         } else if (enable.read() == 1) {
             count += 1;
             counter_out.write(count);
-            cout << "@" << sc_time_stamp() << " :: Incremented Counter "
-                 << counter_out.read() << endl;
+            cout << "(" << sc_time_stamp() << ") Incremented Counter "
+                 << counter_out.read() << "\n";
         }
     }
 
