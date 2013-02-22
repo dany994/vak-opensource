@@ -15,6 +15,7 @@ struct process_t {
     char        stack[1];       // Space for thread stack
 };
 
+process_t *process_current;     // Current running process
 process_t *process_queue;       // Queue of pending events
 
 //
@@ -23,8 +24,9 @@ process_t *process_queue;       // Queue of pending events
 typedef struct activation_t activation_t;
 
 struct activation_t {
-    activation_t *next;         // Member of sensitivity list
+    signal_t    *signal;        // Sensitive to this signal
     process_t   *process;       // Process to activate
+    activation_t *next;         // Member of sensitivity list
 };
 
 //
@@ -48,3 +50,14 @@ signal_t *signal_active;        // List of active signals for the current cycle
 // Time
 //
 uint64_t simulation_time;       // Current time
+
+//
+// Functions
+//
+void process_main (process_t *proc, int argc, char **argv);
+process_t *process_init (char *stack, void (*func)());
+void process_sensitive (process_t *proc, activation_t *act);
+void process_wait (unsigned delay);
+void process_finish (void);
+
+void signal_set (signal_t *sig, uint64_t value);
