@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ns / 1ns
 //
 // Negate-or function.
 //
@@ -13,6 +13,7 @@ module counter_m (
     always @(posedge clock) begin
         if (reset)
             counter_out <= 0;
+
         else if (enable) begin
             counter_out <= counter_out + 1;
             $display("(%0d ns) Incremented Counter %d", $time, counter_out);
