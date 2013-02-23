@@ -20,4 +20,4 @@ clean:
 		$(MAKE) -C simulink $@
 
 edit:
-		glade-2 simulator.glade &
+		glade-gtk2 simulator.glade &
