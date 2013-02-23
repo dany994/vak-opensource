@@ -3,10 +3,13 @@
 //
 #include "rtlsim.h"
 
-signal_t clock;         // Clock input of the design
-signal_t reset;         // active high, synchronous Reset input
-signal_t enable;        // Active high enable signal for counter
-signal_t count;         // 4 bit vector output of the counter
+#define STACK_NBYTES    2048    // Stack size for processes
+
+// Initialize signals
+signal_t clock  = signal_init ("clock",  0); // Clock input of the design
+signal_t reset  = signal_init ("reset",  0); // Active high, synchronous Reset input
+signal_t enable = signal_init ("enable", 0); // Active high enable signal for counter
+signal_t count  = signal_init ("count",  0); // 4-bit vector output of the counter
 
 //
 // 4-bit up-counter with synchronous active high reset and
@@ -38,14 +41,8 @@ void proc_counter ()
 
 int main (int argc, char **argv)
 {
-    // Initialize signals
-    signal_init (clock,  "clock",  0);
-    signal_init (reset,  "reset",  0);
-    signal_init (enable, "enable", 0);
-    signal_init (count,  "count",  0);
-
     // Create processes
-    process_create (proc_counter, alloca(2048));
+    process_init ("counter", proc_counter, STACK_NBYTES);
 
     int i;                      // Issue some clock pulses
     for (i=0; i<5; i++) {

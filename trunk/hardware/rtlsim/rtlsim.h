@@ -22,41 +22,48 @@ value_t time_ticks;             // Current simulation time
 //
 struct signal_t {
     signal_t    *next;          // Member of active list
-    signal_t    *prev;
-
     const char  *name;          // Name for log file
     hook_t      *activate;      // Sensitivity list: processes to activate
-
     value_t     value;          // Current value
     value_t     new_value;      // Value for next cycle
 };
 
 signal_t *signal_active;        // List of active signals for the current cycle
 
-void signal_init (signal_t *sig, const char *name, value_t value);
 void signal_set (signal_t *sig, value_t value);
+
+#define signal_init(name, value) { 0, 0, name, 0, value, value }
 
 //--------------------------------------
 // Process
 //
 struct process_t {
     process_t   *next;          // Member of event queue
-    process_t   *prev;
-
     const char  *name;          // Name for log file
     value_t     delay;          // Time to wait
     ucontext_t  context;        // User context for thread switching
-
-    char        stack[1];       // Space for thread stack
 };
 
 process_t *process_current;     // Current running process
 process_t *process_queue;       // Queue of pending events
 process_t proc_main;            // Main process
 
-process_t *process_create (const char *name, void (*func)(void), void *stack);
 void process_wait (void);
 void process_delay (unsigned ticks);
+
+#define process_init (name, func, nbytes) ({ \
+        process_t *proc = alloca (nbytes); \
+        proc->name = name; \
+        proc->delay = 0; \
+        getcontext (&proc->context); \
+        proc->context.uc_stack = nbytes + (char*) proc; \
+        proc->context.uc_link = 0; \
+        makecontext (&proc->context, func, 0); \
+        proc->next = process_queue; \
+        process_queue = proc; \
+        proc;
+    })
+
 
 //--------------------------------------
 // Sensitivity hook
