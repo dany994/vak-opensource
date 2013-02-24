@@ -25,6 +25,7 @@ void proc_counter ()
     for (;;) {
         // Wait for event from the sensitivity list
         process_wait();
+        printf ("(%llu) Counter activated\n", time_ticks);
 
         // At every rising edge of clock we check if reset is active
         // If active, we load the counter output with 4'b0000
