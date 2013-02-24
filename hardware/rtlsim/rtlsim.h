@@ -2,6 +2,7 @@
 // Simple RTL simulator.
 // Copyright (C) 2013 Serge Vakulenko <serge@vak.ru>
 //
+#include <stdlib.h>
 #include <ucontext.h>
 
 //
@@ -32,7 +33,7 @@ signal_t *signal_active;        // List of active signals for the current cycle
 
 void signal_set (signal_t *sig, value_t value);
 
-#define signal_init(name, value) { 0, 0, name, 0, value, value }
+#define signal_init(_name, _value) { 0, _name, 0, _value, _value }
 
 //--------------------------------------
 // Process
@@ -46,22 +47,22 @@ struct process_t {
 
 process_t *process_current;     // Current running process
 process_t *process_queue;       // Queue of pending events
-process_t proc_main;            // Main process
+process_t process_main;         // Main process
 
 void process_wait (void);
 void process_delay (unsigned ticks);
 
-#define process_init (name, func, nbytes) ({ \
-        process_t *proc = alloca (nbytes); \
-        proc->name = name; \
+#define process_init(_name, _func, _nbytes) ({ \
+        process_t *proc = alloca (_nbytes); \
+        proc->name = _name; \
         proc->delay = 0; \
         getcontext (&proc->context); \
-        proc->context.uc_stack = nbytes + (char*) proc; \
+        proc->context.uc_stack.ss_sp = (char*) proc; \
+        proc->context.uc_stack.ss_size = _nbytes; \
         proc->context.uc_link = 0; \
-        makecontext (&proc->context, func, 0); \
+        makecontext (&proc->context, _func, 0); \
         proc->next = process_queue; \
         process_queue = proc; \
-        proc;
     })
 
 
@@ -76,10 +77,10 @@ struct hook_t {
 #define NEGEDGE 2
 };
 
-#define process_sensitive(sig, edge) { \
+#define process_sensitive(_sig, _edge) { \
         hook_t *a = alloca (sizeof(hook_t)); \
         a->process = process_current; \
-        a->edge = edge; \
-        a->next = sig->activate; \
-        sig->activate = a; \
+        a->edge = _edge; \
+        a->next = (_sig)->activate; \
+        (_sig)->activate = a; \
     }
