@@ -22,13 +22,13 @@ void signal_set (signal_t *sig, value_t value)
     }
 }
 
-static int edge_is_sensitive (signal_t *sig, hook_t *hook)
+static int edge_is_sensitive (signal_t *sig, int edge)
 {
-    if (hook->edge == 0)
+    if (edge == 0)
         return 1;
-    if ((hook->edge & POSEDGE) && sig->value == 0 && sig->new_value != 0)
+    if ((edge & POSEDGE) && sig->value == 0 && sig->new_value != 0)
         return 1;
-    if ((hook->edge & NEGEDGE) && sig->value != 0 && sig->new_value == 0)
+    if ((edge & NEGEDGE) && sig->value != 0 && sig->new_value == 0)
         return 1;
     return 0;
 }
@@ -58,7 +58,7 @@ void process_wait (void)
             // Handle all processes, sensitive to this signal.
             for (; hook != 0; hook = hook->next) {
                 if (hook->process->next == 0 &&
-                    edge_is_sensitive (signal_active, hook))
+                    edge_is_sensitive (signal_active, hook->edge))
                 {
                     // Put the process to queue of pending events.
                     printf ("(%llu) Process '%s' activated\n", time_ticks, hook->process->name);
@@ -79,7 +79,7 @@ void process_wait (void)
     if (process_current->delay != 0) {
         // Advance time.
         time_ticks += process_current->delay;
-        printf ("(%llu) Time advanced\n", time_ticks);
+        printf ("----------------\n");
     }
     printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
     swapcontext(&old->context, &process_current->context);
@@ -98,7 +98,19 @@ void process_delay (unsigned ticks)
     }
 
     // Put the current process to queue of pending events.
-    //TODO: enqueue (process_current, ticks);
+    // Keep the queue sorted.
+    process_t **q = &process_queue;
+    process_t *p;
+    while ((p = *q) && p->delay < ticks) {
+        if (p->delay > 0)
+            ticks -= p->delay;
+        q = &p->next;
+    }
+    process_current->delay = ticks;
+    process_current->next = p;
+    if (p)
+            p->delay -= ticks;
+    *q = process_current;
 
     // Switch to next active process.
     process_wait();
