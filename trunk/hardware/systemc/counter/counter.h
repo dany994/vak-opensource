@@ -25,10 +25,10 @@ SC_MODULE (counter_m)
 
         // If enable is active, then we increment the counter
         } else if (enable.read() == 1) {
+            cout << "(" << sc_time_stamp() << ") Incremented Counter "
+                 << count << "\n";
             count += 1;
             counter_out.write(count);
-            cout << "(" << sc_time_stamp() << ") Incremented Counter "
-                 << counter_out.read() << "\n";
         }
     }
 

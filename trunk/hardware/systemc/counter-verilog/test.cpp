@@ -5,7 +5,7 @@ int sc_main (int argc, char* argv[])
 {
     Verilated::commandArgs(argc, argv);
 
-    sc_clock            clock ("clock", 10, SC_NS);
+    sc_clock            clock ("clock", 20, SC_NS);
     sc_signal<bool>     reset;
     sc_signal<bool>     enable;
     sc_signal<uint32_t> counter_out;
@@ -16,8 +16,6 @@ int sc_main (int argc, char* argv[])
     counter.reset(reset);
     counter.enable(enable);
     counter.counter_out(counter_out);
-
-    sc_start(10, SC_NS);
 
     // Open VCD file
     sc_trace_file *wf = sc_create_vcd_trace_file("counter");
@@ -32,19 +30,19 @@ int sc_main (int argc, char* argv[])
     // Initialize all variables
     reset = 0;                  // initial value of reset
     enable = 0;                 // initial value of enable
-    sc_start(50, SC_NS);
+    sc_start(100, SC_NS);
 
     reset = 1;                  // Assert the reset
     cout << "(" << sc_time_stamp() <<") Asserting reset\n";
-    sc_start(100, SC_NS);
+    sc_start(200, SC_NS);
 
     reset = 0;                  // De-assert the reset
     cout << "(" << sc_time_stamp() <<") De-Asserting reset\n";
-    sc_start(50, SC_NS);
+    sc_start(100, SC_NS);
 
     enable = 1;                 // Assert enable
     cout << "(" << sc_time_stamp() <<") Asserting Enable\n";
-    sc_start(200, SC_NS);
+    sc_start(400, SC_NS);
 
     enable = 0; // De-assert enable
     cout << "(" << sc_time_stamp() <<") De-Asserting Enable\n";

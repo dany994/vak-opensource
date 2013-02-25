@@ -16,8 +16,6 @@ int sc_main (int argc, char* argv[])
     counter.enable(enable);
     counter.counter_out(counter_out);
 
-    sc_start(10, SC_NS);
-
     // Open VCD file
     sc_trace_file *wf = sc_create_vcd_trace_file("counter");
     wf->set_time_unit(1, SC_NS);

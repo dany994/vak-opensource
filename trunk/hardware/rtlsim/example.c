@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "rtlsim.h"
 
-#define STACK_NBYTES    2048    /* Stack size for processes */
+#define STACK_NBYTES    4096    /* Stack size for processes */
 
 /* Initialize signals */
 signal_t clock  = signal_init ("clock",  0); /* Clock input of the design */
@@ -15,12 +15,12 @@ signal_t count  = signal_init ("count",  0); /* 4-bit vector output of the count
 /*
  * Clock generator.
  */
-void proc_clock ()
+void do_clock ()
 {
     for (;;) {
-        signal_set (&clock, 1);
-        process_delay (10);
         signal_set (&clock, 0);
+        process_delay (10);
+        signal_set (&clock, 1);
         process_delay (10);
     }
 }
@@ -29,7 +29,7 @@ void proc_clock ()
  * 4-bit up-counter with synchronous active high reset and
  * with active high enable signal.
  */
-void proc_counter ()
+void do_counter ()
 {
     /* Create a sensitivity list. */
     process_sensitive (&clock, POSEDGE);
@@ -46,9 +46,8 @@ void proc_counter ()
 
         /* If enable is active, then we increment the counter. */
         } else if (enable.value != 0) {
-            int newval = (count.value + 1) & 15;
-            signal_set (&count, newval);
-            printf ("(%llu) Incremented Counter %u\n", time_ticks, newval);
+            printf ("(%llu) Incremented Counter %llu\n", time_ticks, count.value);
+            signal_set (&count, (count.value + 1) & 15);
         }
     }
 }
@@ -56,23 +55,22 @@ void proc_counter ()
 int main (int argc, char **argv)
 {
     /* Create processes. */
-    process_init ("clock", proc_clock, STACK_NBYTES);
-    process_init ("counter", proc_counter, STACK_NBYTES);
+    process_init ("clock", do_clock, STACK_NBYTES);
+    process_init ("counter", do_counter, STACK_NBYTES);
 
     /* Issue some clock pulses */
-    process_delay (50);
+    process_delay (100);
     signal_set (&reset, 1);     /* Assert the reset */
     printf ("(%llu) Asserting reset\n", time_ticks);
-    process_delay (100);
+    process_delay (200);
     signal_set (&reset, 0);     /* De-assert the reset */
     printf ("(%llu) De-Asserting reset\n", time_ticks);
-    process_delay (50);
+    process_delay (100);
     printf ("(%llu) Asserting Enable\n", time_ticks);
     signal_set (&enable, 1);    /* Assert enable */
-    process_delay (200);
+    process_delay (400);
     printf ("(%llu) De-Asserting Enable\n", time_ticks);
     signal_set (&enable, 0);    /* De-assert enable */
-    process_delay (10);
 
     /* Terminate simulation. */
     printf ("(%llu) Terminating simulation\n", time_ticks);

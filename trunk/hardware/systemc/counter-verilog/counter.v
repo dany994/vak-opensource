@@ -15,8 +15,8 @@ module counter_m (
             counter_out <= 0;
 
         else if (enable) begin
-            counter_out <= counter_out + 1;
             $display("(%0d ns) Incremented Counter %d", $time, counter_out);
+            counter_out <= counter_out + 1;
         end
     end
 endmodule
