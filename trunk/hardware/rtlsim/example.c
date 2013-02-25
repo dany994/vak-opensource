@@ -13,6 +13,19 @@ signal_t enable = signal_init ("enable", 0); /* Active high enable signal for co
 signal_t count  = signal_init ("count",  0); /* 4-bit vector output of the counter */
 
 /*
+ * Clock generator.
+ */
+void proc_clock ()
+{
+    for (;;) {
+        signal_set (&clock, 1);
+        process_delay (10);
+        signal_set (&clock, 0);
+        process_delay (10);
+    }
+}
+
+/*
  * 4-bit up-counter with synchronous active high reset and
  * with active high enable signal.
  */
@@ -43,39 +56,20 @@ void proc_counter ()
 int main (int argc, char **argv)
 {
     /* Create processes. */
+    process_init ("clock", proc_clock, STACK_NBYTES);
     process_init ("counter", proc_counter, STACK_NBYTES);
 
-    int i;                      /* Issue some clock pulses */
-    for (i=0; i<5; i++) {
-        signal_set (&clock, 0);
-        process_delay (10);
-        signal_set (&clock, 1);
-        process_delay (10);
-    }
+    /* Issue some clock pulses */
+    process_delay (50);
     signal_set (&reset, 1);     /* Assert the reset */
     printf ("(%llu) Asserting reset\n", time_ticks);
-    for (i=0; i<10; i++) {
-        signal_set (&clock, 0);
-        process_delay (10);
-        signal_set (&clock, 1);
-        process_delay (10);
-    }
+    process_delay (100);
     signal_set (&reset, 0);     /* De-assert the reset */
     printf ("(%llu) De-Asserting reset\n", time_ticks);
-    for (i=0; i<5; i++) {
-        signal_set (&clock, 0);
-        process_delay (10);
-        signal_set (&clock, 1);
-        process_delay (10);
-    }
+    process_delay (50);
     printf ("(%llu) Asserting Enable\n", time_ticks);
     signal_set (&enable, 1);    /* Assert enable */
-    for (i=0; i<20; i++) {
-        signal_set (&clock, 0);
-        process_delay (10);
-        signal_set (&clock, 1);
-        process_delay (10);
-    }
+    process_delay (200);
     printf ("(%llu) De-Asserting Enable\n", time_ticks);
     signal_set (&enable, 0);    /* De-assert enable */
     process_delay (10);
