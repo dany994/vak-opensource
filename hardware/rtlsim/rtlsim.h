@@ -1,6 +1,16 @@
 /*
  * Simple RTL simulator.
+ *
  * Copyright (C) 2013 Serge Vakulenko <serge@vak.ru>
+ *
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * You can redistribute this file and/or modify it under the terms of the GNU
+ * General Public License (GPL) as published by the Free Software Foundation;
+ * either version 2 of the License, or (at your discretion) any later version.
+ * See the accompanying file "COPYING.txt" for more details.
  */
 #include <stdlib.h>
 #include <ucontext.h>
@@ -23,8 +33,8 @@ value_t time_ticks;             /* Current simulation time */
  */
 struct signal_t {
     signal_t    *next;          /* Member of active list */
-    const char  *name;          /* Name for log file */
     hook_t      *activate;      /* Sensitivity list: processes to activate */
+    const char  *name;          /* Name for log file */
     value_t     value;          /* Current value */
     value_t     new_value;      /* Value for next cycle */
 };
@@ -33,7 +43,7 @@ signal_t *signal_active;        /* List of active signals for the current cycle 
 
 void signal_set (signal_t *sig, value_t value);
 
-#define signal_init(_name, _value) { 0, _name, 0, _value, _value }
+#define signal_init(_name, _value) { 0, 0, _name, _value, _value }
 
 /*--------------------------------------
  * Process

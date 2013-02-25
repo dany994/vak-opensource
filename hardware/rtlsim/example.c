@@ -1,16 +1,27 @@
 /*
  * Example of simple simulation.
+ *
+ * Copyright (C) 2013 Serge Vakulenko <serge@vak.ru>
+ *
+ * This file is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * You can redistribute this file and/or modify it under the terms of the GNU
+ * General Public License (GPL) as published by the Free Software Foundation;
+ * either version 2 of the License, or (at your discretion) any later version.
+ * See the accompanying file "COPYING.txt" for more details.
  */
 #include <stdio.h>
 #include "rtlsim.h"
 
-#define STACK_NBYTES    4096    /* Stack size for processes */
-
-/* Initialize signals */
-signal_t clock  = signal_init ("clock",  0); /* Clock input of the design */
-signal_t reset  = signal_init ("reset",  0); /* Active high, synchronous Reset input */
+/*
+ * Signals.
+ */
+signal_t clock  = signal_init ("clock",  0); /* Main clock of the design */
+signal_t reset  = signal_init ("reset",  0); /* Active high, synchronous Reset */
 signal_t enable = signal_init ("enable", 0); /* Active high enable signal for counter */
-signal_t count  = signal_init ("count",  0); /* 4-bit vector output of the counter */
+signal_t count  = signal_init ("count",  0); /* 4-bit counter */
 
 /*
  * Clock generator.
@@ -31,9 +42,8 @@ void do_clock ()
  */
 void do_counter ()
 {
-    /* Create a sensitivity list. */
+    /* Make a sensitivity list. */
     process_sensitive (&clock, POSEDGE);
-    process_sensitive (&reset, 0);
 
     for (;;) {
         /* Wait for event from the sensitivity list. */
@@ -54,25 +64,26 @@ void do_counter ()
 
 int main (int argc, char **argv)
 {
-    /* Create processes. */
-    process_init ("clock", do_clock, STACK_NBYTES);
-    process_init ("counter", do_counter, STACK_NBYTES);
+    /* Create processes with 4kbyte stacks. */
+    process_init ("clock", do_clock, 4096);
+    process_init ("counter", do_counter, 4096);
 
-    /* Issue some clock pulses */
     process_delay (100);
-    signal_set (&reset, 1);     /* Assert the reset */
-    printf ("(%llu) Asserting reset\n", time_ticks);
+    signal_set (&reset, 1);
+    printf ("(%llu) Asserting Reset\n", time_ticks);
+
     process_delay (200);
-    signal_set (&reset, 0);     /* De-assert the reset */
-    printf ("(%llu) De-Asserting reset\n", time_ticks);
+    signal_set (&reset, 0);
+    printf ("(%llu) De-Asserting Reset\n", time_ticks);
+
     process_delay (100);
     printf ("(%llu) Asserting Enable\n", time_ticks);
-    signal_set (&enable, 1);    /* Assert enable */
+    signal_set (&enable, 1);
+
     process_delay (400);
     printf ("(%llu) De-Asserting Enable\n", time_ticks);
-    signal_set (&enable, 0);    /* De-assert enable */
+    signal_set (&enable, 0);
 
-    /* Terminate simulation. */
     printf ("(%llu) Terminating simulation\n", time_ticks);
     return 0;
 }
