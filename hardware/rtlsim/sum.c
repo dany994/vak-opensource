@@ -39,7 +39,7 @@ int main (int argc, char **argv)
         signal_set(&a, a.value + 2);
         signal_set(&b, b.value + 3);
     }
-    process_delay(100000);
+    process_delay (100);
     //printf ("(%llu) Terminating simulation\n", time_ticks);
     return 0;
 }

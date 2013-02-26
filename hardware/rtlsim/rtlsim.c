@@ -26,7 +26,7 @@ void signal_set (signal_t *sig, value_t value)
 
     if (value != sig->value && sig->next == 0) {
         /* Value changed - put to list of active signals. */
-        printf ("(%llu) Signal '%s' changed %s\n", time_ticks, sig->name, sig->new_value ? "HIGH" : "LOW");
+        //printf ("(%llu) Signal '%s' changed %s\n", time_ticks, sig->name, sig->new_value ? "HIGH" : "LOW");
         sig->next = signal_active;
         signal_active = sig;
     }
@@ -59,7 +59,7 @@ void process_wait (void)
         printf ("Internal error: empty process queue\n");
         exit (-1);
     }
-    if (process_current->delay != 0) {
+    if (process_queue->delay != 0) {
         /* Delta cycle finished.
          * Schedule processes for active signals. */
         while (signal_active != 0) {
@@ -72,7 +72,7 @@ void process_wait (void)
                     edge_is_sensitive (signal_active, hook->edge))
                 {
                     /* Put the process to queue of pending events. */
-                    printf ("(%llu) Process '%s' activated\n", time_ticks, hook->process->name);
+                    //printf ("(%llu) Process '%s' activated\n", time_ticks, hook->process->name);
                     hook->process->next = process_queue;
                     process_queue = hook->process;
                 }
@@ -82,7 +82,7 @@ void process_wait (void)
             signal_active->next = 0;
             signal_active = next;
         }
-        printf ("---\n");
+    	//printf ("(%llu) ---\n", time_ticks);
     }
     /* Select next process from the queue. */
     process_current = process_queue;
@@ -91,10 +91,9 @@ void process_wait (void)
     if (process_current->delay != 0) {
         /* Advance time. */
         time_ticks += process_current->delay;
-        printf ("------\n");
     }
     if (process_current != old) {
-    	printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
+    	//printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
     	swapcontext(&old->context, &process_current->context);
     }
 }
