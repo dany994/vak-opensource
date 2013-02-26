@@ -63,16 +63,16 @@ void process_wait (void);
 void process_delay (unsigned ticks);
 
 #define process_init(_name, _func, _nbytes) ({ \
-        process_t *proc = alloca (_nbytes); \
-        proc->name = _name; \
-        proc->delay = 0; \
-        getcontext (&proc->context); \
-        proc->context.uc_stack.ss_sp = (char*) proc; \
-        proc->context.uc_stack.ss_size = _nbytes; \
-        proc->context.uc_link = 0; \
-        makecontext (&proc->context, _func, 0); \
-        proc->next = process_queue; \
-        process_queue = proc; \
+        process_t *_proc = alloca (_nbytes); \
+        _proc->name = _name; \
+        _proc->delay = 0; \
+        getcontext (&_proc->context); \
+        _proc->context.uc_stack.ss_sp = (char*) _proc; \
+        _proc->context.uc_stack.ss_size = _nbytes; \
+        _proc->context.uc_link = 0; \
+        makecontext (&_proc->context, _func, 0); \
+        _proc->next = process_queue; \
+        process_queue = _proc; \
     })
 
 
@@ -88,9 +88,9 @@ struct hook_t {
 };
 
 #define process_sensitive(_sig, _edge) { \
-        hook_t *a = alloca (sizeof(hook_t)); \
-        a->process = process_current; \
-        a->edge = _edge; \
-        a->next = (_sig)->activate; \
-        (_sig)->activate = a; \
+        hook_t *_hook = alloca (sizeof(hook_t)); \
+        _hook->process = process_current; \
+        _hook->edge = _edge; \
+        _hook->next = (_sig)->activate; \
+        (_sig)->activate = _hook; \
     }
