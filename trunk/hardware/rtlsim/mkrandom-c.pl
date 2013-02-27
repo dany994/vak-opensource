@@ -107,7 +107,6 @@ for ($i = 0; $i < $steps; ++$i) {
 #        print_a_b_c();
 print qq/
     }
-    process_delay (100);
     print_a_b_c();
     return 0;
 }

@@ -4077,7 +4077,6 @@ int main() {
         signal_set (&a1, ! a1.value);
 
     }
-    process_delay (100);
     print_a_b_c();
     return 0;
 }
