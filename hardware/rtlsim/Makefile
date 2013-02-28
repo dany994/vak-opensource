@@ -14,7 +14,7 @@ random:         random.o rtlsim.o
 		$(CC) $(LDFLAGS) -o $@ $@.o rtlsim.o
 
 clean:
-		rm -f *.o example sum random
+		rm -f *.o a.out ucli.key example sum random simv
 
 random.c:       mkrandom-c.pl
 		./mkrandom-c.pl > $@

@@ -114,7 +114,7 @@ void process_delay (unsigned ticks)
      * Keep the queue sorted. */
     process_t **q = &process_queue;
     process_t *p;
-    while ((p = *q) && p->delay < ticks) {
+    while ((p = *q) && p->delay <= ticks) {
         if (p->delay > 0)
             ticks -= p->delay;
         q = &p->next;
