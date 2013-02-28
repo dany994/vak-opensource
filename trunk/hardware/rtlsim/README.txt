@@ -6,7 +6,7 @@ Features:
     2) Event-driven;
     3) Simple data structures;
     4) No dynamic memory allocation;
-    5) Using standard POSIX getcontext() calls for coroutines.
+    5) Using standard setjmp/longjmp() calls for coroutines.
 
 Tested on Linux.
 
@@ -57,7 +57,7 @@ It is equivalent to non-blocking assignment in Verilog:
 Processes
 ~~~~~~~~~
 process_t -- a lightweight thread, modelling a behavior of some hardware unit.
-Implemented using standard POSIX swapcontext() family of functions.
+Implemented using standard setjmp/longjmp() functions.
 The process is equivalent to 'always' block in Verilog.
 Defined as C data structure:
 
