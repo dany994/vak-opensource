@@ -13,7 +13,7 @@
  * See the accompanying file "COPYING.txt" for more details.
  */
 #include <stdlib.h>
-#include <ucontext.h>
+#include <setjmp.h>
 
 /*
  * Forward typedefs
@@ -52,7 +52,9 @@ struct process_t {
     process_t   *next;          /* Member of event queue */
     const char  *name;          /* Name for log file */
     value_t     delay;          /* Time to wait */
-    ucontext_t  context;        /* User context for thread switching */
+    jmp_buf     context;        /* User context for thread switching.
+                                 * Six words for i386 architecture:
+                                 * EBX, ESI, EDI, EBP, ESP, PC. */
 };
 
 process_t *process_current;     /* Current running process */
@@ -66,11 +68,12 @@ void process_delay (unsigned ticks);
         process_t *_proc = alloca (_nbytes); \
         _proc->name = _name; \
         _proc->delay = 0; \
-        getcontext (&_proc->context); \
-        _proc->context.uc_stack.ss_sp = (char*) _proc; \
-        _proc->context.uc_stack.ss_size = _nbytes; \
-        _proc->context.uc_link = 0; \
-        makecontext (&_proc->context, _func, 0); \
+        _proc->context[0].__jmpbuf[0] = 0; \
+        _proc->context[0].__jmpbuf[1] = 0; \
+        _proc->context[0].__jmpbuf[2] = 0; \
+        _proc->context[0].__jmpbuf[3] = 0; \
+        _proc->context[0].__jmpbuf[4] = _nbytes + (size_t) _proc; \
+        _proc->context[0].__jmpbuf[5] = (size_t) _func; \
         _proc->next = process_queue; \
         process_queue = _proc; \
     })
