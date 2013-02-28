@@ -2,14 +2,16 @@
 
 $gates = 64;
 $steps = 2000;
-$loops = 400;
+$loops = 30000;
+#$steps = 2;
+#$loops = 1;
 srand (123);
 
-print qq/module top();
+print qq[module top();
     reg [$gates-1:0] a;
     reg [$gates-1:0] b;
     reg [$gates-1:0] c;
-/;
+];
 
 @binop  = ('%s & %s', '~(%s & %s)', '(%s | %s)', '~(%s | %s)', '%s ^ %s', '~(%s ^ %s)');
 
@@ -45,29 +47,28 @@ for ($i = 0; $i < $gates; ++$i) {
     printf "    always @(*) c[$i] <= $op;\n", "b[$x]", "b[$y]";
 }
 
-print qq/
+print qq[
     integer i;
     initial begin
-        a = 0;
-        b = 0;
-        c = 0;
+        a <= 0;
+        \#1;
         for (i=0; i<$loops; i=i+1) begin
-/;
+];
 
 for ($i = 0; $i < $steps; ++$i) {
     if (rand() < 0.2) {
         printf "            #1;\n";
     }
     $x = int(rand() * $gates);
-    printf "            a[$x] <= ~a[$x];\n";
-    #printf "            \$display (\"%%x %%x %%x\", a, b, c);\n";
+    printf "            a[$x] <= ~c[$x];\n";
 }
 
-#            \$display ("%x %x %x", a, b, c);
-print qq/
+print qq[
+            #1;
+            //\$display ("%x %x %x", a, b, c);
         end
         \$display ("%x %x %x", a, b, c);
         \$finish;
     end
 endmodule
-/;
+];

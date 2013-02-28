@@ -94,7 +94,8 @@ void process_wait (void)
     }
     if (process_current != old) {
     	//printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
-    	swapcontext(&old->context, &process_current->context);
+        if (! _setjmp (old->context))
+            longjmp(process_current->context, 1);
     }
 }
 
@@ -106,7 +107,6 @@ void process_delay (unsigned ticks)
     /* On first call, initialize the main process. */
     if (process_current == 0) {
         process_main.name = "main";
-        getcontext (&process_main.context);
         process_current = &process_main;
     }
 
@@ -128,3 +128,41 @@ void process_delay (unsigned ticks)
     /* Switch to next active process. */
     process_wait();
 }
+
+/*
+ * Simplified versions of longjmp() and _setjmp().
+ */
+asm (
+    ".global longjmp \n"
+    ".type longjmp,@function \n"
+"longjmp: \n"
+    "mov 4(%esp),%edx \n"
+    "mov 8(%esp),%eax \n"
+    "test %eax,%eax \n"
+    "jnz 1f \n"
+    "inc %eax \n"
+"1: \n"
+    "mov (%edx),%ebx \n"
+    "mov 4(%edx),%esi \n"
+    "mov 8(%edx),%edi \n"
+    "mov 12(%edx),%ebp \n"
+    "mov 16(%edx),%ecx \n"
+    "mov %ecx,%esp \n"
+    "mov 20(%edx),%ecx \n"
+    "jmp *%ecx ");
+
+asm (
+    ".global _setjmp \n"
+    ".type _setjmp,@function \n"
+"_setjmp: \n"
+    "mov 4(%esp), %eax \n"
+    "mov %ebx, (%eax) \n"
+    "mov %esi, 4(%eax) \n"
+    "mov %edi, 8(%eax) \n"
+    "mov %ebp, 12(%eax) \n"
+    "lea 4(%esp), %ecx \n"
+    "mov %ecx, 16(%eax) \n"
+    "mov (%esp), %ecx \n"
+    "mov %ecx, 20(%eax) \n"
+    "xor %eax, %eax \n"
+    "ret ");
