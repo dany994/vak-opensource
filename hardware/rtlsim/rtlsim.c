@@ -129,8 +129,8 @@ void process_wait (void)
      "1: pop %%ebx \n"              /* Compute address of label 1 */
         "lea 2f-1b(%%ebx), %%ebx \n"
         "mov %%ebx, 4(%1) \n"       /* Save address of label 2 to context[1] */
-        "mov 0(%0),%%esp \n"        /* Restore ESP from context[0] */
-        "mov 4(%0),%%ecx \n"        /* Get address from context[1] */
+        "mov 0(%0), %%esp \n"       /* Restore ESP from context[0] */
+        "mov 4(%0), %%ecx \n"       /* Get address from context[1] */
         "jmp *%%ecx \n "            /* Jump to address */
      "2: "
         : : "r" (process_current->context), "r" (old->context)
@@ -147,12 +147,12 @@ void process_wait (void)
         "mov %%r13, 24(%1) \n"      /* Save R13 to context[3] */
         "mov %%r14, 32(%1) \n"      /* Save R14 to context[4] */
         "mov %%r15, 40(%1) \n"      /* Save R15 to context[5] */
-        "mov 0(%0),%%rsp \n"        /* Restore RSP from context[0] */
-        "mov 8(%0),%%rcx \n"        /* Get address from context[1] */
-        "mov 16(%0),%%r12 \n"       /* Restore R12 from context[2] */
-        "mov 24(%0),%%r13 \n"       /* Restore R13 from context[3] */
-        "mov 32(%0),%%r14 \n"       /* Restore R14 from context[4] */
-        "mov 40(%0),%%r15 \n"       /* Restore R15 from context[5] */
+        "mov 0(%0), %%rsp \n"       /* Restore RSP from context[0] */
+        "mov 8(%0), %%rcx \n"       /* Get address from context[1] */
+        "mov 16(%0), %%r12 \n"      /* Restore R12 from context[2] */
+        "mov 24(%0), %%r13 \n"      /* Restore R13 from context[3] */
+        "mov 32(%0), %%r14 \n"      /* Restore R14 from context[4] */
+        "mov 40(%0), %%r15 \n"      /* Restore R15 from context[5] */
         "jmp *%%rcx \n "            /* Jump to address */
      "2: "
         : : "r" (process_current->context), "r" (old->context)
