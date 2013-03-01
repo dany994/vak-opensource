@@ -13,6 +13,7 @@
  * See the accompanying file "COPYING.txt" for more details.
  */
 #include <stdio.h>
+#include <string.h>
 #include "rtlsim.h"
 
 /*
@@ -92,11 +93,25 @@ void process_wait (void)
         /* Advance time. */
         time_ticks += process_current->delay;
     }
-    if (process_current != old) {
-    	//printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
-        if (! _setjmp (old->context))
-            longjmp(process_current->context, 1);
-    }
+    if (process_current == old)
+        return;
+
+    /* Switch to new process. */
+    //printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
+#ifdef __i386__
+    asm (
+        "mov %%esp, 0(%1) \n"       /* Save ESP to context[0] */
+        "call 1f \n"
+     "1: pop %%ebx \n"              /* Compute address of label 1 */
+        "lea 2f-1b(%%ebx), %%ebx \n"
+        "mov %%ebx, 4(%1) \n"       /* Save address of label 2 to context[1] */
+        "mov 0(%0),%%esp \n"        /* Restore ESP from context[0] */
+        "mov 4(%0),%%ecx \n"        /* Get address from context[1] */
+        "jmp *%%ecx \n "            /* Jump to address */
+     "2: "
+        : : "r" (process_current->context), "r" (old->context)
+        : "bx", "si", "di", "bp");
+#endif
 }
 
 /*
@@ -130,39 +145,19 @@ void process_delay (unsigned ticks)
 }
 
 /*
- * Simplified versions of longjmp() and _setjmp().
+ * Setup a context of the process, to call a given function
+ * on a given stack.
  */
-asm (
-    ".global longjmp \n"
-    ".type longjmp,@function \n"
-"longjmp: \n"
-    "mov 4(%esp),%edx \n"
-    "mov 8(%esp),%eax \n"
-    "test %eax,%eax \n"
-    "jnz 1f \n"
-    "inc %eax \n"
-"1: \n"
-    "mov (%edx),%ebx \n"
-    "mov 4(%edx),%esi \n"
-    "mov 8(%edx),%edi \n"
-    "mov 12(%edx),%ebp \n"
-    "mov 16(%edx),%ecx \n"
-    "mov %ecx,%esp \n"
-    "mov 20(%edx),%ecx \n"
-    "jmp *%ecx ");
+void _process_setup (process_t *proc, void (*func)(), unsigned nbytes)
+{
+    memset (proc->context, 0, sizeof(proc->context));
 
-asm (
-    ".global _setjmp \n"
-    ".type _setjmp,@function \n"
-"_setjmp: \n"
-    "mov 4(%esp), %eax \n"
-    "mov %ebx, (%eax) \n"
-    "mov %esi, 4(%eax) \n"
-    "mov %edi, 8(%eax) \n"
-    "mov %ebp, 12(%eax) \n"
-    "lea 4(%esp), %ecx \n"
-    "mov %ecx, 16(%eax) \n"
-    "mov (%esp), %ecx \n"
-    "mov %ecx, 20(%eax) \n"
-    "xor %eax, %eax \n"
-    "ret ");
+#ifdef __i386__
+    /* For i386 architecture, we need to save ESP and EIP.
+     * Stack must be aligned at 16-byte boundary.
+     * We use jmp_buf in non-standard way. */
+    int *context = (int*) proc->context;
+    context[0] = (((int) proc + nbytes) & ~15) - 4;
+    context[1] = (int) func;
+#endif
+}
