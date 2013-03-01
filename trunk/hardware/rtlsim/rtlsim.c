@@ -27,91 +27,10 @@ void signal_set (signal_t *sig, value_t value)
 
     if (value != sig->value && sig->next == 0) {
         /* Value changed - put to list of active signals. */
-        //printf ("(%llu) Signal '%s' changed %s\n", time_ticks, sig->name, sig->new_value ? "HIGH" : "LOW");
         sig->next = signal_active;
         signal_active = sig;
+        //printf ("(%llu) Signal '%s' changed %s\n", time_ticks, sig->name, sig->new_value ? "HIGH" : "LOW");
     }
-}
-
-/*
- * Return true when the signal change matches the edge flag.
- */
-static int edge_is_sensitive (signal_t *sig, int edge)
-{
-    if (edge == 0)
-        return 1;
-    if ((edge & POSEDGE) && sig->value == 0 && sig->new_value != 0)
-        return 1;
-    if ((edge & NEGEDGE) && sig->value != 0 && sig->new_value == 0)
-        return 1;
-    return 0;
-}
-
-/*
- * Wait for activation of any signal from a sensitivity list.
- * Switch to next active process.
- */
-void process_wait (void)
-{
-    process_t *old = process_current;
-
-    if (process_queue == 0) {
-        /* Cannot happen. */
-        printf ("Internal error: empty process queue\n");
-        exit (-1);
-    }
-    if (process_queue->delay != 0) {
-        /* Delta cycle finished.
-         * Schedule processes for active signals. */
-        while (signal_active != 0) {
-            hook_t *hook = signal_active->activate;
-            signal_t *next = signal_active->next;
-
-            /* Handle all processes, sensitive to this signal. */
-            for (; hook != 0; hook = hook->next) {
-                if (hook->process->next == 0 &&
-                    edge_is_sensitive (signal_active, hook->edge))
-                {
-                    /* Put the process to queue of pending events. */
-                    //printf ("(%llu) Process '%s' activated\n", time_ticks, hook->process->name);
-                    hook->process->next = process_queue;
-                    process_queue = hook->process;
-                }
-            }
-            /* Setup a new signal value. */
-            signal_active->value = signal_active->new_value;
-            signal_active->next = 0;
-            signal_active = next;
-        }
-    	//printf ("(%llu) ---\n", time_ticks);
-    }
-    /* Select next process from the queue. */
-    process_current = process_queue;
-    process_queue = process_queue->next;
-    process_current->next = 0;
-    if (process_current->delay != 0) {
-        /* Advance time. */
-        time_ticks += process_current->delay;
-    }
-    if (process_current == old)
-        return;
-
-    /* Switch to new process. */
-    //printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
-#ifdef __i386__
-    asm (
-        "mov %%esp, 0(%1) \n"       /* Save ESP to context[0] */
-        "call 1f \n"
-     "1: pop %%ebx \n"              /* Compute address of label 1 */
-        "lea 2f-1b(%%ebx), %%ebx \n"
-        "mov %%ebx, 4(%1) \n"       /* Save address of label 2 to context[1] */
-        "mov 0(%0),%%esp \n"        /* Restore ESP from context[0] */
-        "mov 4(%0),%%ecx \n"        /* Get address from context[1] */
-        "jmp *%%ecx \n "            /* Jump to address */
-     "2: "
-        : : "r" (process_current->context), "r" (old->context)
-        : "bx", "si", "di", "bp");
-#endif
 }
 
 /*
@@ -145,6 +64,106 @@ void process_delay (unsigned ticks)
 }
 
 /*
+ * Wait for activation of any signal from a sensitivity list.
+ * Switch to next active process.
+ */
+void process_wait (void)
+{
+    process_t *old = process_current;
+
+    if (process_queue == 0) {
+        /* Cannot happen. */
+        printf ("Internal error: empty process queue\n");
+        exit (-1);
+    }
+    if (process_queue->delay != 0) {
+        /* Delta cycle finished.
+         * Schedule processes for active signals. */
+        while (signal_active != 0) {
+            hook_t *hook = signal_active->activate;
+            signal_t *next = signal_active->next;
+
+            /* Handle all processes, sensitive to this signal. */
+            for (; hook != 0; hook = hook->next) {
+                if (hook->process->next == 0) {
+                    /* Signal change should matches the edge flag. */
+                    if ((hook->edge & POSEDGE) &&
+                        (signal_active->value != 0 ||
+                         signal_active->new_value == 0))
+                        continue;
+                    if ((hook->edge & NEGEDGE) &&
+                        (signal_active->value == 0 ||
+                         signal_active->new_value != 0))
+                        continue;
+
+                    /* Put the process to queue of pending events. */
+                    hook->process->next = process_queue;
+                    process_queue = hook->process;
+                    //printf ("(%llu) Process '%s' activated\n", time_ticks, hook->process->name);
+                }
+            }
+            /* Setup a new signal value. */
+            signal_active->value = signal_active->new_value;
+            signal_active->next = 0;
+            signal_active = next;
+        }
+    	//printf ("(%llu) ---\n", time_ticks);
+    }
+    /* Select next process from the queue. */
+    process_current = process_queue;
+    process_queue = process_queue->next;
+    process_current->next = 0;
+    if (process_current->delay != 0) {
+        /* Advance time. */
+        time_ticks += process_current->delay;
+    }
+    if (process_current == old)
+        return;
+
+    /* Switch to new process. */
+    //printf ("(%llu) Switch process '%s' -> '%s'\n", time_ticks, old->name, process_current->name);
+#if defined (__i386__)
+    asm (
+        "mov %%esp, 0(%1) \n"       /* Save ESP to context[0] */
+        "call 1f \n"
+     "1: pop %%ebx \n"              /* Compute address of label 1 */
+        "lea 2f-1b(%%ebx), %%ebx \n"
+        "mov %%ebx, 4(%1) \n"       /* Save address of label 2 to context[1] */
+        "mov 0(%0),%%esp \n"        /* Restore ESP from context[0] */
+        "mov 4(%0),%%ecx \n"        /* Get address from context[1] */
+        "jmp *%%ecx \n "            /* Jump to address */
+     "2: "
+        : : "r" (process_current->context), "r" (old->context)
+        : "bx", "si", "di", "bp");
+
+#elif defined __x86_64__
+    asm (
+        "mov %%rsp, 0(%1) \n"       /* Save RSP to context[0] */
+        "call 1f \n"
+     "1: pop %%rbx \n"              /* Compute address of label 1 */
+        "lea 2f-1b(%%rbx), %%rbx \n"
+        "mov %%rbx, 8(%1) \n"       /* Save address of label 2 to context[1] */
+        "mov %%r12, 16(%1) \n"      /* Save R12 to context[2] */
+        "mov %%r13, 24(%1) \n"      /* Save R13 to context[3] */
+        "mov %%r14, 32(%1) \n"      /* Save R14 to context[4] */
+        "mov %%r15, 40(%1) \n"      /* Save R15 to context[5] */
+        "mov 0(%0),%%rsp \n"        /* Restore RSP from context[0] */
+        "mov 8(%0),%%rcx \n"        /* Get address from context[1] */
+        "mov 16(%0),%%r12 \n"       /* Restore R12 from context[2] */
+        "mov 24(%0),%%r13 \n"       /* Restore R13 from context[3] */
+        "mov 32(%0),%%r14 \n"       /* Restore R14 from context[4] */
+        "mov 40(%0),%%r15 \n"       /* Restore R15 from context[5] */
+        "jmp *%%rcx \n "            /* Jump to address */
+     "2: "
+        : : "r" (process_current->context), "r" (old->context)
+        : "bx", "bp");
+#else
+    if (! _setjmp (old->context))
+        longjmp(process_current->context, 1);
+#endif
+}
+
+/*
  * Setup a context of the process, to call a given function
  * on a given stack.
  */
@@ -152,12 +171,17 @@ void _process_setup (process_t *proc, void (*func)(), unsigned nbytes)
 {
     memset (proc->context, 0, sizeof(proc->context));
 
-#ifdef __i386__
-    /* For i386 architecture, we need to save ESP and EIP.
+#if defined(__i386__) || defined(__x86_64__)
+    /* For i386 and  x86_64 architectures, we need to set SP and IP.
      * Stack must be aligned at 16-byte boundary.
      * We use jmp_buf in non-standard way. */
-    int *context = (int*) proc->context;
-    context[0] = (((int) proc + nbytes) & ~15) - 4;
-    context[1] = (int) func;
+    size_t *context = (size_t*) proc->context;
+    context[0] = (((size_t) proc + nbytes) & ~15) - 4;
+    context[1] = (size_t) func;
+
+#else
+#error Coroutine setup not implemented for this architecture.
+    /* Need to set at least a stack pointer
+     * and a program counter. */
 #endif
 }

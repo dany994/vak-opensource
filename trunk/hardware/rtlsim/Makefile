@@ -1,5 +1,5 @@
-CFLAGS          = -m32 -Wall -Werror -g -O -U_FORTIFY_SOURCE
-LDFLAGS         = -m32 -g
+CFLAGS          = -Wall -Werror -g -O
+LDFLAGS         = -g
 OBJS            = example.o rtlsim.o
 
 all:            example sum random.c random.v random
