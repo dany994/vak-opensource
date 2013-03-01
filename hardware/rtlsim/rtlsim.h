@@ -52,9 +52,7 @@ struct process_t {
     process_t   *next;          /* Member of event queue */
     const char  *name;          /* Name for log file */
     value_t     delay;          /* Time to wait */
-    jmp_buf     context;        /* User context for thread switching.
-                                 * Six words for i386 architecture:
-                                 * EBX, ESI, EDI, EBP, ESP, PC. */
+    jmp_buf     context;        /* User context for thread switching */
 };
 
 process_t *process_current;     /* Current running process */
@@ -63,17 +61,13 @@ process_t process_main;         /* Main process */
 
 void process_wait (void);
 void process_delay (unsigned ticks);
+void _process_setup (process_t *proc, void (*func)(), unsigned nbytes);
 
 #define process_init(_name, _func, _nbytes) ({ \
         process_t *_proc = alloca (_nbytes); \
         _proc->name = _name; \
         _proc->delay = 0; \
-        _proc->context[0].__jmpbuf[0] = 0; \
-        _proc->context[0].__jmpbuf[1] = 0; \
-        _proc->context[0].__jmpbuf[2] = 0; \
-        _proc->context[0].__jmpbuf[3] = 0; \
-        _proc->context[0].__jmpbuf[4] = _nbytes + (size_t) _proc; \
-        _proc->context[0].__jmpbuf[5] = (size_t) _func; \
+        _process_setup (_proc, _func, _nbytes); \
         _proc->next = process_queue; \
         process_queue = _proc; \
     })
