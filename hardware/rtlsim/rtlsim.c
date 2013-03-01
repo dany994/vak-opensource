@@ -176,7 +176,7 @@ void _process_setup (process_t *proc, void (*func)(), unsigned nbytes)
      * Stack must be aligned at 16-byte boundary.
      * We use jmp_buf in non-standard way. */
     size_t *context = (size_t*) proc->context;
-    context[0] = (((size_t) proc + nbytes) & ~15) - 4;
+    context[0] = (((size_t) proc + nbytes) & ~15) - sizeof(size_t);
     context[1] = (size_t) func;
 
 #else
