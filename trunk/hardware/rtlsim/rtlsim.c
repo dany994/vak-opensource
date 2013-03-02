@@ -34,6 +34,21 @@ void signal_set (signal_t *sig, value_t value)
 }
 
 /*
+ * Remove the hook from the signal's activation list.
+ */
+void _signal_unhook (signal_t *sig, hook_t *hook)
+{
+    hook_t *h, **q;
+
+    for (q = &sig->activate; (h = *q) != 0; q = &h->next) {
+        if (h == hook) {
+            *q = h->next;
+            break;
+        }
+    }
+}
+
+/*
  * Delay the current process by a given number of clock ticks.
  */
 void process_delay (unsigned ticks)

@@ -42,6 +42,7 @@ struct signal_t {
 signal_t *signal_active;        /* List of active signals for the current cycle */
 
 void signal_set (signal_t *sig, value_t value);
+void _signal_unhook (signal_t *sig, hook_t *hook);
 
 #define signal_init(_name, _value) { 0, 0, _name, _value, _value }
 
@@ -79,10 +80,41 @@ struct hook_t {
 #define NEGEDGE 2
 };
 
+#define _signal_hook(_sig, _edge, _hook) { \
+        (_hook)->process = process_current; \
+        (_hook)->edge = (_edge); \
+        (_hook)->next = (_sig)->activate; \
+        (_sig)->activate = (_hook); \
+    }
+
 #define process_sensitive(_sig, _edge) { \
         hook_t *_hook = alloca (sizeof(hook_t)); \
-        _hook->process = process_current; \
-        _hook->edge = _edge; \
-        _hook->next = (_sig)->activate; \
-        (_sig)->activate = _hook; \
+        _signal_hook (_sig, _edge, _hook); \
+    }
+
+#define process_wait1(_sig, _edge) { \
+        hook_t _hook; \
+        _signal_hook (_sig, _edge, &_hook); \
+        process_wait(); \
+        _signal_unhook (_sig, &_hook); \
+    }
+
+#define process_wait2(_sig1, _edge1, _sig2, _edge2) { \
+        hook_t _hook1, _hook2; \
+        _signal_hook (_sig1, _edge1, &_hook1); \
+        _signal_hook (_sig2, _edge2, &_hook2); \
+        process_wait(); \
+        _signal_unhook (_sig1, &_hook1); \
+        _signal_unhook (_sig2, &_hook2); \
+    }
+
+#define process_wait3(_sig1, _edge1, _sig2, _edge2, _sig3, _edge3) { \
+        hook_t _hook1, _hook2, _hook3; \
+        _signal_hook (_sig1, _edge1, &_hook1); \
+        _signal_hook (_sig2, _edge2, &_hook2); \
+        _signal_hook (_sig3, _edge3, &_hook3); \
+        process_wait(); \
+        _signal_unhook (_sig1, &_hook1); \
+        _signal_unhook (_sig2, &_hook2); \
+        _signal_unhook (_sig3, &_hook3); \
     }
