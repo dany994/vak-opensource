@@ -167,9 +167,11 @@ void process_wait (void)
  * Setup a context of the process, to call a given function
  * on a given stack.
  */
-void _process_setup (process_t *proc, void (*func)(), unsigned nbytes)
+process_t *_process_setup (process_t *proc, const char *name,
+    void (*func)(), unsigned nbytes)
 {
-    memset (proc->context, 0, sizeof(proc->context));
+    memset (proc, 0, sizeof(process_t));
+    proc->name = name;
 
 #if defined(__i386__) || defined(__x86_64__)
     /* For i386 and  x86_64 architectures, we need to set SP and IP.
@@ -184,4 +186,7 @@ void _process_setup (process_t *proc, void (*func)(), unsigned nbytes)
     /* Need to set at least a stack pointer
      * and a program counter. */
 #endif
+
+    proc->next = process_queue;
+    return proc;
 }
