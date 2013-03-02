@@ -61,16 +61,11 @@ process_t process_main;         /* Main process */
 
 void process_wait (void);
 void process_delay (unsigned ticks);
-void _process_setup (process_t *proc, void (*func)(), unsigned nbytes);
+process_t *_process_setup (process_t *proc, const char *name,
+    void (*func)(), unsigned nbytes);
 
-#define process_init(_name, _func, _nbytes) ({ \
-        process_t *_proc = alloca (_nbytes); \
-        _proc->name = _name; \
-        _proc->delay = 0; \
-        _process_setup (_proc, _func, _nbytes); \
-        _proc->next = process_queue; \
-        process_queue = _proc; \
-    })
+#define process_init(_name, _func, _nbytes) (process_queue = \
+    _process_setup (alloca (_nbytes), _name, _func, _nbytes))
 
 
 /*--------------------------------------
