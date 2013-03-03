@@ -42,7 +42,6 @@ struct signal_t {
 signal_t *signal_active;        /* List of active signals for the current cycle */
 
 void signal_set (signal_t *sig, value_t value);
-void _signal_unhook (signal_t *sig, hook_t *hook);
 
 #define signal_init(_name, _value) { 0, 0, _name, _value, _value }
 
@@ -73,7 +72,7 @@ process_t *_process_setup (process_t *proc, const char *name,
  * Sensitivity hook
  */
 struct hook_t {
-    hook_t      *next;          /* Member of sensitivity list */
+    hook_t      *next, *prev;   /* Member of sensitivity list */
     process_t   *process;       /* Process to activate */
     int         edge;           /* Edge, if nonzero */
 #define POSEDGE 1
@@ -84,7 +83,15 @@ struct hook_t {
         (_hook)->process = process_current; \
         (_hook)->edge = (_edge); \
         (_hook)->next = (_sig)->activate; \
+        (_hook)->prev = 0; \
+        if ((_hook)->next != 0) (_hook)->next->prev = (_hook); \
         (_sig)->activate = (_hook); \
+    }
+
+#define _signal_unhook(_sig, _hook) { \
+        if ((_hook)->next != 0) (_hook)->next->prev = (_hook)->prev; \
+        if ((_hook)->prev != 0) (_hook)->prev->next = (_hook)->next; \
+        if ((_sig)->activate == (_hook)) (_sig)->activate = (_hook)->next; \
     }
 
 #define process_sensitive(_sig, _edge) { \
