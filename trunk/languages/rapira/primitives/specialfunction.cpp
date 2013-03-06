@@ -244,7 +244,7 @@ Object* SpecialFunction::evaluate()
 
 		throw InvalidTypeException(getLineNumber(), getColumnNumber(), OBJ_INTEGER | OBJ_REAL, arg1->getType(), 1);
 	}
-	
+
 	if(id == SPF_ISEMPTY)
 	{
 		return new Logical(arg1->getType() == OBJ_EMPTY);
@@ -341,7 +341,6 @@ Object* SpecialFunction::evaluate()
 		if(arg1->getType() == OBJ_INTEGER)
 		{
 			Integer* cast = static_cast<Integer*>(arg1.get());
-			double res = asin((double) cast->getValue());
 			if(errno == EDOM)
 				throw new Excep(getLineNumber(), getColumnNumber(), "Invalid value passed to special function!");
 			return new Real(exp((double) cast->getValue()));
@@ -350,7 +349,6 @@ Object* SpecialFunction::evaluate()
 		if(arg1->getType() == OBJ_REAL)
 		{
 			Real* cast = static_cast<Real*>(arg1.get());
-			double res = asin(cast->getValue());
 			if(errno == EDOM)
 				throw new Excep(getLineNumber(), getColumnNumber(), "Invalid value passed to special function!");
 			return new Real(exp(cast->getValue()));
@@ -364,7 +362,6 @@ Object* SpecialFunction::evaluate()
 		if(arg1->getType() == OBJ_INTEGER)
 		{
 			Integer* cast = static_cast<Integer*>(arg1.get());
-			double res = atan((double) cast->getValue());
 			if(errno == EDOM)
 				throw new Excep(getLineNumber(), getColumnNumber(), "Invalid value passed to special function!");
 			return new Real(exp((double) cast->getValue()));
@@ -373,7 +370,6 @@ Object* SpecialFunction::evaluate()
 		if(arg1->getType() == OBJ_REAL)
 		{
 			Real* cast = static_cast<Real*>(arg1.get());
-			double res = atan(cast->getValue());
 			if(errno == EDOM)
 				throw new Excep(getLineNumber(), getColumnNumber(), "Invalid value passed to special function!");
 			return new Real(exp(cast->getValue()));

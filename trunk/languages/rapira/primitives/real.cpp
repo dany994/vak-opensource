@@ -64,7 +64,7 @@ void Real::setValue(std::string pValue)
 {
 	int index = pValue.find('e');
 
-	if(index == std::string::npos)
+	if(index == (int) std::string::npos)
 		std::istringstream(pValue) >> value;
 	else
 	{

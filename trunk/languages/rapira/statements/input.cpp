@@ -52,7 +52,7 @@ void Input::setText(bool pGetText)
 /*** Execute this node ***/
 Outcome Input::execute()
 {
-	for(int i = 0; i < exprs.size(); i++)
+	for(int i = 0; i < (int) exprs.size(); i++)
 	{
 		if(exprs.at(i)->getType() != OP_VARIABLE)
 			throw Excep(getLineNumber(), getColumnNumber(), "Expected variable name to input statement!");
@@ -122,7 +122,7 @@ bool Input::isReal(std::string text)
 	// Store the index of the e
 	int eIndex = chars.find('e', 0);
 
-	if(eIndex == std::string::npos)
+	if(eIndex == (int) std::string::npos)
 		return isDecimal(chars);
 
 	return (isDecimal(chars.substr(0, eIndex)) || isInteger(chars.substr(0, eIndex))) && isInteger(chars.substr(eIndex + 1, chars.length()));

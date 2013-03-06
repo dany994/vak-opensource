@@ -40,13 +40,13 @@ class Outcome
 
 		/*** Constructor ***/
 		Outcome(unsigned char pStatus);
-		
+
 		/*** Constructor ***
 		Outcome(const Outcome& cop)
 		{
 			setStatus(cop.status);
 			setObject(cop.obj);
-		}
+		}*/
 
 		/*** Set the status of this outcome ***/
 		void setStatus(unsigned char pStatus);

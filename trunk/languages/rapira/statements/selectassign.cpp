@@ -79,7 +79,7 @@ Outcome SelectAssign::execute()
 		Text* cast1 = static_cast<Text*>(obj1.get());
 		Text* cast2 = static_cast<Text*>(obj2.get());
 
-		if(numIndex > cast1->getLength())
+		if(numIndex > (int) cast1->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), numIndex);
 
 		if(cast2->getLength() != 1)
@@ -96,7 +96,7 @@ Outcome SelectAssign::execute()
 	{
 		Sequence* cast = static_cast<Sequence*>(obj1.get());
 
-		if(numIndex > cast->getLength())
+		if(numIndex > (int) cast->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), numIndex);
 
 		std::auto_ptr<Sequence> seqClone(cast->clone());
