@@ -14,6 +14,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <getopt.h>
 
@@ -21,6 +22,7 @@ char *progname;
 
 extern char *optarg;
 extern int optind;
+extern float strtof (const char *nptr, char **endptr);
 
 void usage ()
 {
@@ -31,6 +33,13 @@ void usage ()
     fprintf (stderr, "    %s [-d] -h hex-number\n", progname);
     fprintf (stderr, "or:\n");
     fprintf (stderr, "    %s [-d] -t testfloat-hex-number\n", progname);
+    fprintf (stderr, "\nExamples:\n");
+    fprintf (stderr, "    %s 1.2\n", progname);
+    fprintf (stderr, "    %s -d 3.14\n", progname);
+    fprintf (stderr, "    %s -h 55555555\n", progname);
+    fprintf (stderr, "    %s -d -h 5555555555555555\n", progname);
+    fprintf (stderr, "    %s -t 012.345678\n", progname);
+    fprintf (stderr, "    %s -d -t 123.456789abcdef0\n", progname);
     exit (-1);
 }
 
@@ -51,7 +60,7 @@ float get_testfloat (const char *str)
     return (exp & 0x800) ? -f : f;
 }
 
-float get_testfloat_double (const char *str)
+double get_testfloat_double (const char *str)
 {
     char *endptr;
     unsigned exp;
@@ -77,7 +86,12 @@ int main (int argc, char **argv)
     double d;
     unsigned short *sp;
 
-    progname = *argv;
+    progname = strrchr (*argv, '/');
+    if (progname)
+        progname++;
+    else
+        progname = *argv;
+
     for (;;) {
         switch (getopt (argc, argv, "hdt")) {
         case EOF:

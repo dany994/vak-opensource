@@ -1,6 +1,6 @@
 PROG            = float
-CFLAGS		= -O -Wall
-LDFLAGS		=
+CFLAGS		= -m32 -O -Wall
+LDFLAGS		= -m32
 #CC		= i586-mingw32msvc-gcc
 
 all:		$(PROG)
