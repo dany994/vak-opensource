@@ -92,9 +92,9 @@ Outcome SliceAssign::execute()
 		Text* cast1 = static_cast<Text*>(evalTarget.get());
 		Text* cast2 = static_cast<Text*>(evalExpr.get());
 
-		if(numIndex1 > cast1->getLength() || numIndex1 > numIndex2)
+		if(numIndex1 > (int) cast1->getLength() || numIndex1 > numIndex2)
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), numIndex1);
-		if(numIndex2 > cast1->getLength())
+		if(numIndex2 > (int) cast1->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), numIndex2);
 
 		std::string modified = "";
@@ -113,13 +113,13 @@ Outcome SliceAssign::execute()
 		Sequence* cast1 = static_cast<Sequence*>(evalTarget.get());
 		Sequence* cast2 = static_cast<Sequence*>(evalExpr.get());
 
-		if(numIndex1 > cast1->getLength() || numIndex1 > numIndex2)
+		if(numIndex1 > (int) cast1->getLength() || numIndex1 > numIndex2)
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), numIndex1);
-		if(numIndex2 > cast1->getLength())
+		if(numIndex2 > (int) cast1->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), numIndex2);
 
 		Sequence* seqResult = new Sequence();
-		for(unsigned int i = 0; i < numIndex1 - 1; i++)
+		for(unsigned int i = 0; i < (unsigned) numIndex1 - 1; i++)
 			seqResult->pushObject(cast1->getObject(i)->clone());
 		for(unsigned int j = 0; j < cast2->getLength(); j++)
 			seqResult->pushObject(cast2->getObject(j)->clone());

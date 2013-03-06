@@ -114,7 +114,7 @@ Object* Slice::evaluate()
 
 		if(index1 < 1)
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), index1, 1);
-		if(index2 > cast1->getLength())
+		if(index2 > (int) cast1->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), index2, 2);
 
 		if(index1 > index2)
@@ -135,14 +135,14 @@ Object* Slice::evaluate()
 
 		if(index1 < 1)
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), index1, 1);
-		if(index2 > cast1->getLength())
+		if(index2 > (int) cast1->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), index2, 2);
 
 		Sequence* seqResult = new Sequence();
 
 		if(index1 <= index2)
 		{
-			for(unsigned int i = index1 - 1; i < index2; i++)
+			for(unsigned int i = index1 - 1; i < (unsigned) index2; i++)
 				seqResult->pushObject(cast1->getObject(i)->clone());
 		}
 

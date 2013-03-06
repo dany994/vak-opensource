@@ -21,6 +21,8 @@
 
 #include <vector>
 #include <cmath>
+#include <errno.h>
+#include <stdlib.h>
 #include "../object.h"
 #include "variable.h"
 #include "sequence.h"

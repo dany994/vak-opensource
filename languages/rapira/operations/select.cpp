@@ -81,7 +81,7 @@ Object* Select::evaluate()
 		Text* cast1	= static_cast<Text*>(obj1.get());
 		Integer* cast2	= static_cast<Integer*>(obj2.get());
 
-		if(cast2->getValue() < 1 || cast2->getValue() > cast1->getLength())
+		if(cast2->getValue() < 1 || cast2->getValue() > (int) cast1->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), cast2->getValue(), 2);
 
 		return cast1->getChar(cast2->getValue() - 1);
@@ -92,7 +92,7 @@ Object* Select::evaluate()
 		Sequence* cast1	= static_cast<Sequence*>(obj1.get());
 		Integer* cast2	= static_cast<Integer*>(obj2.get());
 
-		if(cast2->getValue() < 1 || cast2->getValue() > cast1->getLength())
+		if(cast2->getValue() < 1 || cast2->getValue() > (int) cast1->getLength())
 			throw InvalidIndexException(getLineNumber(), getColumnNumber(), cast2->getValue(), 2);
 
 		return cast1->getObject(cast2->getValue() - 1)->clone();
