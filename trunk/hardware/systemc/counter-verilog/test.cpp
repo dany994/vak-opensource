@@ -33,11 +33,11 @@ int sc_main (int argc, char* argv[])
     sc_start(100, SC_NS);
 
     reset = 1;                  // Assert the reset
-    cout << "(" << sc_time_stamp() <<") Asserting reset\n";
+    cout << "(" << sc_time_stamp() <<") Asserting Reset\n";
     sc_start(200, SC_NS);
 
     reset = 0;                  // De-assert the reset
-    cout << "(" << sc_time_stamp() <<") De-Asserting reset\n";
+    cout << "(" << sc_time_stamp() <<") De-Asserting Reset\n";
     sc_start(100, SC_NS);
 
     enable = 1;                 // Assert enable
