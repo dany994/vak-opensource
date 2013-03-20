@@ -36,7 +36,7 @@ int sc_main (int argc, char* argv[])
         sc_start(10, SC_NS);
     }
     reset = 1;    // Assert the reset
-    cout << "(" << sc_time_stamp() <<") Asserting reset\n";
+    cout << "(" << sc_time_stamp() <<") Asserting Reset\n";
     for (i=0;i<10;i++) {
         clock = 0;
         sc_start(10, SC_NS);
@@ -44,7 +44,7 @@ int sc_main (int argc, char* argv[])
         sc_start(10, SC_NS);
     }
     reset = 0;    // De-assert the reset
-    cout << "(" << sc_time_stamp() <<") De-Asserting reset\n";
+    cout << "(" << sc_time_stamp() <<") De-Asserting Reset\n";
     for (i=0;i<5;i++) {
         clock = 0;
         sc_start(10, SC_NS);
