@@ -100,6 +100,7 @@ void decode (char *filename)
 		case 0253: fputs ("┬", stdout); break;	/* Т верхнее */
 		case 0241: fputs ("┴", stdout); break;	/* Т нижнее */
 		case 0256: fputs ("┼", stdout); break;	/* Перекрестие */
+		case 0202: fputs ("*", stdout); break;	/* Перекрестие */
 
 		case 0207: fputs ("━", stdout); break;	/* Горизонтальная линия */
 		case 0217: fputs ("┃", stdout); break;	/* Вертикальная линия */
