@@ -22,8 +22,8 @@ xg.s: xg1 xg.int
 	./xg1 < xg.int
 	mv ASM xg.s
 
-xg.int: st1 cg1 iclib.i blib.i xg.b
-	./st1 < xg.b
+xg.int: st1 cg1 iclib.i blib.i xg.bcpl
+	./st1 < xg.bcpl
 	./cg1 < OCODE
 	cat iclib.i blib.i INTCODE >xg.int
 
@@ -40,8 +40,8 @@ cg.s: xg1 cg.int
 	./xg1 < cg.int
 	mv ASM cg.s
 
-cg.int: st1 cg1 iclib.i blib.i cg.b
-	./st1 < cg.b
+cg.int: st1 cg1 iclib.i blib.i cg.bcpl
+	./st1 < cg.bcpl
 	./cg1 < OCODE
 	cat iclib.i blib.i INTCODE >cg.int
 
@@ -58,11 +58,11 @@ st.s: xg1 st.int
 	./xg1 < st.int
 	mv ASM st.s
 
-st.int: st1 cg1 iclib.i blib.i syn.b trn.b
-	./st1 < syn.b
+st.int: st1 cg1 iclib.i blib.i syn.bcpl trn.bcpl
+	./st1 < syn.bcpl
 	./cg1 < OCODE
 	cat iclib.i blib.i INTCODE >st.int
-	./st1 < trn.b
+	./st1 < trn.bcpl
 	./cg1 < OCODE
 	cat INTCODE >>st.int
 
@@ -79,8 +79,8 @@ xg1.s: xg0 xg1.int
 	./xg0 < xg1.int
 	mv ASM xg1.s
 
-xg1.int: st0 cg0 iclib.i blib.i xg.b
-	./st0 < xg.b
+xg1.int: st0 cg0 iclib.i blib.i xg.bcpl
+	./st0 < xg.bcpl
 	./cg0 < OCODE
 	cat iclib.i blib.i INTCODE >xg1.int
 
@@ -97,8 +97,8 @@ cg1.s: xg0 cg1.int
 	./xg0 < cg1.int
 	mv ASM cg1.s
 
-cg1.int: st0 cg0 iclib.i blib.i cg.b
-	./st0 < cg.b
+cg1.int: st0 cg0 iclib.i blib.i cg.bcpl
+	./st0 < cg.bcpl
 	./cg0 < OCODE
 	cat iclib.i blib.i INTCODE >cg1.int
 
@@ -115,11 +115,11 @@ st1.s: xg0 st1.int
 	./xg0 < st1.int
 	mv ASM st1.s
 
-st1.int: st0 cg0 iclib.i blib.i syn.b trn.b
-	./st0 < syn.b
+st1.int: st0 cg0 iclib.i blib.i syn.bcpl trn.bcpl
+	./st0 < syn.bcpl
 	./cg0 < OCODE
 	cat iclib.i blib.i INTCODE >st1.int
-	./st0 < trn.b
+	./st0 < trn.bcpl
 	./cg0 < OCODE
 	cat INTCODE >>st1.int
 
@@ -180,8 +180,8 @@ su.o: su.s
 xg0.int: iclib.i blib.i xg.i
 	cat iclib.i blib.i xg.i >xg0.int
 
-xg.i: icint st0.int cg0.int LIBHDR xg.b
-	./icint st0.int < xg.b
+xg.i: icint st0.int cg0.int LIBHDR xg.bcpl
+	./icint st0.int < xg.bcpl
 	./icint cg0.int < OCODE
 	mv INTCODE xg.i
 
@@ -209,8 +209,8 @@ icint.o: icint.c
 #
 # Hello, intcode
 #
-hello: icint st0.int cg0.int LIBHDR hello.b iclib.i blib.i xg0.int clib.o
-	./icint st0.int < hello.b
+hello: icint st0.int cg0.int LIBHDR hello.bcpl iclib.i blib.i xg0.int clib.o
+	./icint st0.int < hello.bcpl
 	./icint cg0.int < OCODE
 	cat iclib.i blib.i INTCODE > hello.int
 	./icint hello.int
