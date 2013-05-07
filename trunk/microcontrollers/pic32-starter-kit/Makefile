@@ -1,4 +1,5 @@
 P               = /usr/local/pic32-tools/bin/pic32-
+#P               = /mips/arch/overflow/codesourcery/mips-sde-elf/lite/release/2012.03-64/Linux/bin/mips-sde-elf-
 CC              = $(P)gcc -mips32r2 -g -nostdlib
 GDB             = mipsel-elf32-gdb
 OBJCOPY         = $(P)objcopy
