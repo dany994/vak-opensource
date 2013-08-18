@@ -120,11 +120,30 @@ void close_port (int fd)
     // Restore the port mode.
     tcsetattr (fd, TCSANOW, &oldtio);
     close (fd);
+
+    // Radio needs a timeout to reset to a normal state.
+    usleep (2000000);
 }
 
 int read_with_timeout (int fd, char *data, int len)
 {
-    // TODO: use timeouts.
+    fd_set rset, wset, xset;
+
+    // Initialize file descriptor sets
+    FD_ZERO (&rset);
+    FD_ZERO (&wset);
+    FD_ZERO (&xset);
+    FD_SET (fd, &rset);
+
+    // Set timeout to 100 msec
+    struct timeval timo;
+    timo.tv_sec = 0;
+    timo.tv_usec = 200000;
+
+    // Wait for input to become ready or until the time out.
+    if (select (fd + 1, &rset, &wset, &xset, &timo) != 1)
+        return 0;
+
     return read (fd, data, len);
 }
 
@@ -133,14 +152,15 @@ int try_magic (int fd, const char *magic)
     char reply[8];
 
     // Send magic.
-    printf ("Sending magic: ");
-    print_hex (magic, strlen(magic));
-    printf ("\n");
+    //printf ("Sending magic: ");
+    //print_hex (magic, strlen(magic));
+    //printf ("\n");
+    tcflush (fd, TCIFLUSH);
     write (fd, magic, strlen(magic));
 
     // Check response.
     if (read_with_timeout (fd, reply, 1) != 1) {
-        printf ("Radio did not respond.\n");
+        //printf ("Radio did not respond.\n");
         return 0;
     }
     if (reply[0] != 0x06) {
@@ -178,14 +198,20 @@ void identify (int fd)
 {
     static const char *UV5R_MODEL_ORIG = "\x50\xBB\xFF\x01\x25\x98\x4D";
     static const char *UV5R_MODEL_291 = "\x50\xBB\xFF\x20\x12\x07\x25";
+    int retry;
 
-    if (try_magic (fd, UV5R_MODEL_291)) {
-        printf ("UV-5R firmware BFB291 detected.\n");
-        return;
-    }
-    if (try_magic (fd, UV5R_MODEL_ORIG)) {
-        printf ("Original UV-5R detected.\n");
-        return;
+    for (retry=0; retry<10; retry++) {
+        if (try_magic (fd, UV5R_MODEL_291)) {
+            printf ("UV-5R firmware BFB291 detected.\n");
+            return;
+        }
+        usleep (500000);
+        if (try_magic (fd, UV5R_MODEL_ORIG)) {
+            printf ("Original UV-5R detected.\n");
+            return;
+        }
+        printf ("Retry #%d...\n", retry+1);
+        usleep (500000);
     }
     printf ("Device not detected.\n");
     exit (-1);
