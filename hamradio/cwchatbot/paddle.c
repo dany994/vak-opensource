@@ -108,8 +108,8 @@ void paddle_poll (int *left_key, int *right_key)
             reply[0], reply[1], reply[2], reply[3]);
 
     /* Get key state. */
-    *left_key  = ! (reply[3] & MASK_RXD);
-    *right_key = ! (reply[3] & MASK_CTS);
+    *right_key = ! (reply[3] & MASK_RXD);
+    *left_key  = ! (reply[3] & MASK_CTS);
 }
 
 void paddle_close (void)
