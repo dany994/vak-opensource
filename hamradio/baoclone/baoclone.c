@@ -33,6 +33,8 @@ struct termios oldtio, newtio;  // Mode of serial port
 
 unsigned char ident [8];        // Radio: identifier
 unsigned char mem [0x2000];     // Radio: memory contents
+unsigned char image_ident [8];  // Image file: identifier
+int progress;                   // Read/write progress counter
 
 extern char *optarg;
 extern int optind;
@@ -115,6 +117,8 @@ int open_port (char *portname)
 //
 void close_port (int fd)
 {
+    printf ("Close device.\n");
+
     // Restore the port mode.
     tcsetattr (fd, TCSANOW, &oldtio);
     close (fd);
@@ -196,9 +200,11 @@ int try_magic (int fd, const unsigned char *magic)
         printf ("Empty identifier.\n");
         return 0;
     }
-    printf ("Identifier: ");
-    print_hex (ident, 8);
-    printf ("\n");
+    if (verbose) {
+        printf ("Identifier: ");
+        print_hex (ident, 8);
+        printf ("\n");
+    }
 
     // Enter clone mode.
     write (fd, "\x06", 1);
@@ -222,12 +228,12 @@ void identify (int fd)
 
     for (retry=0; retry<10; retry++) {
         if (try_magic (fd, UV5R_MODEL_291)) {
-            printf ("UV-5R firmware BFB291 detected.\n");
+            printf ("Detected Baofeng UV-5R, firmware BFB291.\n");
             return;
         }
         usleep (500000);
         if (try_magic (fd, UV5R_MODEL_ORIG)) {
-            printf ("Original UV-5R detected.\n");
+            printf ("Detected Baofeng UV-5R, original firmware.\n");
             return;
         }
         printf ("Retry #%d...\n", retry+1);
@@ -286,12 +292,22 @@ void read_block (int fd, int start, unsigned char *data, int nbytes)
         printf ("0x%04x: ", start);
         print_hex (data, nbytes);
         printf ("\n");
+    } else {
+        ++progress;
+        if (progress % 2 == 0) {
+            printf ("#");
+            fflush (stdout);
+        }
     }
 }
 
 void read_memory (int fd)
 {
     int addr;
+
+    progress = 0;
+    if (! verbose)
+        printf ("Read device: ");
 
     // Main block.
     for (addr=0; addr<0x1800; addr+=0x40)
@@ -300,6 +316,50 @@ void read_memory (int fd)
     // Auxiliary block starts at 0x1EC0.
     for (addr=0x1EC0; addr<0x2000; addr+=0x40)
         read_block (fd, addr, &mem[addr], 0x40);
+
+    if (! verbose)
+        printf (" done.\n");
+}
+
+void load_image (char *filename)
+{
+    FILE *img;
+
+    printf ("Read image from file '%s'.\n", filename);
+    img = fopen (filename, "r");
+    if (! img) {
+        perror (filename);
+        exit (-1);
+    }
+    if (fread (image_ident, 1, 8, img) != 8) {
+        fprintf (stderr, "Error reading image header.\n");
+        exit (-1);
+    }
+    if (fread (&mem[0], 1, 0x1800, img) != 0x1800) {
+        fprintf (stderr, "Error reading image data.\n");
+        exit (-1);
+    }
+    if (fread (&mem[0x1EC0], 1, 0x2000-0x1EC0, img) != 0x2000-0x1EC0) {
+        fprintf (stderr, "Error reading image footer.\n");
+        exit (-1);
+    }
+    fclose (img);
+}
+
+void save_image (char *filename)
+{
+    FILE *img;
+
+    printf ("Write image to file '%s'.\n", filename);
+    img = fopen (filename, "w");
+    if (! img) {
+        perror (filename);
+        exit (-1);
+    }
+    fwrite (ident, 1, 8, img);
+    fwrite (&mem[0], 1, 0x1800, img);
+    fwrite (&mem[0x1EC0], 1, 0x2000-0x1EC0, img);
+    fclose (img);
 }
 
 int main (int argc, char **argv)
@@ -330,6 +390,7 @@ int main (int argc, char **argv)
     read_memory (fd);
 
     // TODO
+    save_image("output.img");
 
     close_port (fd);
     return (0);
