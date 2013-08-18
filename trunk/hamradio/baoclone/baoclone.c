@@ -18,6 +18,7 @@
 #include <getopt.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <sys/stat.h>
 
 const char version[] = "1.0";
 const char copyright[] = "Copyright (C) 2013 Serge Vakulenko";
@@ -27,7 +28,6 @@ const unsigned char UV5R_MODEL_291[] = "\x50\xBB\xFF\x20\x12\x07\x25";
 
 char *progname;
 int verbose;
-char *portname;                 // Device name of serial port
 
 struct termios oldtio, newtio;  // Mode of serial port
 
@@ -42,10 +42,30 @@ extern int optind;
 void usage ()
 {
     fprintf (stderr, "Baofeng UV-5R Clone Utility, Version %s, %s\n", version, copyright);
-    fprintf (stderr, "Usage:\n\t%s [-vtd] file\n", progname);
+    fprintf (stderr, "Usage:\n");
+    fprintf (stderr, "    %s [option]...\n", progname);
     fprintf (stderr, "Options:\n");
-    fprintf (stderr, "  -v          verbose mode\n");
+    fprintf (stderr, "    -d device file.img  dump device image to file\n");
+    fprintf (stderr, "    -r device file.img  restore device image from file\n");
+    fprintf (stderr, "    -c device file.cfg  configure device from text file\n");
+    fprintf (stderr, "    -s device           show device configuration\n");
+    fprintf (stderr, "    -s file.img         show configuration from image file\n");
+    fprintf (stderr, "    -v                  verbose mode\n");
     exit (-1);
+}
+
+//
+// Check for a regular file.
+//
+int is_file (char *filename)
+{
+    struct stat st;
+
+    if (stat (filename, &st) < 0) {
+        // File not exist: treat it as a regular file.
+        return 1;
+    }
+    return (st.st_mode & S_IFMT) == S_IFREG;
 }
 
 //
@@ -321,6 +341,12 @@ void read_memory (int fd)
         printf (" done.\n");
 }
 
+void write_memory (int fd)
+{
+    // TODO
+    printf ("Write to device: NOT IMPLEMENTED YET.\n");
+}
+
 void load_image (char *filename)
 {
     FILE *img;
@@ -362,36 +388,99 @@ void save_image (char *filename)
     fclose (img);
 }
 
+void read_config (char *filename)
+{
+    // TODO
+    printf ("Read configuration from file '%s'.\n", filename);
+}
+
+void print_config ()
+{
+    // TODO
+    printf ("Print configuration: NOT IMPLEMENTED YET.\n");
+}
+
 int main (int argc, char **argv)
 {
+    int dump_flag = 0, restore_flag = 0;
+    int config_flag = 0, show_flag = 0;
+
     progname = *argv;
     for (;;) {
-        switch (getopt (argc, argv, "v")) {
-        case EOF:
-            break;
-        case 'v':
-            ++verbose;
-            continue;
+        switch (getopt (argc, argv, "vdrcs")) {
+        case 'v': ++verbose;      continue;
+        case 'd': ++dump_flag;    continue;
+        case 'r': ++restore_flag; continue;
+        case 'c': ++config_flag;  continue;
+        case 's': ++show_flag;    continue;
         default:
             usage ();
+        case EOF:
+            break;
         }
         break;
     }
     argc -= optind;
     argv += optind;
-    if (argc != 1)
-        usage ();
+    if (dump_flag + restore_flag + config_flag + show_flag == 0)
+        usage();
+    if (dump_flag + restore_flag + config_flag + show_flag > 1) {
+        printf ("Only one of -d -r -c -s options is allowed.\n");
+        usage();
+    }
 
-    // Open serial port.
-    char *portname = argv[0];
-    int fd = open_port (portname);
+    if (dump_flag) {
+        // Dump device to image file.
+        if (argc != 2)
+            usage();
 
-    identify (fd);
-    read_memory (fd);
+        int fd = open_port (argv[0]);
+        identify (fd);
+        read_memory (fd);
+        save_image (argv[1]);
+        close_port (fd);
 
-    // TODO
-    save_image("output.img");
+    } else if (restore_flag) {
+        // Restore image file to device.
+        if (argc != 2)
+            usage();
 
-    close_port (fd);
+        int fd = open_port (argv[0]);
+        identify (fd);
+        load_image (argv[1]);
+        write_memory (fd);
+        close_port (fd);
+
+    } else if (config_flag) {
+        // Update device from text config file.
+        if (argc != 2)
+            usage();
+
+        int fd = open_port (argv[0]);
+        identify (fd);
+        read_memory (fd);
+        save_image ("save.img");
+        read_config (argv[1]);
+        write_memory (fd);
+        close_port (fd);
+
+    } else if (show_flag) {
+        // Print device or image configuration in readable format.
+        if (argc != 1)
+            usage();
+
+        if (is_file (argv[0])) {
+            // Load image from file.
+            load_image (argv[1]);
+            memcpy (ident, image_ident, sizeof(ident));
+        } else {
+            // Use real device.
+            int fd = open_port (argv[0]);
+            identify (fd);
+            read_memory (fd);
+            close_port (fd);
+        }
+        print_config();
+    }
     return (0);
 }
