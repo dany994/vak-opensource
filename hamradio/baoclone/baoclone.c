@@ -510,7 +510,7 @@ typedef struct {
 
 void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
-    int *lowpower, int *wide, int *bcl, int *scan, int *pttid)
+    int *lowpower, int *wide, int *bcl, int *scan, int *pttid, int *scode)
 {
     memory_channel_t *ch = i + (memory_channel_t*) mem;
 
@@ -539,6 +539,7 @@ void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     *wide = ch->wide;
     *bcl = ch->bcl;
     *scan = ch->scan;
+    *scode = ch->scode;
     *pttid = ch->pttidbot | (ch->pttideot << 1);
 }
 
@@ -547,15 +548,15 @@ void print_config ()
     int i;
 
     // Print memory channels.
-    printf ("Chan  Name    Receive  TxOffset R-CTCS T-CTCS R-DCS T-DCS Power FM     Scan BCL PTTID\n");
+    printf ("Chan  Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan Scode BCL PTTID\n");
     for (i=0; i<128; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
-        int lowpower, wide, busy_channel_lockout, scan, pttid;
+        int lowpower, wide, busy_channel_lockout, scan, pttid, scode;
         char name[17];
 
         decode_channel (i, name, &rx_hz, &tx_hz, &rx_ctcs, &tx_ctcs,
             &rx_dcs, &tx_dcs, &lowpower, &wide, &busy_channel_lockout,
-            &scan, &pttid);
+            &scan, &pttid, &scode);
         if (rx_hz == 0) {
             // Channel is disabled
             return;
@@ -578,17 +579,25 @@ void print_config ()
 
         printf ("%4d  %-7s %8.4f %-8s", i, name,
             rx_hz / 1000000.0, offset);
-        if (rx_ctcs) printf ("  %5.1f", rx_ctcs / 10.0); else printf ("  -    ");
-        if (tx_ctcs) printf ("  %5.1f", tx_ctcs / 10.0); else printf ("  -    ");
-        if (rx_dcs > 0)      printf ("  D%03dN", rx_dcs);
-        else if (rx_dcs < 0) printf ("  D%03dI", -rx_dcs);
-        else                 printf ("  -    ");
-        if (tx_dcs > 0)      printf (" D%03dN", tx_dcs);
-        else if (tx_dcs < 0) printf (" D%03dI", -tx_dcs);
-        else                 printf (" -    ");
 
-        printf ("%-4s  %-6s %-4s %-3s %-4s\n", lowpower ? "Low" : "High",
-            wide ? "Wide" : "Narrow", scan ? "+" : "-",
+        if      (rx_ctcs)    printf (" %5.1f", rx_ctcs / 10.0);
+        else if (rx_dcs > 0) printf (" D%03dN", rx_dcs);
+        else if (rx_dcs < 0) printf (" D%03dI", -rx_dcs);
+        else                 printf ("    - ");
+
+        if      (tx_ctcs)    printf ("   %5.1f", tx_ctcs / 10.0);
+        else if (tx_dcs > 0) printf ("   D%03dN", tx_dcs);
+        else if (tx_dcs < 0) printf ("   D%03dI", -tx_dcs);
+        else                 printf ("      - ");
+
+        char sgroup [8];
+        if (scode == 0)
+            strcpy (sgroup, "-");
+        else
+            sprintf (sgroup, "%u", scode);
+
+        printf ("   %-4s  %-6s %-4s %-5s %-3s %-4s\n", lowpower ? "Low" : "High",
+            wide ? "Wide" : "Narrow", scan ? "+" : "-", sgroup,
             busy_channel_lockout ? "+" : "-", PTTID_NAME[pttid]);
     }
 
