@@ -40,6 +40,8 @@ const int DCS_CODES[] = {
     731, 732, 734, 743, 754,
 };
 
+const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
+
 char *progname;
 int verbose;
 
@@ -492,22 +494,23 @@ typedef struct {
     uint32_t    txfreq; // binary coded decimal, 8 digits
     uint16_t    rxtone;
     uint16_t    txtone;
-    uint8_t     _u1      : 4,
-                scode    : 4;
+    uint8_t     scode    : 4,
+                _u1      : 4;
     uint8_t     _u2;
-    uint8_t     _u3      : 7,
-                lowpower : 1;
-    uint8_t     _u4      : 1,
-                wide     : 1,
-                _u5      : 2,
-                bcl      : 1,
-                scan     : 1,
+    uint8_t     lowpower : 1,
+                _u3      : 7;
+    uint8_t     pttidbot : 1,
                 pttideot : 1,
-                pttidbot : 1;
+                scan     : 1,
+                bcl      : 1,
+                _u5      : 2,
+                wide     : 1,
+                _u4      : 1;
 } memory_channel_t;
 
 void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
-    int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs)
+    int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
+    int *lowpower, int *wide, int *bcl, int *scan, int *pttid)
 {
     memory_channel_t *ch = i + (memory_channel_t*) mem;
 
@@ -530,6 +533,13 @@ void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     // Decode squelch modes.
     decode_squelch (ch->rxtone, rx_ctcs, rx_dcs);
     decode_squelch (ch->txtone, tx_ctcs, tx_dcs);
+
+    // Other parameters.
+    *lowpower = ch->lowpower;
+    *wide = ch->wide;
+    *bcl = ch->bcl;
+    *scan = ch->scan;
+    *pttid = ch->pttidbot | (ch->pttideot << 1);
 }
 
 void print_config ()
@@ -537,13 +547,15 @@ void print_config ()
     int i;
 
     // Print memory channels.
-    printf ("Chan  Name    Receive  TxOffset R-CTCS T-CTCS R-DCS T-DCS\n");
+    printf ("Chan  Name    Receive  TxOffset R-CTCS T-CTCS R-DCS T-DCS Power FM     Scan BCL PTTID\n");
     for (i=0; i<128; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
+        int lowpower, wide, busy_channel_lockout, scan, pttid;
         char name[17];
 
         decode_channel (i, name, &rx_hz, &tx_hz, &rx_ctcs, &tx_ctcs,
-            &rx_dcs, &tx_dcs);
+            &rx_dcs, &tx_dcs, &lowpower, &wide, &busy_channel_lockout,
+            &scan, &pttid);
         if (rx_hz == 0) {
             // Channel is disabled
             return;
@@ -574,9 +586,10 @@ void print_config ()
         if (tx_dcs > 0)      printf (" D%03dN", tx_dcs);
         else if (tx_dcs < 0) printf (" D%03dI", -tx_dcs);
         else                 printf (" -    ");
-        printf ("\n");
 
-        // TODO: scode, lowpower, wide, bcl, scan, pttideot, pttidbot
+        printf ("%-4s  %-6s %-4s %-3s %-4s\n", lowpower ? "Low" : "High",
+            wide ? "Wide" : "Narrow", scan ? "+" : "-",
+            busy_channel_lockout ? "+" : "-", PTTID_NAME[pttid]);
     }
 
     // TODO: ani, settings, extra, wmchannel, vfoa, vfob,
