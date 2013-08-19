@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <getopt.h>
 #include <fcntl.h>
 #include <termios.h>
@@ -50,6 +51,7 @@ struct termios oldtio, newtio;  // Mode of serial port
 unsigned char ident [8];        // Radio: identifier
 unsigned char mem [0x2000];     // Radio: memory contents
 unsigned char image_ident [8];  // Image file: identifier
+int is_original;
 int progress;                   // Read/write progress counter
 
 extern char *optarg;
@@ -153,7 +155,7 @@ int open_port (char *portname)
 //
 void close_port (int fd)
 {
-    printf ("Close device.\n");
+    fprintf (stderr, "Close device.\n");
 
     // Restore the port mode.
     tcsetattr (fd, TCSANOW, &oldtio);
@@ -212,44 +214,53 @@ int try_magic (int fd, const unsigned char *magic)
 
     // Send magic.
     if (verbose) {
-        printf ("Sending magic: ");
+        printf ("# Sending magic: ");
         print_hex (magic, magic_len);
         printf ("\n");
     }
     tcflush (fd, TCIFLUSH);
-    write (fd, magic, magic_len);
+    if (write (fd, magic, magic_len) != magic_len) {
+        perror ("Serial port");
+        exit (-1);
+    }
 
     // Check response.
     if (read_with_timeout (fd, &reply, 1) != 1) {
         if (verbose)
-            printf ("Radio did not respond.\n");
+            fprintf (stderr, "Radio did not respond.\n");
         return 0;
     }
     if (reply != 0x06) {
-        printf ("Bad response: %02x\n", reply);
+        fprintf (stderr, "Bad response: %02x\n", reply);
         return 0;
     }
 
     // Query for identifier..
-    write (fd, "\x02", 1);
+    if (write (fd, "\x02", 1) != 1) {
+        perror ("Serial port");
+        exit (-1);
+    }
     if (read_with_timeout (fd, ident, 8) != 8) {
-        printf ("Empty identifier.\n");
+        fprintf (stderr, "Empty identifier.\n");
         return 0;
     }
     if (verbose) {
-        printf ("Identifier: ");
+        printf ("# Identifier: ");
         print_hex (ident, 8);
         printf ("\n");
     }
 
     // Enter clone mode.
-    write (fd, "\x06", 1);
+    if (write (fd, "\x06", 1) != 1) {
+        perror ("Serial port");
+        exit (-1);
+    }
     if (read_with_timeout (fd, &reply, 1) != 1) {
-        printf ("Radio refused to clone.\n");
+        fprintf (stderr, "Radio refused to clone.\n");
         return 0;
     }
     if (reply != 0x06) {
-        printf ("Radio refused to clone: %02x\n", reply);
+        fprintf (stderr, "Radio refused to clone: %02x\n", reply);
         return 0;
     }
     return 1;
@@ -260,7 +271,7 @@ void print_firmware_version()
     char buf[17], *version = buf, *p;
 
     // Copy the string, trim spaces.
-    strncpy (version, (char*)&mem[0x1EF0], 16);
+    strncpy (version, (char*)&mem[0x1EC0+0x30], 16);
     version [16] = 0;
     while (*version == ' ')
         version++;
@@ -268,9 +279,9 @@ void print_firmware_version()
     while (p > version && p[-1]==' ')
         *--p = 0;
 
-    printf ("Device: %.16s\n", &mem[0x1EE0]);
-    printf ("Serial number: %.16s\n", &mem[0x1ED0]);
-    printf ("Firmware: '%s'\n", version);
+    printf ("Device: %.16s\n", &mem[0x1EC0+0x20]);          // poweron message
+    printf ("Firmware: %s\n", version);                     // 3+poweron message
+    printf ("Serial number: %.16s\n", &mem[0x1EC0+0x10]);   // 6+poweron message
 }
 
 //
@@ -282,18 +293,18 @@ void identify (int fd)
 
     for (retry=0; retry<10; retry++) {
         if (try_magic (fd, UV5R_MODEL_291)) {
-            printf ("Detected Baofeng UV-5R.\n");
+            fprintf (stderr, "Detected Baofeng UV-5R.\n");
             return;
         }
         usleep (500000);
         if (try_magic (fd, UV5R_MODEL_ORIG)) {
-            printf ("Detected Baofeng UV-5R original.\n");
+            fprintf (stderr, "Detected Baofeng UV-5R original.\n");
             return;
         }
-        printf ("Retry #%d...\n", retry+1);
+        fprintf (stderr, "Retry #%d...\n", retry+1);
         usleep (500000);
     }
-    printf ("Device not detected.\n");
+    fprintf (stderr, "Device not detected.\n");
     exit (-1);
 }
 
@@ -311,16 +322,19 @@ void read_block (int fd, int start, unsigned char *data, int nbytes)
     cmd[1] = start >> 8;
     cmd[2] = start;
     cmd[3] = nbytes;
-    write (fd, cmd, 4);
+    if (write (fd, cmd, 4) != 4) {
+        perror ("Serial port");
+        exit (-1);
+    }
 
     // Read reply.
     if (read_with_timeout (fd, reply, 4) != 4) {
-        printf ("Radio refused to send block 0x%04x.\n", start);
+        fprintf (stderr, "Radio refused to send block 0x%04x.\n", start);
         exit(-1);
     }
     addr = reply[1] << 8 | reply[2];
     if (reply[0] != 'X' || addr != start || reply[3] != nbytes) {
-        printf ("Bad reply for block 0x%04x of %d bytes: %02x-%02x-%02x-%02x\n",
+        fprintf (stderr, "Bad reply for block 0x%04x of %d bytes: %02x-%02x-%02x-%02x\n",
             start, nbytes, reply[0], reply[1], reply[2], reply[3]);
         exit(-1);
     }
@@ -328,29 +342,32 @@ void read_block (int fd, int start, unsigned char *data, int nbytes)
     // Read data.
     len = read_with_timeout (fd, data, 0x40);
     if (len != nbytes) {
-        printf ("Reading block 0x%04x: got only %d bytes.\n", start, len);
+        fprintf (stderr, "Reading block 0x%04x: got only %d bytes.\n", start, len);
         exit(-1);
     }
 
     // Get acknowledge.
-    write (fd, "\x06", 1);
+    if (write (fd, "\x06", 1) != 1) {
+        perror ("Serial port");
+        exit (-1);
+    }
     if (read_with_timeout (fd, reply, 1) != 1) {
-        printf ("No acknowledge after block 0x%04x.\n", start);
+        fprintf (stderr, "No acknowledge after block 0x%04x.\n", start);
         exit(-1);
     }
     if (reply[0] != 0x06) {
-        printf ("Bad acknowledge after block 0x%04x: %02x\n", start, reply[0]);
+        fprintf (stderr, "Bad acknowledge after block 0x%04x: %02x\n", start, reply[0]);
         exit(-1);
     }
     if (verbose) {
-        printf ("0x%04x: ", start);
+        printf ("# 0x%04x: ", start);
         print_hex (data, nbytes);
         printf ("\n");
     } else {
         ++progress;
         if (progress % 2 == 0) {
-            printf ("#");
-            fflush (stdout);
+            fprintf (stderr, "#");
+            fflush (stderr);
         }
     }
 }
@@ -361,7 +378,7 @@ void read_device (int fd)
 
     progress = 0;
     if (! verbose)
-        printf ("Read device: ");
+        fprintf (stderr, "Read device: ");
 
     // Main block.
     for (addr=0; addr<0x1800; addr+=0x40)
@@ -372,13 +389,13 @@ void read_device (int fd)
         read_block (fd, addr, &mem[addr], 0x40);
 
     if (! verbose)
-        printf (" done.\n");
+        fprintf (stderr, " done.\n");
 }
 
 void write_device (int fd)
 {
     // TODO
-    printf ("Write to device: NOT IMPLEMENTED YET.\n");
+    fprintf (stderr, "Write to device: NOT IMPLEMENTED YET.\n");
 #if 0
     _ident_radio(radio)
 
@@ -417,7 +434,7 @@ void load_image (char *filename)
 {
     FILE *img;
 
-    printf ("Read image from file '%s'.\n", filename);
+    fprintf (stderr, "Read image from file '%s'.\n", filename);
     img = fopen (filename, "r");
     if (! img) {
         perror (filename);
@@ -442,7 +459,7 @@ void save_image (char *filename)
 {
     FILE *img;
 
-    printf ("Write image to file '%s'.\n", filename);
+    fprintf (stderr, "Write image to file '%s'.\n", filename);
     img = fopen (filename, "w");
     if (! img) {
         perror (filename);
@@ -457,7 +474,7 @@ void save_image (char *filename)
 void read_config (char *filename)
 {
     // TODO
-    printf ("Read configuration from file '%s'.\n", filename);
+    fprintf (stderr, "Read configuration from file '%s'.\n", filename);
 }
 
 int bcd_to_hz (uint32_t bcd)
@@ -543,11 +560,42 @@ void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     *pttid = ch->pttidbot | (ch->pttideot << 1);
 }
 
+typedef struct {
+    uint8_t     enable;
+    uint8_t     lower_msb;
+    uint8_t     lower_lsb;
+    uint8_t     upper_msb;
+    uint8_t     upper_lsb;
+} limits_t;
+
+void decode_limits (char band, int *enable, int *lower, int *upper)
+{
+    int offset;
+
+    // Offset for limits has changed since firmware version 291.
+    if (is_original)
+        offset = (band == 'V') ? 0x1EC0+0x10a : 0x1EC0+0x11a;
+    else
+        offset = (band == 'V') ? 0x1EC0+0x100 : 0x1EC0+0x105;
+
+    limits_t *limits = (limits_t*) (mem + offset);
+    *enable = limits->enable;
+    *lower = ((limits->lower_msb >> 4) & 15) * 1000 +
+             (limits->lower_msb        & 15) * 100 +
+             ((limits->lower_lsb >> 4) & 15) * 10 +
+             (limits->lower_lsb        & 15);
+    *upper = ((limits->upper_msb >> 4) & 15) * 1000 +
+             (limits->upper_msb        & 15) * 100 +
+             ((limits->upper_lsb >> 4) & 15) * 10 +
+             (limits->upper_lsb        & 15);
+}
+
 void print_config ()
 {
     int i;
 
     // Print memory channels.
+    printf ("\n");
     printf ("Chan  Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan Scode BCL PTTID\n");
     for (i=0; i<128; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
@@ -559,7 +607,7 @@ void print_config ()
             &scan, &pttid, &scode);
         if (rx_hz == 0) {
             // Channel is disabled
-            return;
+            continue;
         }
         char offset[16];
         if (tx_hz == rx_hz) {
@@ -601,8 +649,18 @@ void print_config ()
             busy_channel_lockout ? "+" : "-", PTTID_NAME[pttid]);
     }
 
-    // TODO: ani, settings, extra, wmchannel, vfoa, vfob,
-    // poweron_msg, sixpoweron_msg, limits
+    // Print band limits.
+    int vhf_enable, vhf_lower, vhf_upper, uhf_enable, uhf_lower, uhf_upper;
+    decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
+    decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
+    printf ("\n");
+    printf ("Band Lower Upper Enable\n");
+    printf (" VHF %4d  %4d  %s\n", vhf_lower, vhf_upper,
+        vhf_enable ? "+" : "-");
+    printf (" UHF %4d  %4d  %s\n", uhf_lower, uhf_upper,
+        uhf_enable ? "+" : "-");
+
+    // TODO: ani, settings, extra, wmchannel, vfoa, vfob, limits
 }
 
 int main (int argc, char **argv)
@@ -630,7 +688,7 @@ int main (int argc, char **argv)
     if (dump_flag + restore_flag + config_flag + show_flag == 0)
         usage();
     if (dump_flag + restore_flag + config_flag + show_flag > 1) {
-        printf ("Only one of -d -r -c -s options is allowed.\n");
+        fprintf (stderr, "Only one of -d -r -c -s options is allowed.\n");
         usage();
     }
 
