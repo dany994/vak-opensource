@@ -1,5 +1,5 @@
 PROG            = baoclone
-CFLAGS		= -m32 -O -Wall
+CFLAGS		= -m32 -O -Wall -Werror
 LDFLAGS		= -m32
 #CC		= i586-mingw32msvc-gcc
 
