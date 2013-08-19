@@ -239,6 +239,22 @@ int try_magic (int fd, const unsigned char *magic)
     return 1;
 }
 
+void print_firmware_version()
+{
+    char buf[17], *version = buf, *p;
+
+    // Copy the string, trim spaces.
+    strncpy (version, (char*)&mem[0x1EF0], 16);
+    version [16] = 0;
+    while (*version == ' ')
+        version++;
+    p = version + strlen(version);
+    while (p > version && p[-1]==' ')
+        *--p = 0;
+
+    printf ("Firmware: '%s'.\n", version);
+}
+
 //
 // Identify the type of device connected.
 //
@@ -248,12 +264,12 @@ void identify (int fd)
 
     for (retry=0; retry<10; retry++) {
         if (try_magic (fd, UV5R_MODEL_291)) {
-            printf ("Detected Baofeng UV-5R, firmware BFB291.\n");
+            printf ("Detected Baofeng UV-5R.\n");
             return;
         }
         usleep (500000);
         if (try_magic (fd, UV5R_MODEL_ORIG)) {
-            printf ("Detected Baofeng UV-5R, original firmware.\n");
+            printf ("Detected Baofeng UV-5R original.\n");
             return;
         }
         printf ("Retry #%d...\n", retry+1);
@@ -321,7 +337,7 @@ void read_block (int fd, int start, unsigned char *data, int nbytes)
     }
 }
 
-void read_memory (int fd)
+void read_device (int fd)
 {
     int addr;
 
@@ -341,7 +357,7 @@ void read_memory (int fd)
         printf (" done.\n");
 }
 
-void write_memory (int fd)
+void write_device (int fd)
 {
     // TODO
     printf ("Write to device: NOT IMPLEMENTED YET.\n");
@@ -436,7 +452,8 @@ int main (int argc, char **argv)
 
         int fd = open_port (argv[0]);
         identify (fd);
-        read_memory (fd);
+        read_device (fd);
+        print_firmware_version();
         save_image (argv[1]);
         close_port (fd);
 
@@ -448,7 +465,8 @@ int main (int argc, char **argv)
         int fd = open_port (argv[0]);
         identify (fd);
         load_image (argv[1]);
-        write_memory (fd);
+        print_firmware_version();
+        write_device (fd);
         close_port (fd);
 
     } else if (config_flag) {
@@ -458,10 +476,11 @@ int main (int argc, char **argv)
 
         int fd = open_port (argv[0]);
         identify (fd);
-        read_memory (fd);
+        read_device (fd);
+        print_firmware_version();
         save_image ("save.img");
         read_config (argv[1]);
-        write_memory (fd);
+        write_device (fd);
         close_port (fd);
 
     } else if (show_flag) {
@@ -471,13 +490,15 @@ int main (int argc, char **argv)
 
         if (is_file (argv[0])) {
             // Load image from file.
-            load_image (argv[1]);
+            load_image (argv[0]);
+            print_firmware_version();
             memcpy (ident, image_ident, sizeof(ident));
         } else {
             // Use real device.
             int fd = open_port (argv[0]);
             identify (fd);
-            read_memory (fd);
+            read_device (fd);
+            print_firmware_version();
             close_port (fd);
         }
         print_config();
