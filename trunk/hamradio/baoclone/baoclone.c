@@ -18,6 +18,7 @@
 #include <getopt.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <stdint.h>
 #include <sys/stat.h>
 
 const char version[] = "1.0";
@@ -25,6 +26,19 @@ const char copyright[] = "Copyright (C) 2013 Serge Vakulenko";
 
 const unsigned char UV5R_MODEL_ORIG[] = "\x50\xBB\xFF\x01\x25\x98\x4D";
 const unsigned char UV5R_MODEL_291[] = "\x50\xBB\xFF\x20\x12\x07\x25";
+
+const int DCS_CODES[] = {
+     23,  25,  26,  31,  32,  36,  43,  47,  51,  53,  54,
+     65,  71,  72,  73,  74, 114, 115, 116, 122, 125, 131,
+    132, 134, 143, 145, 152, 155, 156, 162, 165, 172, 174,
+    205, 212, 223, 225, 226, 243, 244, 245, 246, 251, 252,
+    255, 261, 263, 265, 266, 271, 274, 306, 311, 315, 325,
+    331, 332, 343, 346, 351, 356, 364, 365, 371, 411, 412,
+    413, 423, 431, 432, 445, 446, 452, 454, 455, 462, 464,
+    465, 466, 503, 506, 516, 523, 526, 532, 546, 565, 606,
+    612, 624, 627, 631, 632, 654, 662, 664, 703, 712, 723,
+    731, 732, 734, 743, 754,
+};
 
 char *progname;
 int verbose;
@@ -252,7 +266,9 @@ void print_firmware_version()
     while (p > version && p[-1]==' ')
         *--p = 0;
 
-    printf ("Firmware: '%s'.\n", version);
+    printf ("Device: %.16s\n", &mem[0x1EE0]);
+    printf ("Serial number: %.16s\n", &mem[0x1ED0]);
+    printf ("Firmware: '%s'\n", version);
 }
 
 //
@@ -361,6 +377,38 @@ void write_device (int fd)
 {
     // TODO
     printf ("Write to device: NOT IMPLEMENTED YET.\n");
+#if 0
+    _ident_radio(radio)
+
+    image_version = _firmware_version_from_image(radio)
+    radio_version = _get_radio_firmware_version(radio)
+    print "Image is %s" % repr(image_version)
+    print "Radio is %s" % repr(radio_version)
+
+    if "BFB" not in radio_version:
+        raise errors.RadioError("Unsupported firmware version: `%s'" %
+                                radio_version)
+
+    # Main block
+    for i in range(0x08, 0x1808, 0x10):
+        _send_block(radio, i - 0x08, radio.get_mmap()[i:i+0x10])
+        _do_status(radio, i)
+
+    if len(radio.get_mmap().get_packed()) == 0x1808:
+        print "Old image, not writing aux block"
+        return # Old image, no aux block
+
+    if image_version != radio_version:
+        raise errors.RadioError("Upload finished, but the 'Other Settings' "
+                                "could not be sent because the firmware "
+                                "version of the image does not match that "
+                                "of the radio")
+
+    # Auxiliary block at radio address 0x1EC0, our offset 0x1808
+    for i in range(0x1EC0, 0x2000, 0x10):
+        addr = 0x1808 + (i - 0x1EC0)
+        _send_block(radio, i, radio.get_mmap()[addr:addr+0x10])
+#endif
 }
 
 void load_image (char *filename)
@@ -410,10 +458,129 @@ void read_config (char *filename)
     printf ("Read configuration from file '%s'.\n", filename);
 }
 
+int bcd_to_hz (uint32_t bcd)
+{
+    return ((bcd >> 28) & 15) * 100000000 +
+           ((bcd >> 24) & 15) * 10000000 +
+           ((bcd >> 20) & 15) * 1000000 +
+           ((bcd >> 16) & 15) * 100000 +
+           ((bcd >> 12) & 15) * 10000 +
+           ((bcd >> 8)  & 15) * 1000 +
+           ((bcd >> 4)  & 15) * 100 +
+           (bcd         & 15) * 10;
+}
+
+void decode_squelch (uint16_t index, int *ctcs, int *dcs)
+{
+    if (index == 0 || index == 0xffff) {
+        // Squelch disabled.
+        return;
+    }
+    if (index >= 0x0258) {
+        // CTCSS value is Hz multiplied by 10.
+        *ctcs = index;
+    }
+    // DCS mode.
+    if (index < 0x6A)
+        *dcs = DCS_CODES[index - 1];
+    else
+        *dcs = - DCS_CODES[index - 0x6A];
+}
+
+typedef struct {
+    uint32_t    rxfreq; // binary coded decimal, 8 digits
+    uint32_t    txfreq; // binary coded decimal, 8 digits
+    uint16_t    rxtone;
+    uint16_t    txtone;
+    uint8_t     _u1      : 4,
+                scode    : 4;
+    uint8_t     _u2;
+    uint8_t     _u3      : 7,
+                lowpower : 1;
+    uint8_t     _u4      : 1,
+                wide     : 1,
+                _u5      : 2,
+                bcl      : 1,
+                scan     : 1,
+                pttideot : 1,
+                pttidbot : 1;
+} memory_channel_t;
+
+void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
+    int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs)
+{
+    memory_channel_t *ch = i + (memory_channel_t*) mem;
+
+    *rx_hz = *tx_hz = *rx_ctcs = *tx_ctcs = *rx_dcs = *tx_dcs = 0;
+    *name = 0;
+    if (ch->rxfreq == 0 || ch->rxfreq == 0xffffffff)
+        return;
+
+    // Extract channel name; strip trailing FF's.
+    char *p;
+    strncpy (name, (char*) &mem[0x1000 + i*16], 7);
+    name[7] = 0;
+    for (p=name+6; p>=name && *p=='\xff'; p--)
+        *p = 0;
+
+    // Decode channel frequencies.
+    *rx_hz = bcd_to_hz (ch->rxfreq);
+    *tx_hz = bcd_to_hz (ch->txfreq);
+
+    // Decode squelch modes.
+    decode_squelch (ch->rxtone, rx_ctcs, rx_dcs);
+    decode_squelch (ch->txtone, tx_ctcs, tx_dcs);
+}
+
 void print_config ()
 {
-    // TODO
-    printf ("Print configuration: NOT IMPLEMENTED YET.\n");
+    int i;
+
+    // Print memory channels.
+    printf ("Chan  Name    Receive  TxOffset R-CTCS T-CTCS R-DCS T-DCS\n");
+    for (i=0; i<128; i++) {
+        int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
+        char name[17];
+
+        decode_channel (i, name, &rx_hz, &tx_hz, &rx_ctcs, &tx_ctcs,
+            &rx_dcs, &tx_dcs);
+        if (rx_hz == 0) {
+            // Channel is disabled
+            return;
+        }
+        char offset[16];
+        if (tx_hz == rx_hz) {
+            strcpy (offset, "0");
+        } else {
+            int delta = tx_hz - rx_hz;
+            offset[0] = '+';
+            if (delta < 0) {
+                delta = - delta;
+                offset[0] = '-';
+            }
+            if (delta % 1000000 == 0)
+                sprintf (offset+1, "%u", delta / 1000000);
+            else
+                sprintf (offset+1, "%.3f", delta / 1000000.0);
+        }
+
+        printf ("%4d  %-7s %8.4f %-8s", i, name,
+            rx_hz / 1000000.0, offset);
+        if (rx_ctcs) printf ("  %5.1f", rx_ctcs / 10.0); else printf ("  -    ");
+        if (tx_ctcs) printf ("  %5.1f", tx_ctcs / 10.0); else printf ("  -    ");
+        if (rx_dcs > 0)      printf ("  D%03dN", rx_dcs);
+        else if (rx_dcs < 0) printf ("  D%03dI", -rx_dcs);
+        else                 printf ("  -    ");
+        if (tx_dcs > 0)      printf (" D%03dN", tx_dcs);
+        else if (tx_dcs < 0) printf (" D%03dI", -tx_dcs);
+        else                 printf (" -    ");
+        printf ("\n");
+
+        // TODO: scode, lowpower, wide, bcl, scan, pttideot, pttidbot
+    }
+
+    // TODO: ani, settings, extra, wmchannel, vfoa, vfob,
+    // poweron_msg, sixpoweron_msg, limits
 }
 
 int main (int argc, char **argv)
