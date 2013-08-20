@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 
 const char version[] = "1.0";
-const char copyright[] = "Copyright (C) 2013 Serge Vakulenko";
+const char copyright[] = "Copyright (C) 2013 Serge Vakulenko KK6ABQ";
 
 const unsigned char UV5R_MODEL_ORIG[] = "\x50\xBB\xFF\x01\x25\x98\x4D";
 const unsigned char UV5R_MODEL_291[] = "\x50\xBB\xFF\x20\x12\x07\x25";
@@ -51,7 +51,7 @@ struct termios oldtio, newtio;  // Mode of serial port
 unsigned char ident [8];        // Radio: identifier
 unsigned char mem [0x2000];     // Radio: memory contents
 unsigned char image_ident [8];  // Image file: identifier
-int is_original;
+int is_original;                // True for firmware older than 291
 int progress;                   // Read/write progress counter
 
 extern char *optarg;
@@ -293,12 +293,14 @@ void identify (int fd)
 
     for (retry=0; retry<10; retry++) {
         if (try_magic (fd, UV5R_MODEL_291)) {
-            fprintf (stderr, "Detected Baofeng UV-5R.\n");
+            is_original = 0;
+            printf ("Detected Baofeng UV-5R.\n");
             return;
         }
         usleep (500000);
         if (try_magic (fd, UV5R_MODEL_ORIG)) {
-            fprintf (stderr, "Detected Baofeng UV-5R original.\n");
+            is_original = 1;
+            printf ("Detected Baofeng UV-5R original.\n");
             return;
         }
         fprintf (stderr, "Retry #%d...\n", retry+1);
@@ -562,9 +564,9 @@ void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
 
 typedef struct {
     uint8_t     enable;
-    uint8_t     lower_msb;
+    uint8_t     lower_msb; // binary coded decimal, 4 digits
     uint8_t     lower_lsb;
-    uint8_t     upper_msb;
+    uint8_t     upper_msb; // binary coded decimal, 4 digits
     uint8_t     upper_lsb;
 } limits_t;
 
@@ -598,14 +600,49 @@ void fetch_ani (char *ani)
         ani[i] = "0123456789ABCDEF" [mem[0x0CAA+i] & 0x0f];
 }
 
+void get_current_channel (int index, int *chan_num)
+{
+    unsigned char *ptr = mem + 0x0E76;
+    *chan_num = ptr[index] % 128;
+}
+
+typedef struct {
+    uint32_t    freq_msb;   // binary coded decimal, 8 digits
+    uint32_t    freq_lsb;   // binary coded decimal, 8 digits
+    uint8_t     _u1;
+    uint8_t     offset[4];  // binary coded decimal, 8 digits
+    uint8_t     _u2;
+    uint16_t    rxtone;
+    uint16_t    txtone;
+    uint8_t     band     : 1,
+                _u3      : 7;
+    uint8_t     _u4;
+    uint8_t     scode    : 4,
+                _u5      : 4;
+    uint8_t     _u6;
+    uint8_t     _u7      : 4,
+                step     : 3,
+                _u8      : 1;
+    uint8_t     _u9      : 6,
+                widenarr : 1,
+                txpower  : 1;
+} vfo_t;
+
+void decode_vfo (char index, int *band, int *hz, int *offset,
+    int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
+    int *lowpower, int *wide, int *step, int *scode)
+{
+    //vfo_t *vfo = (vfo_t*) &mem[index ? 0x0F28 : 0x0F0];
+
+    *band = *hz = *offset = *rx_ctcs = *tx_ctcs = *rx_dcs = *tx_dcs = 0;
+    *lowpower = *wide = *step = *scode = 0;
+
+    // TODO
+}
+
 void print_config ()
 {
     int i;
-
-    // Print atomatic number identification.
-    char ani[5];
-    fetch_ani (ani);
-    printf ("PTT ID: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
 
     // Print memory channels.
     printf ("\n");
@@ -673,7 +710,25 @@ void print_config ()
     printf (" UHF %4d  %4d  %s\n", uhf_lower, uhf_upper,
         uhf_enable ? "+" : "-");
 
-    // TODO: settings, extra, wmchannel, vfoa, vfob
+    // Print frequency mode VFO settings.
+    //decode_vfo (0, &);
+    //decode_vfo (1, &);
+    // TODO
+
+    // Print channel mode settings.
+    int chan_a, chan_b;
+    get_current_channel (0, &chan_a);
+    get_current_channel (1, &chan_b);
+    printf ("\n");
+    printf ("Channel A: %d\n", chan_a);
+    printf ("Channel B: %d\n", chan_b);
+
+    // Print atomatic number identification.
+    char ani[5];
+    fetch_ani (ani);
+    printf ("PTT ID: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
+
+    // TODO: settings, extra
 }
 
 int main (int argc, char **argv)
