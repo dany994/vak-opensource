@@ -590,9 +590,22 @@ void decode_limits (char band, int *enable, int *lower, int *upper)
              (limits->upper_lsb        & 15);
 }
 
+void fetch_ani (char *ani)
+{
+    int i;
+
+    for (i=0; i<5; i++)
+        ani[i] = "0123456789ABCDEF" [mem[0x0CAA+i] & 0x0f];
+}
+
 void print_config ()
 {
     int i;
+
+    // Print atomatic number identification.
+    char ani[5];
+    fetch_ani (ani);
+    printf ("PTT ID: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
 
     // Print memory channels.
     printf ("\n");
@@ -660,7 +673,7 @@ void print_config ()
     printf (" UHF %4d  %4d  %s\n", uhf_lower, uhf_upper,
         uhf_enable ? "+" : "-");
 
-    // TODO: ani, settings, extra, wmchannel, vfoa, vfob, limits
+    // TODO: settings, extra, wmchannel, vfoa, vfob
 }
 
 int main (int argc, char **argv)
