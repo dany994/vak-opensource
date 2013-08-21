@@ -66,7 +66,6 @@ const char *ALARM_NAME[] = { "Site", "Tone", "Code", "??" };
 const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
                              "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
 
-char *progname;
 int verbose;
 
 struct termios oldtio, newtio;  // Mode of serial port
@@ -84,14 +83,13 @@ void usage ()
 {
     fprintf (stderr, "Baofeng UV-5R Clone Utility, Version %s, %s\n", version, copyright);
     fprintf (stderr, "Usage:\n");
-    fprintf (stderr, "    %s [option]...\n", progname);
+    fprintf (stderr, "    baoclone [-v] port                Save device binary image to file 'device.img',\n");
+    fprintf (stderr, "                                      and text configuration to 'device.cfg'.\n");
+    fprintf (stderr, "    baoclone -w [-v] port file.img    Write image to device.\n");
+    fprintf (stderr, "    baoclone -c [-v] port file.cfg    Configure device from text file.\n");
+    fprintf (stderr, "    baoclone file.img                 Show configuration from image file.\n");
     fprintf (stderr, "Options:\n");
-    fprintf (stderr, "    -d device file.img  dump device image to file\n");
-    fprintf (stderr, "    -r device file.img  restore device image from file\n");
-    fprintf (stderr, "    -c device file.cfg  configure device from text file\n");
-    fprintf (stderr, "    -s device           show device configuration\n");
-    fprintf (stderr, "    -s file.img         show configuration from image file\n");
-    fprintf (stderr, "    -v                  verbose mode\n");
+    fprintf (stderr, "    -v                                Verbose mode.\n");
     exit (-1);
 }
 
@@ -289,7 +287,7 @@ int try_magic (int fd, const unsigned char *magic)
     return 1;
 }
 
-void print_firmware_version()
+void print_firmware_version(FILE *out)
 {
     char buf[17], *version = buf, *p;
 
@@ -302,9 +300,9 @@ void print_firmware_version()
     while (p > version && p[-1]==' ')
         *--p = 0;
 
-    printf ("Device: %.16s\n", &mem[0x1EC0+0x20]);          // poweron message
-    printf ("Firmware: %s\n", version);                     // 3+poweron message
-    printf ("Serial number: %.16s\n", &mem[0x1EC0+0x10]);   // 6+poweron message
+    fprintf (out, "Device: %.16s\n", &mem[0x1EC0+0x20]);          // poweron message
+    fprintf (out, "Firmware: %s\n", version);                     // 3+poweron message
+    fprintf (out, "Serial number: %.16s\n", &mem[0x1EC0+0x10]);   // 6+poweron message
 }
 
 //
@@ -719,42 +717,42 @@ void decode_vfo (int index, int *band, int *hz, int *offset,
     *scode = vfo->scode;
 }
 
-void print_offset (int delta)
+void print_offset (FILE *out, int delta)
 {
     if (delta == 0) {
-        printf ("0       ");
+        fprintf (out, "0       ");
     } else {
         if (delta > 0) {
-            printf ("+");;
+            fprintf (out, "+");;
         } else {
-            printf ("-");;
+            fprintf (out, "-");;
             delta = - delta;
         }
         if (delta % 1000000 == 0)
-            printf ("%-7u", delta / 1000000);
+            fprintf (out, "%-7u", delta / 1000000);
         else
-            printf ("%-7.3f", delta / 1000000.0);
+            fprintf (out, "%-7.3f", delta / 1000000.0);
     }
 }
 
-void print_squelch (ctcs, dcs)
+void print_squelch (FILE *out, int ctcs, int dcs)
 {
-    if      (ctcs)    printf ("%5.1f", ctcs / 10.0);
-    else if (dcs > 0) printf ("D%03dN", dcs);
-    else if (dcs < 0) printf ("D%03dI", -dcs);
-    else              printf ("   - ");
+    if      (ctcs)    fprintf (out, "%5.1f", ctcs / 10.0);
+    else if (dcs > 0) fprintf (out, "D%03dN", dcs);
+    else if (dcs < 0) fprintf (out, "D%03dI", -dcs);
+    else              fprintf (out, "   - ");
 }
 
-void print_vfo (char name, int band, int hz, int offset,
+void print_vfo (FILE *out, char name, int band, int hz, int offset,
     int rx_ctcs, int tx_ctcs, int rx_dcs, int tx_dcs,
     int lowpower, int wide, int step, int scode)
 {
-    printf (" %c  %3s  %8.4f ", name, band ? "UHF" : "VHF", hz / 1000000.0);
-    print_offset (offset);
-    printf (" ");
-    print_squelch (rx_ctcs, rx_dcs);
-    printf ("   ");
-    print_squelch (tx_ctcs, tx_dcs);
+    fprintf (out, " %c  %3s  %8.4f ", name, band ? "UHF" : "VHF", hz / 1000000.0);
+    print_offset (out, offset);
+    fprintf (out, " ");
+    print_squelch (out, rx_ctcs, rx_dcs);
+    fprintf (out, "   ");
+    print_squelch (out, tx_ctcs, tx_dcs);
 
     char sgroup [8];
     if (scode == 0)
@@ -762,7 +760,7 @@ void print_vfo (char name, int band, int hz, int offset,
     else
         sprintf (sgroup, "%u", scode);
 
-    printf ("   %-4s %-4s  %-6s %-3s\n", STEP_NAME[step],
+    fprintf (out, "   %-4s %-4s  %-6s %-3s\n", STEP_NAME[step],
         lowpower ? "Low" : "High", wide ? "Wide" : "Narrow", sgroup);
 }
 
@@ -823,13 +821,13 @@ typedef struct {
     uint8_t keylock;            // Keypad Lock
 } extra_settings_t;
 
-void print_config ()
+void print_config (FILE *out)
 {
     int i;
 
     // Print memory channels.
-    printf ("\n");
-    printf ("Chan  Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan ID[6] PTTID\n");
+    fprintf (out, "\n");
+    fprintf (out, "Chan  Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan ID[6] PTTID\n");
     for (i=0; i<128; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
         int lowpower, wide, scan, pttid, scode;
@@ -842,12 +840,12 @@ void print_config ()
             continue;
         }
 
-        printf ("%4d  %-7s %8.4f ", i, name, rx_hz / 1000000.0);
-        print_offset (tx_hz - rx_hz);
-        printf (" ");
-        print_squelch (rx_ctcs, rx_dcs);
-        printf ("   ");
-        print_squelch (tx_ctcs, tx_dcs);
+        fprintf (out, "%4d  %-7s %8.4f ", i, name, rx_hz / 1000000.0);
+        print_offset (out, tx_hz - rx_hz);
+        fprintf (out, " ");
+        print_squelch (out, rx_ctcs, rx_dcs);
+        fprintf (out, "   ");
+        print_squelch (out, tx_ctcs, tx_dcs);
 
         char sgroup [8];
         if (scode == 0)
@@ -855,42 +853,42 @@ void print_config ()
         else
             sprintf (sgroup, "%u", scode);
 
-        printf ("   %-4s  %-6s %-4s %-5s %-4s\n", lowpower ? "Low" : "High",
+        fprintf (out, "   %-4s  %-6s %-4s %-5s %-4s\n", lowpower ? "Low" : "High",
             wide ? "Wide" : "Narrow", scan ? "+" : "-", sgroup, PTTID_NAME[pttid]);
     }
 
     // Print frequency mode VFO settings.
     int band, hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
     int lowpower, wide, step, scode;
-    printf ("\n");
+    fprintf (out, "\n");
     decode_vfo (0, &band, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &lowpower, &wide, &step, &scode);
-    printf ("VFO Band Receive  TxOffset R-Squel T-Squel Step Power FM     ID[6]\n");
-    print_vfo ('A', band, hz, offset, rx_ctcs, tx_ctcs,
+    fprintf (out, "VFO Band Receive  TxOffset R-Squel T-Squel Step Power FM     ID[6]\n");
+    print_vfo (out, 'A', band, hz, offset, rx_ctcs, tx_ctcs,
         rx_dcs, tx_dcs, lowpower, wide, step, scode);
     decode_vfo (1, &band, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &lowpower, &wide, &step, &scode);
-    print_vfo ('B', band, hz, offset, rx_ctcs, tx_ctcs,
+    print_vfo (out, 'B', band, hz, offset, rx_ctcs, tx_ctcs,
         rx_dcs, tx_dcs, lowpower, wide, step, scode);
 
     // Print band limits.
     int vhf_enable, vhf_lower, vhf_upper, uhf_enable, uhf_lower, uhf_upper;
     decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
     decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
-    printf ("\n");
-    printf ("Band Lower Upper Enable\n");
-    printf (" VHF %4d  %4d  %s\n", vhf_lower, vhf_upper,
+    fprintf (out, "\n");
+    fprintf (out, "Band Lower Upper Enable\n");
+    fprintf (out, " VHF %4d  %4d  %s\n", vhf_lower, vhf_upper,
         vhf_enable ? "+" : "-");
-    printf (" UHF %4d  %4d  %s\n", uhf_lower, uhf_upper,
+    fprintf (out, " UHF %4d  %4d  %s\n", uhf_lower, uhf_upper,
         uhf_enable ? "+" : "-");
 
     // Print channel mode settings.
     int chan_a, chan_b;
     get_current_channel (0, &chan_a);
     get_current_channel (1, &chan_b);
-    printf ("\n");
-    printf ("Channel A: %d\n", chan_a);
-    printf ("Channel B: %d\n", chan_b);
+    fprintf (out, "\n");
+    fprintf (out, "Channel A: %d\n", chan_a);
+    fprintf (out, "Channel B: %d\n", chan_b);
 
     // Get atomatic number identifier.
     char ani[5];
@@ -898,30 +896,30 @@ void print_config ()
 
     // Print other settings.
     settings_t *mode = (settings_t*) &mem[0x0E20];
-    printf ("Carrier Squelch Level: %u\n",          mode->squelch);
-    printf ("Battery Saver: %s\n",                  SAVER_NAME[mode->save & 7]);
-    printf ("VOX Sensitivity: %s\n",                VOX_NAME[mode->vox & 15]);
-    printf ("Backlight Timeout: %s\n",              ABR_NAME[mode->abr & 7]);
-    printf ("Dual Watch: %s\n",                     mode->tdr ? "On" : "Off");
-    printf ("Keypad Beep: %s\n",                    mode->beep ? "On" : "Off");
-    printf ("Transmittion Timer: %u\n",             (mode->timeout + 1) * 15);
-    printf ("Voice Prompt: %s\n",                   mode->voice ? "On" : "Off");
-    printf ("Automatic ID[1-5]: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
-    printf ("DTMF Sidetone: %s\n",                  DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
-    printf ("Scan Resume Method: %s\n",             SCAN_RESUME_NAME[mode->screv & 3]);
-    printf ("Display Mode A: %s\n",                 DISPLAY_MODE_NAME[mode->mdfa & 3]);
-    printf ("Display Mode B: %s\n",                 DISPLAY_MODE_NAME[mode->mdfb & 3]);
-    printf ("Busy Channel Lockout: %s\n",           mode->bcl ? "On" : "Off");
-    printf ("Auto Key Lock: %s\n",                  mode->autolk ? "On" : "Off");
-    printf ("Standby LED Color: %s\n",              COLOR_NAME[mode->wtled & 3]);
-    printf ("RX LED Color: %s\n",                   COLOR_NAME[mode->rxled & 3]);
-    printf ("TX LED Color: %s\n",                   COLOR_NAME[mode->txled & 3]);
-    printf ("Alarm Mode: %s\n",                     ALARM_NAME[mode->almod & 3]);
-    printf ("Squelch Tail Eliminate: %s\n",         mode->ste ? "On" : "Off");
-    printf ("Squelch Tail Eliminate for Repeater: %s\n", RPSTE_NAME[mode->rpste & 15]);
-    printf ("Squelch Tail Repeater Delay: %s\n",    RPSTE_NAME[mode->rptrl & 15]);
-    printf ("Power-On Message: %s\n",               mode->ponmsg ? "On" : "Off");
-    printf ("Roger Beep: %s\n",                     mode->roger ? "On" : "Off");
+    fprintf (out, "Carrier Squelch Level: %u\n", mode->squelch);
+    fprintf (out, "Battery Saver: %s\n", SAVER_NAME[mode->save & 7]);
+    fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
+    fprintf (out, "Backlight Timeout: %s\n", ABR_NAME[mode->abr & 7]);
+    fprintf (out, "Dual Watch: %s\n", mode->tdr ? "On" : "Off");
+    fprintf (out, "Keypad Beep: %s\n", mode->beep ? "On" : "Off");
+    fprintf (out, "Transmittion Timer: %u\n", (mode->timeout + 1) * 15);
+    fprintf (out, "Voice Prompt: %s\n", mode->voice ? "On" : "Off");
+    fprintf (out, "Automatic ID[1-5]: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
+    fprintf (out, "DTMF Sidetone: %s\n", DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
+    fprintf (out, "Scan Resume Method: %s\n", SCAN_RESUME_NAME[mode->screv & 3]);
+    fprintf (out, "Display Mode A: %s\n", DISPLAY_MODE_NAME[mode->mdfa & 3]);
+    fprintf (out, "Display Mode B: %s\n", DISPLAY_MODE_NAME[mode->mdfb & 3]);
+    fprintf (out, "Busy Channel Lockout: %s\n", mode->bcl ? "On" : "Off");
+    fprintf (out, "Auto Key Lock: %s\n", mode->autolk ? "On" : "Off");
+    fprintf (out, "Standby LED Color: %s\n", COLOR_NAME[mode->wtled & 3]);
+    fprintf (out, "RX LED Color: %s\n", COLOR_NAME[mode->rxled & 3]);
+    fprintf (out, "TX LED Color: %s\n", COLOR_NAME[mode->txled & 3]);
+    fprintf (out, "Alarm Mode: %s\n", ALARM_NAME[mode->almod & 3]);
+    fprintf (out, "Squelch Tail Eliminate: %s\n", mode->ste ? "On" : "Off");
+    fprintf (out, "Squelch Tail Eliminate for Repeater: %s\n", RPSTE_NAME[mode->rpste & 15]);
+    fprintf (out, "Squelch Tail Repeater Delay: %s\n", RPSTE_NAME[mode->rptrl & 15]);
+    fprintf (out, "Power-On Message: %s\n", mode->ponmsg ? "On" : "Off");
+    fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
 
 #if 0
     // Transient modes: usually there is no interest to display or touch these.
@@ -938,17 +936,13 @@ void print_config ()
 
 int main (int argc, char **argv)
 {
-    int dump_flag = 0, restore_flag = 0;
-    int config_flag = 0, show_flag = 0;
+    int write_flag = 0, config_flag = 0;
 
-    progname = *argv;
     for (;;) {
-        switch (getopt (argc, argv, "vdrcs")) {
-        case 'v': ++verbose;      continue;
-        case 'd': ++dump_flag;    continue;
-        case 'r': ++restore_flag; continue;
-        case 'c': ++config_flag;  continue;
-        case 's': ++show_flag;    continue;
+        switch (getopt (argc, argv, "vcw")) {
+        case 'v': ++verbose;     continue;
+        case 'w': ++write_flag;  continue;
+        case 'c': ++config_flag; continue;
         default:
             usage ();
         case EOF:
@@ -958,26 +952,12 @@ int main (int argc, char **argv)
     }
     argc -= optind;
     argv += optind;
-    if (dump_flag + restore_flag + config_flag + show_flag == 0)
-        usage();
-    if (dump_flag + restore_flag + config_flag + show_flag > 1) {
-        fprintf (stderr, "Only one of -d -r -c -s options is allowed.\n");
+    if (write_flag + config_flag > 1) {
+        fprintf (stderr, "Only one of -w or -c options is allowed.\n");
         usage();
     }
 
-    if (dump_flag) {
-        // Dump device to image file.
-        if (argc != 2)
-            usage();
-
-        int fd = open_port (argv[0]);
-        identify (fd);
-        read_device (fd);
-        print_firmware_version();
-        save_image (argv[1]);
-        close_port (fd);
-
-    } else if (restore_flag) {
+    if (write_flag) {
         // Restore image file to device.
         if (argc != 2)
             usage();
@@ -985,7 +965,7 @@ int main (int argc, char **argv)
         int fd = open_port (argv[0]);
         identify (fd);
         load_image (argv[1]);
-        print_firmware_version();
+        print_firmware_version(stdout);
         write_device (fd);
         close_port (fd);
 
@@ -997,31 +977,44 @@ int main (int argc, char **argv)
         int fd = open_port (argv[0]);
         identify (fd);
         read_device (fd);
-        print_firmware_version();
+        print_firmware_version(stdout);
         save_image ("save.img");
         read_config (argv[1]);
         write_device (fd);
         close_port (fd);
 
-    } else if (show_flag) {
-        // Print device or image configuration in readable format.
+    } else {
         if (argc != 1)
             usage();
 
         if (is_file (argv[0])) {
+            // Print configuration from image file.
             // Load image from file.
             load_image (argv[0]);
-            print_firmware_version();
+            print_firmware_version(stdout);
             memcpy (ident, image_ident, sizeof(ident));
+            print_config (stdout);
         } else {
-            // Use real device.
+            // Dump device to image file.
             int fd = open_port (argv[0]);
             identify (fd);
             read_device (fd);
-            print_firmware_version();
+            print_firmware_version(stdout);
             close_port (fd);
+            save_image ("device.img");
+
+            // Print configuration to file.
+            const char *filename = "device.cfg";
+            FILE *cfg = fopen (filename, "w");
+            if (! cfg) {
+                perror (filename);
+                exit (-1);
+            }
+            print_firmware_version(cfg);
+            print_config (cfg);
+            fclose (cfg);
+            printf ("Print configuration to file '%s'.\n", filename);
         }
-        print_config();
     }
     return (0);
 }
