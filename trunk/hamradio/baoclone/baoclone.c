@@ -385,12 +385,57 @@ void read_block (int fd, int start, unsigned char *data, int nbytes)
         exit(-1);
     }
     if (verbose) {
-        printf ("# 0x%04x: ", start);
+        printf ("# Read 0x%04x: ", start);
         print_hex (data, nbytes);
         printf ("\n");
     } else {
         ++progress;
         if (progress % 2 == 0) {
+            fprintf (stderr, "#");
+            fflush (stderr);
+        }
+    }
+}
+
+//
+// Write block of data, up to 16 bytes.
+// Halt the program on any error.
+//
+void write_block (int fd, int start, const unsigned char *data, int nbytes)
+{
+    unsigned char cmd[4], reply;
+
+    // Send command.
+    cmd[0] = 'X';
+    cmd[1] = start >> 8;
+    cmd[2] = start;
+    cmd[3] = nbytes;
+    if (write (fd, cmd, 4) != 4) {
+        perror ("Serial port");
+        exit (-1);
+    }
+    if (write (fd, data, nbytes) != nbytes) {
+        perror ("Serial port");
+        exit (-1);
+    }
+
+    // Get acknowledge.
+    if (read_with_timeout (fd, &reply, 1) != 1) {
+        fprintf (stderr, "No acknowledge after block 0x%04x.\n", start);
+        exit(-1);
+    }
+    if (reply != 0x06) {
+        fprintf (stderr, "Bad acknowledge after block 0x%04x: %02x\n", start, reply);
+        exit(-1);
+    }
+
+    if (verbose) {
+        printf ("# Write 0x%04x: ", start);
+        print_hex (data, nbytes);
+        printf ("\n");
+    } else {
+        ++progress;
+        if (progress % 8 == 0) {
             fprintf (stderr, "#");
             fflush (stderr);
         }
@@ -409,50 +454,45 @@ void read_device (int fd)
     for (addr=0; addr<0x1800; addr+=0x40)
         read_block (fd, addr, &mem[addr], 0x40);
 
-    // Auxiliary block starts at 0x1EC0.
-    for (addr=0x1EC0; addr<0x2000; addr+=0x40)
-        read_block (fd, addr, &mem[addr], 0x40);
+    if (! is_original) {
+        // Auxiliary block starts at 0x1EC0.
+        for (addr=0x1EC0; addr<0x2000; addr+=0x40)
+            read_block (fd, addr, &mem[addr], 0x40);
+    }
 
     if (! verbose)
         fprintf (stderr, " done.\n");
+
+    // Copy device identifier to image identifier,
+    // to allow writing it back to device.
+    memcpy (image_ident, ident, sizeof(ident));
 }
 
 void write_device (int fd)
 {
-    // TODO
-    fprintf (stderr, "Write to device: NOT IMPLEMENTED YET.\n");
-#if 0
-    _ident_radio(radio)
+    int addr;
 
-    image_version = _firmware_version_from_image(radio)
-    radio_version = _get_radio_firmware_version(radio)
-    print "Image is %s" % repr(image_version)
-    print "Radio is %s" % repr(radio_version)
+    // Check for compatibility.
+    if (memcmp (image_ident, ident, sizeof(ident)) != 0) {
+        fprintf (stderr, "Incompatible image - cannot upload.\n");
+        exit(-1);
+    }
+    progress = 0;
+    if (! verbose)
+        fprintf (stderr, "Write device: ");
 
-    if "BFB" not in radio_version:
-        raise errors.RadioError("Unsupported firmware version: `%s'" %
-                                radio_version)
+    // Main block.
+    for (addr=0; addr<0x1800; addr+=0x10)
+        write_block (fd, addr, &mem[addr], 0x10);
 
-    # Main block
-    for i in range(0x08, 0x1808, 0x10):
-        _send_block(radio, i - 0x08, radio.get_mmap()[i:i+0x10])
-        _do_status(radio, i)
+    if (! is_original) {
+        // Auxiliary block starts at 0x1EC0.
+        for (addr=0x1EC0; addr<0x2000; addr+=0x10)
+            write_block (fd, addr, &mem[addr], 0x10);
+    }
 
-    if len(radio.get_mmap().get_packed()) == 0x1808:
-        print "Old image, not writing aux block"
-        return # Old image, no aux block
-
-    if image_version != radio_version:
-        raise errors.RadioError("Upload finished, but the 'Other Settings' "
-                                "could not be sent because the firmware "
-                                "version of the image does not match that "
-                                "of the radio")
-
-    # Auxiliary block at radio address 0x1EC0, our offset 0x1808
-    for i in range(0x1EC0, 0x2000, 0x10):
-        addr = 0x1808 + (i - 0x1EC0)
-        _send_block(radio, i, radio.get_mmap()[addr:addr+0x10])
-#endif
+    if (! verbose)
+        fprintf (stderr, " done.\n");
 }
 
 void load_image (char *filename)
@@ -858,8 +898,6 @@ void print_config ()
 
     // Print other settings.
     settings_t *mode = (settings_t*) &mem[0x0E20];
-
-    // TODO
     printf ("Carrier Squelch Level: %u\n",          mode->squelch);
     printf ("Battery Saver: %s\n",                  SAVER_NAME[mode->save & 7]);
     printf ("VOX Sensitivity: %s\n",                VOX_NAME[mode->vox & 15]);
