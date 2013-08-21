@@ -291,6 +291,11 @@ void print_firmware_version(FILE *out)
 {
     char buf[17], *version = buf, *p;
 
+    if (is_original) {
+        // No messages on old firmware.
+        return;
+    }
+
     // Copy the string, trim spaces.
     strncpy (version, (char*)&mem[0x1EC0+0x30], 16);
     version [16] = 0;
@@ -300,9 +305,9 @@ void print_firmware_version(FILE *out)
     while (p > version && p[-1]==' ')
         *--p = 0;
 
-    fprintf (out, "Device: %.16s\n", &mem[0x1EC0+0x20]);          // poweron message
-    fprintf (out, "Firmware: %s\n", version);                     // 3+poweron message
-    fprintf (out, "Serial number: %.16s\n", &mem[0x1EC0+0x10]);   // 6+poweron message
+    fprintf (out, "Serial number: %.16s\n", &mem[0x1EC0+0x10]); // 6+poweron message
+    fprintf (out, "Firmware: %s\n", version);                   // 3+poweron message
+    fprintf (out, "Message: %.16s\n", &mem[0x1EC0+0x20]);       // poweron message
 }
 
 //
@@ -630,15 +635,18 @@ typedef struct {
     uint8_t     upper_lsb;
 } limits_t;
 
+//
+// Looks like limits are not implemented on old firmware
+// (prior to version 291).
+//
 void decode_limits (char band, int *enable, int *lower, int *upper)
 {
-    int offset;
+    int offset = (band == 'V') ? 0x1EC0+0x100 : 0x1EC0+0x105;
 
-    // Offset for limits has changed since firmware version 291.
-    if (is_original)
-        offset = (band == 'V') ? 0x1EC0+0x10a : 0x1EC0+0x11a;
-    else
-        offset = (band == 'V') ? 0x1EC0+0x100 : 0x1EC0+0x105;
+    if (is_original) {
+        *enable = *lower = *upper = 0;
+        return;
+    }
 
     limits_t *limits = (limits_t*) (mem + offset);
     *enable = limits->enable;
@@ -827,7 +835,7 @@ void print_config (FILE *out)
 
     // Print memory channels.
     fprintf (out, "\n");
-    fprintf (out, "Chan  Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan ID[6] PTTID\n");
+    fprintf (out, "Channel Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan ID[6] PTTID\n");
     for (i=0; i<128; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
         int lowpower, wide, scan, pttid, scode;
@@ -840,7 +848,7 @@ void print_config (FILE *out)
             continue;
         }
 
-        fprintf (out, "%4d  %-7s %8.4f ", i, name, rx_hz / 1000000.0);
+        fprintf (out, "%5d   %-7s %8.4f ", i, name, rx_hz / 1000000.0);
         print_offset (out, tx_hz - rx_hz);
         fprintf (out, " ");
         print_squelch (out, rx_ctcs, rx_dcs);
@@ -871,16 +879,18 @@ void print_config (FILE *out)
     print_vfo (out, 'B', band, hz, offset, rx_ctcs, tx_ctcs,
         rx_dcs, tx_dcs, lowpower, wide, step, scode);
 
-    // Print band limits.
-    int vhf_enable, vhf_lower, vhf_upper, uhf_enable, uhf_lower, uhf_upper;
-    decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
-    decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
-    fprintf (out, "\n");
-    fprintf (out, "Band Lower Upper Enable\n");
-    fprintf (out, " VHF %4d  %4d  %s\n", vhf_lower, vhf_upper,
-        vhf_enable ? "+" : "-");
-    fprintf (out, " UHF %4d  %4d  %s\n", uhf_lower, uhf_upper,
-        uhf_enable ? "+" : "-");
+    if (! is_original) {
+        // Print band limits.
+        int vhf_enable, vhf_lower, vhf_upper, uhf_enable, uhf_lower, uhf_upper;
+        decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
+        decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
+        fprintf (out, "\n");
+        fprintf (out, "Limit Lower Upper Enable\n");
+        fprintf (out, " VHF  %4d  %4d  %s\n", vhf_lower, vhf_upper,
+            vhf_enable ? "+" : "-");
+        fprintf (out, " UHF  %4d  %4d  %s\n", uhf_lower, uhf_upper,
+            uhf_enable ? "+" : "-");
+    }
 
     // Print channel mode settings.
     int chan_a, chan_b;
