@@ -46,6 +46,26 @@ const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
 const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
                             "12.5", "25.0", "????", "????" };
 
+const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
+
+const char *VOX_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                           "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
+
+const char *ABR_NAME[] = { "Off", "1", "2", "3", "4", "5", "?6?", "?7?" };
+
+const char *DTMF_SIDETONE_NAME[] = { "Off", "DTMF Only", "ANI Only", "DTMF+ANI" };
+
+const char *SCAN_RESUME_NAME[] = { "After Timeout", "When Carrier Off", "Stop On Active", "??" };
+
+const char *DISPLAY_MODE_NAME[] = { "Channel", "Name", "Frequency", "??" };
+
+const char *COLOR_NAME[] = { "Off", "Blue", "Orange", "Purple" };
+
+const char *ALARM_NAME[] = { "Site", "Tone", "Code", "??" };
+
+const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                             "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
+
 char *progname;
 int verbose;
 
@@ -532,7 +552,7 @@ typedef struct {
 
 void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
-    int *lowpower, int *wide, int *bcl, int *scan, int *pttid, int *scode)
+    int *lowpower, int *wide, int *scan, int *pttid, int *scode)
 {
     memory_channel_t *ch = i + (memory_channel_t*) mem;
 
@@ -559,7 +579,6 @@ void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     // Other parameters.
     *lowpower = ch->lowpower;
     *wide = ch->wide;
-    *bcl = ch->bcl;
     *scan = ch->scan;
     *scode = ch->scode;
     *pttid = ch->pttidbot | (ch->pttideot << 1);
@@ -626,8 +645,8 @@ typedef struct {
                 step     : 3,
                 _u8      : 1;
     uint8_t     _u9      : 6,
-                widenarr : 1,
-                txpower  : 1;
+                narrow   : 1,
+                lowpower : 1;
 } vfo_t;
 
 void decode_vfo (int index, int *band, int *hz, int *offset,
@@ -654,8 +673,8 @@ void decode_vfo (int index, int *band, int *hz, int *offset,
               (vfo->offset[3] & 15) * 100000;
     decode_squelch (vfo->rxtone, rx_ctcs, rx_dcs);
     decode_squelch (vfo->txtone, tx_ctcs, tx_dcs);
-    *lowpower = vfo->txpower;
-    *wide = !vfo->widenarr;
+    *lowpower = vfo->lowpower;
+    *wide = ! vfo->narrow;
     *step = vfo->step;
     *scode = vfo->scode;
 }
@@ -707,21 +726,77 @@ void print_vfo (char name, int band, int hz, int offset,
         lowpower ? "Low" : "High", wide ? "Wide" : "Narrow", sgroup);
 }
 
+//
+// Generic settings.
+//
+typedef struct {
+    uint8_t squelch;    // Carrier Squelch Level
+    uint8_t step;
+    uint8_t _u1;
+    uint8_t save;       // Battery Saver
+    uint8_t vox;        // VOX Sensitivity
+    uint8_t _u2;
+    uint8_t abr;        // Backlight Timeout
+    uint8_t tdr;        // Dual Watch
+    uint8_t beep;       // Beep
+    uint8_t timeout;    // Timeout Timer
+    uint8_t _u3 [4];
+    uint8_t voice;      // Voice
+    uint8_t _u4;
+    uint8_t dtmfst;     // DTMF Sidetone
+    uint8_t _u5;
+    uint8_t screv;      // Scan Resume
+    uint8_t pttid;
+    uint8_t pttlt;
+    uint8_t mdfa;       // Display Mode (A)
+    uint8_t mdfb;       // Display Mode (B)
+    uint8_t bcl;        // Busy Channel Lockout
+    uint8_t autolk;     // Automatic Key Lock
+    uint8_t sftd;
+    uint8_t _u6 [3];
+    uint8_t wtled;      // Standby LED Color
+    uint8_t rxled;      // RX LED Color
+    uint8_t txled;      // TX LED Color
+    uint8_t almod;      // Alarm Mode
+    uint8_t band;
+    uint8_t tdrab;      // Dual Watch Priority
+    uint8_t ste;        // Squelch Tail Eliminate (HT to HT)
+    uint8_t rpste;      // Squelch Tail Eliminate (repeater)
+    uint8_t rptrl;      // STE Repeater Delay
+    uint8_t ponmsg;     // Power-On Message
+    uint8_t roger;      // Roger Beep
+} settings_t;
+
+//
+// Transient modes.
+//
+typedef struct {
+    uint8_t displayab  : 1,     // Display
+            _u1        : 2,
+            fmradio    : 1,     // Broadcast FM Radio
+            alarm      : 1,
+            _u2        : 1,
+            reset      : 1,     // RESET Menu
+            menu       : 1;     // All Menus
+    uint8_t _u3;
+    uint8_t workmode;           // VFO/MR Mode
+    uint8_t keylock;            // Keypad Lock
+} extra_settings_t;
+
 void print_config ()
 {
     int i;
 
     // Print memory channels.
     printf ("\n");
-    printf ("Chan  Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan Scode BCL PTTID\n");
+    printf ("Chan  Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan ID[6] PTTID\n");
     for (i=0; i<128; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
-        int lowpower, wide, busy_channel_lockout, scan, pttid, scode;
+        int lowpower, wide, scan, pttid, scode;
         char name[17];
 
         decode_channel (i, name, &rx_hz, &tx_hz, &rx_ctcs, &tx_ctcs,
-            &rx_dcs, &tx_dcs, &lowpower, &wide, &busy_channel_lockout,
-            &scan, &pttid, &scode);
+            &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid, &scode);
         if (rx_hz == 0) {
             // Channel is disabled
             continue;
@@ -740,18 +815,9 @@ void print_config ()
         else
             sprintf (sgroup, "%u", scode);
 
-        printf ("   %-4s  %-6s %-4s %-5s %-3s %-4s\n", lowpower ? "Low" : "High",
-            wide ? "Wide" : "Narrow", scan ? "+" : "-", sgroup,
-            busy_channel_lockout ? "+" : "-", PTTID_NAME[pttid]);
+        printf ("   %-4s  %-6s %-4s %-5s %-4s\n", lowpower ? "Low" : "High",
+            wide ? "Wide" : "Narrow", scan ? "+" : "-", sgroup, PTTID_NAME[pttid]);
     }
-
-    // Print channel mode settings.
-    int chan_a, chan_b;
-    get_current_channel (0, &chan_a);
-    get_current_channel (1, &chan_b);
-    printf ("\n");
-    printf ("Channel A: %d\n", chan_a);
-    printf ("Channel B: %d\n", chan_b);
 
     // Print frequency mode VFO settings.
     int band, hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
@@ -759,7 +825,7 @@ void print_config ()
     printf ("\n");
     decode_vfo (0, &band, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &lowpower, &wide, &step, &scode);
-    printf ("VFO Band Receive  TxOffset R-Squel T-Squel Step Power FM     Scode\n");
+    printf ("VFO Band Receive  TxOffset R-Squel T-Squel Step Power FM     ID[6]\n");
     print_vfo ('A', band, hz, offset, rx_ctcs, tx_ctcs,
         rx_dcs, tx_dcs, lowpower, wide, step, scode);
     decode_vfo (1, &band, &hz, &offset, &rx_ctcs, &tx_ctcs,
@@ -778,13 +844,58 @@ void print_config ()
     printf (" UHF %4d  %4d  %s\n", uhf_lower, uhf_upper,
         uhf_enable ? "+" : "-");
 
-    // Print atomatic number identification.
+    // Print channel mode settings.
+    int chan_a, chan_b;
+    get_current_channel (0, &chan_a);
+    get_current_channel (1, &chan_b);
+    printf ("\n");
+    printf ("Channel A: %d\n", chan_a);
+    printf ("Channel B: %d\n", chan_b);
+
+    // Get atomatic number identifier.
     char ani[5];
     fetch_ani (ani);
-    printf ("\n");
-    printf ("PTT ID: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
 
-    // TODO: settings, extra
+    // Print other settings.
+    settings_t *mode = (settings_t*) &mem[0x0E20];
+
+    // TODO
+    printf ("Carrier Squelch Level: %u\n",          mode->squelch);
+    printf ("Battery Saver: %s\n",                  SAVER_NAME[mode->save & 7]);
+    printf ("VOX Sensitivity: %s\n",                VOX_NAME[mode->vox & 15]);
+    printf ("Backlight Timeout: %s\n",              ABR_NAME[mode->abr & 7]);
+    printf ("Dual Watch: %s\n",                     mode->tdr ? "On" : "Off");
+    printf ("Keypad Beep: %s\n",                    mode->beep ? "On" : "Off");
+    printf ("Transmittion Timer: %u\n",             (mode->timeout + 1) * 15);
+    printf ("Voice Prompt: %s\n",                   mode->voice ? "On" : "Off");
+    printf ("Automatic ID[1-5]: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
+    printf ("DTMF Sidetone: %s\n",                  DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
+    printf ("Scan Resume Method: %s\n",             SCAN_RESUME_NAME[mode->screv & 3]);
+    printf ("Display Mode A: %s\n",                 DISPLAY_MODE_NAME[mode->mdfa & 3]);
+    printf ("Display Mode B: %s\n",                 DISPLAY_MODE_NAME[mode->mdfb & 3]);
+    printf ("Busy Channel Lockout: %s\n",           mode->bcl ? "On" : "Off");
+    printf ("Auto Key Lock: %s\n",                  mode->autolk ? "On" : "Off");
+    printf ("Standby LED Color: %s\n",              COLOR_NAME[mode->wtled & 3]);
+    printf ("RX LED Color: %s\n",                   COLOR_NAME[mode->rxled & 3]);
+    printf ("TX LED Color: %s\n",                   COLOR_NAME[mode->txled & 3]);
+    printf ("Alarm Mode: %s\n",                     ALARM_NAME[mode->almod & 3]);
+    printf ("Squelch Tail Eliminate: %s\n",         mode->ste ? "On" : "Off");
+    printf ("Squelch Tail Eliminate for Repeater: %s\n", RPSTE_NAME[mode->rpste & 15]);
+    printf ("Squelch Tail Repeater Delay: %s\n",    RPSTE_NAME[mode->rptrl & 15]);
+    printf ("Power-On Message: %s\n",               mode->ponmsg ? "On" : "Off");
+    printf ("Roger Beep: %s\n",                     mode->roger ? "On" : "Off");
+
+#if 0
+    // Transient modes: usually there is no interest to display or touch these.
+    extra_settings_t *extra = (extra_settings_t*) &mem[0x0E4A];
+    extra->displayab;
+    extra->fmradio;
+    extra->alarm;
+    extra->reset;
+    extra->menu;
+    extra->workmode;
+    extra->keylock;
+#endif
 }
 
 int main (int argc, char **argv)
