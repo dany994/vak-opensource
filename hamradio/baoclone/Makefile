@@ -1,9 +1,20 @@
-PROG            = baoclone
-CFLAGS		= -m32 -O -Wall -Werror
-LDFLAGS		= -m32
-#CC		= i586-mingw32msvc-gcc
+CC		= gcc -m32
+#CC              = i586-mingw32msvc-gcc -m32
 
-all:		$(PROG)
+CFLAGS		= -g -O -Wall -Werror
+LDFLAGS		=
+
+OBJS		= main.o radio.o
+LIBS            =
+
+all:		baoclone
+
+baoclone:	$(OBJS)
+		$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 clean:
-		rm -f $(PROG) *.o *~ a.out
+		rm -f *~ *.o core baoclone
+
+install:	baoclone
+		install -c -s baoclone /usr/local/bin/baoclone
+###

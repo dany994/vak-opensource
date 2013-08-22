@@ -1,16 +1,29 @@
 /*
- * Baofeng UV-5R Clone Utility
+ * Clone Utility for Baofeng radios.
  *
- * Copyright (C) 2013 Serge Vakulenko, <serge@vak.ru>
+ * Copyright (C) 2013 Serge Vakulenko, KK6ABQ
  *
- * This file is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * You can redistribute this file and/or modify it under the terms of the GNU
- * General Public License (GPL) as published by the Free Software Foundation;
- * either version 2 of the License, or (at your discretion) any later version.
- * See the accompanying file "COPYING.txt" for more details.
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *   3. The name of the author may not be used to endorse or promote products
+ *      derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ * EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
 #include <string.h>
@@ -21,14 +34,12 @@
 #include <termios.h>
 #include <stdint.h>
 #include <sys/stat.h>
+#include "radio.h"
 
-const char version[] = "1.0";
-const char copyright[] = "Copyright (C) 2013 Serge Vakulenko KK6ABQ";
+static const unsigned char UV5R_MODEL_ORIG[] = "\x50\xBB\xFF\x01\x25\x98\x4D";
+static const unsigned char UV5R_MODEL_291[] = "\x50\xBB\xFF\x20\x12\x07\x25";
 
-const unsigned char UV5R_MODEL_ORIG[] = "\x50\xBB\xFF\x01\x25\x98\x4D";
-const unsigned char UV5R_MODEL_291[] = "\x50\xBB\xFF\x20\x12\x07\x25";
-
-const int DCS_CODES[] = {
+static const int DCS_CODES[] = {
      23,  25,  26,  31,  32,  36,  43,  47,  51,  53,  54,
      65,  71,  72,  73,  74, 114, 115, 116, 122, 125, 131,
     132, 134, 143, 145, 152, 155, 156, 162, 165, 172, 174,
@@ -41,76 +52,45 @@ const int DCS_CODES[] = {
     731, 732, 734, 743, 754,
 };
 
-const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
+static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
 
-const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
+static const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
                             "12.5", "25.0", "????", "????" };
 
-const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
+static const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
 
-const char *VOX_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+static const char *VOX_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
                            "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
 
-const char *ABR_NAME[] = { "Off", "1", "2", "3", "4", "5", "?6?", "?7?" };
+static const char *ABR_NAME[] = { "Off", "1", "2", "3", "4", "5", "?6?", "?7?" };
 
-const char *DTMF_SIDETONE_NAME[] = { "Off", "DTMF Only", "ANI Only", "DTMF+ANI" };
+static const char *DTMF_SIDETONE_NAME[] = { "Off", "DTMF Only", "ANI Only", "DTMF+ANI" };
 
-const char *SCAN_RESUME_NAME[] = { "After Timeout", "When Carrier Off", "Stop On Active", "??" };
+static const char *SCAN_RESUME_NAME[] = { "After Timeout", "When Carrier Off", "Stop On Active", "??" };
 
-const char *DISPLAY_MODE_NAME[] = { "Channel", "Name", "Frequency", "??" };
+static const char *DISPLAY_MODE_NAME[] = { "Channel", "Name", "Frequency", "??" };
 
-const char *COLOR_NAME[] = { "Off", "Blue", "Orange", "Purple" };
+static const char *COLOR_NAME[] = { "Off", "Blue", "Orange", "Purple" };
 
-const char *ALARM_NAME[] = { "Site", "Tone", "Code", "??" };
+static const char *ALARM_NAME[] = { "Site", "Tone", "Code", "??" };
 
-const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+static const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
                              "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
 
-int verbose;
+static int verbose;                     // Trace data i/o via the serial port
+static int serial_port;                 // File descriptor of programming serial port
+static struct termios oldtio, newtio;   // Mode of serial port
 
-struct termios oldtio, newtio;  // Mode of serial port
-
-unsigned char ident [8];        // Radio: identifier
-unsigned char mem [0x2000];     // Radio: memory contents
-unsigned char image_ident [8];  // Image file: identifier
-int is_original;                // True for firmware older than 291
-int progress;                   // Read/write progress counter
-
-extern char *optarg;
-extern int optind;
-
-void usage ()
-{
-    fprintf (stderr, "Baofeng UV-5R Clone Utility, Version %s, %s\n", version, copyright);
-    fprintf (stderr, "Usage:\n");
-    fprintf (stderr, "    baoclone [-v] port                Save device binary image to file 'device.img',\n");
-    fprintf (stderr, "                                      and text configuration to 'device.cfg'.\n");
-    fprintf (stderr, "    baoclone -w [-v] port file.img    Write image to device.\n");
-    fprintf (stderr, "    baoclone -c [-v] port file.cfg    Configure device from text file.\n");
-    fprintf (stderr, "    baoclone file.img                 Show configuration from image file.\n");
-    fprintf (stderr, "Options:\n");
-    fprintf (stderr, "    -v                                Verbose mode.\n");
-    exit (-1);
-}
-
-//
-// Check for a regular file.
-//
-int is_file (char *filename)
-{
-    struct stat st;
-
-    if (stat (filename, &st) < 0) {
-        // File not exist: treat it as a regular file.
-        return 1;
-    }
-    return (st.st_mode & S_IFMT) == S_IFREG;
-}
+static unsigned char ident [8];         // Radio: identifier
+static unsigned char mem [0x2000];      // Radio: memory contents
+static unsigned char image_ident [8];   // Image file: identifier
+static int is_original;                 // True for firmware older than 291
+static int progress;                    // Read/write progress counter
 
 //
 // Print data in hex format.
 //
-void print_hex (const unsigned char *data, int len)
+static void print_hex (const unsigned char *data, int len)
 {
     int i;
 
@@ -122,7 +102,7 @@ void print_hex (const unsigned char *data, int len)
 //
 // Open the serial port.
 //
-int open_port (char *portname)
+static int open_port (char *portname)
 {
     int fd;
 
@@ -174,13 +154,14 @@ int open_port (char *portname)
 //
 // Close the serial port.
 //
-void close_port (int fd)
+void radio_disconnect()
 {
     fprintf (stderr, "Close device.\n");
 
     // Restore the port mode.
-    tcsetattr (fd, TCSANOW, &oldtio);
-    close (fd);
+    tcsetattr (serial_port, TCSANOW, &oldtio);
+    close (serial_port);
+    serial_port = -1;
 
     // Radio needs a timeout to reset to a normal state.
     usleep (2000000);
@@ -191,7 +172,7 @@ void close_port (int fd)
 // Return 0 when no data available.
 // Use 200-msec timeout.
 //
-int read_with_timeout (int fd, unsigned char *data, int len)
+static int read_with_timeout (int fd, unsigned char *data, int len)
 {
     fd_set rset, wset, xset;
     int nbytes, len0 = len;
@@ -228,7 +209,7 @@ int read_with_timeout (int fd, unsigned char *data, int len)
 // Try to identify the device with a given magic command.
 // Return 0 when failed.
 //
-int try_magic (int fd, const unsigned char *magic)
+static int try_magic (const unsigned char *magic)
 {
     unsigned char reply;
     int magic_len = strlen ((char*) magic);
@@ -239,14 +220,14 @@ int try_magic (int fd, const unsigned char *magic)
         print_hex (magic, magic_len);
         printf ("\n");
     }
-    tcflush (fd, TCIFLUSH);
-    if (write (fd, magic, magic_len) != magic_len) {
+    tcflush (serial_port, TCIFLUSH);
+    if (write (serial_port, magic, magic_len) != magic_len) {
         perror ("Serial port");
         exit (-1);
     }
 
     // Check response.
-    if (read_with_timeout (fd, &reply, 1) != 1) {
+    if (read_with_timeout (serial_port, &reply, 1) != 1) {
         if (verbose)
             fprintf (stderr, "Radio did not respond.\n");
         return 0;
@@ -257,11 +238,11 @@ int try_magic (int fd, const unsigned char *magic)
     }
 
     // Query for identifier..
-    if (write (fd, "\x02", 1) != 1) {
+    if (write (serial_port, "\x02", 1) != 1) {
         perror ("Serial port");
         exit (-1);
     }
-    if (read_with_timeout (fd, ident, 8) != 8) {
+    if (read_with_timeout (serial_port, ident, 8) != 8) {
         fprintf (stderr, "Empty identifier.\n");
         return 0;
     }
@@ -272,11 +253,11 @@ int try_magic (int fd, const unsigned char *magic)
     }
 
     // Enter clone mode.
-    if (write (fd, "\x06", 1) != 1) {
+    if (write (serial_port, "\x06", 1) != 1) {
         perror ("Serial port");
         exit (-1);
     }
-    if (read_with_timeout (fd, &reply, 1) != 1) {
+    if (read_with_timeout (serial_port, &reply, 1) != 1) {
         fprintf (stderr, "Radio refused to clone.\n");
         return 0;
     }
@@ -287,7 +268,10 @@ int try_magic (int fd, const unsigned char *magic)
     return 1;
 }
 
-void print_firmware_version(FILE *out)
+//
+// Print a generic information about the device.
+//
+void radio_print_version (FILE *out)
 {
     char buf[17], *version = buf, *p;
 
@@ -311,20 +295,22 @@ void print_firmware_version(FILE *out)
 }
 
 //
-// Identify the type of device connected.
+// Connect to the radio and identify the type of device.
 //
-void identify (int fd)
+void radio_connect (char *port_name, int vflag)
 {
     int retry;
 
+    verbose = vflag;
+    serial_port = open_port (port_name);
     for (retry=0; retry<10; retry++) {
-        if (try_magic (fd, UV5R_MODEL_291)) {
+        if (try_magic (UV5R_MODEL_291)) {
             is_original = 0;
             printf ("Detected Baofeng UV-5R.\n");
             return;
         }
         usleep (500000);
-        if (try_magic (fd, UV5R_MODEL_ORIG)) {
+        if (try_magic (UV5R_MODEL_ORIG)) {
             is_original = 1;
             printf ("Detected Baofeng UV-5R original.\n");
             return;
@@ -340,7 +326,7 @@ void identify (int fd)
 // Read block of data, up to 64 bytes.
 // Halt the program on any error.
 //
-void read_block (int fd, int start, unsigned char *data, int nbytes)
+static void read_block (int fd, int start, unsigned char *data, int nbytes)
 {
     unsigned char cmd[4], reply[4];
     int addr, len;
@@ -404,7 +390,7 @@ void read_block (int fd, int start, unsigned char *data, int nbytes)
 // Write block of data, up to 16 bytes.
 // Halt the program on any error.
 //
-void write_block (int fd, int start, const unsigned char *data, int nbytes)
+static void write_block (int fd, int start, const unsigned char *data, int nbytes)
 {
     unsigned char cmd[4], reply;
 
@@ -445,7 +431,10 @@ void write_block (int fd, int start, const unsigned char *data, int nbytes)
     }
 }
 
-void read_device (int fd)
+//
+// Read firmware image from the device.
+//
+void radio_download()
 {
     int addr;
 
@@ -455,12 +444,12 @@ void read_device (int fd)
 
     // Main block.
     for (addr=0; addr<0x1800; addr+=0x40)
-        read_block (fd, addr, &mem[addr], 0x40);
+        read_block (serial_port, addr, &mem[addr], 0x40);
 
     if (! is_original) {
         // Auxiliary block starts at 0x1EC0.
         for (addr=0x1EC0; addr<0x2000; addr+=0x40)
-            read_block (fd, addr, &mem[addr], 0x40);
+            read_block (serial_port, addr, &mem[addr], 0x40);
     }
 
     if (! verbose)
@@ -471,7 +460,10 @@ void read_device (int fd)
     memcpy (image_ident, ident, sizeof(ident));
 }
 
-void write_device (int fd)
+//
+// Write firmware image to the device.
+//
+void radio_upload()
 {
     int addr;
 
@@ -486,19 +478,22 @@ void write_device (int fd)
 
     // Main block.
     for (addr=0; addr<0x1800; addr+=0x10)
-        write_block (fd, addr, &mem[addr], 0x10);
+        write_block (serial_port, addr, &mem[addr], 0x10);
 
     if (! is_original) {
         // Auxiliary block starts at 0x1EC0.
         for (addr=0x1EC0; addr<0x2000; addr+=0x10)
-            write_block (fd, addr, &mem[addr], 0x10);
+            write_block (serial_port, addr, &mem[addr], 0x10);
     }
 
     if (! verbose)
         fprintf (stderr, " done.\n");
 }
 
-void load_image (char *filename)
+//
+// Read firmware image from the binary file.
+//
+void radio_load_image (char *filename)
 {
     FILE *img;
 
@@ -523,7 +518,10 @@ void load_image (char *filename)
     fclose (img);
 }
 
-void save_image (char *filename)
+//
+// Save firmware image to the binary file.
+//
+void radio_save_image (char *filename)
 {
     FILE *img;
 
@@ -539,13 +537,16 @@ void save_image (char *filename)
     fclose (img);
 }
 
-void read_config (char *filename)
+//
+// Read the configuration from text file, and modify the firmware.
+//
+void radio_parse_config (char *filename)
 {
     // TODO
     fprintf (stderr, "Read configuration from file '%s'.\n", filename);
 }
 
-int bcd_to_int (uint32_t bcd)
+static int bcd_to_int (uint32_t bcd)
 {
     return ((bcd >> 28) & 15) * 10000000 +
            ((bcd >> 24) & 15) * 1000000 +
@@ -557,7 +558,7 @@ int bcd_to_int (uint32_t bcd)
            (bcd         & 15);
 }
 
-void decode_squelch (uint16_t index, int *ctcs, int *dcs)
+static void decode_squelch (uint16_t index, int *ctcs, int *dcs)
 {
     if (index == 0 || index == 0xffff) {
         // Squelch disabled.
@@ -593,7 +594,7 @@ typedef struct {
                 _u4      : 1;
 } memory_channel_t;
 
-void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
+static void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
     int *lowpower, int *wide, int *scan, int *pttid, int *scode)
 {
@@ -639,7 +640,7 @@ typedef struct {
 // Looks like limits are not implemented on old firmware
 // (prior to version 291).
 //
-void decode_limits (char band, int *enable, int *lower, int *upper)
+static void decode_limits (char band, int *enable, int *lower, int *upper)
 {
     int offset = (band == 'V') ? 0x1EC0+0x100 : 0x1EC0+0x105;
 
@@ -660,7 +661,7 @@ void decode_limits (char band, int *enable, int *lower, int *upper)
              (limits->upper_lsb        & 15);
 }
 
-void fetch_ani (char *ani)
+static void fetch_ani (char *ani)
 {
     int i;
 
@@ -668,7 +669,7 @@ void fetch_ani (char *ani)
         ani[i] = "0123456789ABCDEF" [mem[0x0CAA+i] & 0x0f];
 }
 
-void get_current_channel (int index, int *chan_num)
+static void get_current_channel (int index, int *chan_num)
 {
     unsigned char *ptr = mem + 0x0E76;
     *chan_num = ptr[index] % 128;
@@ -695,7 +696,7 @@ typedef struct {
                 lowpower : 1;
 } vfo_t;
 
-void decode_vfo (int index, int *band, int *hz, int *offset,
+static void decode_vfo (int index, int *band, int *hz, int *offset,
     int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
     int *lowpower, int *wide, int *step, int *scode)
 {
@@ -725,7 +726,7 @@ void decode_vfo (int index, int *band, int *hz, int *offset,
     *scode = vfo->scode;
 }
 
-void print_offset (FILE *out, int delta)
+static void print_offset (FILE *out, int delta)
 {
     if (delta == 0) {
         fprintf (out, "0       ");
@@ -743,7 +744,7 @@ void print_offset (FILE *out, int delta)
     }
 }
 
-void print_squelch (FILE *out, int ctcs, int dcs)
+static void print_squelch (FILE *out, int ctcs, int dcs)
 {
     if      (ctcs)    fprintf (out, "%5.1f", ctcs / 10.0);
     else if (dcs > 0) fprintf (out, "D%03dN", dcs);
@@ -751,7 +752,7 @@ void print_squelch (FILE *out, int ctcs, int dcs)
     else              fprintf (out, "   - ");
 }
 
-void print_vfo (FILE *out, char name, int band, int hz, int offset,
+static void print_vfo (FILE *out, char name, int band, int hz, int offset,
     int rx_ctcs, int tx_ctcs, int rx_dcs, int tx_dcs,
     int lowpower, int wide, int step, int scode)
 {
@@ -829,7 +830,10 @@ typedef struct {
     uint8_t keylock;            // Keypad Lock
 } extra_settings_t;
 
-void print_config (FILE *out)
+//
+// Print full information about the device configuration.
+//
+void radio_print_config (FILE *out)
 {
     int i;
 
@@ -942,89 +946,4 @@ void print_config (FILE *out)
     extra->workmode;
     extra->keylock;
 #endif
-}
-
-int main (int argc, char **argv)
-{
-    int write_flag = 0, config_flag = 0;
-
-    for (;;) {
-        switch (getopt (argc, argv, "vcw")) {
-        case 'v': ++verbose;     continue;
-        case 'w': ++write_flag;  continue;
-        case 'c': ++config_flag; continue;
-        default:
-            usage ();
-        case EOF:
-            break;
-        }
-        break;
-    }
-    argc -= optind;
-    argv += optind;
-    if (write_flag + config_flag > 1) {
-        fprintf (stderr, "Only one of -w or -c options is allowed.\n");
-        usage();
-    }
-
-    if (write_flag) {
-        // Restore image file to device.
-        if (argc != 2)
-            usage();
-
-        int fd = open_port (argv[0]);
-        identify (fd);
-        load_image (argv[1]);
-        print_firmware_version(stdout);
-        write_device (fd);
-        close_port (fd);
-
-    } else if (config_flag) {
-        // Update device from text config file.
-        if (argc != 2)
-            usage();
-
-        int fd = open_port (argv[0]);
-        identify (fd);
-        read_device (fd);
-        print_firmware_version(stdout);
-        save_image ("save.img");
-        read_config (argv[1]);
-        write_device (fd);
-        close_port (fd);
-
-    } else {
-        if (argc != 1)
-            usage();
-
-        if (is_file (argv[0])) {
-            // Print configuration from image file.
-            // Load image from file.
-            load_image (argv[0]);
-            print_firmware_version(stdout);
-            memcpy (ident, image_ident, sizeof(ident));
-            print_config (stdout);
-        } else {
-            // Dump device to image file.
-            int fd = open_port (argv[0]);
-            identify (fd);
-            read_device (fd);
-            print_firmware_version(stdout);
-            close_port (fd);
-            save_image ("device.img");
-
-            // Print configuration to file.
-            const char *filename = "device.cfg";
-            FILE *cfg = fopen (filename, "w");
-            if (! cfg) {
-                perror (filename);
-                exit (-1);
-            }
-            print_firmware_version(cfg);
-            print_config (cfg);
-            fclose (cfg);
-            printf ("Print configuration to file '%s'.\n", filename);
-        }
-    }
-    return (0);
 }
