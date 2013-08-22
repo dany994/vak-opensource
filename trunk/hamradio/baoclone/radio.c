@@ -206,6 +206,9 @@ void radio_read_image (char *filename)
     case 6472:
         device = &radio_uv5r;
         break;
+    case 6152:
+        device = &radio_uv5r_aged;
+        break;
 #if 0
     // TODO
     case 4144:
