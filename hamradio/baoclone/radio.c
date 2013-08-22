@@ -122,30 +122,108 @@ void radio_print_version (FILE *out)
 }
 
 //
+// Try to identify the device with a given magic command.
+// Return 0 when failed.
+//
+static int try_magic (const unsigned char *magic)
+{
+    unsigned char reply;
+    int magic_len = strlen ((char*) magic);
+
+    // Send magic.
+    if (verbose) {
+        printf ("# Sending magic: ");
+        print_hex (magic, magic_len);
+        printf ("\n");
+    }
+    tcflush (radio_port, TCIFLUSH);
+    if (write (radio_port, magic, magic_len) != magic_len) {
+        perror ("Serial port");
+        exit (-1);
+    }
+
+    // Check response.
+    if (read_with_timeout (radio_port, &reply, 1) != 1) {
+        if (verbose)
+            fprintf (stderr, "Radio did not respond.\n");
+        return 0;
+    }
+    if (reply != 0x06) {
+        fprintf (stderr, "Bad response: %02x\n", reply);
+        return 0;
+    }
+
+    // Query for identifier..
+    if (write (radio_port, "\x02", 1) != 1) {
+        perror ("Serial port");
+        exit (-1);
+    }
+    if (read_with_timeout (radio_port, radio_ident, 8) != 8) {
+        fprintf (stderr, "Empty identifier.\n");
+        return 0;
+    }
+    if (verbose) {
+        printf ("# Identifier: ");
+        print_hex (radio_ident, 8);
+        printf ("\n");
+    }
+
+    // Enter clone mode.
+    if (write (radio_port, "\x06", 1) != 1) {
+        perror ("Serial port");
+        exit (-1);
+    }
+    if (read_with_timeout (radio_port, &reply, 1) != 1) {
+        fprintf (stderr, "Radio refused to clone.\n");
+        return 0;
+    }
+    if (reply != 0x06) {
+        fprintf (stderr, "Radio refused to clone: %02x\n", reply);
+        return 0;
+    }
+    return 1;
+}
+
+//
 // Connect to the radio and identify the type of device.
 //
 void radio_connect (char *port_name)
 {
+    static const unsigned char UV5R_MODEL_AGED[] = "\x50\xBB\xFF\x01\x25\x98\x4D";
+    static const unsigned char UV5R_MODEL_291[] = "\x50\xBB\xFF\x20\x12\x07\x25";
+    static const unsigned char UVB5_MODEL[] = "PROGRAM";
     int retry;
 
+    fprintf (stderr, "Connect to %s.\n", port_name);
     radio_port = open_port (port_name);
-    for (retry=0; retry<10; retry++) {
-        device = &radio_uv5r;
-        if (device->connect()) {
-            printf ("Detected %s.\n", device->name);
-            return;
+    for (retry=0; ; retry++) {
+        if (retry >= 10) {
+            fprintf (stderr, "Device not detected.\n");
+            exit (-1);
+        }
+        if (try_magic (UVB5_MODEL)) {
+            if (strncmp ((char*)radio_ident, "HKT511", 6) == 0) {
+                device = &radio_uvb5;   // Baofeng UV-B5, UV-B6
+                break;
+            }
+            if (strncmp ((char*)radio_ident, "P3107", 5) == 0) {
+                device = &radio_bf888s; // Baofeng BF-888S
+                break;
+            }
         }
         usleep (500000);
-        device = &radio_uv5r_aged;
-        if (device->connect()) {
-            printf ("Detected %s.\n", device->name);
-            return;
+        if (try_magic (UV5R_MODEL_291)) {
+            device = &radio_uv5r;       // Baofeng UV-5R, UV-5RA
+            break;
         }
-        fprintf (stderr, "Retry #%d...\n", retry+1);
+        usleep (500000);
+        if (try_magic (UV5R_MODEL_AGED)) {
+            device = &radio_uv5r_aged;  // Baofeng UV-5R with old firmware
+            break;
+        }
         usleep (500000);
     }
-    fprintf (stderr, "Device not detected.\n");
-    exit (-1);
+    printf ("Detected %s.\n", device->name);
 }
 
 //
@@ -209,15 +287,12 @@ void radio_read_image (char *filename)
     case 6152:
         device = &radio_uv5r_aged;
         break;
-#if 0
-    // TODO
     case 4144:
         device = &radio_uvb5;
         break;
-    case ????:
+    case 1032:
         device = &radio_bf888s;
         break;
-#endif
     default:
         fprintf (stderr, "%s: Unrecognized file size %u bytes.\n",
             filename, (int) st.st_size);

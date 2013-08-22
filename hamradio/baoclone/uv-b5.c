@@ -1,5 +1,5 @@
 /*
- * Interface to Baofeng UV-5R and compatibles.
+ * Interface to Baofeng UV-B5 and compatibles.
  *
  * Copyright (C) 2013 Serge Vakulenko, KK6ABQ
  *
@@ -47,6 +47,8 @@ static const int DCS_CODES[] = {
     731, 732, 734, 743, 754,
 };
 
+static const char MAGIC[] = "PROGRAM";
+
 static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
 
 static const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
@@ -75,36 +77,12 @@ static const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8
 //
 // Print a generic information about the device.
 //
-static void uv5r_print_version (FILE *out)
+static void uvb5_print_version (FILE *out)
 {
-    char buf[17], *version = buf, *p;
-
-    // Copy the string, trim spaces.
-    strncpy (version, (char*)&radio_mem[0x1EC0+0x30], 16);
-    version [16] = 0;
-    while (*version == ' ')
-        version++;
-    p = version + strlen(version);
-    while (p > version && p[-1]==' ')
-        *--p = 0;
-
-    // 6+poweron message
-    fprintf (out, "Serial number: %.16s\n", &radio_mem[0x1EC0+0x10]);
-
-    // 3+poweron message
-    fprintf (out, "Firmware: %s\n", version);
-
-    // poweron message
-    fprintf (out, "Message: %.16s\n", &radio_mem[0x1EC0+0x20]);
-}
-
-static void aged_print_version (FILE *out)
-{
-    // Nothing to print.
 }
 
 //
-// Read block of data, up to 64 bytes.
+// Read block of data, up to 16 bytes.
 // Halt the program on any error.
 //
 static void read_block (int fd, int start, unsigned char *data, int nbytes)
@@ -113,7 +91,7 @@ static void read_block (int fd, int start, unsigned char *data, int nbytes)
     int addr, len;
 
     // Send command.
-    cmd[0] = 'S';
+    cmd[0] = 'R';
     cmd[1] = start >> 8;
     cmd[2] = start;
     cmd[3] = nbytes;
@@ -128,14 +106,14 @@ static void read_block (int fd, int start, unsigned char *data, int nbytes)
         exit(-1);
     }
     addr = reply[1] << 8 | reply[2];
-    if (reply[0] != 'X' || addr != start || reply[3] != nbytes) {
+    if (reply[0] != 'W' || addr != start || reply[3] != nbytes) {
         fprintf (stderr, "Bad reply for block 0x%04x of %d bytes: %02x-%02x-%02x-%02x\n",
             start, nbytes, reply[0], reply[1], reply[2], reply[3]);
         exit(-1);
     }
 
     // Read data.
-    len = read_with_timeout (fd, data, 0x40);
+    len = read_with_timeout (fd, data, 0x10);
     if (len != nbytes) {
         fprintf (stderr, "Reading block 0x%04x: got only %d bytes.\n", start, len);
         exit(-1);
@@ -150,7 +128,7 @@ static void read_block (int fd, int start, unsigned char *data, int nbytes)
         fprintf (stderr, "No acknowledge after block 0x%04x.\n", start);
         exit(-1);
     }
-    if (reply[0] != 0x06) {
+    if (reply[0] != 0x74 && reply[0] != 0x78 && reply[0] != 0x1f) {
         fprintf (stderr, "Bad acknowledge after block 0x%04x: %02x\n", start, reply[0]);
         exit(-1);
     }
@@ -160,7 +138,7 @@ static void read_block (int fd, int start, unsigned char *data, int nbytes)
         printf ("\n");
     } else {
         ++radio_progress;
-        if (radio_progress % 2 == 0) {
+        if (radio_progress % 8 == 0) {
             fprintf (stderr, "#");
             fflush (stderr);
         }
@@ -176,7 +154,7 @@ static void write_block (int fd, int start, const unsigned char *data, int nbyte
     unsigned char cmd[4], reply;
 
     // Send command.
-    cmd[0] = 'X';
+    cmd[0] = 'W';
     cmd[1] = start >> 8;
     cmd[2] = start;
     cmd[3] = nbytes;
@@ -215,50 +193,22 @@ static void write_block (int fd, int start, const unsigned char *data, int nbyte
 //
 // Read firmware image from the device.
 //
-static void uv5r_download()
+static void uvb5_download()
 {
     int addr;
 
-    // Main block.
-    for (addr=0; addr<0x1800; addr+=0x40)
-        read_block (radio_port, addr, &radio_mem[addr], 0x40);
-
-    // Auxiliary block starts at 0x1EC0.
-    for (addr=0x1EC0; addr<0x2000; addr+=0x40)
-        read_block (radio_port, addr, &radio_mem[addr], 0x40);
-}
-
-static void aged_download()
-{
-    int addr;
-
-    // Main block only.
-    for (addr=0; addr<0x1800; addr+=0x40)
-        read_block (radio_port, addr, &radio_mem[addr], 0x40);
+    for (addr=0; addr<0x1000; addr+=0x10)
+        read_block (radio_port, addr, &radio_mem[addr], 0x10);
 }
 
 //
 // Write firmware image to the device.
 //
-static void uv5r_upload()
+static void uvb5_upload()
 {
     int addr;
 
-    // Main block.
-    for (addr=0; addr<0x1800; addr+=0x10)
-        write_block (radio_port, addr, &radio_mem[addr], 0x10);
-
-    // Auxiliary block starts at 0x1EC0.
-    for (addr=0x1EC0; addr<0x2000; addr+=0x10)
-        write_block (radio_port, addr, &radio_mem[addr], 0x10);
-}
-
-static void aged_upload()
-{
-    int addr;
-
-    // Main block only.
-    for (addr=0; addr<0x1800; addr+=0x10)
+    for (addr=0; addr<0x1000; addr+=0x10)
         write_block (radio_port, addr, &radio_mem[addr], 0x10);
 }
 
@@ -526,26 +476,13 @@ typedef struct {
 } settings_t;
 
 //
-// Transient modes.
-//
-typedef struct {
-    uint8_t displayab  : 1,     // Display
-            _u1        : 2,
-            fmradio    : 1,     // Broadcast FM Radio
-            alarm      : 1,
-            _u2        : 1,
-            reset      : 1,     // RESET Menu
-            menu       : 1;     // All Menus
-    uint8_t _u3;
-    uint8_t workmode;           // VFO/MR Mode
-    uint8_t keylock;            // Keypad Lock
-} extra_settings_t;
-
-//
 // Print full information about the device configuration.
 //
-static void print_config (FILE *out, int is_aged)
+static void uvb5_print_config (FILE *out)
 {
+    fprintf (stderr, "TODO: Print configuration of UV-B5.\n");
+    return;
+
     int i;
 
     // Print memory channels.
@@ -594,18 +531,16 @@ static void print_config (FILE *out, int is_aged)
     print_vfo (out, 'B', band, hz, offset, rx_ctcs, tx_ctcs,
         rx_dcs, tx_dcs, lowpower, wide, step, scode);
 
-    if (! is_aged) {
-        // Print band limits.
-        int vhf_enable, vhf_lower, vhf_upper, uhf_enable, uhf_lower, uhf_upper;
-        decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
-        decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
-        fprintf (out, "\n");
-        fprintf (out, "Limit Lower Upper Enable\n");
-        fprintf (out, " VHF  %4d  %4d  %s\n", vhf_lower, vhf_upper,
-            vhf_enable ? "+" : "-");
-        fprintf (out, " UHF  %4d  %4d  %s\n", uhf_lower, uhf_upper,
-            uhf_enable ? "+" : "-");
-    }
+    // Print band limits.
+    int vhf_enable, vhf_lower, vhf_upper, uhf_enable, uhf_lower, uhf_upper;
+    decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
+    decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
+    fprintf (out, "\n");
+    fprintf (out, "Limit Lower Upper Enable\n");
+    fprintf (out, " VHF  %4d  %4d  %s\n", vhf_lower, vhf_upper,
+        vhf_enable ? "+" : "-");
+    fprintf (out, " UHF  %4d  %4d  %s\n", uhf_lower, uhf_upper,
+        uhf_enable ? "+" : "-");
 
     // Print channel mode settings.
     int chan_a, chan_b;
@@ -645,59 +580,25 @@ static void print_config (FILE *out, int is_aged)
     fprintf (out, "Squelch Tail Repeater Delay: %s\n", RPSTE_NAME[mode->rptrl & 15]);
     fprintf (out, "Power-On Message: %s\n", mode->ponmsg ? "On" : "Off");
     fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
-
-#if 0
-    // Transient modes: usually there is no interest to display or touch these.
-    extra_settings_t *extra = (extra_settings_t*) &radio_mem[0x0E4A];
-    extra->displayab;
-    extra->fmradio;
-    extra->alarm;
-    extra->reset;
-    extra->menu;
-    extra->workmode;
-    extra->keylock;
-#endif
-}
-
-//
-// Print full information about the device configuration.
-//
-static void uv5r_print_config (FILE *out)
-{
-    print_config (out, 0);
-}
-
-static void aged_print_config (FILE *out)
-{
-    print_config (out, 1);
 }
 
 //
 // Read firmware image from the binary file.
 //
-static void uv5r_read_image (FILE *img, unsigned char *ident)
+static void uvb5_read_image (FILE *img, unsigned char *ident)
 {
-    if (fread (ident, 1, 8, img) != 8) {
-        fprintf (stderr, "Error reading image header.\n");
-        exit (-1);
-    }
-    if (fread (&radio_mem[0], 1, 0x1800, img) != 0x1800) {
-        fprintf (stderr, "Error reading image data.\n");
-        exit (-1);
-    }
-    if (fread (&radio_mem[0x1EC0], 1, 0x2000-0x1EC0, img) != 0x2000-0x1EC0) {
-        fprintf (stderr, "Error reading image footer.\n");
-        exit (-1);
-    }
-}
+    char buf[40];
 
-static void aged_read_image (FILE *img, unsigned char *ident)
-{
     if (fread (ident, 1, 8, img) != 8) {
         fprintf (stderr, "Error reading image header.\n");
         exit (-1);
     }
-    if (fread (&radio_mem[0], 1, 0x1800, img) != 0x1800) {
+    // Ignore next 40 bytes.
+    if (fread (buf, 1, 40, img) != 40) {
+        fprintf (stderr, "Error reading header.\n");
+        exit (-1);
+    }
+    if (fread (&radio_mem[0], 1, 0x1000, img) != 0x1000) {
         fprintf (stderr, "Error reading image data.\n");
         exit (-1);
     }
@@ -705,42 +606,24 @@ static void aged_read_image (FILE *img, unsigned char *ident)
 
 //
 // Save firmware image to the binary file.
+// Try to be compatible with Chirp.
 //
-static void uv5r_save_image (FILE *img)
+static void uvb5_save_image (FILE *img)
 {
     fwrite (radio_ident, 1, 8, img);
-    fwrite (&radio_mem[0], 1, 0x1800, img);
-    fwrite (&radio_mem[0x1EC0], 1, 0x2000-0x1EC0, img);
-}
-
-static void aged_save_image (FILE *img)
-{
-    fwrite (radio_ident, 1, 8, img);
-    fwrite (&radio_mem[0], 1, 0x1800, img);
+    fwrite ("Radio Program data v1.08\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 1, 40, img);
+    fwrite (&radio_mem[0], 1, 0x1000, img);
 }
 
 //
-// Baofeng UV-5R, UV-5RA
+// Baofeng UV-B5R, UV-B6
 //
-radio_device_t radio_uv5r = {
-    "Baofeng UV-5R",
-    uv5r_download,
-    uv5r_upload,
-    uv5r_read_image,
-    uv5r_save_image,
-    uv5r_print_version,
-    uv5r_print_config,
-};
-
-//
-// Baofeng UV-5R with old firmware
-//
-radio_device_t radio_uv5r_aged = {
-    "Baofeng UV-5R Aged",
-    aged_download,
-    aged_upload,
-    aged_read_image,
-    aged_save_image,
-    aged_print_version,
-    aged_print_config,
+radio_device_t radio_uvb5 = {
+    "Baofeng UV-B5",
+    uvb5_download,
+    uvb5_upload,
+    uvb5_read_image,
+    uvb5_save_image,
+    uvb5_print_version,
+    uvb5_print_config,
 };
