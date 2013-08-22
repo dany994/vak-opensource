@@ -49,8 +49,7 @@ static const int DCS_CODES[] = {
 
 static const char MAGIC[] = "PROGRAM";
 
-static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
-
+#if 0
 static const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
                             "12.5", "25.0", "????", "????" };
 
@@ -73,6 +72,7 @@ static const char *ALARM_NAME[] = { "Site", "Tone", "Code", "??" };
 
 static const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
                              "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
+#endif
 
 //
 // Print a generic information about the device.
@@ -233,59 +233,52 @@ static int bcd_to_int (uint32_t bcd)
            (bcd         & 15);
 }
 
-static void decode_squelch (uint16_t index, int *ctcs, int *dcs)
+static void decode_squelch (uint16_t bcd, int *ctcs, int *dcs)
 {
-    if (index == 0 || index == 0xffff) {
+    if (bcd == 0 || bcd == 0xffff) {
         // Squelch disabled.
         return;
     }
-    if (index >= 0x0258) {
+    int index = ((bcd >> 12) & 15) * 1000 +
+                ((bcd >> 8)  & 15) * 100 +
+                ((bcd >> 4)  & 15) * 10 +
+                (bcd         & 15);
+
+    if (index < 8000) {
         // CTCSS value is Hz multiplied by 10.
         *ctcs = index;
     }
     // DCS mode.
-    if (index < 0x6A)
-        *dcs = DCS_CODES[index - 1];
+    if (index < 12000)
+        *dcs = index - 8000;
     else
-        *dcs = - DCS_CODES[index - 0x6A];
+        *dcs = - (index - 12000);
 }
 
 typedef struct {
-    uint32_t    rxfreq; // binary coded decimal, 8 digits
-    uint32_t    txfreq; // binary coded decimal, 8 digits
+    uint32_t    rxfreq;     // binary coded decimal, 8 digits
+    uint32_t    txfreq;     // binary coded decimal, 8 digits
     uint16_t    rxtone;
     uint16_t    txtone;
-    uint8_t     scode    : 4,
-                _u1      : 4;
-    uint8_t     _u2;
-    uint8_t     lowpower : 1,
-                _u3      : 7;
-    uint8_t     pttidbot : 1,
-                pttideot : 1,
-                scan     : 1,
-                bcl      : 1,
-                _u5      : 2,
-                wide     : 1,
-                _u4      : 1;
+    uint8_t     _u1       : 2,
+                scramble  : 1,
+                _u2       : 1,
+                highpower : 1,
+                bcl       : 1,
+                narrow    : 1,
+                scan      : 1;
+    uint8_t     _u3[3];
 } memory_channel_t;
 
-static void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
+static void decode_channel (int i, int *rx_hz, int *tx_hz,
     int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
-    int *lowpower, int *wide, int *scan, int *pttid, int *scode)
+    int *lowpower, int *wide, int *scan, int *bcl, int *scramble)
 {
-    memory_channel_t *ch = i + (memory_channel_t*) radio_mem;
+    memory_channel_t *ch = i + (memory_channel_t*) &radio_mem[0x10];
 
     *rx_hz = *tx_hz = *rx_ctcs = *tx_ctcs = *rx_dcs = *tx_dcs = 0;
-    *name = 0;
     if (ch->rxfreq == 0 || ch->rxfreq == 0xffffffff)
         return;
-
-    // Extract channel name; strip trailing FF's.
-    char *p;
-    strncpy (name, (char*) &radio_mem[0x1000 + i*16], 7);
-    name[7] = 0;
-    for (p=name+6; p>=name && *p=='\xff'; p--)
-        *p = 0;
 
     // Decode channel frequencies.
     *rx_hz = bcd_to_int (ch->rxfreq) * 10;
@@ -296,104 +289,11 @@ static void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     decode_squelch (ch->txtone, tx_ctcs, tx_dcs);
 
     // Other parameters.
-    *lowpower = ch->lowpower;
-    *wide = ch->wide;
+    *lowpower = ! ch->highpower;
+    *wide = ! ch->narrow;
     *scan = ch->scan;
-    *scode = ch->scode;
-    *pttid = ch->pttidbot | (ch->pttideot << 1);
-}
-
-typedef struct {
-    uint8_t     enable;
-    uint8_t     lower_msb; // binary coded decimal, 4 digits
-    uint8_t     lower_lsb;
-    uint8_t     upper_msb; // binary coded decimal, 4 digits
-    uint8_t     upper_lsb;
-} limits_t;
-
-//
-// Looks like limits are not implemented on old firmware
-// (prior to version 291).
-//
-static void decode_limits (char band, int *enable, int *lower, int *upper)
-{
-    int offset = (band == 'V') ? 0x1EC0+0x100 : 0x1EC0+0x105;
-
-    limits_t *limits = (limits_t*) (radio_mem + offset);
-    *enable = limits->enable;
-    *lower = ((limits->lower_msb >> 4) & 15) * 1000 +
-             (limits->lower_msb        & 15) * 100 +
-             ((limits->lower_lsb >> 4) & 15) * 10 +
-             (limits->lower_lsb        & 15);
-    *upper = ((limits->upper_msb >> 4) & 15) * 1000 +
-             (limits->upper_msb        & 15) * 100 +
-             ((limits->upper_lsb >> 4) & 15) * 10 +
-             (limits->upper_lsb        & 15);
-}
-
-static void fetch_ani (char *ani)
-{
-    int i;
-
-    for (i=0; i<5; i++)
-        ani[i] = "0123456789ABCDEF" [radio_mem[0x0CAA+i] & 0x0f];
-}
-
-static void get_current_channel (int index, int *chan_num)
-{
-    unsigned char *ptr = radio_mem + 0x0E76;
-    *chan_num = ptr[index] % 128;
-}
-
-typedef struct {
-    uint8_t     freq[8];    // binary coded decimal, 8 digits
-    uint8_t     _u1;
-    uint8_t     offset[4];  // binary coded decimal, 8 digits
-    uint8_t     _u2;
-    uint16_t    rxtone;
-    uint16_t    txtone;
-    uint8_t     band     : 1,
-                _u3      : 7;
-    uint8_t     _u4;
-    uint8_t     scode    : 4,
-                _u5      : 4;
-    uint8_t     _u6;
-    uint8_t     _u7      : 4,
-                step     : 3,
-                _u8      : 1;
-    uint8_t     _u9      : 6,
-                narrow   : 1,
-                lowpower : 1;
-} vfo_t;
-
-static void decode_vfo (int index, int *band, int *hz, int *offset,
-    int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
-    int *lowpower, int *wide, int *step, int *scode)
-{
-    vfo_t *vfo = (vfo_t*) &radio_mem[index ? 0x0F28 : 0x0F08];
-
-    *band = *hz = *offset = *rx_ctcs = *tx_ctcs = *rx_dcs = *tx_dcs = 0;
-    *lowpower = *wide = *step = *scode = 0;
-
-    *band = vfo->band;
-    *hz = (vfo->freq[0] & 15) * 100000000 +
-          (vfo->freq[1] & 15) * 10000000 +
-          (vfo->freq[2] & 15) * 1000000 +
-          (vfo->freq[3] & 15) * 100000 +
-          (vfo->freq[4] & 15) * 10000 +
-          (vfo->freq[5] & 15) * 1000 +
-          (vfo->freq[6] & 15) * 100 +
-          (vfo->freq[7] & 15);
-    *offset = (vfo->offset[0] & 15) * 100000000 +
-              (vfo->offset[1] & 15) * 10000000 +
-              (vfo->offset[2] & 15) * 1000000 +
-              (vfo->offset[3] & 15) * 100000;
-    decode_squelch (vfo->rxtone, rx_ctcs, rx_dcs);
-    decode_squelch (vfo->txtone, tx_ctcs, tx_dcs);
-    *lowpower = vfo->lowpower;
-    *wide = ! vfo->narrow;
-    *step = vfo->step;
-    *scode = vfo->scode;
+    *bcl = ch->bcl;
+    *scramble = ch->scramble;
 }
 
 static void print_offset (FILE *out, int delta)
@@ -420,27 +320,6 @@ static void print_squelch (FILE *out, int ctcs, int dcs)
     else if (dcs > 0) fprintf (out, "D%03dN", dcs);
     else if (dcs < 0) fprintf (out, "D%03dI", -dcs);
     else              fprintf (out, "   - ");
-}
-
-static void print_vfo (FILE *out, char name, int band, int hz, int offset,
-    int rx_ctcs, int tx_ctcs, int rx_dcs, int tx_dcs,
-    int lowpower, int wide, int step, int scode)
-{
-    fprintf (out, " %c  %3s  %8.4f ", name, band ? "UHF" : "VHF", hz / 1000000.0);
-    print_offset (out, offset);
-    fprintf (out, " ");
-    print_squelch (out, rx_ctcs, rx_dcs);
-    fprintf (out, "   ");
-    print_squelch (out, tx_ctcs, tx_dcs);
-
-    char sgroup [8];
-    if (scode == 0)
-        strcpy (sgroup, "-");
-    else
-        sprintf (sgroup, "%u", scode);
-
-    fprintf (out, "   %-4s %-4s  %-6s %-3s\n", STEP_NAME[step],
-        lowpower ? "Low" : "High", wide ? "Wide" : "Narrow", sgroup);
 }
 
 //
@@ -489,81 +368,36 @@ typedef struct {
 //
 static void bf888s_print_config (FILE *out)
 {
-    fprintf (stderr, "TODO: Print configuration of BF-888S.\n");
-    return;
-
     int i;
 
     // Print memory channels.
     fprintf (out, "\n");
-    fprintf (out, "Channel Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan ID[6] PTTID\n");
-    for (i=0; i<128; i++) {
+    fprintf (out, "Channel Receive  TxOffset R-Squel T-Squel Power FM     Scan BCL Scramble\n");
+    for (i=0; i<16; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
-        int lowpower, wide, scan, pttid, scode;
-        char name[17];
+        int lowpower, wide, scan, bcl, scramble;
 
-        decode_channel (i, name, &rx_hz, &tx_hz, &rx_ctcs, &tx_ctcs,
-            &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid, &scode);
+        decode_channel (i, &rx_hz, &tx_hz, &rx_ctcs, &tx_ctcs,
+            &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &bcl, &scramble);
         if (rx_hz == 0) {
             // Channel is disabled
             continue;
         }
 
-        fprintf (out, "%5d   %-7s %8.4f ", i, name, rx_hz / 1000000.0);
+        fprintf (out, "%5d   %8.4f ", i+1, rx_hz / 1000000.0);
         print_offset (out, tx_hz - rx_hz);
         fprintf (out, " ");
         print_squelch (out, rx_ctcs, rx_dcs);
         fprintf (out, "   ");
         print_squelch (out, tx_ctcs, tx_dcs);
 
-        char sgroup [8];
-        if (scode == 0)
-            strcpy (sgroup, "-");
-        else
-            sprintf (sgroup, "%u", scode);
-
-        fprintf (out, "   %-4s  %-6s %-4s %-5s %-4s\n", lowpower ? "Low" : "High",
-            wide ? "Wide" : "Narrow", scan ? "+" : "-", sgroup, PTTID_NAME[pttid]);
+        fprintf (out, "   %-4s  %-6s %-4s %-3s %s\n", lowpower ? "Low" : "High",
+            wide ? "Wide" : "Narrow", scan ? "+" : "-",
+            bcl ? "+" : "-", scramble ? "+" : "-");
     }
 
-    // Print frequency mode VFO settings.
-    int band, hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
-    int lowpower, wide, step, scode;
-    fprintf (out, "\n");
-    decode_vfo (0, &band, &hz, &offset, &rx_ctcs, &tx_ctcs,
-        &rx_dcs, &tx_dcs, &lowpower, &wide, &step, &scode);
-    fprintf (out, "VFO Band Receive  TxOffset R-Squel T-Squel Step Power FM     ID[6]\n");
-    print_vfo (out, 'A', band, hz, offset, rx_ctcs, tx_ctcs,
-        rx_dcs, tx_dcs, lowpower, wide, step, scode);
-    decode_vfo (1, &band, &hz, &offset, &rx_ctcs, &tx_ctcs,
-        &rx_dcs, &tx_dcs, &lowpower, &wide, &step, &scode);
-    print_vfo (out, 'B', band, hz, offset, rx_ctcs, tx_ctcs,
-        rx_dcs, tx_dcs, lowpower, wide, step, scode);
-
-    // Print band limits.
-    int vhf_enable, vhf_lower, vhf_upper, uhf_enable, uhf_lower, uhf_upper;
-    decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
-    decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
-    fprintf (out, "\n");
-    fprintf (out, "Limit Lower Upper Enable\n");
-    fprintf (out, " VHF  %4d  %4d  %s\n", vhf_lower, vhf_upper,
-        vhf_enable ? "+" : "-");
-    fprintf (out, " UHF  %4d  %4d  %s\n", uhf_lower, uhf_upper,
-        uhf_enable ? "+" : "-");
-
-    // Print channel mode settings.
-    int chan_a, chan_b;
-    get_current_channel (0, &chan_a);
-    get_current_channel (1, &chan_b);
-    fprintf (out, "\n");
-    fprintf (out, "Channel A: %d\n", chan_a);
-    fprintf (out, "Channel B: %d\n", chan_b);
-
-    // Get atomatic number identifier.
-    char ani[5];
-    fetch_ani (ani);
-
     // Print other settings.
+#if 0
     settings_t *mode = (settings_t*) &radio_mem[0x0E20];
     fprintf (out, "Carrier Squelch Level: %u\n", mode->squelch);
     fprintf (out, "Battery Saver: %s\n", SAVER_NAME[mode->save & 7]);
@@ -589,6 +423,7 @@ static void bf888s_print_config (FILE *out)
     fprintf (out, "Squelch Tail Repeater Delay: %s\n", RPSTE_NAME[mode->rptrl & 15]);
     fprintf (out, "Power-On Message: %s\n", mode->ponmsg ? "On" : "Off");
     fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
+#endif
 }
 
 //

@@ -290,7 +290,7 @@ void radio_read_image (char *filename)
     case 4144:
         device = &radio_uvb5;
         break;
-    case 1032:
+    case 992:
         device = &radio_bf888s;
         break;
     default:
