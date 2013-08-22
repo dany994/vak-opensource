@@ -26,15 +26,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <getopt.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <stdint.h>
-#include <sys/stat.h>
 #include "radio.h"
+#include "util.h"
 
 const char version[] = "1.0";
 const char copyright[] = "Copyright (C) 2013 Serge Vakulenko KK6ABQ";
@@ -56,24 +51,11 @@ void usage ()
     exit (-1);
 }
 
-//
-// Check for a regular file.
-//
-int is_file (char *filename)
-{
-    struct stat st;
-
-    if (stat (filename, &st) < 0) {
-        // File not exist: treat it as a regular file.
-        return 1;
-    }
-    return (st.st_mode & S_IFMT) == S_IFREG;
-}
-
 int main (int argc, char **argv)
 {
-    int verbose = 0, write_flag = 0, config_flag = 0;
+    int write_flag = 0, config_flag = 0;
 
+    verbose = 0;
     for (;;) {
         switch (getopt (argc, argv, "vcw")) {
         case 'v': ++verbose;     continue;
@@ -98,8 +80,8 @@ int main (int argc, char **argv)
         if (argc != 2)
             usage();
 
-        radio_connect (argv[0], verbose);
-        radio_load_image (argv[1]);
+        radio_connect (argv[0]);
+        radio_read_image (argv[1]);
         radio_print_version (stdout);
         radio_upload();
         radio_disconnect();
@@ -109,7 +91,7 @@ int main (int argc, char **argv)
         if (argc != 2)
             usage();
 
-        radio_connect (argv[0], verbose);
+        radio_connect (argv[0]);
         radio_download();
         radio_print_version (stdout);
         radio_save_image ("save.img");
@@ -124,13 +106,13 @@ int main (int argc, char **argv)
         if (is_file (argv[0])) {
             // Print configuration from image file.
             // Load image from file.
-            radio_load_image (argv[0]);
+            radio_read_image (argv[0]);
             radio_print_version (stdout);
             radio_print_config (stdout);
 
         } else {
             // Dump device to image file.
-            radio_connect (argv[0], verbose);
+            radio_connect (argv[0]);
             radio_download();
             radio_print_version (stdout);
             radio_disconnect();

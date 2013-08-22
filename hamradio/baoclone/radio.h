@@ -30,7 +30,7 @@
 // Connect to the radio via the serial port.
 // Identify the type of device.
 //
-void radio_connect (char *port_name, int vflag);
+void radio_connect (char *port_name);
 
 //
 // Close the serial port.
@@ -60,7 +60,7 @@ void radio_print_config (FILE *out);
 //
 // Read firmware image from the binary file.
 //
-void radio_load_image (char *filename);
+void radio_read_image (char *filename);
 
 //
 // Save firmware image to the binary file.
@@ -71,3 +71,43 @@ void radio_save_image (char *filename);
 // Read the configuration from text file, and modify the firmware.
 //
 void radio_parse_config (char *filename);
+
+//
+// Device-dependent interface to the radio.
+//
+typedef struct {
+    const char *name;
+    int (*connect) (void);
+    void (*download) (void);
+    void (*upload) (void);
+    void (*read_image) (FILE *img, unsigned char *ident);
+    void (*save_image) (FILE *img);
+    void (*print_version) (FILE *out);
+    void (*print_config) (FILE *out);
+    // TODO
+} radio_device_t;
+
+extern radio_device_t radio_uv5r;       // Baofeng UV-5R, UV-5RA
+extern radio_device_t radio_uv5r_aged;  // Baofeng UV-5R with old firmware
+extern radio_device_t radio_uvb5;       // Baofeng UV-B5, UV-B6
+extern radio_device_t radio_bt888s;     // Baofeng BF-888S
+
+//
+// Radio: memory contents.
+//
+unsigned char radio_mem [0x2000];
+
+//
+// Radio: identifier
+//
+unsigned char radio_ident [8];
+
+//
+// File descriptor of serial port with programming cable attached.
+//
+int radio_port;
+
+//
+// Read/write progress counter.
+//
+int radio_progress;
