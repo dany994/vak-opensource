@@ -1,21 +1,25 @@
-Use case #1: 'Dump'
-+   Download the contents of device memory;
-+   Dump to IMG file.
 
-Use case #2: 'Restore'
-+   Load IMG file;
-    Upload the image to the device memory.
+Baoclone is a utility for programming Baofeng radios via a serial or USB
+programming cable.  Supported radios:
 
-Use case #3: 'Configure'
-+   Download the contents of device memory;
-+   Dump to IMG file;
-    Read the configuration (in text format) and apply to the image;
-    Upload the image to the device memory.
+ * Baofeng UV-5R
+ * Baofeng UV-B5 (todo)
+ * Baofeng BF-888S (todo)
 
-Use case #4: 'Show'
-+   Download the contents of device memory;
-    Print configuration in readable text format.
 
-Use case #5: 'Show image'
-+   Load IMG file;
-    Print configuration in readable text format.
+Usage:
+    baoclone [-v] port
+                                Save device binary image to file 'device.img',
+                                and text configuration to 'device.cfg'.
+
+    baoclone -w [-v] port file.img
+                                Write image to device.
+
+    baoclone -c [-v] port file.cfg
+                                Configure device from text file.
+
+    baoclone file.img
+                                Show configuration from image file.
+
+Options:
+    -v                          Verbose mode.
