@@ -17,6 +17,7 @@ Usage:
 
     baoclone -c [-v] port file.cfg
                                 Configure device from text file.
+                                Previous device image saved to 'backup.img'.
 
     baoclone file.img
                                 Show configuration from image file.

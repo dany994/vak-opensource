@@ -117,7 +117,7 @@ void radio_disconnect()
 //
 void radio_print_version (FILE *out)
 {
-    fprintf (out, "Type: %s\n", device->name);
+    fprintf (out, "Radio: %s\n", device->name);
     device->print_version (out);
 }
 
@@ -302,7 +302,7 @@ void radio_read_image (char *filename)
         exit (-1);
     }
 
-    img = fopen (filename, "r");
+    img = fopen (filename, "rb");
     if (! img) {
         perror (filename);
         exit (-1);
@@ -333,8 +333,16 @@ void radio_save_image (char *filename)
 //
 void radio_parse_config (char *filename)
 {
-    // TODO
+    FILE *cfg;
+
     fprintf (stderr, "Read configuration from file '%s'.\n", filename);
+    cfg = fopen (filename, "r");
+    if (! cfg) {
+        perror (filename);
+        exit (-1);
+    }
+    device->parse_config (cfg);
+    fclose (cfg);
 }
 
 //

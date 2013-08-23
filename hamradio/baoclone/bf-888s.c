@@ -33,9 +33,9 @@
 #include "radio.h"
 #include "util.h"
 
-static const char *SIDEKEY_NAME[] = { "Off", "Monitor", "TX Power", "Alarm" };
+#define NCHAN 16
 
-static const char *VOX_NAME[] = { "1", "2", "3", "4", "5", "?6?", "?7?", "?8?" };
+static const char *SIDEKEY_NAME[] = { "Off", "Monitor", "TX Power", "Alarm" };
 
 //
 // Print a generic information about the device.
@@ -196,6 +196,18 @@ static int bcd_to_int (uint32_t bcd)
            (bcd         & 15);
 }
 
+static int int_to_bcd (uint32_t val)
+{
+    return ((val / 10000000) % 10) << 28 |
+           ((val / 1000000)  % 10) << 24 |
+           ((val / 100000)   % 10) << 20 |
+           ((val / 10000)    % 10) << 16 |
+           ((val / 1000)     % 10) << 12 |
+           ((val / 100)      % 10) << 8 |
+           ((val / 10)       % 10) << 4 |
+           (val              % 10);
+}
+
 static void decode_squelch (uint16_t bcd, int *ctcs, int *dcs)
 {
     if (bcd == 0 || bcd == 0xffff) {
@@ -256,6 +268,22 @@ static void decode_channel (int i, int *rx_hz, int *tx_hz,
     *scan = ! ch->noscan;
     *bcl = ! ch->nobcl;
     *scramble = ! ch->noscr;
+}
+
+static void setup_channel (int i, double rx_mhz, double tx_mhz,
+    int rq, int tq, int highpower, int wide, int scan, int bcl, int scramble)
+{
+    memory_channel_t *ch = i + (memory_channel_t*) &radio_mem[0x10];
+
+    ch->rxfreq = int_to_bcd ((int) (rx_mhz * 100000.0));
+    ch->txfreq = int_to_bcd ((int) (tx_mhz * 100000.0));
+    ch->rxtone = rq;
+    ch->txtone = tq;
+    ch->highpower = highpower;
+    ch->narrow = ! wide;
+    ch->noscan = ! scan;
+    ch->nobcl = ! bcl;
+    ch->noscr = ! scramble;
 }
 
 static void print_offset (FILE *out, int delta)
@@ -322,7 +350,7 @@ static void bf888s_print_config (FILE *out)
     // Print memory channels.
     fprintf (out, "\n");
     fprintf (out, "Channel Receive  TxOffset R-Squel T-Squel Power FM     Scan BCL Scramble\n");
-    for (i=0; i<16; i++) {
+    for (i=0; i<NCHAN; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
         int lowpower, wide, scan, bcl, scramble;
 
@@ -360,7 +388,7 @@ static void bf888s_print_config (FILE *out)
     fprintf (out, "Alarm: %s\n", mode->alarm ? "On" : "Off");
     fprintf (out, "FM: %s\n", mode->fm ? "On" : "Off");
     fprintf (out, "VOX Function: %s\n", mode->vox ? "On" : "Off");
-    fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 7]);
+    fprintf (out, "VOX Sensitivity: %u\n", mode->voxgain);
     fprintf (out, "VOX Inhibit On Receive: %s\n", mode->voxinhrx ? "On" : "Off");
     fprintf (out, "Battery Saver: %s\n", extra->saver ? "On" : "Off");
     fprintf (out, "Beep: %s\n", extra->beep ? "On" : "Off");
@@ -411,6 +439,284 @@ static void bf888s_save_image (FILE *img)
     fwrite (&radio_mem[0x380], 1, 0x3e0-0x380, img);
 }
 
+static int on_off (char *param, char *value)
+{
+    if (strcasecmp ("On", value) == 0)
+        return 1;
+    if (strcasecmp ("Off", value) == 0)
+        return 0;
+    fprintf (stderr, "Bad value for %s: %s\n", param, value);
+    exit(-1);
+}
+
+static void parse_parameter (char *param, char *value)
+{
+    settings_t *mode = (settings_t*) &radio_mem[0x2b0];
+    extra_settings_t *extra = (extra_settings_t*) &radio_mem[0x3c0];
+    int i;
+
+    if (strcasecmp ("Radio", param) == 0) {
+        if (strcasecmp ("Baofeng BF-888S", value) != 0) {
+bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
+            exit(-1);
+        }
+        return;
+    }
+    if (strcasecmp ("Squelch Level", param) == 0) {
+        extra->squelch = atoi (value);
+        return;
+    }
+    if (strcasecmp ("Side Key", param) == 0) {
+        for (i=0; i<4; i++) {
+            if (strcasecmp (SIDEKEY_NAME[i], value) == 0) {
+                extra->sidekey = i;
+                return;
+            }
+        }
+        goto bad;
+    }
+    if (strcasecmp ("TX Timer", param) == 0) {
+        if (strcasecmp ("Off", value) == 0) {
+            extra->timeout = 0;
+        } else {
+            extra->timeout = atoi (value) / 30;
+        }
+        return;
+    }
+    if (strcasecmp ("Scan Function", param) == 0) {
+        mode->scan = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Voice Prompt", param) == 0) {
+        mode->voice = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Voice Language", param) == 0) {
+        if (strcasecmp ("English", value) == 0) {
+            mode->chinese = 0;
+            return;
+        }
+        if (strcasecmp ("Chinese", value) == 0) {
+            mode->chinese = 1;
+            return;
+        }
+        goto bad;
+    }
+    if (strcasecmp ("Alarm", param) == 0) {
+        mode->alarm = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("FM", param) == 0) {
+        mode->fm = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("VOX Function", param) == 0) {
+        mode->vox = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("VOX Sensitivity", param) == 0) {
+        mode->voxgain = atoi (value);
+        if (mode->voxgain > 0)
+             mode->voxgain -= 1;
+        return;
+    }
+    if (strcasecmp ("VOX Inhibit On Receive", param) == 0) {
+        mode->voxinhrx = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Battery Saver", param) == 0) {
+        extra->saver = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Beep", param) == 0) {
+        extra->beep = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("High Vol Inhibit TX", param) == 0) {
+        mode->highinhtx = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Low Vol Inhibit TX", param) == 0) {
+        mode->lowinhtx = on_off (param, value);
+        return;
+    }
+    fprintf (stderr, "Unknown parameter: %s = %s\n", param, value);
+    exit(-1);
+}
+
+static int encode_squelch (char *str)
+{
+    // TODO
+    return 0;
+}
+
+static void parse_channel (int first_flag, char *num_str, char *rxfreq_str,
+    char *offset_str, char *rq_str, char *tq_str, char *power_str, char *wide_str,
+    char *scan_str, char *bcl_str, char *scramble_str)
+{
+    int num, rq, tq, highpower, wide, scan, bcl, scramble;
+    float rx_mhz, txoff_mhz;
+
+    num = atoi (num_str);
+    if (num < 1 || num > NCHAN) {
+        fprintf (stderr, "Bad channel number");
+bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
+            num_str, rxfreq_str, offset_str, rq_str, tq_str, power_str,
+            wide_str, scan_str, bcl_str, scramble_str);
+        exit (-1);
+    }
+    if (sscanf (rxfreq_str, "%f", &rx_mhz) != 1 ||
+        rx_mhz < 400 || rx_mhz >= 470)
+    {
+        fprintf (stderr, "Bad receive frequency");
+        goto bad;
+    }
+    if (sscanf (offset_str, "%f", &txoff_mhz) != 1 ||
+        (rx_mhz + txoff_mhz) < 400 || (rx_mhz + txoff_mhz) >= 470)
+    {
+        fprintf (stderr, "Bad transmit offset");
+        goto bad;
+    }
+    rq = encode_squelch (rq_str);
+    tq = encode_squelch (tq_str);
+
+    if (strcasecmp ("High", power_str) == 0) {
+        highpower = 1;
+    } else if (strcasecmp ("Low", power_str) == 0) {
+        highpower = 0;
+    } else {
+        fprintf (stderr, "Bad power level");
+        goto bad;
+    }
+
+    if (strcasecmp ("Wide", wide_str) == 0) {
+        wide = 1;
+    } else if (strcasecmp ("Narrow", wide_str) == 0) {
+        wide = 0;
+    } else {
+        fprintf (stderr, "Bad modulation width");
+        goto bad;
+    }
+
+    if (*scan_str == '+') {
+        scan = 1;
+    } else if (*scan_str == '-') {
+        scan = 0;
+    } else {
+        fprintf (stderr, "Bad scan flag");
+        goto bad;
+    }
+
+    if (*bcl_str == '+') {
+        bcl = 1;
+    } else if (*bcl_str == '-') {
+        bcl = 0;
+    } else {
+        fprintf (stderr, "Bad BCL flag");
+        goto bad;
+    }
+
+    if (*scramble_str == '+') {
+        scramble = 1;
+    } else if (*scramble_str == '-') {
+        scramble = 0;
+    } else {
+        fprintf (stderr, "Bad scramble flag");
+        goto bad;
+    }
+
+    if (first_flag) {
+        // On first entry, erase the channel table.
+        int i;
+        for (i=0; i<NCHAN; i++) {
+            setup_channel (i, 0, 0, 0, 0, 1, 1, 0, 0, 0);
+        }
+    }
+    setup_channel (num-1, rx_mhz, rx_mhz + txoff_mhz, rq, tq,
+        highpower, wide, scan, bcl, scramble);
+}
+
+//
+// Read the configuration from text file, and modify the firmware.
+//
+static void bf888s_parse_config (FILE *in)
+{
+    char line [256], *p, *v, table;
+    int table_dirty = 0;
+
+    fprintf (stderr, "Parse configuration for BF-888S.\n");
+
+    table = 0;
+    while (fgets (line, sizeof(line), in)) {
+        // Strip trailing spaces and newline.
+        line[sizeof(line)-1] = 0;
+        v = line + strlen(line) - 1;
+        while (v >= line && (*v=='\n' || *v=='\r' || *v==' ' || *v=='\t'))
+            *v-- = 0;
+
+        // Ignore comments and empty lines.
+        p = line;
+        if (*p == '#' || *p == 0)
+            continue;
+
+        if (*p != ' ') {
+            // Table finished.
+            table = 0;
+
+            // Find the value.
+            v = strchr (p, ':');
+            if (! v) {
+                // Table header.
+                v = strchr (p, ' ');
+                if (! v) {
+badline:            fprintf (stderr, "Invalid line: '%s'\n", line);
+                    exit(-1);
+                }
+
+                // Decode table type.
+                if (strncasecmp (p, "Channel", 7) == 0) {
+                    table = 'C';
+                    table_dirty = 0;
+                } else
+                    goto badline;
+                continue;
+            }
+
+            // Parameter.
+            *v++ = 0;
+
+            // Skip spaces.
+            while (*v == ' ' || *v == '\t')
+                v++;
+
+            parse_parameter (p, v);
+
+        } else {
+            // Table row or comment.
+            // Skip spaces.
+            // Ignore comments and empty lines.
+            while (*p == ' ' || *p == '\t')
+                p++;
+            if (*p == '#' || *p == 0)
+                continue;
+            if (! table)
+                goto badline;
+
+            char v1[256], v2[256], v3[256], v4[256], v5[256];
+            char v6[256], v7[256], v8[256], v9[256], v10[256];
+            if (sscanf (p, "%s %s %s %s %s %s %s %s %s %s",
+                v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) != 10)
+            {
+                goto badline;
+            }
+
+            parse_channel (! table_dirty, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
+            table_dirty = 1;
+        }
+    }
+//exit (-1);
+}
+
 //
 // Baofeng BF-888S
 //
@@ -422,4 +728,5 @@ radio_device_t radio_bf888s = {
     bf888s_save_image,
     bf888s_print_version,
     bf888s_print_config,
+    bf888s_parse_config,
 };

@@ -83,7 +83,7 @@ typedef struct {
     void (*save_image) (FILE *img);
     void (*print_version) (FILE *out);
     void (*print_config) (FILE *out);
-    // TODO
+    void (*parse_config) (FILE *in);
 } radio_device_t;
 
 extern radio_device_t radio_uv5r;       // Baofeng UV-5R, UV-5RA

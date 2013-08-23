@@ -615,6 +615,15 @@ static void uvb5_save_image (FILE *img)
 }
 
 //
+// Read the configuration from text file, and modify the firmware.
+//
+static void uvb5_parse_config (FILE *in)
+{
+    fprintf (stderr, "TODO: Parse configuration for UV-B5.\n");
+    // TODO
+}
+
+//
 // Baofeng UV-B5R, UV-B6
 //
 radio_device_t radio_uvb5 = {
@@ -625,4 +634,5 @@ radio_device_t radio_uvb5 = {
     uvb5_save_image,
     uvb5_print_version,
     uvb5_print_config,
+    uvb5_parse_config,
 };

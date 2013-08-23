@@ -720,6 +720,21 @@ static void aged_save_image (FILE *img)
 }
 
 //
+// Read the configuration from text file, and modify the firmware.
+//
+static void uv5r_parse_config (FILE *in)
+{
+    fprintf (stderr, "TODO: Parse configuration for UV-5R.\n");
+    // TODO
+}
+
+static void aged_parse_config (FILE *in)
+{
+    fprintf (stderr, "TODO: Parse configuration for UV-5R Aged.\n");
+    // TODO
+}
+
+//
 // Baofeng UV-5R, UV-5RA
 //
 radio_device_t radio_uv5r = {
@@ -730,6 +745,7 @@ radio_device_t radio_uv5r = {
     uv5r_save_image,
     uv5r_print_version,
     uv5r_print_config,
+    uv5r_parse_config,
 };
 
 //
@@ -743,4 +759,5 @@ radio_device_t radio_uv5r_aged = {
     aged_save_image,
     aged_print_version,
     aged_print_config,
+    aged_parse_config,
 };
