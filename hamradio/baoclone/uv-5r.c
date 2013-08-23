@@ -440,7 +440,7 @@ static void decode_vfo (int index, int *band, int *hz, int *offset,
 static void print_offset (FILE *out, int delta)
 {
     if (delta == 0) {
-        fprintf (out, "0       ");
+        fprintf (out, " 0      ");
     } else {
         if (delta > 0) {
             fprintf (out, "+");;
@@ -621,13 +621,13 @@ static void print_config (FILE *out, int is_aged)
 
     // Print other settings.
     settings_t *mode = (settings_t*) &radio_mem[0x0E20];
-    fprintf (out, "Carrier Squelch Level: %u\n", mode->squelch);
+    fprintf (out, "Squelch Level: %u\n", mode->squelch);
     fprintf (out, "Battery Saver: %s\n", SAVER_NAME[mode->save & 7]);
     fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
     fprintf (out, "Backlight Timeout: %s\n", ABR_NAME[mode->abr & 7]);
     fprintf (out, "Dual Watch: %s\n", mode->tdr ? "On" : "Off");
     fprintf (out, "Keypad Beep: %s\n", mode->beep ? "On" : "Off");
-    fprintf (out, "Transmittion Timer: %u\n", (mode->timeout + 1) * 15);
+    fprintf (out, "TX Timer: %u\n", (mode->timeout + 1) * 15);
     fprintf (out, "Voice Prompt: %s\n", mode->voice ? "On" : "Off");
     fprintf (out, "Automatic ID[1-5]: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
     fprintf (out, "DTMF Sidetone: %s\n", DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
