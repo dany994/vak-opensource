@@ -30,7 +30,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <termios.h>
 #include "radio.h"
 #include "util.h"
 

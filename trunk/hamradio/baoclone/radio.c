@@ -210,6 +210,9 @@ void radio_connect (char *port_name)
                 device = &radio_bf888s; // Baofeng BF-888S
                 break;
             }
+            printf ("Unrecognized identifier: ");
+            print_hex (radio_ident, 8);
+            printf ("\n");
         }
         usleep (500000);
         if (try_magic (UV5R_MODEL_291)) {

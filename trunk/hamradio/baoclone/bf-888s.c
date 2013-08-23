@@ -30,49 +30,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <termios.h>
 #include "radio.h"
 #include "util.h"
 
-static const int DCS_CODES[] = {
-     23,  25,  26,  31,  32,  36,  43,  47,  51,  53,  54,
-     65,  71,  72,  73,  74, 114, 115, 116, 122, 125, 131,
-    132, 134, 143, 145, 152, 155, 156, 162, 165, 172, 174,
-    205, 212, 223, 225, 226, 243, 244, 245, 246, 251, 252,
-    255, 261, 263, 265, 266, 271, 274, 306, 311, 315, 325,
-    331, 332, 343, 346, 351, 356, 364, 365, 371, 411, 412,
-    413, 423, 431, 432, 445, 446, 452, 454, 455, 462, 464,
-    465, 466, 503, 506, 516, 523, 526, 532, 546, 565, 606,
-    612, 624, 627, 631, 632, 654, 662, 664, 703, 712, 723,
-    731, 732, 734, 743, 754,
-};
+static const char *SIDEKEY_NAME[] = { "Off", "Monitor", "TX Power", "Alarm" };
 
-static const char MAGIC[] = "PROGRAM";
-
-#if 0
-static const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
-                            "12.5", "25.0", "????", "????" };
-
-static const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
-
-static const char *VOX_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                           "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
-
-static const char *ABR_NAME[] = { "Off", "1", "2", "3", "4", "5", "?6?", "?7?" };
-
-static const char *DTMF_SIDETONE_NAME[] = { "Off", "DTMF Only", "ANI Only", "DTMF+ANI" };
-
-static const char *SCAN_RESUME_NAME[] = { "After Timeout", "When Carrier Off", "Stop On Active", "??" };
-
-static const char *DISPLAY_MODE_NAME[] = { "Channel", "Name", "Frequency", "??" };
-
-static const char *COLOR_NAME[] = { "Off", "Blue", "Orange", "Purple" };
-
-static const char *ALARM_NAME[] = { "Site", "Tone", "Code", "??" };
-
-static const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                             "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
-#endif
+static const char *VOX_NAME[] = { "1", "2", "3", "4", "5", "?6?", "?7?", "?8?" };
 
 //
 // Print a generic information about the device.
@@ -260,13 +223,12 @@ typedef struct {
     uint32_t    txfreq;     // binary coded decimal, 8 digits
     uint16_t    rxtone;
     uint16_t    txtone;
-    uint8_t     _u1       : 2,
-                scramble  : 1,
-                _u2       : 1,
-                highpower : 1,
-                bcl       : 1,
+    uint8_t     nobcl     : 1,
+                noscr     : 1,
                 narrow    : 1,
-                scan      : 1;
+                highpower : 1,
+                noscan    : 1,
+                _u1       : 3;
     uint8_t     _u3[3];
 } memory_channel_t;
 
@@ -291,15 +253,15 @@ static void decode_channel (int i, int *rx_hz, int *tx_hz,
     // Other parameters.
     *lowpower = ! ch->highpower;
     *wide = ! ch->narrow;
-    *scan = ch->scan;
-    *bcl = ch->bcl;
-    *scramble = ch->scramble;
+    *scan = ! ch->noscan;
+    *bcl = ! ch->nobcl;
+    *scramble = ! ch->noscr;
 }
 
 static void print_offset (FILE *out, int delta)
 {
     if (delta == 0) {
-        fprintf (out, "0       ");
+        fprintf (out, " 0      ");
     } else {
         if (delta > 0) {
             fprintf (out, "+");;
@@ -323,45 +285,32 @@ static void print_squelch (FILE *out, int ctcs, int dcs)
 }
 
 //
-// Generic settings.
+// Generic settings at 0x2b0.
 //
 typedef struct {
-    uint8_t squelch;    // Carrier Squelch Level
-    uint8_t step;
-    uint8_t _u1;
-    uint8_t save;       // Battery Saver
-    uint8_t vox;        // VOX Sensitivity
-    uint8_t _u2;
-    uint8_t abr;        // Backlight Timeout
-    uint8_t tdr;        // Dual Watch
-    uint8_t beep;       // Beep
-    uint8_t timeout;    // Timeout Timer
-    uint8_t _u3 [4];
-    uint8_t voice;      // Voice
-    uint8_t _u4;
-    uint8_t dtmfst;     // DTMF Sidetone
-    uint8_t _u5;
-    uint8_t screv;      // Scan Resume
-    uint8_t pttid;
-    uint8_t pttlt;
-    uint8_t mdfa;       // Display Mode (A)
-    uint8_t mdfb;       // Display Mode (B)
-    uint8_t bcl;        // Busy Channel Lockout
-    uint8_t autolk;     // Automatic Key Lock
-    uint8_t sftd;
-    uint8_t _u6 [3];
-    uint8_t wtled;      // Standby LED Color
-    uint8_t rxled;      // RX LED Color
-    uint8_t txled;      // TX LED Color
-    uint8_t almod;      // Alarm Mode
-    uint8_t band;
-    uint8_t tdrab;      // Dual Watch Priority
-    uint8_t ste;        // Squelch Tail Eliminate (HT to HT)
-    uint8_t rpste;      // Squelch Tail Eliminate (repeater)
-    uint8_t rptrl;      // STE Repeater Delay
-    uint8_t ponmsg;     // Power-On Message
-    uint8_t roger;      // Roger Beep
+    uint8_t voice;      // Voice Prompt
+    uint8_t chinese;    // Voice Language
+    uint8_t scan;       // Scan
+    uint8_t vox;        // VOX Function
+    uint8_t voxgain;    // VOX Sensitivity (0='1' ... 4='5')
+    uint8_t voxinhrx;   // VOX Inhibit On Receive
+    uint8_t lowinhtx;   // Low Vol Inhibit Tx
+    uint8_t highinhtx;  // High Vol Inhibit Tx
+    uint8_t alarm;      // Alarm
+    uint8_t fm;         // FM
 } settings_t;
+
+//
+// Extra settings at 0x3c0.
+//
+typedef struct {
+    uint8_t beep  : 1,  // Beep
+            saver : 1,  // Battery Saver
+            _u1   : 6;
+    uint8_t squelch;    // Carrier Squelch Level (0-9)
+    uint8_t sidekey;    // Side Key (0=Off, 1=Monitor, 2=TX Power, 3=Alarm)
+    uint8_t timeout;    // TX Timer (0-10 multiply 30 sec)
+} extra_settings_t;
 
 //
 // Print full information about the device configuration.
@@ -397,33 +346,26 @@ static void bf888s_print_config (FILE *out)
     }
 
     // Print other settings.
-#if 0
-    settings_t *mode = (settings_t*) &radio_mem[0x0E20];
-    fprintf (out, "Carrier Squelch Level: %u\n", mode->squelch);
-    fprintf (out, "Battery Saver: %s\n", SAVER_NAME[mode->save & 7]);
-    fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
-    fprintf (out, "Backlight Timeout: %s\n", ABR_NAME[mode->abr & 7]);
-    fprintf (out, "Dual Watch: %s\n", mode->tdr ? "On" : "Off");
-    fprintf (out, "Keypad Beep: %s\n", mode->beep ? "On" : "Off");
-    fprintf (out, "Transmittion Timer: %u\n", (mode->timeout + 1) * 15);
+    settings_t *mode = (settings_t*) &radio_mem[0x2b0];
+    extra_settings_t *extra = (extra_settings_t*) &radio_mem[0x3c0];
+    fprintf (out, "\n");
+    fprintf (out, "Squelch Level: %u\n", extra->squelch);
+    fprintf (out, "Side Key: %s\n", SIDEKEY_NAME[extra->sidekey & 3]);
+    fprintf (out, "TX Timer: ");
+    if (extra->timeout == 0) fprintf (out, "Off\n");
+    else                     fprintf (out, "%u\n", extra->timeout * 30);
+    fprintf (out, "Scan Function: %s\n", mode->scan ? "On" : "Off");
     fprintf (out, "Voice Prompt: %s\n", mode->voice ? "On" : "Off");
-    fprintf (out, "Automatic ID[1-5]: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
-    fprintf (out, "DTMF Sidetone: %s\n", DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
-    fprintf (out, "Scan Resume Method: %s\n", SCAN_RESUME_NAME[mode->screv & 3]);
-    fprintf (out, "Display Mode A: %s\n", DISPLAY_MODE_NAME[mode->mdfa & 3]);
-    fprintf (out, "Display Mode B: %s\n", DISPLAY_MODE_NAME[mode->mdfb & 3]);
-    fprintf (out, "Busy Channel Lockout: %s\n", mode->bcl ? "On" : "Off");
-    fprintf (out, "Auto Key Lock: %s\n", mode->autolk ? "On" : "Off");
-    fprintf (out, "Standby LED Color: %s\n", COLOR_NAME[mode->wtled & 3]);
-    fprintf (out, "RX LED Color: %s\n", COLOR_NAME[mode->rxled & 3]);
-    fprintf (out, "TX LED Color: %s\n", COLOR_NAME[mode->txled & 3]);
-    fprintf (out, "Alarm Mode: %s\n", ALARM_NAME[mode->almod & 3]);
-    fprintf (out, "Squelch Tail Eliminate: %s\n", mode->ste ? "On" : "Off");
-    fprintf (out, "Squelch Tail Eliminate for Repeater: %s\n", RPSTE_NAME[mode->rpste & 15]);
-    fprintf (out, "Squelch Tail Repeater Delay: %s\n", RPSTE_NAME[mode->rptrl & 15]);
-    fprintf (out, "Power-On Message: %s\n", mode->ponmsg ? "On" : "Off");
-    fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
-#endif
+    fprintf (out, "Voice Language: %s\n", mode->chinese ? "Chinese" : "English");
+    fprintf (out, "Alarm: %s\n", mode->alarm ? "On" : "Off");
+    fprintf (out, "FM: %s\n", mode->fm ? "On" : "Off");
+    fprintf (out, "VOX Function: %s\n", mode->vox ? "On" : "Off");
+    fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 7]);
+    fprintf (out, "VOX Inhibit On Receive: %s\n", mode->voxinhrx ? "On" : "Off");
+    fprintf (out, "Battery Saver: %s\n", extra->saver ? "On" : "Off");
+    fprintf (out, "Beep: %s\n", extra->beep ? "On" : "Off");
+    fprintf (out, "High Vol Inhibit TX: %s\n", mode->highinhtx ? "On" : "Off");
+    fprintf (out, "Low Vol Inhibit TX: %s\n", mode->lowinhtx ? "On" : "Off");
 }
 
 //
