@@ -94,7 +94,7 @@ int main (int argc, char **argv)
         radio_connect (argv[0]);
         radio_download();
         radio_print_version (stdout);
-        radio_save_image ("save.img");
+        radio_save_image ("backup.img");
         radio_parse_config (argv[1]);
         radio_upload();
         radio_disconnect();
