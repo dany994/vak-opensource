@@ -154,7 +154,7 @@ static void write_block (int fd, int start, const unsigned char *data, int nbyte
 }
 
 //
-// Read firmware image from the device.
+// Read memory image from the device.
 //
 static void bf888s_download()
 {
@@ -170,7 +170,7 @@ static void bf888s_download()
 }
 
 //
-// Write firmware image to the device.
+// Write memory image to the device.
 //
 static void bf888s_upload()
 {
@@ -182,30 +182,6 @@ static void bf888s_upload()
         write_block (radio_port, addr, &radio_mem[addr], 8);
     for (addr=0x3c0; addr<0x3e0; addr+=8)
         write_block (radio_port, addr, &radio_mem[addr], 8);
-}
-
-static int bcd_to_int (uint32_t bcd)
-{
-    return ((bcd >> 28) & 15) * 10000000 +
-           ((bcd >> 24) & 15) * 1000000 +
-           ((bcd >> 20) & 15) * 100000 +
-           ((bcd >> 16) & 15) * 10000 +
-           ((bcd >> 12) & 15) * 1000 +
-           ((bcd >> 8)  & 15) * 100 +
-           ((bcd >> 4)  & 15) * 10 +
-           (bcd         & 15);
-}
-
-static int int_to_bcd (uint32_t val)
-{
-    return ((val / 10000000) % 10) << 28 |
-           ((val / 1000000)  % 10) << 24 |
-           ((val / 100000)   % 10) << 20 |
-           ((val / 10000)    % 10) << 16 |
-           ((val / 1000)     % 10) << 12 |
-           ((val / 100)      % 10) << 8 |
-           ((val / 10)       % 10) << 4 |
-           (val              % 10);
 }
 
 static void decode_squelch (uint16_t bcd, int *ctcs, int *dcs)
@@ -397,7 +373,7 @@ static void bf888s_print_config (FILE *out)
 }
 
 //
-// Read firmware image from the binary file.
+// Read memory image from the binary file.
 // Try to be compatible with Baofeng BF-480 software.
 //
 static void bf888s_read_image (FILE *img, unsigned char *ident)
@@ -424,7 +400,7 @@ static void bf888s_read_image (FILE *img, unsigned char *ident)
 }
 
 //
-// Save firmware image to the binary file.
+// Save memory image to the binary file.
 // Try to be compatible with Baofeng BF-480 software.
 //
 static void bf888s_save_image (FILE *img)
@@ -437,16 +413,6 @@ static void bf888s_save_image (FILE *img)
     fwrite (&radio_mem[0x2c0], 1, 0x370-0x2c0, img);
     fwrite (&radio_mem[0x2b0], 1, 0x10, img);
     fwrite (&radio_mem[0x380], 1, 0x3e0-0x380, img);
-}
-
-static int on_off (char *param, char *value)
-{
-    if (strcasecmp ("On", value) == 0)
-        return 1;
-    if (strcasecmp ("Off", value) == 0)
-        return 0;
-    fprintf (stderr, "Bad value for %s: %s\n", param, value);
-    exit(-1);
 }
 
 static void bf888s_parse_parameter (char *param, char *value)

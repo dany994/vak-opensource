@@ -47,3 +47,39 @@ int read_with_timeout (int fd, unsigned char *data, int len);
 // Check for a regular file.
 //
 int is_file (char *filename);
+
+//
+// Convert 32-bit value from binary coded decimal
+// to integer format (8 digits).
+//
+int bcd_to_int (int bcd);
+
+//
+// Convert 32-bit value from integer
+// binary coded decimal format (8 digits).
+//
+int int_to_bcd (int val);
+
+//
+// Get a binary value of the parameter: On/Off,
+// Ignore case.
+//
+int on_off (char *param, char *value);
+
+//
+// Get integer value, or "Off" as 0,
+// Ignore case.
+//
+int atoi_off (const char *value);
+
+//
+// Copy a text string to memory image.
+// Clear unused space to zero.
+//
+void copy_str (unsigned char *dest, const char *src, int nbytes);
+
+//
+// Find a string in a table of size nelem, ignoring case.
+// Return -1 when not found.
+//
+int string_in_table (const char *value, const char *tab[], int nelem);

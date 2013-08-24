@@ -89,7 +89,7 @@ static void uv5r_print_version (FILE *out)
         *--p = 0;
 
     // 6+poweron message
-    fprintf (out, "Serial number: %.16s\n", &radio_mem[0x1EC0+0x10]);
+    fprintf (out, "Serial: %.16s\n", &radio_mem[0x1EC0+0x10]);
 
     // 3+poweron message
     fprintf (out, "Firmware: %s\n", version);
@@ -213,7 +213,7 @@ static void write_block (int fd, int start, const unsigned char *data, int nbyte
 }
 
 //
-// Read firmware image from the device.
+// Read memory image from the device.
 //
 static void uv5r_download()
 {
@@ -238,7 +238,7 @@ static void aged_download()
 }
 
 //
-// Write firmware image to the device.
+// Write memory image to the device.
 //
 static void uv5r_upload()
 {
@@ -260,18 +260,6 @@ static void aged_upload()
     // Main block only.
     for (addr=0; addr<0x1800; addr+=0x10)
         write_block (radio_port, addr, &radio_mem[addr], 0x10);
-}
-
-static int bcd_to_int (uint32_t bcd)
-{
-    return ((bcd >> 28) & 15) * 10000000 +
-           ((bcd >> 24) & 15) * 1000000 +
-           ((bcd >> 20) & 15) * 100000 +
-           ((bcd >> 16) & 15) * 10000 +
-           ((bcd >> 12) & 15) * 1000 +
-           ((bcd >> 8)  & 15) * 100 +
-           ((bcd >> 4)  & 15) * 10 +
-           (bcd         & 15);
 }
 
 static void decode_squelch (uint16_t index, int *ctcs, int *dcs)
@@ -381,11 +369,34 @@ static void fetch_ani (char *ani)
         ani[i] = "0123456789ABCDEF" [radio_mem[0x0CAA+i] & 0x0f];
 }
 
+static void setup_ani (char *ani)
+{
+    int i, v;
+
+    for (i=0; i<5; i++) {
+        v = ani[i];
+
+        // Get next hex digit.
+        if (v >= '0' && v <= '9')
+            v -= '0';
+        else if (v >= 'A' && v <= 'F')
+            v -= 'A' - 10;
+        else if (v >= 'a' && v <= 'f')
+            v -= 'a' - 10;
+        else
+            v = 0;
+
+        radio_mem[0x0CAA+i] = v;
+    }
+}
+
+#if 0
 static void get_current_channel (int index, int *chan_num)
 {
     unsigned char *ptr = radio_mem + 0x0E76;
     *chan_num = ptr[index] % 128;
 }
+#endif
 
 typedef struct {
     uint8_t     freq[8];    // binary coded decimal, 8 digits
@@ -609,20 +620,13 @@ static void print_config (FILE *out, int is_aged)
             uhf_enable ? "+" : "-");
     }
 
-    // Print channel mode settings.
-    int chan_a, chan_b;
-    get_current_channel (0, &chan_a);
-    get_current_channel (1, &chan_b);
-    fprintf (out, "\n");
-    fprintf (out, "Channel A: %d\n", chan_a);
-    fprintf (out, "Channel B: %d\n", chan_b);
-
     // Get atomatic number identifier.
     char ani[5];
     fetch_ani (ani);
 
     // Print other settings.
     settings_t *mode = (settings_t*) &radio_mem[0x0E20];
+    fprintf (out, "\n");
     fprintf (out, "Squelch Level: %u\n", mode->squelch);
     fprintf (out, "Battery Saver: %s\n", SAVER_NAME[mode->save & 7]);
     fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
@@ -649,6 +653,13 @@ static void print_config (FILE *out, int is_aged)
     fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
 
 #if 0
+    // Print channel mode settings.
+    int chan_a, chan_b;
+    get_current_channel (0, &chan_a);
+    get_current_channel (1, &chan_b);
+    fprintf (out, "Channel A: %d\n", chan_a);
+    fprintf (out, "Channel B: %d\n", chan_b);
+
     // Transient modes: usually there is no interest to display or touch these.
     extra_settings_t *extra = (extra_settings_t*) &radio_mem[0x0E4A];
     extra->displayab;
@@ -675,7 +686,7 @@ static void aged_print_config (FILE *out)
 }
 
 //
-// Read firmware image from the binary file.
+// Read memory image from the binary file.
 //
 static void uv5r_read_image (FILE *img, unsigned char *ident)
 {
@@ -706,7 +717,7 @@ static void aged_read_image (FILE *img, unsigned char *ident)
 }
 
 //
-// Save firmware image to the binary file.
+// Save memory image to the binary file.
 //
 static void uv5r_save_image (FILE *img)
 {
@@ -722,11 +733,162 @@ static void aged_save_image (FILE *img)
 }
 
 //
-// Read the configuration from text file, and modify the firmware.
+// Read the configuration from text file, and modify the image.
 //
 static void parse_parameter (char *param, char *value, int is_aged)
 {
-    fprintf (stderr, "TODO: Parse parameter for UV-5R.\n");
+    settings_t *mode = (settings_t*) &radio_mem[0x0E20];
+    int i;
+
+    if (strcasecmp ("Radio", param) == 0) {
+        if (strcasecmp ("Baofeng UV-5R", value) != 0) {
+bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
+            exit(-1);
+        }
+        return;
+    }
+    if (! is_aged) {
+        // Only new firmware has power-on messages.
+        if (strcasecmp ("Serial", param) == 0) {
+            copy_str (&radio_mem[0x1EC0+0x10], value, 16);
+            return;
+        }
+        if (strcasecmp ("Firmware", param) == 0) {
+            copy_str (&radio_mem[0x1EC0+0x30], value, 16);
+            return;
+        }
+        if (strcasecmp ("Message", param) == 0) {
+            copy_str (&radio_mem[0x1EC0+0x20], value, 16);
+            return;
+        }
+    }
+    if (strcasecmp ("Squelch Level", param) == 0) {
+        mode->squelch = atoi (value);
+        return;
+    }
+    if (strcasecmp ("Battery Saver", param) == 0) {
+        mode->save = atoi_off (value);
+        return;
+    }
+    if (strcasecmp ("VOX Sensitivity", param) == 0) {
+        mode->vox = atoi_off (value);
+        return;
+    }
+    if (strcasecmp ("Backlight Timeout", param) == 0) {
+        mode->abr = atoi_off (value);
+        return;
+    }
+    if (strcasecmp ("Dual Watch", param) == 0) {
+        mode->tdr = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Keypad Beep", param) == 0) {
+        mode->beep = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("TX Timer", param) == 0) {
+        mode->timeout = atoi (value) / 15;
+        if (mode->timeout > 0)
+             mode->timeout -= 1;
+        return;
+    }
+    if (strcasecmp ("Voice Prompt", param) == 0) {
+        mode->voice = on_off (param, value);
+        return;
+    }
+    if (strncasecmp ("Automatic ID", param, 12) == 0) {
+        if (strlen (value) != 5) {
+            fprintf (stderr, "Five hex digits expected.\n");
+            goto bad;
+        }
+        setup_ani (value);
+        return;
+    }
+    if (strcasecmp ("DTMF Sidetone", param) == 0) {
+        i = string_in_table (value, DTMF_SIDETONE_NAME, 4);
+        if (i < 0)
+            goto bad;
+        mode->dtmfst = i;
+        return;
+    }
+    if (strcasecmp ("Scan Resume Method", param) == 0) {
+        i = string_in_table (value, SCAN_RESUME_NAME, 4);
+        if (i < 0)
+            goto bad;
+        mode->screv = i;
+        return;
+    }
+    if (strcasecmp ("Display Mode A", param) == 0) {
+        i = string_in_table (value, DISPLAY_MODE_NAME, 3);
+        if (i < 0)
+            goto bad;
+        mode->mdfa = i;
+        return;
+    }
+    if (strcasecmp ("Display Mode B", param) == 0) {
+        i = string_in_table (value, DISPLAY_MODE_NAME, 3);
+        if (i < 0)
+            goto bad;
+        mode->mdfb = i;
+        return;
+    }
+    if (strcasecmp ("Busy Channel Lockout", param) == 0) {
+        mode->bcl = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Auto Key Lock", param) == 0) {
+        mode->autolk = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Standby LED Color", param) == 0) {
+        i = string_in_table (value, COLOR_NAME, 4);
+        if (i < 0)
+            goto bad;
+        mode->wtled = i;
+        return;
+    }
+    if (strcasecmp ("RX LED Color", param) == 0) {
+        i = string_in_table (value, COLOR_NAME, 4);
+        if (i < 0)
+            goto bad;
+        mode->rxled = i;
+        return;
+    }
+    if (strcasecmp ("TX LED Color", param) == 0) {
+        i = string_in_table (value, COLOR_NAME, 4);
+        if (i < 0)
+            goto bad;
+        mode->txled = i;
+        return;
+    }
+    if (strcasecmp ("Alarm Mode", param) == 0) {
+        i = string_in_table (value, ALARM_NAME, 3);
+        if (i < 0)
+            goto bad;
+        mode->almod = i;
+        return;
+    }
+    if (strcasecmp ("Squelch Tail Eliminate", param) == 0) {
+        mode->ste = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Squelch Tail Eliminate for Repeater", param) == 0) {
+        mode->rpste = atoi_off (value);
+        return;
+    }
+    if (strcasecmp ("Squelch Tail Repeater Delay", param) == 0) {
+        mode->rptrl = atoi_off (value);
+        return;
+    }
+    if (strcasecmp ("Power-On Message", param) == 0) {
+        mode->ponmsg = on_off (param, value);
+        return;
+    }
+    if (strcasecmp ("Roger Beep", param) == 0) {
+        mode->roger = on_off (param, value);
+        return;
+    }
+    fprintf (stderr, "Unknown parameter: %s = %s\n", param, value);
     exit(-1);
 }
 
@@ -759,6 +921,19 @@ static int uv5r_parse_row (int table_id, int first_row, char *line)
 {
     fprintf (stderr, "TODO: Parse table row for UV-5R.\n");
     exit(-1);
+#if 0
+Channel Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan BCL ID6 PTTID
+    0   WR6ABD  442.9000 +5       162.2   162.2   High  Wide   +    -   -   -
+   93   K6GL    145.1700 -0.600    94.8    94.8   High  Wide   +    -   -   -
+
+VFO Band Receive  TxOffset R-Squel T-Squel Step Power FM     ID[6]
+ A  UHF  443.9300  0          -       -    2.5  High  Wide   -
+ B  VHF  145.2300 +6          -       -    5.0  High  Wide   -
+
+Limit Lower Upper Enable
+ VHF   136   174  +
+ UHF   400   520  +
+#endif
 }
 
 //

@@ -26,6 +26,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -93,4 +95,88 @@ int read_with_timeout (int fd, unsigned char *data, int len)
 
         data += nbytes;
     }
+}
+
+//
+// Convert 32-bit value from binary coded decimal
+// to integer format (8 digits).
+//
+int bcd_to_int (int bcd)
+{
+    return ((bcd >> 28) & 15) * 10000000 +
+           ((bcd >> 24) & 15) * 1000000 +
+           ((bcd >> 20) & 15) * 100000 +
+           ((bcd >> 16) & 15) * 10000 +
+           ((bcd >> 12) & 15) * 1000 +
+           ((bcd >> 8)  & 15) * 100 +
+           ((bcd >> 4)  & 15) * 10 +
+           (bcd         & 15);
+}
+
+//
+// Convert 32-bit value from integer
+// binary coded decimal format (8 digits).
+//
+int int_to_bcd (int val)
+{
+    return ((val / 10000000) % 10) << 28 |
+           ((val / 1000000)  % 10) << 24 |
+           ((val / 100000)   % 10) << 20 |
+           ((val / 10000)    % 10) << 16 |
+           ((val / 1000)     % 10) << 12 |
+           ((val / 100)      % 10) << 8 |
+           ((val / 10)       % 10) << 4 |
+           (val              % 10);
+}
+
+//
+// Get a binary value of the parameter: On/Off,
+// Ignore case.
+// For invlid value, print a message and halt.
+//
+int on_off (char *param, char *value)
+{
+    if (strcasecmp ("On", value) == 0)
+        return 1;
+    if (strcasecmp ("Off", value) == 0)
+        return 0;
+    fprintf (stderr, "Bad value for %s: %s\n", param, value);
+    exit(-1);
+}
+
+//
+// Get integer value, or "Off" as 0,
+// Ignore case.
+//
+int atoi_off (const char *value)
+{
+    if (strcasecmp ("Off", value) == 0)
+        return 0;
+    return atoi (value);
+}
+
+//
+// Copy a text string to memory image.
+// Clear unused space to zero.
+//
+void copy_str (unsigned char *dest, const char *src, int nbytes)
+{
+    memset (dest, 0, 16);
+    strncpy ((char*) dest, src, 16);
+}
+
+//
+// Find a string in a table of size nelem, ignoring case.
+// Return -1 when not found.
+//
+int string_in_table (const char *value, const char *tab[], int nelem)
+{
+    int i;
+
+    for (i=0; i<nelem; i++) {
+        if (strcasecmp (tab[i], value) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }
