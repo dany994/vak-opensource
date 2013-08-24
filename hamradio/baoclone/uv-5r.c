@@ -312,7 +312,7 @@ typedef struct {
 
 static void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
-    int *lowpower, int *wide, int *scan, int *pttid, int *scode)
+    int *lowpower, int *wide, int *scan, int *bcl, int *pttid, int *scode)
 {
     memory_channel_t *ch = i + (memory_channel_t*) radio_mem;
 
@@ -340,6 +340,7 @@ static void decode_channel (int i, char *name, int *rx_hz, int *tx_hz,
     *lowpower = ch->lowpower;
     *wide = ch->wide;
     *scan = ch->scan;
+    *bcl = ch->bcl;
     *scode = ch->scode;
     *pttid = ch->pttidbot | (ch->pttideot << 1);
 }
@@ -550,14 +551,14 @@ static void print_config (FILE *out, int is_aged)
 
     // Print memory channels.
     fprintf (out, "\n");
-    fprintf (out, "Channel Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan ID[6] PTTID\n");
+    fprintf (out, "Channel Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan BCL ID6 PTTID\n");
     for (i=0; i<128; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
-        int lowpower, wide, scan, pttid, scode;
+        int lowpower, wide, scan, bcl, pttid, scode;
         char name[17];
 
         decode_channel (i, name, &rx_hz, &tx_hz, &rx_ctcs, &tx_ctcs,
-            &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid, &scode);
+            &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &bcl, &pttid, &scode);
         if (rx_hz == 0) {
             // Channel is disabled
             continue;
@@ -576,8 +577,9 @@ static void print_config (FILE *out, int is_aged)
         else
             sprintf (sgroup, "%u", scode);
 
-        fprintf (out, "   %-4s  %-6s %-4s %-5s %-4s\n", lowpower ? "Low" : "High",
-            wide ? "Wide" : "Narrow", scan ? "+" : "-", sgroup, PTTID_NAME[pttid]);
+        fprintf (out, "   %-4s  %-6s %-4s %-3s %-3s %-4s\n", lowpower ? "Low" : "High",
+            wide ? "Wide" : "Narrow", scan ? "+" : "-", bcl ? "+" : "-",
+            sgroup, PTTID_NAME[pttid]);
     }
 
     // Print frequency mode VFO settings.
@@ -722,39 +724,40 @@ static void aged_save_image (FILE *img)
 //
 // Read the configuration from text file, and modify the firmware.
 //
-static void uv5r_parse_parameter (char *param, char *value)
+static void parse_parameter (char *param, char *value, int is_aged)
 {
     fprintf (stderr, "TODO: Parse parameter for UV-5R.\n");
     exit(-1);
 }
 
+static void uv5r_parse_parameter (char *param, char *value)
+{
+    parse_parameter (param, value, 0);
+}
+
 static void aged_parse_parameter (char *param, char *value)
 {
-    fprintf (stderr, "TODO: Parse parameter for UV-5R Aged.\n");
-    exit(-1);
+    parse_parameter (param, value, 1);
 }
 
+//
+// Parse table header.
+// Return table id, or 0 in case of error.
+//
 static int uv5r_parse_header (char *line)
 {
-    fprintf (stderr, "TODO: Parse table header for UV-5R.\n");
-    exit(-1);
-}
-
-static int aged_parse_header (char *line)
-{
-    fprintf (stderr, "TODO: Parse table header for UV-5R Aged.\n");
-    exit(-1);
+    if (strncasecmp (line, "Channel", 7) == 0)
+        return 'C';
+    if (strncasecmp (line, "VFO", 3) == 0)
+        return 'V';
+    if (strncasecmp (line, "Limit", 5) == 0)
+        return 'L';
+    return 0;
 }
 
 static int uv5r_parse_row (int table_id, int first_row, char *line)
 {
     fprintf (stderr, "TODO: Parse table row for UV-5R.\n");
-    exit(-1);
-}
-
-static int aged_parse_row (int table_id, int first_row, char *line)
-{
-    fprintf (stderr, "TODO: Parse table row for UV-5R Aged.\n");
     exit(-1);
 }
 
@@ -786,6 +789,6 @@ radio_device_t radio_uv5r_aged = {
     aged_print_version,
     aged_print_config,
     aged_parse_parameter,
-    aged_parse_header,
-    aged_parse_row,
+    uv5r_parse_header,      // Use the same routines
+    uv5r_parse_row,         // for tables
 };
