@@ -388,7 +388,7 @@ static void bf888s_print_config (FILE *out)
     fprintf (out, "Alarm: %s\n", mode->alarm ? "On" : "Off");
     fprintf (out, "FM: %s\n", mode->fm ? "On" : "Off");
     fprintf (out, "VOX Function: %s\n", mode->vox ? "On" : "Off");
-    fprintf (out, "VOX Sensitivity: %u\n", mode->voxgain);
+    fprintf (out, "VOX Sensitivity: %u\n", mode->voxgain + 1);
     fprintf (out, "VOX Inhibit On Receive: %s\n", mode->voxinhrx ? "On" : "Off");
     fprintf (out, "Battery Saver: %s\n", extra->saver ? "On" : "Off");
     fprintf (out, "Beep: %s\n", extra->beep ? "On" : "Off");
@@ -550,6 +550,13 @@ static int encode_squelch (char *str)
     return 0;
 }
 
+static int is_valid_frequency (int mhz)
+{
+    if (mhz >= 400 && mhz <= 470)
+        return 1;
+    return 0;
+}
+
 static void parse_channel (int first_flag, char *num_str, char *rxfreq_str,
     char *offset_str, char *rq_str, char *tq_str, char *power_str, char *wide_str,
     char *scan_str, char *bcl_str, char *scramble_str)
@@ -566,13 +573,13 @@ bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
         exit (-1);
     }
     if (sscanf (rxfreq_str, "%f", &rx_mhz) != 1 ||
-        rx_mhz < 400 || rx_mhz >= 470)
+        ! is_valid_frequency (rx_mhz))
     {
         fprintf (stderr, "Bad receive frequency");
         goto bad;
     }
     if (sscanf (offset_str, "%f", &txoff_mhz) != 1 ||
-        (rx_mhz + txoff_mhz) < 400 || (rx_mhz + txoff_mhz) >= 470)
+        ! is_valid_frequency (rx_mhz + txoff_mhz))
     {
         fprintf (stderr, "Bad transmit offset");
         goto bad;
@@ -714,7 +721,6 @@ badline:            fprintf (stderr, "Invalid line: '%s'\n", line);
             table_dirty = 1;
         }
     }
-//exit (-1);
 }
 
 //
