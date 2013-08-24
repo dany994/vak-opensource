@@ -190,7 +190,7 @@ static void write_block (int fd, int start, const unsigned char *data, int nbyte
 }
 
 //
-// Read firmware image from the device.
+// Read memory image from the device.
 //
 static void uvb5_download()
 {
@@ -201,7 +201,7 @@ static void uvb5_download()
 }
 
 //
-// Write firmware image to the device.
+// Write memory image to the device.
 //
 static void uvb5_upload()
 {
@@ -209,18 +209,6 @@ static void uvb5_upload()
 
     for (addr=0; addr<0x1000; addr+=0x10)
         write_block (radio_port, addr, &radio_mem[addr], 0x10);
-}
-
-static int bcd_to_int (uint32_t bcd)
-{
-    return ((bcd >> 28) & 15) * 10000000 +
-           ((bcd >> 24) & 15) * 1000000 +
-           ((bcd >> 20) & 15) * 100000 +
-           ((bcd >> 16) & 15) * 10000 +
-           ((bcd >> 12) & 15) * 1000 +
-           ((bcd >> 8)  & 15) * 100 +
-           ((bcd >> 4)  & 15) * 10 +
-           (bcd         & 15);
 }
 
 static void decode_squelch (uint16_t index, int *ctcs, int *dcs)
@@ -582,7 +570,7 @@ static void uvb5_print_config (FILE *out)
 }
 
 //
-// Read firmware image from the binary file.
+// Read memory image from the binary file.
 //
 static void uvb5_read_image (FILE *img, unsigned char *ident)
 {
@@ -604,7 +592,7 @@ static void uvb5_read_image (FILE *img, unsigned char *ident)
 }
 
 //
-// Save firmware image to the binary file.
+// Save memory image to the binary file.
 // Try to be compatible with Chirp.
 //
 static void uvb5_save_image (FILE *img)
