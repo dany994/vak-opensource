@@ -325,7 +325,7 @@ typedef struct {
     uint8_t lowinhtx;   // Low Vol Inhibit Tx
     uint8_t highinhtx;  // High Vol Inhibit Tx
     uint8_t alarm;      // Alarm
-    uint8_t fm;         // FM
+    uint8_t fm;         // FM Radio
 } settings_t;
 
 //
@@ -386,7 +386,7 @@ static void bf888s_print_config (FILE *out)
     fprintf (out, "Voice Prompt: %s\n", mode->voice ? "On" : "Off");
     fprintf (out, "Voice Language: %s\n", mode->chinese ? "Chinese" : "English");
     fprintf (out, "Alarm: %s\n", mode->alarm ? "On" : "Off");
-    fprintf (out, "FM: %s\n", mode->fm ? "On" : "Off");
+    fprintf (out, "FM Radio: %s\n", mode->fm ? "On" : "Off");
     fprintf (out, "VOX Function: %s\n", mode->vox ? "On" : "Off");
     fprintf (out, "VOX Sensitivity: %u\n", mode->voxgain + 1);
     fprintf (out, "VOX Inhibit On Receive: %s\n", mode->voxinhrx ? "On" : "Off");
@@ -449,7 +449,7 @@ static int on_off (char *param, char *value)
     exit(-1);
 }
 
-static void parse_parameter (char *param, char *value)
+static void bf888s_parse_parameter (char *param, char *value)
 {
     settings_t *mode = (settings_t*) &radio_mem[0x2b0];
     extra_settings_t *extra = (extra_settings_t*) &radio_mem[0x3c0];
@@ -506,7 +506,7 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
         mode->alarm = on_off (param, value);
         return;
     }
-    if (strcasecmp ("FM", param) == 0) {
+    if (strcasecmp ("FM Radio", param) == 0) {
         mode->fm = on_off (param, value);
         return;
     }
@@ -557,32 +557,52 @@ static int is_valid_frequency (int mhz)
     return 0;
 }
 
-static void parse_channel (int first_flag, char *num_str, char *rxfreq_str,
-    char *offset_str, char *rq_str, char *tq_str, char *power_str, char *wide_str,
-    char *scan_str, char *bcl_str, char *scramble_str)
+//
+// Parse table header.
+// Return table id, or 0 in case of error.
+//
+static int bf888s_parse_header (char *line)
 {
+    if (strncasecmp (line, "Channel", 7) == 0)
+        return 'C';
+
+    return 0;
+}
+
+//
+// Parse one line of table data.
+// Start_flag is 1 for the first table row.
+// Return 0 on failure.
+//
+static int bf888s_parse_row (int table_id, int first_row, char *line)
+{
+    char num_str[256], rxfreq_str[256], offset_str[256], rq_str[256];
+    char tq_str[256], power_str[256], wide_str[256], scan_str[256];
+    char bcl_str[256], scramble_str[256];
     int num, rq, tq, highpower, wide, scan, bcl, scramble;
     float rx_mhz, txoff_mhz;
 
+    if (sscanf (line, "%s %s %s %s %s %s %s %s %s %s",
+        num_str, rxfreq_str, offset_str, rq_str, tq_str, power_str,
+        wide_str, scan_str, bcl_str, scramble_str) != 10)
+        return 0;
+
     num = atoi (num_str);
     if (num < 1 || num > NCHAN) {
-        fprintf (stderr, "Bad channel number");
-bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
-            num_str, rxfreq_str, offset_str, rq_str, tq_str, power_str,
-            wide_str, scan_str, bcl_str, scramble_str);
-        exit (-1);
+        fprintf (stderr, "Bad channel number.\n");
+        return 0;
     }
     if (sscanf (rxfreq_str, "%f", &rx_mhz) != 1 ||
         ! is_valid_frequency (rx_mhz))
     {
-        fprintf (stderr, "Bad receive frequency");
-        goto bad;
+        fprintf (stderr, "Bad receive frequency.\n");
+        return 0;
     }
     if (sscanf (offset_str, "%f", &txoff_mhz) != 1 ||
         ! is_valid_frequency (rx_mhz + txoff_mhz))
     {
-        fprintf (stderr, "Bad transmit offset");
-        goto bad;
+        fprintf (stderr, "Bad transmit offset.\n");
+        return 0;
     }
     rq = encode_squelch (rq_str);
     tq = encode_squelch (tq_str);
@@ -592,8 +612,8 @@ bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
     } else if (strcasecmp ("Low", power_str) == 0) {
         highpower = 0;
     } else {
-        fprintf (stderr, "Bad power level");
-        goto bad;
+        fprintf (stderr, "Bad power level.\n");
+        return 0;
     }
 
     if (strcasecmp ("Wide", wide_str) == 0) {
@@ -601,8 +621,8 @@ bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
     } else if (strcasecmp ("Narrow", wide_str) == 0) {
         wide = 0;
     } else {
-        fprintf (stderr, "Bad modulation width");
-        goto bad;
+        fprintf (stderr, "Bad modulation width.\n");
+        return 0;
     }
 
     if (*scan_str == '+') {
@@ -610,8 +630,8 @@ bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
     } else if (*scan_str == '-') {
         scan = 0;
     } else {
-        fprintf (stderr, "Bad scan flag");
-        goto bad;
+        fprintf (stderr, "Bad scan flag.\n");
+        return 0;
     }
 
     if (*bcl_str == '+') {
@@ -619,8 +639,8 @@ bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
     } else if (*bcl_str == '-') {
         bcl = 0;
     } else {
-        fprintf (stderr, "Bad BCL flag");
-        goto bad;
+        fprintf (stderr, "Bad BCL flag.\n");
+        return 0;
     }
 
     if (*scramble_str == '+') {
@@ -628,11 +648,11 @@ bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
     } else if (*scramble_str == '-') {
         scramble = 0;
     } else {
-        fprintf (stderr, "Bad scramble flag");
-        goto bad;
+        fprintf (stderr, "Bad scramble flag.\n");
+        return 0;
     }
 
-    if (first_flag) {
+    if (first_row) {
         // On first entry, erase the channel table.
         int i;
         for (i=0; i<NCHAN; i++) {
@@ -641,86 +661,7 @@ bad:    fprintf (stderr, " in row: %s %s %s %s %s %s %s %s %s %s\n",
     }
     setup_channel (num-1, rx_mhz, rx_mhz + txoff_mhz, rq, tq,
         highpower, wide, scan, bcl, scramble);
-}
-
-//
-// Read the configuration from text file, and modify the firmware.
-//
-static void bf888s_parse_config (FILE *in)
-{
-    char line [256], *p, *v, table;
-    int table_dirty = 0;
-
-    fprintf (stderr, "Parse configuration for BF-888S.\n");
-
-    table = 0;
-    while (fgets (line, sizeof(line), in)) {
-        // Strip trailing spaces and newline.
-        line[sizeof(line)-1] = 0;
-        v = line + strlen(line) - 1;
-        while (v >= line && (*v=='\n' || *v=='\r' || *v==' ' || *v=='\t'))
-            *v-- = 0;
-
-        // Ignore comments and empty lines.
-        p = line;
-        if (*p == '#' || *p == 0)
-            continue;
-
-        if (*p != ' ') {
-            // Table finished.
-            table = 0;
-
-            // Find the value.
-            v = strchr (p, ':');
-            if (! v) {
-                // Table header.
-                v = strchr (p, ' ');
-                if (! v) {
-badline:            fprintf (stderr, "Invalid line: '%s'\n", line);
-                    exit(-1);
-                }
-
-                // Decode table type.
-                if (strncasecmp (p, "Channel", 7) == 0) {
-                    table = 'C';
-                    table_dirty = 0;
-                } else
-                    goto badline;
-                continue;
-            }
-
-            // Parameter.
-            *v++ = 0;
-
-            // Skip spaces.
-            while (*v == ' ' || *v == '\t')
-                v++;
-
-            parse_parameter (p, v);
-
-        } else {
-            // Table row or comment.
-            // Skip spaces.
-            // Ignore comments and empty lines.
-            while (*p == ' ' || *p == '\t')
-                p++;
-            if (*p == '#' || *p == 0)
-                continue;
-            if (! table)
-                goto badline;
-
-            char v1[256], v2[256], v3[256], v4[256], v5[256];
-            char v6[256], v7[256], v8[256], v9[256], v10[256];
-            if (sscanf (p, "%s %s %s %s %s %s %s %s %s %s",
-                v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) != 10)
-            {
-                goto badline;
-            }
-
-            parse_channel (! table_dirty, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
-            table_dirty = 1;
-        }
-    }
+    return 1;
 }
 
 //
@@ -734,5 +675,7 @@ radio_device_t radio_bf888s = {
     bf888s_save_image,
     bf888s_print_version,
     bf888s_print_config,
-    bf888s_parse_config,
+    bf888s_parse_parameter,
+    bf888s_parse_header,
+    bf888s_parse_row,
 };

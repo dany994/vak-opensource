@@ -334,6 +334,8 @@ void radio_save_image (char *filename)
 void radio_parse_config (char *filename)
 {
     FILE *cfg;
+    char line [256], *p, *v;
+    int table_id = 0, table_dirty = 0;
 
     fprintf (stderr, "Read configuration from file '%s'.\n", filename);
     cfg = fopen (filename, "r");
@@ -341,7 +343,61 @@ void radio_parse_config (char *filename)
         perror (filename);
         exit (-1);
     }
-    device->parse_config (cfg);
+
+    while (fgets (line, sizeof(line), cfg)) {
+        // Strip trailing spaces and newline.
+        line[sizeof(line)-1] = 0;
+        v = line + strlen(line) - 1;
+        while (v >= line && (*v=='\n' || *v=='\r' || *v==' ' || *v=='\t'))
+            *v-- = 0;
+
+        // Ignore comments and empty lines.
+        p = line;
+        if (*p == '#' || *p == 0)
+            continue;
+
+        if (*p != ' ') {
+            // Table finished.
+            table_id = 0;
+
+            // Find the value.
+            v = strchr (p, ':');
+            if (! v) {
+                // Table header: get table type.
+                table_id = device->parse_header (p);
+                if (! table_id) {
+badline:            fprintf (stderr, "Invalid line: '%s'\n", line);
+                    exit(-1);
+                }
+                table_dirty = 0;
+                continue;
+            }
+
+            // Parameter.
+            *v++ = 0;
+
+            // Skip spaces.
+            while (*v == ' ' || *v == '\t')
+                v++;
+
+            device->parse_parameter (p, v);
+
+        } else {
+            // Table row or comment.
+            // Skip spaces.
+            // Ignore comments and empty lines.
+            while (*p == ' ' || *p == '\t')
+                p++;
+            if (*p == '#' || *p == 0)
+                continue;
+            if (! table_id)
+                goto badline;
+
+            if (! device->parse_row (table_id, ! table_dirty, p))
+                goto badline;
+            table_dirty = 1;
+        }
+    }
     fclose (cfg);
 }
 

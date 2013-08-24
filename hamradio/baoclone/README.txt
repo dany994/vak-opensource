@@ -4,7 +4,7 @@ programming cable.  Supported radios:
 
  * Baofeng UV-5R
  * Baofeng UV-B5 (todo)
- * Baofeng BF-888S (todo)
+ * Baofeng BF-888S
 
 
 Usage:

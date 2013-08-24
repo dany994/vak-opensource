@@ -722,16 +722,40 @@ static void aged_save_image (FILE *img)
 //
 // Read the configuration from text file, and modify the firmware.
 //
-static void uv5r_parse_config (FILE *in)
+static void uv5r_parse_parameter (char *param, char *value)
 {
-    fprintf (stderr, "TODO: Parse configuration for UV-5R.\n");
-    // TODO
+    fprintf (stderr, "TODO: Parse parameter for UV-5R.\n");
+    exit(-1);
 }
 
-static void aged_parse_config (FILE *in)
+static void aged_parse_parameter (char *param, char *value)
 {
-    fprintf (stderr, "TODO: Parse configuration for UV-5R Aged.\n");
-    // TODO
+    fprintf (stderr, "TODO: Parse parameter for UV-5R Aged.\n");
+    exit(-1);
+}
+
+static int uv5r_parse_header (char *line)
+{
+    fprintf (stderr, "TODO: Parse table header for UV-5R.\n");
+    exit(-1);
+}
+
+static int aged_parse_header (char *line)
+{
+    fprintf (stderr, "TODO: Parse table header for UV-5R Aged.\n");
+    exit(-1);
+}
+
+static int uv5r_parse_row (int table_id, int first_row, char *line)
+{
+    fprintf (stderr, "TODO: Parse table row for UV-5R.\n");
+    exit(-1);
+}
+
+static int aged_parse_row (int table_id, int first_row, char *line)
+{
+    fprintf (stderr, "TODO: Parse table row for UV-5R Aged.\n");
+    exit(-1);
 }
 
 //
@@ -745,7 +769,9 @@ radio_device_t radio_uv5r = {
     uv5r_save_image,
     uv5r_print_version,
     uv5r_print_config,
-    uv5r_parse_config,
+    uv5r_parse_parameter,
+    uv5r_parse_header,
+    uv5r_parse_row,
 };
 
 //
@@ -759,5 +785,7 @@ radio_device_t radio_uv5r_aged = {
     aged_save_image,
     aged_print_version,
     aged_print_config,
-    aged_parse_config,
+    aged_parse_parameter,
+    aged_parse_header,
+    aged_parse_row,
 };
