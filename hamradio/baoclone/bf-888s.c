@@ -245,7 +245,7 @@ static int encode_squelch (char *str)
         return 0;
     }
 
-    int bcd = ((val / 1000) % 10) << 12 |
+    int bcd = ((val / 1000) % 16) << 12 |
               ((val / 100)  % 10) << 8 |
               ((val / 10)   % 10) << 4 |
               (val          % 10);
