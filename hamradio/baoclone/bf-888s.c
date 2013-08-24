@@ -206,6 +206,52 @@ static void decode_squelch (uint16_t bcd, int *ctcs, int *dcs)
         *dcs = - (index - 12000);
 }
 
+//
+// Convert squelch string to tone value in BCD format.
+// Four possible formats:
+// nnn.n - CTCSS frequency
+// DnnnN - DCS normal
+// DnnnI - DCS inverted
+// '-'   - Disabled
+//
+static int encode_squelch (char *str)
+{
+    unsigned val;
+
+    if (*str == 'D' || *str == 'd') {
+        // DCS tone
+        char *e;
+        val = strtol (++str, &e, 10);
+        if (val < 1 || val >= 999)
+            return 0;
+
+        if (*e == 'N' || *e == 'n') {
+            val += 8000;
+        } else if (*e == 'I' || *e == 'i') {
+            val += 12000;
+        } else {
+            return 0;
+        }
+    } else if (*str >= '0' && *str <= '9') {
+        // CTCSS tone
+        float hz;
+        if (sscanf (str, "%f", &hz) != 1)
+            return 0;
+
+        // Round to integer.
+        val = hz * 10.0 + 0.5;
+    } else {
+        // Disabled
+        return 0;
+    }
+
+    int bcd = ((val / 1000) % 10) << 12 |
+              ((val / 100)  % 10) << 8 |
+              ((val / 10)   % 10) << 4 |
+              (val          % 10);
+    return bcd;
+}
+
 typedef struct {
     uint32_t    rxfreq;     // binary coded decimal, 8 digits
     uint32_t    txfreq;     // binary coded decimal, 8 digits
@@ -508,12 +554,6 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
     }
     fprintf (stderr, "Unknown parameter: %s = %s\n", param, value);
     exit(-1);
-}
-
-static int encode_squelch (char *str)
-{
-    // TODO
-    return 0;
 }
 
 static int is_valid_frequency (int mhz)
