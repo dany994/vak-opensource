@@ -367,7 +367,7 @@ static void print_squelch (FILE *out, int ctcs, int dcs)
 
 static void print_vfo (FILE *out, char name, int hz, int offset,
     int rx_ctcs, int tx_ctcs, int rx_dcs, int tx_dcs,
-    int lowpower, int wide)
+    int lowpower, int wide, int pttid, int bcl, int revfreq, int compander)
 {
     fprintf (out, " %c  %8.4f ", name, hz / 1000000.0);
     print_offset (out, offset);
@@ -376,8 +376,10 @@ static void print_vfo (FILE *out, char name, int hz, int offset,
     fprintf (out, " ");
     print_squelch (out, tx_ctcs, tx_dcs);
 
-    fprintf (out, " %-4s  %-6s\n",
-        lowpower ? "Low" : "High", wide ? "Wide" : "Narr");
+    fprintf (out, " %-4s  %-6s %-4s %-4s %-4s %s\n",
+        lowpower ? "Low" : "High", wide ? "Wide" : "Narr",
+        pttid ? "+" : "-", bcl ? "+" : "-",
+        revfreq ? "+" : "-", compander ? "+" : "-");
 }
 
 //
@@ -469,14 +471,14 @@ static void uvb5_print_config (FILE *out)
     decode_channel (0, 0, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid,
         &bcl, &compander, &duplex, &revfreq);
-    fprintf (out, "VFO Receive  TxOffset Rx-Sq Tx-Sq Power FM\n");
-    print_vfo (out, 'A', hz, offset, rx_ctcs, tx_ctcs,
-        rx_dcs, tx_dcs, lowpower, wide);
+    fprintf (out, "VFO Receive  TxOffset Rx-Sq Tx-Sq Power FM   PTTID BCL Rev Compand\n");
+    print_vfo (out, 'A', hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs,
+        lowpower, wide, pttid, bcl, revfreq, compander);
     decode_channel (130, 0, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid,
         &bcl, &compander, &duplex, &revfreq);
-    print_vfo (out, 'B', hz, offset, rx_ctcs, tx_ctcs,
-        rx_dcs, tx_dcs, lowpower, wide);
+    print_vfo (out, 'B', hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs,
+        lowpower, wide, pttid, bcl, revfreq, compander);
 
     // Print band limits.
     int vhf_lower, vhf_upper, uhf_lower, uhf_upper;
