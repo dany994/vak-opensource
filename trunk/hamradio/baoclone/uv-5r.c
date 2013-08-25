@@ -51,7 +51,7 @@ static const int DCS_CODES[] = {
 
 static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
 
-static const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
+static const char *STEP_NAME[] = { "2.5", "5.0", "6.25", "10.0",
                             "12.5", "20.0", "25.0", "50.0" };
 
 static const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
@@ -538,7 +538,7 @@ static void decode_vfo (int index, int *band, int *hz, int *offset,
           (vfo->freq[4] & 15) * 10000 +
           (vfo->freq[5] & 15) * 1000 +
           (vfo->freq[6] & 15) * 100 +
-          (vfo->freq[7] & 15);
+          (vfo->freq[7] & 15) * 10;
     *offset = (vfo->offset[0] & 15) * 100000000 +
               (vfo->offset[1] & 15) * 10000000 +
               (vfo->offset[2] & 15) * 1000000 +
@@ -549,6 +549,32 @@ static void decode_vfo (int index, int *band, int *hz, int *offset,
     *wide = ! vfo->narrow;
     *step = vfo->step;
     *scode = vfo->scode;
+}
+
+static void setup_vfo (int index, int band, int hz, int offset,
+    int rxtone, int txtone, int step, int lowpower, int wide, int scode)
+{
+    vfo_t *vfo = (vfo_t*) &radio_mem[index ? 0x0F28 : 0x0F08];
+
+    vfo->band = (band == 'U');
+    vfo->freq[0] = (hz / 100000000) % 10;
+    vfo->freq[1] = (hz / 10000000) % 10;
+    vfo->freq[2] = (hz / 1000000) % 10;
+    vfo->freq[3] = (hz / 100000) % 10;
+    vfo->freq[4] = (hz / 10000) % 10;
+    vfo->freq[5] = (hz / 1000) % 10;
+    vfo->freq[6] = (hz / 100) % 10;
+    vfo->freq[7] = (hz / 10) % 10;
+    vfo->offset[0] = (offset / 100000000) % 10;
+    vfo->offset[1] = (offset / 10000000) % 10;
+    vfo->offset[2] = (offset / 1000000) % 10;
+    vfo->offset[3] = (offset / 100000) % 10;
+    vfo->rxtone = rxtone;
+    vfo->txtone = txtone;
+    vfo->lowpower = lowpower;
+    vfo->narrow = ! wide;
+    vfo->step = step;
+    vfo->scode = scode;
 }
 
 static void print_offset (FILE *out, int delta)
@@ -1150,7 +1176,89 @@ static int parse_channel (int first_row, char *line)
 //
 static int parse_vfo (int first_row, char *line)
 {
-    // TODO
+    char num_str[256], band_str[256], rxfreq_str[256], offset_str[256];
+    char rq_str[256], tq_str[256], step_str[256];
+    char power_str[256], wide_str[256], scode_str[256];
+    int num, band, rq, tq, step, lowpower, wide, scode;
+    double rx_mhz, txoff_mhz;
+
+    if (sscanf (line, "%s %s %s %s %s %s %s %s %s %s",
+        num_str, band_str, rxfreq_str, offset_str, rq_str, tq_str,
+        step_str, power_str, wide_str, scode_str) != 10)
+        return 0;
+
+    if (*num_str == 'A' || *num_str == 'a')
+        num = 0;
+    else if (*num_str == 'B' || *num_str == 'b')
+        num = 1;
+    else  {
+        fprintf (stderr, "Bad VFO number.\n");
+        return 0;
+    }
+
+    if (strcasecmp ("VHF", band_str) == 0) {
+        band = 'V';
+    } else if (strcasecmp ("UHF", band_str) == 0) {
+        band = 'U';
+    } else {
+        fprintf (stderr, "Unknown band.\n");
+        return 0;
+    }
+
+    if (sscanf (rxfreq_str, "%lf", &rx_mhz) != 1 ||
+        ! is_valid_frequency (rx_mhz))
+    {
+        fprintf (stderr, "Bad receive frequency.\n");
+        return 0;
+    }
+    if (sscanf (offset_str, "%lf", &txoff_mhz) != 1 ||
+        ! is_valid_frequency (rx_mhz + txoff_mhz))
+    {
+        fprintf (stderr, "Bad transmit offset.\n");
+        return 0;
+    }
+    rq = encode_squelch (rq_str);
+    tq = encode_squelch (tq_str);
+
+    step = string_in_table (step_str, STEP_NAME, 8);
+    if (step < 0) {
+        fprintf (stderr, "Bad step.\n");
+        return 0;
+    }
+
+    if (strcasecmp ("High", power_str) == 0) {
+        lowpower = 0;
+    } else if (strcasecmp ("Low", power_str) == 0) {
+        lowpower = 1;
+    } else {
+        fprintf (stderr, "Bad power level.\n");
+        return 0;
+    }
+
+    if (strcasecmp ("Wide", wide_str) == 0) {
+        wide = 1;
+    } else if (strcasecmp ("Narrow", wide_str) == 0) {
+        wide = 0;
+    } else {
+        fprintf (stderr, "Bad modulation width.\n");
+        return 0;
+    }
+
+    if (*scode_str == '-') {
+        scode = 0;
+    } else if (*scode_str >= '0' && *scode_str <= '9') {
+        scode = *scode_str - '0';
+    } else if (*scode_str >= 'A' && *scode_str <= 'A') {
+        scode = *scode_str - 'A' + 10;
+    } else if (*scode_str >= 'a' && *scode_str <= 'a') {
+        scode = *scode_str - 'a' + 10;
+    } else {
+        fprintf (stderr, "Bad scode value.\n");
+        return 0;
+    }
+
+    setup_vfo (num, band, rx_mhz * 1000000, txoff_mhz * 1000000,
+        rq, tq, step, lowpower, wide, scode);
     return 1;
 }
 
