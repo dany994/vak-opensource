@@ -157,12 +157,15 @@ int atoi_off (const char *value)
 
 //
 // Copy a text string to memory image.
-// Clear unused space to zero.
+// Clear unused part with spaces.
 //
 void copy_str (unsigned char *dest, const char *src, int nbytes)
 {
-    memset (dest, 0, 16);
-    strncpy ((char*) dest, src, 16);
+    int i;
+
+    for (i=0; i<nbytes; i++) {
+        *dest++ = (*src ? *src++ : ' ');
+    }
 }
 
 //

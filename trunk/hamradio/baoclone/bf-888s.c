@@ -556,6 +556,9 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
     exit(-1);
 }
 
+//
+// Check that the radio does support this frequency.
+//
 static int is_valid_frequency (int mhz)
 {
     if (mhz >= 400 && mhz <= 470)
