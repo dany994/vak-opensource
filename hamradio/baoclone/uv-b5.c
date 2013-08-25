@@ -373,11 +373,11 @@ static void print_vfo (FILE *out, char name, int hz, int offset,
     print_offset (out, offset);
     fprintf (out, " ");
     print_squelch (out, rx_ctcs, rx_dcs);
-    fprintf (out, "   ");
+    fprintf (out, " ");
     print_squelch (out, tx_ctcs, tx_dcs);
 
-    fprintf (out, "   %-4s  %-6s\n",
-        lowpower ? "Low" : "High", wide ? "Wide" : "Narrow");
+    fprintf (out, " %-4s  %-6s\n",
+        lowpower ? "Low" : "High", wide ? "Wide" : "Narr");
 }
 
 //
@@ -429,7 +429,7 @@ static void uvb5_print_config (FILE *out)
 
     // Print memory channels.
     fprintf (out, "\n");
-    fprintf (out, "Channel Name  Receive  TxOffset R-Squel T-Squel Power FM     Scan PTTID\n");
+    fprintf (out, "Channel Name  Receive  TxOffset Rx-Sq Tx-Sq Power FM   Scan PTTID BCL Rev Compand\n");
     for (i=1; i<=NCHAN; i++) {
         int rx_hz, txoff_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
         int lowpower, wide, scan, pttid;
@@ -449,12 +449,14 @@ static void uvb5_print_config (FILE *out)
         print_offset (out, txoff_hz);
         fprintf (out, " ");
         print_squelch (out, rx_ctcs, rx_dcs);
-        fprintf (out, "   ");
+        fprintf (out, " ");
         print_squelch (out, tx_ctcs, tx_dcs);
 
-        fprintf (out, "   %-4s  %-6s %-4s %-4s\n", lowpower ? "Low" : "High",
-            wide ? "Wide" : "Narrow", scan ? "+" : "-", PTTID_NAME[pttid]);
-        // TODO: bcl, compander, duplex, revfreq
+        fprintf (out, " %-4s  %-6s %-4s %-4s %-4s %-4s %s\n",
+            lowpower ? "Low" : "High", wide ? "Wide" : "Narr",
+            scan ? "+" : "-", pttid ? "+" : "-",
+            bcl ? "+" : "-", revfreq ? "+" : "-", compander ? "+" : "-");
+        // TODO: duplex
     }
 
     // Print frequency mode VFO settings.
@@ -467,7 +469,7 @@ static void uvb5_print_config (FILE *out)
     decode_channel (0, 0, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid,
         &bcl, &compander, &duplex, &revfreq);
-    fprintf (out, "VFO Receive  TxOffset R-Squel T-Squel Power FM\n");
+    fprintf (out, "VFO Receive  TxOffset Rx-Sq Tx-Sq Power FM\n");
     print_vfo (out, 'A', hz, offset, rx_ctcs, tx_ctcs,
         rx_dcs, tx_dcs, lowpower, wide);
     decode_channel (130, 0, &hz, &offset, &rx_ctcs, &tx_ctcs,
@@ -502,6 +504,7 @@ static void uvb5_print_config (FILE *out)
     fprintf (out, "Keypad Beep: %s\n", mode->beep ? "On" : "Off");
     fprintf (out, "Transmittion Timer: %u\n", (mode->timeout + 1) * 15);
     fprintf (out, "Voice Prompt: %s\n", mode->voice ? "On" : "Off");
+    fprintf (out, "PTT ID Mode: %s\n", PTTID_NAME[mode->pttid & 3]);
     fprintf (out, "Automatic ID[1-5]: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
     fprintf (out, "DTMF Sidetone: %s\n", DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
     fprintf (out, "Scan Resume Method: %s\n", SCAN_RESUME_NAME[mode->screv & 3]);
