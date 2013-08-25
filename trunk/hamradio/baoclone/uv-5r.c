@@ -52,7 +52,7 @@ static const int DCS_CODES[] = {
 static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
 
 static const char *STEP_NAME[] = { "2.5 ", "5.0 ", "6.25", "10.0",
-                            "12.5", "25.0", "????", "????" };
+                            "12.5", "20.0", "25.0", "50.0" };
 
 static const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
 
@@ -444,6 +444,23 @@ static void decode_limits (char band, int *enable, int *lower, int *upper)
              (limits->upper_msb        & 15) * 100 +
              ((limits->upper_lsb >> 4) & 15) * 10 +
              (limits->upper_lsb        & 15);
+}
+
+static void setup_limits (char band, int enable, int lower, int upper)
+{
+    int offset = (band == 'V') ? 0x1EC0+0x100 : 0x1EC0+0x105;
+
+    limits_t *limits = (limits_t*) (radio_mem + offset);
+    limits->enable = enable;
+
+    limits->lower_msb = ((lower / 1000) % 10) << 4 |
+                        ((lower / 100)  % 10);
+    limits->lower_lsb = ((lower / 10)   % 10) << 4 |
+                        (lower          % 10);
+    limits->upper_msb = ((upper / 1000) % 10) << 4 |
+                        ((upper / 100)  % 10);
+    limits->upper_lsb = ((upper / 10)   % 10) << 4 |
+                        (upper          % 10);
 }
 
 static void fetch_ani (char *ani)
@@ -1145,7 +1162,32 @@ static int parse_vfo (int first_row, char *line)
 //
 static int parse_limit (int first_row, char *line)
 {
-    // TODO
+    char band_str[256], lower_str[256], upper_str[256], enable_str[256];
+    int lower, upper, enable;
+
+    if (sscanf (line, "%s %s %s %s",
+        band_str, lower_str, upper_str, enable_str) != 4)
+        return 0;
+
+    lower = atoi (lower_str);
+    upper = atoi (upper_str);
+    if (*enable_str == '+') {
+        enable = 1;
+    } else if (*enable_str == '-') {
+        enable = 0;
+    } else {
+        fprintf (stderr, "Bad enable flag.\n");
+        return 0;
+    }
+
+    if (strcasecmp ("VHF", band_str) == 0) {
+        setup_limits ('V', enable, lower, upper);
+    } else if (strcasecmp ("UHF", band_str) == 0) {
+        setup_limits ('U', enable, lower, upper);
+    } else {
+        fprintf (stderr, "Unknown band.\n");
+        return 0;
+    }
     return 1;
 }
 
