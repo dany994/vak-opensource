@@ -61,8 +61,8 @@ static const char CHARSET[] = "0123456789- ABCDEFGHIJKLMNOPQRSTUVWXYZ/_+*";
 
 static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
 
-//static const char *STEP_NAME[] = { "5.0",  "6.25", "10.0", "12.5",
-//                                   "20.0", "25.0", "????", "????" };
+static const char *STEP_NAME[] = { "5.0",  "6.25", "10.0", "12.5",
+                                   "20.0", "25.0", "????", "????" };
 
 static const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
 
@@ -244,14 +244,14 @@ static void decode_squelch (uint8_t index, int pol, int *ctcs, int *dcs)
 typedef struct {
     uint32_t    rxfreq;     // binary coded decimal, 8 digits
     uint32_t    txoff;      // binary coded decimal, 8 digits
-    uint8_t     _u1       : 3,
+    uint8_t     step      : 3,
                 compander : 1,
                 rxpol     : 1,
                 txpol     : 1,
                 _u2       : 2;
     uint8_t     rxtone;
     uint8_t     txtone;
-    uint8_t     duplex    : 2,
+    uint8_t     duplex    : 2, // unused?
                 revfreq   : 1,
                 highpower : 1,
                 bcl       : 1,
@@ -262,7 +262,7 @@ typedef struct {
 } memory_channel_t;
 
 static void decode_channel (int i, char *name, int *rx_hz, int *txoff_hz,
-    int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs,
+    int *rx_ctcs, int *tx_ctcs, int *rx_dcs, int *tx_dcs, int *step,
     int *lowpower, int *wide, int *scan, int *pttid, int *bcl,
     int *compander, int *duplex, int *revfreq)
 {
@@ -270,7 +270,7 @@ static void decode_channel (int i, char *name, int *rx_hz, int *txoff_hz,
 
     *rx_hz = *txoff_hz = *rx_ctcs = *tx_ctcs = *rx_dcs = *tx_dcs = 0;
     *lowpower = *wide = *scan = *pttid = *bcl = *compander = 0;
-    *duplex = *revfreq = 0;
+    *step = *duplex = *revfreq = 0;
     if (name)
         *name = 0;
     if (ch->rxfreq == 0 || ch->rxfreq == 0xffffffff)
@@ -295,6 +295,7 @@ static void decode_channel (int i, char *name, int *rx_hz, int *txoff_hz,
     decode_squelch (ch->txtone, ch->txpol, tx_ctcs, tx_dcs);
 
     // Other parameters.
+    *step = ch->step;
     *lowpower = ! ch->highpower;
     *wide = ! ch->isnarrow;
     *scan = ch->scanadd;
@@ -366,7 +367,7 @@ static void print_squelch (FILE *out, int ctcs, int dcs)
 }
 
 static void print_vfo (FILE *out, char name, int hz, int offset,
-    int rx_ctcs, int tx_ctcs, int rx_dcs, int tx_dcs,
+    int rx_ctcs, int tx_ctcs, int rx_dcs, int tx_dcs, int step,
     int lowpower, int wide, int pttid, int bcl, int revfreq, int compander)
 {
     fprintf (out, " %c  %8.4f ", name, hz / 1000000.0);
@@ -376,9 +377,9 @@ static void print_vfo (FILE *out, char name, int hz, int offset,
     fprintf (out, " ");
     print_squelch (out, tx_ctcs, tx_dcs);
 
-    fprintf (out, " %-4s  %-6s %-4s %-4s %-4s %s\n",
-        lowpower ? "Low" : "High", wide ? "Wide" : "Narr",
-        pttid ? "+" : "-", bcl ? "+" : "-",
+    fprintf (out, " %-4s %-4s  %-6s %-4s %-3s %-4s %s\n",
+        STEP_NAME[step & 7], lowpower ? "Low" : "High",
+        wide ? "Wide" : "Narr", pttid ? "+" : "-", bcl ? "+" : "-",
         revfreq ? "+" : "-", compander ? "+" : "-");
 }
 
@@ -434,12 +435,12 @@ static void uvb5_print_config (FILE *out)
     fprintf (out, "Channel Name  Receive  TxOffset Rx-Sq Tx-Sq Power FM   Scan PTTID BCL Rev Compand\n");
     for (i=1; i<=NCHAN; i++) {
         int rx_hz, txoff_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
-        int lowpower, wide, scan, pttid;
+        int step, lowpower, wide, scan, pttid;
         int bcl, compander, duplex, revfreq;
         char name[17];
 
         decode_channel (i, name, &rx_hz, &txoff_hz, &rx_ctcs, &tx_ctcs,
-            &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid,
+            &rx_dcs, &tx_dcs, &step, &lowpower, &wide, &scan, &pttid,
             &bcl, &compander, &duplex, &revfreq);
 
         if (rx_hz == 0) {
@@ -454,7 +455,7 @@ static void uvb5_print_config (FILE *out)
         fprintf (out, " ");
         print_squelch (out, tx_ctcs, tx_dcs);
 
-        fprintf (out, " %-4s  %-6s %-4s %-4s %-4s %-4s %s\n",
+        fprintf (out, " %-4s  %-6s %-4s %-4s %-3s %-4s %s\n",
             lowpower ? "Low" : "High", wide ? "Wide" : "Narr",
             scan ? "+" : "-", pttid ? "+" : "-",
             bcl ? "+" : "-", revfreq ? "+" : "-", compander ? "+" : "-");
@@ -463,22 +464,22 @@ static void uvb5_print_config (FILE *out)
 
     // Print frequency mode VFO settings.
     int hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
-    int lowpower, wide, scan, pttid;
+    int step, lowpower, wide, scan, pttid;
     int bcl, compander, duplex, revfreq;;
     fprintf (out, "\n");
 
     // TODO: scan, pttid, bcl, compander, duplex, revfreq
     decode_channel (0, 0, &hz, &offset, &rx_ctcs, &tx_ctcs,
-        &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid,
+        &rx_dcs, &tx_dcs, &step, &lowpower, &wide, &scan, &pttid,
         &bcl, &compander, &duplex, &revfreq);
-    fprintf (out, "VFO Receive  TxOffset Rx-Sq Tx-Sq Power FM   PTTID BCL Rev Compand\n");
+    fprintf (out, "VFO Receive  TxOffset Rx-Sq Tx-Sq Step Power FM   PTTID BCL Rev Compand\n");
     print_vfo (out, 'A', hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs,
-        lowpower, wide, pttid, bcl, revfreq, compander);
+        step, lowpower, wide, pttid, bcl, revfreq, compander);
     decode_channel (130, 0, &hz, &offset, &rx_ctcs, &tx_ctcs,
-        &rx_dcs, &tx_dcs, &lowpower, &wide, &scan, &pttid,
+        &rx_dcs, &tx_dcs, &step, &lowpower, &wide, &scan, &pttid,
         &bcl, &compander, &duplex, &revfreq);
     print_vfo (out, 'B', hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs,
-        lowpower, wide, pttid, bcl, revfreq, compander);
+        step, lowpower, wide, pttid, bcl, revfreq, compander);
 
     // Print band limits.
     int vhf_lower, vhf_upper, uhf_lower, uhf_upper;
