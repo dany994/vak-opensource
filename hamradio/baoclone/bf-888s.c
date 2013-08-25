@@ -198,12 +198,15 @@ static void decode_squelch (uint16_t bcd, int *ctcs, int *dcs)
     if (index < 8000) {
         // CTCSS value is Hz multiplied by 10.
         *ctcs = index;
+        *dcs = 0;
+        return;
     }
     // DCS mode.
     if (index < 12000)
         *dcs = index - 8000;
     else
         *dcs = - (index - 12000);
+    *ctcs = 0;
 }
 
 //

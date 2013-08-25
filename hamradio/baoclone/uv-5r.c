@@ -30,7 +30,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <termios.h>
 #include "radio.h"
 #include "util.h"
 
@@ -51,8 +50,8 @@ static const int DCS_CODES[] = {
 
 static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
 
-static const char *STEP_NAME[] = { "2.5", "5.0", "6.25", "10.0",
-                            "12.5", "20.0", "25.0", "50.0" };
+static const char *STEP_NAME[] = { "2.5",  "5.0",  "6.25", "10.0",
+                                   "12.5", "20.0", "25.0", "50.0" };
 
 static const char *SAVER_NAME[] = { "Off", "1", "2", "3", "4", "?5?", "?6?", "?7?" };
 
@@ -92,11 +91,15 @@ static void uv5r_print_version (FILE *out)
     while (p > version && p[-1]==' ')
         *--p = 0;
 
-    // 3+poweron message
-    fprintf (out, "Firmware: %s\n", version);
+    // Don't print firmware and serial number to file,
+    // to prevent the user to copy them from one radio to another.
+    if (out == stdout) {
+        // 3+poweron message
+        fprintf (out, "Firmware: %s\n", version);
 
-    // 6+poweron message
-    fprintf (out, "Serial: %.16s\n", &radio_mem[0x1EC0+0x10]);
+        // 6+poweron message
+        fprintf (out, "Serial: %.16s\n", &radio_mem[0x1EC0+0x10]);
+    }
 
     // poweron message
     fprintf (out, "Message: %.16s\n", &radio_mem[0x1EC0+0x20]);
@@ -275,12 +278,15 @@ static void decode_squelch (uint16_t index, int *ctcs, int *dcs)
     if (index >= 0x0258) {
         // CTCSS value is Hz multiplied by 10.
         *ctcs = index;
+        *dcs = 0;
+        return;
     }
     // DCS mode.
     if (index < 0x6A)
         *dcs = DCS_CODES[index - 1];
     else
         *dcs = - DCS_CODES[index - 0x6A];
+    *ctcs = 0;
 }
 
 //
@@ -491,14 +497,6 @@ static void setup_ani (char *ani)
         radio_mem[0x0CAA+i] = v;
     }
 }
-
-#if 0
-static void get_current_channel (int index, int *chan_num)
-{
-    unsigned char *ptr = radio_mem + 0x0E76;
-    *chan_num = ptr[index] % NCHAN;
-}
-#endif
 
 typedef struct {
     uint8_t     freq[8];    // binary coded decimal, 8 digits
@@ -779,25 +777,6 @@ static void print_config (FILE *out, int is_aged)
     fprintf (out, "Squelch Tail Repeater Delay: %s\n", RPSTE_NAME[mode->rptrl & 15]);
     fprintf (out, "Power-On Message: %s\n", mode->ponmsg ? "On" : "Off");
     fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
-
-#if 0
-    // Print channel mode settings.
-    int chan_a, chan_b;
-    get_current_channel (0, &chan_a);
-    get_current_channel (1, &chan_b);
-    fprintf (out, "Channel A: %d\n", chan_a);
-    fprintf (out, "Channel B: %d\n", chan_b);
-
-    // Transient modes: usually there is no interest to display or touch these.
-    extra_settings_t *extra = (extra_settings_t*) &radio_mem[0x0E4A];
-    extra->displayab;
-    extra->fmradio;
-    extra->alarm;
-    extra->reset;
-    extra->menu;
-    extra->workmode;
-    extra->keylock;
-#endif
 }
 
 //
