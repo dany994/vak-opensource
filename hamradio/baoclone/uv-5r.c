@@ -48,7 +48,7 @@ static const int DCS_CODES[] = {
     731, 732, 734, 743, 754,
 };
 
-static const char *PTTID_NAME[] = { "-", "Beg", "End", "Both" };
+static const char *PTTID_NAME[] = { "-", "Begin", "End", "Both" };
 
 static const char *STEP_NAME[] = { "2.5",  "5.0",  "6.25", "10.0",
                                    "12.5", "20.0", "25.0", "50.0" };
@@ -761,7 +761,7 @@ static void print_config (FILE *out, int is_aged)
     fprintf (out, "Keypad Beep: %s\n", mode->beep ? "On" : "Off");
     fprintf (out, "TX Timer: %u\n", (mode->timeout + 1) * 15);
     fprintf (out, "Voice Prompt: %s\n", VOICE_NAME[mode->voice & 3]);
-    fprintf (out, "Automatic ID: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
+    fprintf (out, "ANI Code: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
     fprintf (out, "DTMF Sidetone: %s\n", DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
     fprintf (out, "Scan Resume Method: %s\n", SCAN_RESUME_NAME[mode->screv & 3]);
     fprintf (out, "Display Mode A: %s\n", DISPLAY_MODE_NAME[mode->mdfa & 3]);
@@ -907,7 +907,7 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
         mode->voice = i;
         return;
     }
-    if (strncasecmp ("Automatic ID", param, 12) == 0) {
+    if (strcasecmp ("ANI Code", param) == 0) {
         if (strlen (value) != 5) {
             fprintf (stderr, "Five hex digits expected.\n");
             goto bad;
