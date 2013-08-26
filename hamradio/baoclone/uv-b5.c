@@ -402,7 +402,10 @@ typedef struct {
             _u1         : 2,
             mdf_a       : 2,    // Display Mode A
             mdf_b       : 2;    // Display Mode B
-    uint8_t sidetone;           // DTMF Sidetone
+    uint8_t sidetone    : 1,    // DTMF Sidetone
+            _u2         : 2,
+            sqtail      : 1,    // Squelch tail enable
+            _u3         : 4;
     uint8_t vox;                // VOX Level
 } settings_t;
 
@@ -488,30 +491,31 @@ static void uvb5_print_config (FILE *out)
     // Print other settings.
     settings_t *mode = (settings_t*) &radio_mem[0x0D00];
     fprintf (out, "\n");
-    fprintf (out, "Scan Type: %s\n", SCAN_NAME[mode->scantype & 3]);
-    fprintf (out, "Transmittion Timer: %s\n", TIMER_NAME[mode->timeout & 7]);
-    fprintf (out, "Frequency mode: %s\n", mode->freqmode_ab ? "B" : "A");
-    fprintf (out, "Radio A Mode: %s\n", mode->workmode_a ? "Channel" : "Frequency");
-    fprintf (out, "Radio B Mode: %s\n", mode->workmode_b ? "Channel" : "Frequency");
-    fprintf (out, "Display A Mode: %s\n", DISPLAY_MODE_NAME[mode->mdf_a & 3]);
-    fprintf (out, "Display B Mode: %s\n", DISPLAY_MODE_NAME[mode->mdf_b & 3]);
-    fprintf (out, "PTT ID Mode: %s\n", PTTID_NAME[mode->pttid & 3]);
-    fprintf (out, "ANI Code: %c%c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4], ani[5]);
     fprintf (out, "Squelch Level: %u\n", mode->squelch);
-    fprintf (out, "VOX Level: %s\n", VOX_NAME[mode->vox & 15]);
-    fprintf (out, "FM Radio Mode: %s\n", mode->workmode_fm ? "Channel" : "Frequency");
-    fprintf (out, "TX in Dual Watch: %s\n", TXTDR_NAME[mode->txtdr & 3]);
-    fprintf (out, "Voice Language: %s\n", mode->language ? "Chinese" : "English");
-    fprintf (out, "Dual Watch: %s\n", mode->tdr ? "On" : "Off");
-    fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
-    fprintf (out, "Backlight: %s\n", mode->backlight ? "On" : "Off");
     fprintf (out, "Battery Saver: %s\n", mode->save_funct ? "On" : "Off");
-    fprintf (out, "FM Radio: %s\n", mode->fm ? "On" : "Off");
+    fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
+    fprintf (out, "Transmittion Timer: %s\n", TIMER_NAME[mode->timeout & 7]);
+    fprintf (out, "VOX Level: %s\n", VOX_NAME[mode->vox & 15]);
     fprintf (out, "Keypad Beep: %s\n", !mode->nobeep ? "On" : "Off");
     fprintf (out, "Voice Prompt: %s\n", mode->voice_prompt ? "On" : "Off");
-    fprintf (out, "Sidetone: %s\n", mode->sidetone ? "On" : "Off");
+    fprintf (out, "Dual Watch: %s\n", mode->tdr ? "On" : "Off");
+    fprintf (out, "Backlight: %s\n", mode->backlight ? "On" : "Off");
+    fprintf (out, "PTT ID Transmit: %s\n", PTTID_NAME[mode->pttid & 3]);
+    fprintf (out, "ANI Code: %c%c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4], ani[5]);
+    fprintf (out, "DTMF Sidetone: %s\n", mode->sidetone ? "On" : "Off");
+    fprintf (out, "Display A Mode: %s\n", DISPLAY_MODE_NAME[mode->mdf_a & 3]);
+    fprintf (out, "Display B Mode: %s\n", DISPLAY_MODE_NAME[mode->mdf_b & 3]);
+    fprintf (out, "Scan Resume: %s\n", SCAN_NAME[mode->scantype & 3]);
+    fprintf (out, "Frequency mode: %s\n", mode->freqmode_ab ? "B" : "A");
+    fprintf (out, "TX in Dual Watch: %s\n", TXTDR_NAME[mode->txtdr & 3]);
+    fprintf (out, "Squelch Tail Eliminate: %s\n", !mode->sqtail ? "On" : "Off");
+    fprintf (out, "Voice Language: %s\n", mode->language ? "Chinese" : "English");
 
-    // TODO: txtdr
+    // Transient modes: no need to backup or configure.
+    //fprintf (out, "Radio A Mode: %s\n", mode->workmode_a ? "Channel" : "Frequency");
+    //fprintf (out, "Radio B Mode: %s\n", mode->workmode_b ? "Channel" : "Frequency");
+    //fprintf (out, "FM Radio: %s\n", mode->fm ? "On" : "Off");
+    //fprintf (out, "FM Radio Mode: %s\n", mode->workmode_fm ? "Channel" : "Frequency");
 }
 
 //
