@@ -763,7 +763,7 @@ static void print_config (FILE *out, int is_aged)
     fprintf (out, "Voice Prompt: %s\n", VOICE_NAME[mode->voice & 3]);
     fprintf (out, "ANI Code: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
     fprintf (out, "DTMF Sidetone: %s\n", DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
-    fprintf (out, "Scan Resume Method: %s\n", SCAN_RESUME_NAME[mode->screv & 3]);
+    fprintf (out, "Scan Resume: %s\n", SCAN_RESUME_NAME[mode->screv & 3]);
     fprintf (out, "Display Mode A: %s\n", DISPLAY_MODE_NAME[mode->mdfa & 3]);
     fprintf (out, "Display Mode B: %s\n", DISPLAY_MODE_NAME[mode->mdfb & 3]);
     fprintf (out, "Busy Channel Lockout: %s\n", mode->bcl ? "On" : "Off");
@@ -922,8 +922,8 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
         mode->dtmfst = i;
         return;
     }
-    if (strcasecmp ("Scan Resume Method", param) == 0) {
-        i = string_in_table (value, SCAN_RESUME_NAME, 4);
+    if (strcasecmp ("Scan Resume", param) == 0) {
+        i = string_in_table (value, SCAN_RESUME_NAME, 3);
         if (i < 0)
             goto bad;
         mode->screv = i;
