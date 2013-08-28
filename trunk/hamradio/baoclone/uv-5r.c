@@ -35,19 +35,6 @@
 
 #define NCHAN 128
 
-static const int DCS_CODES[] = {
-     23,  25,  26,  31,  32,  36,  43,  47,  51,  53,  54,
-     65,  71,  72,  73,  74, 114, 115, 116, 122, 125, 131,
-    132, 134, 143, 145, 152, 155, 156, 162, 165, 172, 174,
-    205, 212, 223, 225, 226, 243, 244, 245, 246, 251, 252,
-    255, 261, 263, 265, 266, 271, 274, 306, 311, 315, 325,
-    331, 332, 343, 346, 351, 356, 364, 365, 371, 411, 412,
-    413, 423, 431, 432, 445, 446, 452, 454, 455, 462, 464,
-    465, 466, 503, 506, 516, 523, 526, 532, 546, 565, 606,
-    612, 624, 627, 631, 632, 654, 662, 664, 703, 712, 723,
-    731, 732, 734, 743, 754,
-};
-
 static const char *PTTID_NAME[] = { "-", "Begin", "End", "Both" };
 
 static const char *STEP_NAME[] = { "2.5",  "5.0",  "6.25", "10.0",
@@ -282,10 +269,10 @@ static void decode_squelch (uint16_t index, int *ctcs, int *dcs)
         return;
     }
     // DCS mode.
-    if (index < 0x6A)
+    if (index - 1 < NDCS)
         *dcs = DCS_CODES[index - 1];
     else
-        *dcs = - DCS_CODES[index - 0x6A];
+        *dcs = - DCS_CODES[index - 1 - NDCS];
     *ctcs = 0;
 }
 
@@ -308,16 +295,16 @@ static int encode_squelch (char *str)
 
         // Find a valid index in DCS table.
         int i;
-        for (i=1; i<0x6A; i++)
+        for (i=1; i<=NDCS; i++)
             if (DCS_CODES[i-1] == val)
                 break;
-        if (i >= 0x6A)
+        if (i > NDCS)
             return 0;
 
         if (*e == 'N' || *e == 'n') {
             val = i;
         } else if (*e == 'I' || *e == 'i') {
-            val = i + 0x6A - 1;
+            val = i + NDCS + 1;
         } else {
             return 0;
         }

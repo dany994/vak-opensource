@@ -414,6 +414,8 @@ static void bf888s_print_config (FILE *out, int verbose)
             wide ? "Wide" : "Narrow", scan ? "+" : "-",
             bcl ? "+" : "-", scramble ? "+" : "-");
     }
+    if (verbose)
+        print_squelch_tones (out);
 
     // Print other settings.
     settings_t *mode = (settings_t*) &radio_mem[0x2b0];
