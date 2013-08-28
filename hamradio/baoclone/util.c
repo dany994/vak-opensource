@@ -34,6 +34,35 @@
 #include "util.h"
 
 //
+// CTCSS tones, Hz*10.
+//
+const int CTCSS_TONES [NCTCSS] = {
+     670,  693,  719,  744,  770,  797,  825,  854,  885,  915,
+     948,  974, 1000, 1035, 1072, 1109, 1148, 1188, 1230, 1273,
+    1318, 1365, 1413, 1462, 1514, 1567, 1598, 1622, 1655, 1679,
+    1713, 1738, 1773, 1799, 1835, 1862, 1899, 1928, 1966, 1995,
+    2035, 2065, 2107, 2181, 2257, 2291, 2336, 2418, 2503, 2541,
+};
+
+//
+// DCS codes.
+//
+const int DCS_CODES [NDCS] = {
+     23,  25,  26,  31,  32,  36,  43,  47,  51,  53,
+     54,  65,  71,  72,  73,  74, 114, 115, 116, 122,
+    125, 131, 132, 134, 143, 145, 152, 155, 156, 162,
+    165, 172, 174, 205, 212, 223, 225, 226, 243, 244,
+    245, 246, 251, 252, 255, 261, 263, 265, 266, 271,
+    274, 306, 311, 315, 325, 331, 332, 343, 346, 351,
+    356, 364, 365, 371, 411, 412, 413, 423, 431, 432,
+    445, 446, 452, 454, 455, 462, 464, 465, 466, 503,
+    506, 516, 523, 526, 532, 546, 565, 606, 612, 624,
+    627, 631, 632, 654, 662, 664, 703, 712, 723, 731,
+    732, 734, 743, 754,
+};
+
+
+//
 // Check for a regular file.
 //
 int is_file (char *filename)
@@ -199,6 +228,33 @@ void print_options (FILE *out, const char **tab, int num, const char *info)
         if (i > 0)
             fprintf (out, ",");
         fprintf (out, " %s", tab[i]);
+    }
+    fprintf (out, "\n");
+}
+
+//
+// Print list of all squelch tones.
+//
+void print_squelch_tones (FILE *out)
+{
+    int i;
+
+    fprintf (out, "#\n");
+    fprintf (out, "# Squelch tones:");
+    for (i=0; i<NCTCSS; i++) {
+        fprintf (out, " %.1f", CTCSS_TONES[i] / 10.0);
+        if ((i + 1) % 10 == 0)
+            fprintf (out, "\n#");
+    }
+    for (i=0; i<NDCS; i++) {
+        fprintf (out, " D%03dN", DCS_CODES[i]);
+        if ((i + 1) % 10 == 0)
+            fprintf (out, "\n#");
+    }
+    for (i=0; i<NDCS; i++) {
+        fprintf (out, " D%03dI", DCS_CODES[i]);
+        if ((i + 5) % 10 == 0)
+            fprintf (out, "\n#");
     }
     fprintf (out, "\n");
 }

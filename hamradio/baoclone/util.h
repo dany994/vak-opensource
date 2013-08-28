@@ -38,6 +38,20 @@ extern const char copyright[];
 int verbose;
 
 //
+// CTCSS tones, Hz*10.
+//
+#define NCTCSS  50
+
+extern const int CTCSS_TONES [NCTCSS];
+
+//
+// DCS codes.
+//
+#define NDCS    104
+
+extern const int DCS_CODES [NDCS];
+
+//
 // Print data in hex format.
 //
 void print_hex (const unsigned char *data, int len);
@@ -94,3 +108,8 @@ int string_in_table (const char *value, const char *tab[], int nelem);
 // Print description of the parameter.
 //
 void print_options (FILE *out, const char **tab, int num, const char *info);
+
+//
+// Print list of all squelch tones.
+//
+void print_squelch_tones (FILE *out);
