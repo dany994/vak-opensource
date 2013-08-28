@@ -27,6 +27,12 @@
  */
 
 //
+// Program version.
+//
+extern const char version[];
+extern const char copyright[];
+
+//
 // Trace data i/o via the serial port.
 //
 int verbose;
@@ -83,3 +89,8 @@ void copy_str (unsigned char *dest, const char *src, int nbytes);
 // Return -1 when not found.
 //
 int string_in_table (const char *value, const char *tab[], int nelem);
+
+//
+// Print description of the parameter.
+//
+void print_options (FILE *out, const char **tab, int num, const char *info);

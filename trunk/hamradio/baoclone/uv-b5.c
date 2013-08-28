@@ -584,7 +584,7 @@ typedef struct {
 //
 // Print full information about the device configuration.
 //
-static void uvb5_print_config (FILE *out)
+static void uvb5_print_config (FILE *out, int verbose)
 {
     int i;
 

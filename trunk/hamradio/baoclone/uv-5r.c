@@ -682,7 +682,7 @@ typedef struct {
 //
 // Print full information about the device configuration.
 //
-static void print_config (FILE *out, int is_aged)
+static void print_config (FILE *out, int verbose, int is_aged)
 {
     int i;
 
@@ -782,14 +782,14 @@ static void print_config (FILE *out, int is_aged)
 //
 // Print full information about the device configuration.
 //
-static void uv5r_print_config (FILE *out)
+static void uv5r_print_config (FILE *out, int verbose)
 {
-    print_config (out, 0);
+    print_config (out, verbose, 0);
 }
 
-static void aged_print_config (FILE *out)
+static void aged_print_config (FILE *out, int verbose)
 {
-    print_config (out, 1);
+    print_config (out, verbose, 1);
 }
 
 //
