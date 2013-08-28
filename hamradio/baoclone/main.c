@@ -39,7 +39,7 @@ extern int optind;
 
 void usage ()
 {
-    fprintf (stderr, "Baofeng UV-5R Clone Utility, Version %s, %s\n", version, copyright);
+    fprintf (stderr, "BaoClone Utility, Version %s, %s\n", version, copyright);
     fprintf (stderr, "Usage:\n");
     fprintf (stderr, "    baoclone [-v] port                Save device binary image to file 'device.img',\n");
     fprintf (stderr, "                                      and text configuration to 'device.cfg'.\n");
@@ -108,7 +108,7 @@ int main (int argc, char **argv)
             // Load image from file.
             radio_read_image (argv[0]);
             radio_print_version (stdout);
-            radio_print_config (stdout);
+            radio_print_config (stdout, ! isatty (1));
 
         } else {
             // Dump device to image file.
@@ -127,7 +127,7 @@ int main (int argc, char **argv)
                 exit (-1);
             }
             radio_print_version (cfg);
-            radio_print_config (cfg);
+            radio_print_config (cfg, 1);
             fclose (cfg);
         }
     }

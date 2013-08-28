@@ -37,11 +37,14 @@
 
 static const char *SIDEKEY_NAME[] = { "Off", "Monitor", "TX Power", "Alarm" };
 
+static const char *OFF_ON[] = { "Off", "On" };
+
 //
 // Print a generic information about the device.
 //
 static void bf888s_print_version (FILE *out)
 {
+    // Nothing to print.
 }
 
 //
@@ -368,12 +371,26 @@ typedef struct {
 //
 // Print full information about the device configuration.
 //
-static void bf888s_print_config (FILE *out)
+static void bf888s_print_config (FILE *out, int verbose)
 {
     int i;
 
     // Print memory channels.
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Table of preprogrammed channels.\n");
+        fprintf (out, "# 1) Channel number: 1-%d\n", NCHAN+1);
+        fprintf (out, "# 2) Receive frequency in MHz\n");
+        fprintf (out, "# 3) Offset of transmit frequency in MHz\n");
+        fprintf (out, "# 4) Squelch tone for receive, or '-' to disable\n");
+        fprintf (out, "# 5) Squelch tone for transmit, or '-' to disable\n");
+        fprintf (out, "# 6) Transmit power: Low, High\n");
+        fprintf (out, "# 7) Modulation width: Wide, Narrow\n");
+        fprintf (out, "# 8) Add this channel to scan list\n");
+        fprintf (out, "# 9) Busy channel lockout\n");
+        fprintf (out, "# 10) Enable scrambler\n");
+        fprintf (out, "#\n");
+    }
     fprintf (out, "Channel Receive  TxOffset R-Squel T-Squel Power FM     Scan BCL Scramble\n");
     for (i=0; i<NCHAN; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
@@ -402,22 +419,75 @@ static void bf888s_print_config (FILE *out)
     settings_t *mode = (settings_t*) &radio_mem[0x2b0];
     extra_settings_t *extra = (extra_settings_t*) &radio_mem[0x3c0];
     fprintf (out, "\n");
+
+    if (verbose) {
+        fprintf (out, "# Mute the speaker when a received signal is below this level.\n");
+        fprintf (out, "# Options: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\n");
+    }
     fprintf (out, "Squelch Level: %u\n", extra->squelch);
+
+    if (verbose)
+        print_options (out, SIDEKEY_NAME, 4, "Function of the monitor button.");
     fprintf (out, "Side Key: %s\n", SIDEKEY_NAME[extra->sidekey & 3]);
+
+    if (verbose) {
+        fprintf (out, "\n# Stop tramsmittion after specified number of seconds.\n");
+        fprintf (out, "# Options: Off, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300\n");
+    }
     fprintf (out, "TX Timer: ");
     if (extra->timeout == 0) fprintf (out, "Off\n");
     else                     fprintf (out, "%u\n", extra->timeout * 30);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Use channel 16 as scan mode.");
     fprintf (out, "Scan Function: %s\n", mode->scan ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Enable voice messages.");
     fprintf (out, "Voice Prompt: %s\n", mode->voice ? "On" : "Off");
+
+    if (verbose) {
+        fprintf (out, "\n# Select the language of voice messages.\n");
+        fprintf (out, "# Options: English, Chinese\n");
+    }
     fprintf (out, "Voice Language: %s\n", mode->chinese ? "Chinese" : "English");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Send alarm signal when side key pressed.");
     fprintf (out, "Alarm: %s\n", mode->alarm ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Unidentified parameter.");
     fprintf (out, "FM Radio: %s\n", mode->fm ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Voice operated transmission.");
     fprintf (out, "VOX Function: %s\n", mode->vox ? "On" : "Off");
+
+    if (verbose) {
+        fprintf (out, "\n# Microphone sensitivity for VOX control.\n");
+        fprintf (out, "# Options: 1, 2, 3, 4, 5\n");
+    }
     fprintf (out, "VOX Sensitivity: %u\n", mode->voxgain + 1);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "No transmittion when signal is received.");
     fprintf (out, "VOX Inhibit On Receive: %s\n", mode->voxinhrx ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Decrease the amount of power used when idle.");
     fprintf (out, "Battery Saver: %s\n", extra->saver ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Keypad beep sound.");
     fprintf (out, "Beep: %s\n", extra->beep ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Unidentified parameter.");
     fprintf (out, "High Vol Inhibit TX: %s\n", mode->highinhtx ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Disable transmitter when battery low.");
     fprintf (out, "Low Vol Inhibit TX: %s\n", mode->lowinhtx ? "On" : "Off");
 }
 

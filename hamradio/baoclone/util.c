@@ -183,3 +183,22 @@ int string_in_table (const char *value, const char *tab[], int nelem)
     }
     return -1;
 }
+
+//
+// Print description of the parameter.
+//
+void print_options (FILE *out, const char **tab, int num, const char *info)
+{
+    int i;
+
+    fprintf (out, "\n");
+    if (info)
+        fprintf (out, "# %s\n", info);
+    fprintf (out, "# Options:");
+    for (i=0; i<num; i++) {
+        if (i > 0)
+            fprintf (out, ",");
+        fprintf (out, " %s", tab[i]);
+    }
+    fprintf (out, "\n");
+}

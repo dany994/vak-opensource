@@ -55,7 +55,7 @@ void radio_print_version (FILE *out);
 //
 // Print full information about the device configuration.
 //
-void radio_print_config (FILE *out);
+void radio_print_config (FILE *out, int verbose);
 
 //
 // Read firmware image from the binary file.
@@ -82,7 +82,7 @@ typedef struct {
     void (*read_image) (FILE *img, unsigned char *ident);
     void (*save_image) (FILE *img);
     void (*print_version) (FILE *out);
-    void (*print_config) (FILE *out);
+    void (*print_config) (FILE *out, int verbose);
     void (*parse_parameter) (char *param, char *value);
     int (*parse_header) (char *line);
     int (*parse_row) (int table_id, int first_row, char *line);

@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <time.h>
 #include <sys/stat.h>
 #include "radio.h"
 #include "util.h"
@@ -404,7 +405,21 @@ badline:            fprintf (stderr, "Invalid line: '%s'\n", line);
 //
 // Print full information about the device configuration.
 //
-void radio_print_config (FILE *out)
+void radio_print_config (FILE *out, int verbose)
 {
-    device->print_config (out);
+    if (verbose) {
+        char buf [40];
+        time_t t;
+        struct tm *tmp;
+
+        t = time (NULL);
+        tmp = localtime (&t);
+        if (! tmp || ! strftime (buf, sizeof(buf), "%Y/%m/%d ", tmp))
+            buf[0] = 0;
+        printf ("#\n");
+        printf ("# This configuration was generated %sby BaoClone Utility,\n", buf);
+        printf ("# Version %s, %s\n", version, copyright);
+        printf ("#\n");
+    }
+    device->print_config (out, verbose);
 }
