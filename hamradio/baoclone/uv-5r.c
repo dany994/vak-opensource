@@ -692,10 +692,10 @@ static void print_config (FILE *out, int verbose, int is_aged)
         fprintf (out, "# 6) Squelch tone for transmit, or '-' to disable\n");
         fprintf (out, "# 7) Transmit power: Low, High\n");
         fprintf (out, "# 8) Modulation width: Wide, Narrow\n");
-        fprintf (out, "# 9) Add this channel to scan list\n");
-        fprintf (out, "# 10) Busy channel lockout\n");
-        fprintf (out, "# 11) Last (6-th) character of ANI code\n");
-        fprintf (out, "# 12) Transmit PTT ID (ANI code) on this channel\n");
+        fprintf (out, "# 9) Add this channel to scan list: -, +\n");
+        fprintf (out, "# 10) Busy channel lockout: -, +\n");
+        fprintf (out, "# 11) Last (6-th) character of ANI code, or '-'\n");
+        fprintf (out, "# 12) Transmit PTT ID (ANI code) on this channel: -, +\n");
         fprintf (out, "#\n");
     }
     fprintf (out, "Channel Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan BCL Scode PTTID\n");
@@ -735,6 +735,20 @@ static void print_config (FILE *out, int verbose, int is_aged)
     int band, hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
     int lowpower, wide, step, scode;
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Table of VFO settings.\n");
+        fprintf (out, "# 1) VFO index: A, B\n");
+        fprintf (out, "# 2) Band: VHF, UHF\n");
+        fprintf (out, "# 3) Receive frequency in MHz\n");
+        fprintf (out, "# 4) Offset of transmit frequency in MHz\n");
+        fprintf (out, "# 5) Squelch tone for receive, or '-' to disable\n");
+        fprintf (out, "# 6) Squelch tone for transmit, or '-' to disable\n");
+        fprintf (out, "# 7) Frequency step in kHz: 2.5, 5.0, 6.25, 10.0, 12.5, 20.0, 25.0, 50.0\n");
+        fprintf (out, "# 8) Transmit power: Low, High\n");
+        fprintf (out, "# 9) Modulation width: Wide, Narrow\n");
+        fprintf (out, "# 10) Last (6-th) character of ANI code, or '-'\n");
+        fprintf (out, "#\n");
+    }
     decode_vfo (0, &band, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &lowpower, &wide, &step, &scode);
     fprintf (out, "VFO Band Receive  TxOffset R-Squel T-Squel Step Power FM     Scode\n");
@@ -751,6 +765,14 @@ static void print_config (FILE *out, int verbose, int is_aged)
         decode_limits ('V', &vhf_enable, &vhf_lower, &vhf_upper);
         decode_limits ('U', &uhf_enable, &uhf_lower, &uhf_upper);
         fprintf (out, "\n");
+        if (verbose) {
+            fprintf (out, "# Table of band limits.\n");
+            fprintf (out, "# 1) Band: VHF, UHF\n");
+            fprintf (out, "# 2) Lower frequency in MHz\n");
+            fprintf (out, "# 3) Upper frequency in MHz\n");
+            fprintf (out, "# 4) Enable flag: -, +\n");
+            fprintf (out, "#\n");
+        }
         fprintf (out, "Limit Lower Upper Enable\n");
         fprintf (out, " VHF  %4d  %4d  %s\n", vhf_lower, vhf_upper,
             vhf_enable ? "+" : "-");
