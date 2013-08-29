@@ -829,6 +829,7 @@ static void print_config (FILE *out, int verbose, int is_aged)
         fprintf (out, "# PTT ID code, which is transmitted on PTT button press and/or release.\n");
         fprintf (out, "# Last, 6-th character of ANI code is programmed individually\n");
         fprintf (out, "# for every channel (see Scode above).\n");
+        fprintf (out, "# Characters allowed: 0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
     }
     fprintf (out, "ANI Code: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
 
@@ -853,7 +854,7 @@ static void print_config (FILE *out, int verbose, int is_aged)
     fprintf (out, "Display Mode B: %s\n", DISPLAY_MODE_NAME[mode->mdfb & 3]);
 
     if (verbose)
-        print_options (out, OFF_ON, 2, "prevent transmittion when a signal is received.");
+        print_options (out, OFF_ON, 2, "Prevent transmittion when a signal is received.");
     fprintf (out, "Busy Channel Lockout: %s\n", mode->bcl ? "On" : "Off");
 
     if (verbose)
