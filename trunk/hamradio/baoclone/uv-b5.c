@@ -55,6 +55,7 @@ static const char *DISPLAY_MODE_NAME[] = { "Frequency", "Name", "Channel", "??" 
 
 static const char *LANGUAGE_NAME[] = { "English", "Chinese" };
 
+static const char *OFF_ON[] = { "Off", "On" };
 
 //
 // Print a generic information about the device.
@@ -568,6 +569,23 @@ static void uvb5_print_config (FILE *out, int verbose)
 
     // Print memory channels.
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Table of preprogrammed channels.\n");
+        fprintf (out, "# 1) Channel number: 1-%d\n", NCHAN);
+        fprintf (out, "# 2) Name: up to 5 characters, no spaces\n");
+        fprintf (out, "# 3) Receive frequency in MHz\n");
+        fprintf (out, "# 4) Offset of transmit frequency in MHz\n");
+        fprintf (out, "# 5) Squelch tone for receive, or '-' to disable\n");
+        fprintf (out, "# 6) Squelch tone for transmit, or '-' to disable\n");
+        fprintf (out, "# 7) Transmit power: Low, High\n");
+        fprintf (out, "# 8) Modulation width: Wide, Narrow\n");
+        fprintf (out, "# 9) Add this channel to scan list: -, +\n");
+        fprintf (out, "# 10) Transmit PTT ID (ANI code) on this channel: -, +\n");
+        fprintf (out, "# 11) Busy channel lockout: -, +\n");
+        fprintf (out, "# 12) Reverse RX/TX frequencies: -, +\n");
+        fprintf (out, "# 13) Audio compander enable: -, +\n");
+        fprintf (out, "#\n");
+    }
     fprintf (out, "Channel Name   Receive  TxOffset Rx-Sq Tx-Sq Power FM   Scan PTTID BCL Rev Compand\n");
     for (i=1; i<=NCHAN; i++) {
         int rx_hz, txoff_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
@@ -596,12 +614,30 @@ static void uvb5_print_config (FILE *out, int verbose)
             scan ? "+" : "-", pttid ? "+" : "-",
             bcl ? "+" : "-", revfreq ? "+" : "-", compander ? "+" : "-");
     }
+    if (verbose)
+        print_squelch_tones (out);
 
     // Print frequency mode VFO settings.
     int hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
     int step, lowpower, wide, scan, pttid;
     int bcl, compander, revfreq;;
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Table of VFO settings.\n");
+        fprintf (out, "# 1) VFO index: A, B\n");
+        fprintf (out, "# 2) Receive frequency in MHz\n");
+        fprintf (out, "# 3) Offset of transmit frequency in MHz\n");
+        fprintf (out, "# 4) Squelch tone for receive, or '-' to disable\n");
+        fprintf (out, "# 5) Squelch tone for transmit, or '-' to disable\n");
+        fprintf (out, "# 6) Frequency step in kHz: 2.5, 5.0, 6.25, 10.0, 12.5, 20.0, 25.0, 50.0\n");
+        fprintf (out, "# 7) Transmit power: Low, High\n");
+        fprintf (out, "# 8) Modulation width: Wide, Narrow\n");
+        fprintf (out, "# 9) Transmit PTT ID (ANI code) on this channel: -, +\n");
+        fprintf (out, "# 10) Busy channel lockout: -, +\n");
+        fprintf (out, "# 11) Reverse RX/TX frequencies: -, +\n");
+        fprintf (out, "# 12) Audio compander enable: -, +\n");
+        fprintf (out, "#\n");
+    }
 
     decode_channel (0, 0, &hz, &offset, &rx_ctcs, &tx_ctcs,
         &rx_dcs, &tx_dcs, &step, &lowpower, &wide, &scan, &pttid,
@@ -620,6 +656,13 @@ static void uvb5_print_config (FILE *out, int verbose)
     decode_limits ('V', &vhf_lower, &vhf_upper);
     decode_limits ('U', &uhf_lower, &uhf_upper);
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Table of band limits.\n");
+        fprintf (out, "# 1) Band: VHF, UHF\n");
+        fprintf (out, "# 2) Lower frequency in MHz\n");
+        fprintf (out, "# 3) Upper frequency in MHz\n");
+        fprintf (out, "#\n");
+    }
     fprintf (out, "Limit Lower  Upper \n");
     fprintf (out, " VHF  %5.1f  %5.1f\n", vhf_lower/10.0, vhf_upper/10.0);
     fprintf (out, " UHF  %5.1f  %5.1f\n", uhf_lower/10.0, uhf_upper/10.0);
@@ -627,6 +670,12 @@ static void uvb5_print_config (FILE *out, int verbose)
     // Broadcast FM.
     fm_t *fm = (fm_t*) &radio_mem[0x09A0];
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Table of FM radio channels.\n");
+        fprintf (out, "# 1) Channel number: 1-16\n");
+        fprintf (out, "# 2) Frequency in MHz\n");
+        fprintf (out, "#\n");
+    }
     fprintf (out, "FM   Frequency\n");
     for (i=0; i<16; i++) {
         int freq = (fm[i].msb << 8) + fm[i].lsb + 650;
@@ -641,23 +690,85 @@ static void uvb5_print_config (FILE *out, int verbose)
     // Print other settings.
     settings_t *mode = (settings_t*) &radio_mem[0x0D00];
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Mute the speaker when a received signal is below this level.\n");
+        fprintf (out, "# Options: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\n");
+    }
     fprintf (out, "Squelch Level: %u\n", mode->squelch);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Decrease the amount of power used when idle.");
     fprintf (out, "Battery Saver: %s\n", mode->save_funct ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Transmit 'roger' tone when PTT released.");
     fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, TIMER_NAME, 8, "Stop tramsmittion after specified number of seconds.");
     fprintf (out, "TX Timer: %s\n", TIMER_NAME[mode->timeout & 7]);
-    fprintf (out, "VOX Level: %s\n", VOX_NAME[mode->vox & 15]);
+
+    if (verbose)
+        print_options (out, VOX_NAME, 11, "Microphone sensitivity for VOX control.");
+    fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Keypad beep sound.");
     fprintf (out, "Keypad Beep: %s\n", !mode->nobeep ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Enable voice messages.");
     fprintf (out, "Voice Prompt: %s\n", mode->voice_prompt ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Automatically switch A/B when signal is received on another frequency.");
     fprintf (out, "Dual Watch: %s\n", mode->tdr ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Enable display backlight.");
     fprintf (out, "Backlight: %s\n", mode->backlight ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, PTTID_NAME, 4, "Transmit ANI code when PTT button pressed and/or released.");
     fprintf (out, "PTT ID Transmit: %s\n", PTTID_NAME[mode->pttid & 3]);
+
+    if (verbose) {
+        fprintf (out, "\n# Automatic number identification: 6 characters of PTT ID code,\n");
+        fprintf (out, "# which is transmitted on PTT button press and/or release.\n");
+        fprintf (out, "# Characters allowed: 0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
+    }
     fprintf (out, "ANI Code: %c%c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4], ani[5]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 4, "Play DTMF tones when keycode or PTT ID is transmitted.");
     fprintf (out, "DTMF Sidetone: %s\n", mode->sidetone ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, DISPLAY_MODE_NAME, 3, "What information to display for channel A.");
     fprintf (out, "Display A Mode: %s\n", DISPLAY_MODE_NAME[mode->mdf_a & 3]);
+
+    if (verbose)
+        print_options (out, DISPLAY_MODE_NAME, 3, "What information to display for channel B.");
     fprintf (out, "Display B Mode: %s\n", DISPLAY_MODE_NAME[mode->mdf_b & 3]);
+
+    if (verbose) {
+        fprintf (out, "\n# Method of resuming the scan after stop on active channel.\n");
+        fprintf (out, "# TO - resume after a timeout.\n");
+        fprintf (out, "# CO - resume after a carrier dropped off.\n");
+        fprintf (out, "# SE - search and stop on next active frequency.\n");
+    }
     fprintf (out, "Scan Resume: %s\n", SCAN_NAME[mode->scantype & 3]);
+
+    if (verbose)
+        print_options (out, TXTDR_NAME, 3, "Which frequency to use for transmit in dual watch mode.");
     fprintf (out, "TX Dual Watch: %s\n", TXTDR_NAME[mode->txtdr & 3]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Reduce the squelch tail.");
     fprintf (out, "Squelch Tail Eliminate: %s\n", !mode->sqtail ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, LANGUAGE_NAME, 2, "Select voice language.");
     fprintf (out, "Voice Language: %s\n", mode->language ? "Chinese" : "English");
 
     // Transient modes: no need to backup or configure.
@@ -729,7 +840,7 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
         mode->timeout = atoi_off (value);
         return;
     }
-    if (strcasecmp ("VOX Level", param) == 0) {
+    if (strcasecmp ("VOX Sensitivity", param) == 0) {
         mode->vox = atoi_off (value);
         return;
     }
