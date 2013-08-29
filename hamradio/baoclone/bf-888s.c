@@ -379,7 +379,7 @@ static void bf888s_print_config (FILE *out, int verbose)
     fprintf (out, "\n");
     if (verbose) {
         fprintf (out, "# Table of preprogrammed channels.\n");
-        fprintf (out, "# 1) Channel number: 1-%d\n", NCHAN+1);
+        fprintf (out, "# 1) Channel number: 1-%d\n", NCHAN);
         fprintf (out, "# 2) Receive frequency in MHz\n");
         fprintf (out, "# 3) Offset of transmit frequency in MHz\n");
         fprintf (out, "# 4) Squelch tone for receive, or '-' to disable\n");

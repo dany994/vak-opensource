@@ -49,7 +49,7 @@ static const char *ABR_NAME[] = { "Off", "1", "2", "3", "4", "5", "?6?", "?7?" }
 
 static const char *DTMF_SIDETONE_NAME[] = { "Off", "DTMF Only", "ANI Only", "DTMF+ANI" };
 
-static const char *SCAN_RESUME_NAME[] = { "After Timeout", "When Carrier Off", "Stop On Active", "??" };
+static const char *SCAN_RESUME_NAME[] = { "TO", "CO", "SE", "??" };
 
 static const char *DISPLAY_MODE_NAME[] = { "Channel", "Name", "Frequency", "??" };
 
@@ -61,6 +61,8 @@ static const char *RPSTE_NAME[] = { "Off", "1", "2", "3", "4", "5", "6", "7", "8
                              "10", "?11?", "?12?", "?13?", "?14?", "?15?" };
 
 static const char *VOICE_NAME[] = { "Off", "English", "Chinese", "??" };
+
+static const char *OFF_ON[] = { "Off", "On" };
 
 //
 // Print a generic information about the device.
@@ -87,9 +89,6 @@ static void uv5r_print_version (FILE *out)
         // 6+poweron message
         fprintf (out, "Serial: %.16s\n", &radio_mem[0x1EC0+0x10]);
     }
-
-    // poweron message
-    fprintf (out, "Message: %.16s\n", &radio_mem[0x1EC0+0x20]);
 }
 
 static void aged_print_version (FILE *out)
@@ -673,8 +672,32 @@ static void print_config (FILE *out, int verbose, int is_aged)
 {
     int i;
 
+    // Power-on message.
+    if (verbose) {
+        fprintf (out, "\n");
+        fprintf (out, "# Display this message on power-on.\n");
+        fprintf (out, "# 14 characters split into two lines of 7 symbols each.\n");
+    }
+    fprintf (out, "Message: %.16s\n", &radio_mem[0x1EC0+0x20]);
+
     // Print memory channels.
     fprintf (out, "\n");
+    if (verbose) {
+        fprintf (out, "# Table of preprogrammed channels.\n");
+        fprintf (out, "# 1) Channel number: 0-%d\n", NCHAN-1);
+        fprintf (out, "# 2) Name: up to 7 characters, no spaces\n");
+        fprintf (out, "# 3) Receive frequency in MHz\n");
+        fprintf (out, "# 4) Offset of transmit frequency in MHz\n");
+        fprintf (out, "# 5) Squelch tone for receive, or '-' to disable\n");
+        fprintf (out, "# 6) Squelch tone for transmit, or '-' to disable\n");
+        fprintf (out, "# 7) Transmit power: Low, High\n");
+        fprintf (out, "# 8) Modulation width: Wide, Narrow\n");
+        fprintf (out, "# 9) Add this channel to scan list\n");
+        fprintf (out, "# 10) Busy channel lockout\n");
+        fprintf (out, "# 11) Last (6-th) character of ANI code\n");
+        fprintf (out, "# 12) Transmit PTT ID (ANI code) on this channel\n");
+        fprintf (out, "#\n");
+    }
     fprintf (out, "Channel Name    Receive  TxOffset R-Squel T-Squel Power FM     Scan BCL Scode PTTID\n");
     for (i=0; i<NCHAN; i++) {
         int rx_hz, tx_hz, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
@@ -705,6 +728,8 @@ static void print_config (FILE *out, int verbose, int is_aged)
             wide ? "Wide" : "Narrow", scan ? "+" : "-", bcl ? "+" : "-",
             sgroup, PTTID_NAME[pttid]);
     }
+    if (verbose)
+        print_squelch_tones (out);
 
     // Print frequency mode VFO settings.
     int band, hz, offset, rx_ctcs, tx_ctcs, rx_dcs, tx_dcs;
@@ -740,29 +765,117 @@ static void print_config (FILE *out, int verbose, int is_aged)
     // Print other settings.
     settings_t *mode = (settings_t*) &radio_mem[0x0E20];
     fprintf (out, "\n");
+
+    if (verbose) {
+        fprintf (out, "# Mute the speaker when a received signal is below this level.\n");
+        fprintf (out, "# Options: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\n");
+    }
     fprintf (out, "Squelch Level: %u\n", mode->squelch);
+
+    if (verbose)
+        print_options (out, SAVER_NAME, 5, "Decrease the amount of power used when idle.");
     fprintf (out, "Battery Saver: %s\n", SAVER_NAME[mode->save & 7]);
+
+    if (verbose)
+        print_options (out, VOX_NAME, 11, "Microphone sensitivity for VOX control.");
     fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
+
+    if (verbose)
+        print_options (out, ABR_NAME, 6, "Number of seconds for display backlight.");
     fprintf (out, "Backlight Timeout: %s\n", ABR_NAME[mode->abr & 7]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Automatically switch A/B when signal is received on another frequency.");
     fprintf (out, "Dual Watch: %s\n", mode->tdr ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Keypad beep sound.");
     fprintf (out, "Keypad Beep: %s\n", mode->beep ? "On" : "Off");
+
+    if (verbose) {
+        fprintf (out, "\n# Stop tramsmittion after specified number of seconds.\n");
+        fprintf (out, "# Options: 15, 30, 45, 60, ... 585, 600\n");
+    }
     fprintf (out, "TX Timer: %u\n", (mode->timeout + 1) * 15);
+
+    if (verbose)
+        print_options (out, VOICE_NAME, 3, "Enable voice messages.");
     fprintf (out, "Voice Prompt: %s\n", VOICE_NAME[mode->voice & 3]);
+
+    if (verbose) {
+        fprintf (out, "\n# Automatic number identification: first 5 characters of\n");
+        fprintf (out, "# PTT ID code, which is transmitted on PTT button press and/or release.\n");
+        fprintf (out, "# Last, 6-th character of ANI code is programmed individually\n");
+        fprintf (out, "# for every channel (see Scode above).\n");
+    }
     fprintf (out, "ANI Code: %c%c%c%c%c\n", ani[0], ani[1], ani[2], ani[3], ani[4]);
+
+    if (verbose)
+        print_options (out, DTMF_SIDETONE_NAME, 4, "Play DTMF tones when keycode or PTT ID is transmitted.");
     fprintf (out, "DTMF Sidetone: %s\n", DTMF_SIDETONE_NAME[mode->dtmfst & 3]);
+
+    if (verbose) {
+        fprintf (out, "\n# Method of resuming the scan after stop on active channel.\n");
+        fprintf (out, "# TO - resume after a timeout.\n");
+        fprintf (out, "# CO - resume after a carrier dropped off.\n");
+        fprintf (out, "# SE - search and stop on next active frequency.\n");
+    }
     fprintf (out, "Scan Resume: %s\n", SCAN_RESUME_NAME[mode->screv & 3]);
+
+    if (verbose)
+        print_options (out, DISPLAY_MODE_NAME, 3, "What information to display for channel A.");
     fprintf (out, "Display Mode A: %s\n", DISPLAY_MODE_NAME[mode->mdfa & 3]);
+
+    if (verbose)
+        print_options (out, DISPLAY_MODE_NAME, 3, "What information to display for channel B.");
     fprintf (out, "Display Mode B: %s\n", DISPLAY_MODE_NAME[mode->mdfb & 3]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "prevent transmittion when a signal is received.");
     fprintf (out, "Busy Channel Lockout: %s\n", mode->bcl ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Lock keypad automatically.");
     fprintf (out, "Auto Key Lock: %s\n", mode->autolk ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Color of display backlight when idle.");
     fprintf (out, "Standby LED Color: %s\n", COLOR_NAME[mode->wtled & 3]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Color of display backlight when signal is received.");
     fprintf (out, "RX LED Color: %s\n", COLOR_NAME[mode->rxled & 3]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Color of display backlight when transmitting.");
     fprintf (out, "TX LED Color: %s\n", COLOR_NAME[mode->txled & 3]);
+
+    if (verbose) {
+        fprintf (out, "\n# When alarm button is pressed:\n");
+        fprintf (out, "# Site - play local alarm sound, no transmit.\n");
+        fprintf (out, "# Tone - transmit an intermittent sound to remote station.\n");
+        fprintf (out, "# Code - transmit a DTMF code (PTT ID) to remote station.\n");
+    }
     fprintf (out, "Alarm Mode: %s\n", ALARM_NAME[mode->almod & 3]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Reduce the squelch tail when communicating with simplex station.");
     fprintf (out, "Squelch Tail Eliminate: %s\n", mode->ste ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Reduce the squelch tail when communicating via repeater.");
     fprintf (out, "Squelch Tail Eliminate for Repeater: %s\n", RPSTE_NAME[mode->rpste & 15]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Delay the squelch tail for repeater.");
     fprintf (out, "Squelch Tail Repeater Delay: %s\n", RPSTE_NAME[mode->rptrl & 15]);
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Display the power-on message (see above).");
     fprintf (out, "Power-On Message: %s\n", mode->ponmsg ? "On" : "Off");
+
+    if (verbose)
+        print_options (out, OFF_ON, 2, "Transmit 'roger' tone when PTT released.");
     fprintf (out, "Roger Beep: %s\n", mode->roger ? "On" : "Off");
 }
 
