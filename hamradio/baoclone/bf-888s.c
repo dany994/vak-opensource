@@ -336,7 +336,7 @@ typedef struct {
     uint8_t chinese;    // Voice Language
     uint8_t scan;       // Scan
     uint8_t vox;        // VOX Function
-    uint8_t voxgain;    // VOX Sensitivity (0='1' ... 4='5')
+    uint8_t voxgain;    // VOX Level (0='1' ... 4='5')
     uint8_t voxinhrx;   // VOX Inhibit On Receive
     uint8_t lowinhtx;   // Low Vol Inhibit Tx
     uint8_t highinhtx;  // High Vol Inhibit Tx
@@ -458,7 +458,7 @@ static void bf888s_print_config (FILE *out, int verbose)
         fprintf (out, "\n# Microphone sensitivity for VOX control.\n");
         fprintf (out, "# Options: 1, 2, 3, 4, 5\n");
     }
-    fprintf (out, "VOX Sensitivity: %u\n", mode->voxgain + 1);
+    fprintf (out, "VOX Level: %u\n", mode->voxgain + 1);
 
     if (verbose)
         print_options (out, OFF_ON, 2, "No transmittion when signal is received.");
@@ -589,7 +589,7 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
         mode->vox = on_off (param, value);
         return;
     }
-    if (strcasecmp ("VOX Sensitivity", param) == 0) {
+    if (strcasecmp ("VOX Level", param) == 0) {
         mode->voxgain = atoi (value);
         if (mode->voxgain > 0)
              mode->voxgain -= 1;

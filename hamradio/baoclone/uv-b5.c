@@ -698,7 +698,7 @@ static void uvb5_print_config (FILE *out, int verbose)
 
     if (verbose)
         print_options (out, VOX_NAME, 11, "Microphone sensitivity for VOX control.");
-    fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
+    fprintf (out, "VOX Level: %s\n", VOX_NAME[mode->vox & 15]);
 
     if (verbose)
         print_options (out, OFF_ON, 2, "Keypad beep sound.");
@@ -828,7 +828,7 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
         mode->timeout = atoi_off (value);
         return;
     }
-    if (strcasecmp ("VOX Sensitivity", param) == 0) {
+    if (strcasecmp ("VOX Level", param) == 0) {
         mode->vox = atoi_off (value);
         return;
     }

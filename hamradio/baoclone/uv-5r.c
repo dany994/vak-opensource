@@ -604,7 +604,7 @@ typedef struct {
     uint8_t step;
     uint8_t _u1;
     uint8_t save;       // Battery Saver
-    uint8_t vox;        // VOX Sensitivity
+    uint8_t vox;        // VOX Level
     uint8_t _u2;
     uint8_t abr;        // Backlight Timeout
     uint8_t tdr;        // Dual Watch
@@ -788,7 +788,7 @@ static void print_config (FILE *out, int verbose, int is_aged)
 
     if (verbose)
         print_options (out, VOX_NAME, 11, "Microphone sensitivity for VOX control.");
-    fprintf (out, "VOX Sensitivity: %s\n", VOX_NAME[mode->vox & 15]);
+    fprintf (out, "VOX Level: %s\n", VOX_NAME[mode->vox & 15]);
 
     if (verbose)
         print_options (out, ABR_NAME, 6, "Number of seconds for display backlight.");
@@ -989,7 +989,7 @@ bad:        fprintf (stderr, "Bad value for %s: %s\n", param, value);
         mode->save = atoi_off (value);
         return;
     }
-    if (strcasecmp ("VOX Sensitivity", param) == 0) {
+    if (strcasecmp ("VOX Level", param) == 0) {
         mode->vox = atoi_off (value);
         return;
     }
