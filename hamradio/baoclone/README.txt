@@ -3,7 +3,7 @@ Baoclone is a utility for programming Baofeng radios via a serial or USB
 programming cable.  Supported radios:
 
  * Baofeng UV-5R
- * Baofeng UV-B5 (todo)
+ * Baofeng UV-B5
  * Baofeng BF-888S
 
 
