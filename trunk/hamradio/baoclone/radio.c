@@ -30,7 +30,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <termios.h>
+#ifdef MINGW32
+#   include <winsock.h>
+#else
+#   include <termios.h>
+#endif
 #include <time.h>
 #include <sys/stat.h>
 #include "radio.h"
@@ -42,14 +46,66 @@ unsigned char radio_mem [0x2000];       // Radio: memory contents
 int radio_progress;                     // Read/write progress counter
 
 static radio_device_t *device;          // Device-dependent interface
-static struct termios oldtio, newtio;   // Mode of serial port
 static unsigned char image_ident [8];   // Image file: identifier
+#ifdef MINGW32
+DCB saved_mode;                         // Mode of serial port, Windows
+#else
+static struct termios oldtio, newtio;   // Mode of serial port, Unix
+#endif
 
 //
 // Open the serial port.
 //
 static int open_port (char *portname)
 {
+#ifdef MINGW32
+    HANDLE fd;
+    DCB new_mode;
+    COMMTIMEOUTS timo;
+
+    /* Open port */
+    fd = CreateFile (portname, GENERIC_READ | GENERIC_WRITE,
+        0, 0, OPEN_EXISTING, 0, 0);
+    if (fd == INVALID_HANDLE_VALUE) {
+        fprintf (stderr, "%s: Cannot open\n", portname);
+        exit (-1);
+    }
+
+    /* Set serial attributes */
+    memset (&saved_mode, 0, sizeof(saved_mode));
+    if (! GetCommState (fd, &saved_mode)) {
+        fprintf (stderr, "%s: Cannot get state\n", portname);
+        exit (-1);
+    }
+
+    new_mode = saved_mode;
+
+    new_mode.BaudRate = CBR_9600;
+    new_mode.ByteSize = 8;
+    new_mode.StopBits = ONESTOPBIT;
+    new_mode.Parity = 0;
+    new_mode.fParity = FALSE;
+    new_mode.fOutX = FALSE;
+    new_mode.fInX = FALSE;
+    new_mode.fOutxCtsFlow = FALSE;
+    new_mode.fOutxDsrFlow = FALSE;
+    new_mode.fRtsControl = RTS_CONTROL_DISABLE;
+    new_mode.fNull = FALSE;
+    new_mode.fAbortOnError = FALSE;
+    new_mode.fBinary = TRUE;
+    if (! SetCommState (fd, &new_mode)) {
+        fprintf (stderr, "%s: Cannot set state\n", portname);
+        exit (-1);
+    }
+
+    timo.ReadIntervalTimeout = 0;
+    timo.ReadTotalTimeoutMultiplier = 0;
+    timo.ReadTotalTimeoutConstant = 200;
+    timo.WriteTotalTimeoutMultiplier = 1;
+    timo.WriteTotalTimeoutConstant = 1000;
+    SetCommTimeouts (fd, &timo);
+    return (int) fd;
+#else
     int fd;
 
     // Use non-block flag to ignore carrier (DCD).
@@ -95,6 +151,7 @@ static int open_port (char *portname)
     // Flush received data pending on the port.
     tcflush (fd, TCIFLUSH);
     return fd;
+#endif
 }
 
 //
@@ -105,9 +162,14 @@ void radio_disconnect()
     fprintf (stderr, "Close device.\n");
 
     // Restore the port mode.
+#ifdef MINGW32
+    SetCommState ((HANDLE) radio_port, &saved_mode);
+    CloseHandle ((HANDLE) radio_port);
+#else
     tcsetattr (radio_port, TCSANOW, &oldtio);
     close (radio_port);
     radio_port = -1;
+#endif
 
     // Radio needs a timeout to reset to a normal state.
     usleep (2000000);
@@ -137,7 +199,10 @@ static int try_magic (const unsigned char *magic)
         print_hex (magic, magic_len);
         printf ("\n");
     }
+#ifdef MINGW32
+#else
     tcflush (radio_port, TCIFLUSH);
+#endif
     if (write (radio_port, magic, magic_len) != magic_len) {
         perror ("Serial port");
         exit (-1);

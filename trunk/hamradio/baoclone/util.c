@@ -95,6 +95,9 @@ void print_hex (const unsigned char *data, int len)
 //
 int read_with_timeout (int fd, unsigned char *data, int len)
 {
+#ifdef MINGW32
+    return read (fd, data, len);
+#else
     fd_set rset, wset, xset;
     int nbytes, len0 = len;
 
@@ -124,6 +127,7 @@ int read_with_timeout (int fd, unsigned char *data, int len)
 
         data += nbytes;
     }
+#endif
 }
 
 //
