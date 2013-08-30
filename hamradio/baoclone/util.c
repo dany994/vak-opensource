@@ -31,6 +31,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#ifdef MINGW32
+#   include <windows.h>
+#endif
 #include "util.h"
 
 //
@@ -70,8 +73,13 @@ int is_file (char *filename)
     struct stat st;
 
     if (stat (filename, &st) < 0) {
+#ifdef MINGW32
+        // File not exist: treat it as a device.
+        return strncasecmp (filename, "com", 3) != 0;
+#else
         // File not exist: treat it as a regular file.
         return 1;
+#endif
     }
     return (st.st_mode & S_IFMT) == S_IFREG;
 }
@@ -93,10 +101,23 @@ void print_hex (const unsigned char *data, int len)
 // Return 0 when no data available.
 // Use 200-msec timeout.
 //
-int read_with_timeout (int fd, unsigned char *data, int len)
+int serial_read (int fd, unsigned char *data, int len)
 {
 #ifdef MINGW32
-    return read (fd, data, len);
+    DWORD nbytes;
+    int len0 = len;
+
+    for (;;) {
+        if (! ReadFile ((HANDLE)fd, data, len, &nbytes, 0) || nbytes <= 0)
+        if (nbytes <= 0)
+            return 0;
+
+        len -= nbytes;
+        if (len <= 0)
+            return len0;
+
+        data += nbytes;
+    }
 #else
     fd_set rset, wset, xset;
     int nbytes, len0 = len;
@@ -127,6 +148,35 @@ int read_with_timeout (int fd, unsigned char *data, int len)
 
         data += nbytes;
     }
+#endif
+}
+
+//
+// Write data to serial port.
+//
+void serial_write (int fd, const void *data, int len)
+{
+#ifdef MINGW32
+    DWORD count;
+
+    WriteFile ((HANDLE)fd, data, len, &count, 0);
+#else
+    if (write (fd, data, len) != len) {
+        perror ("Serial port");
+        exit (-1);
+    }
+#endif
+}
+
+//
+// Delay in milliseconds.
+//
+void mdelay (unsigned msec)
+{
+#ifdef MINGW32
+    Sleep (msec);
+#else
+    usleep (msec * 1000);
 #endif
 }
 

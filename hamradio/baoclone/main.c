@@ -74,6 +74,8 @@ int main (int argc, char **argv)
         fprintf (stderr, "Only one of -w or -c options is allowed.\n");
         usage();
     }
+    setvbuf (stdout, 0, _IOLBF, 0);
+    setvbuf (stderr, 0, _IOLBF, 0);
 
     if (write_flag) {
         // Restore image file to device.

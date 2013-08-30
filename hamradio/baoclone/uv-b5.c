@@ -78,13 +78,10 @@ static void read_block (int fd, int start, unsigned char *data, int nbytes)
     cmd[1] = start >> 8;
     cmd[2] = start;
     cmd[3] = nbytes;
-    if (write (fd, cmd, 4) != 4) {
-        perror ("Serial port");
-        exit (-1);
-    }
+    serial_write (fd, cmd, 4);
 
     // Read reply.
-    if (read_with_timeout (fd, reply, 4) != 4) {
+    if (serial_read (fd, reply, 4) != 4) {
         fprintf (stderr, "Radio refused to send block 0x%04x.\n", start);
         exit(-1);
     }
@@ -96,18 +93,15 @@ static void read_block (int fd, int start, unsigned char *data, int nbytes)
     }
 
     // Read data.
-    len = read_with_timeout (fd, data, 0x10);
+    len = serial_read (fd, data, 0x10);
     if (len != nbytes) {
         fprintf (stderr, "Reading block 0x%04x: got only %d bytes.\n", start, len);
         exit(-1);
     }
 
     // Get acknowledge.
-    if (write (fd, "\x06", 1) != 1) {
-        perror ("Serial port");
-        exit (-1);
-    }
-    if (read_with_timeout (fd, reply, 1) != 1) {
+    serial_write (fd, "\x06", 1);
+    if (serial_read (fd, reply, 1) != 1) {
         fprintf (stderr, "No acknowledge after block 0x%04x.\n", start);
         exit(-1);
     }
@@ -141,17 +135,11 @@ static void write_block (int fd, int start, const unsigned char *data, int nbyte
     cmd[1] = start >> 8;
     cmd[2] = start;
     cmd[3] = nbytes;
-    if (write (fd, cmd, 4) != 4) {
-        perror ("Serial port");
-        exit (-1);
-    }
-    if (write (fd, data, nbytes) != nbytes) {
-        perror ("Serial port");
-        exit (-1);
-    }
+    serial_write (fd, cmd, 4);
+    serial_write (fd, data, nbytes);
 
     // Get acknowledge.
-    if (read_with_timeout (fd, &reply, 1) != 1) {
+    if (serial_read (fd, &reply, 1) != 1) {
         fprintf (stderr, "No acknowledge after block 0x%04x.\n", start);
         exit(-1);
     }

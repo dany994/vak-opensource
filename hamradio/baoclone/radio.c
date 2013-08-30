@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #ifdef MINGW32
-#   include <winsock.h>
+#   include <windows.h>
 #else
 #   include <termios.h>
 #endif
@@ -175,7 +175,7 @@ void radio_disconnect()
 #endif
 
     // Radio needs a timeout to reset to a normal state.
-    usleep (2000000);
+    mdelay (2000);
 }
 
 //
@@ -207,13 +207,10 @@ static int try_magic (const unsigned char *magic)
 #else
     tcflush (radio_port, TCIFLUSH);
 #endif
-    if (write (radio_port, magic, magic_len) != magic_len) {
-        perror ("Serial port");
-        exit (-1);
-    }
+    serial_write (radio_port, magic, magic_len);
 
     // Check response.
-    if (read_with_timeout (radio_port, &reply, 1) != 1) {
+    if (serial_read (radio_port, &reply, 1) != 1) {
         if (verbose)
             fprintf (stderr, "Radio did not respond.\n");
         return 0;
@@ -224,11 +221,8 @@ static int try_magic (const unsigned char *magic)
     }
 
     // Query for identifier..
-    if (write (radio_port, "\x02", 1) != 1) {
-        perror ("Serial port");
-        exit (-1);
-    }
-    if (read_with_timeout (radio_port, radio_ident, 8) != 8) {
+    serial_write (radio_port, "\x02", 1);
+    if (serial_read (radio_port, radio_ident, 8) != 8) {
         fprintf (stderr, "Empty identifier.\n");
         return 0;
     }
@@ -239,11 +233,8 @@ static int try_magic (const unsigned char *magic)
     }
 
     // Enter clone mode.
-    if (write (radio_port, "\x06", 1) != 1) {
-        perror ("Serial port");
-        exit (-1);
-    }
-    if (read_with_timeout (radio_port, &reply, 1) != 1) {
+    serial_write (radio_port, "\x06", 1);
+    if (serial_read (radio_port, &reply, 1) != 1) {
         fprintf (stderr, "Radio refused to clone.\n");
         return 0;
     }
@@ -284,17 +275,17 @@ void radio_connect (char *port_name)
             print_hex (radio_ident, 8);
             printf ("\n");
         }
-        usleep (500000);
+        mdelay (500);
         if (try_magic (UV5R_MODEL_291)) {
             device = &radio_uv5r;       // Baofeng UV-5R, UV-5RA
             break;
         }
-        usleep (500000);
+        mdelay (500);
         if (try_magic (UV5R_MODEL_AGED)) {
             device = &radio_uv5r_aged;  // Baofeng UV-5R with old firmware
             break;
         }
-        usleep (500000);
+        mdelay (500);
     }
     printf ("Detected %s.\n", device->name);
 }
@@ -485,10 +476,10 @@ void radio_print_config (FILE *out, int verbose)
         tmp = localtime (&t);
         if (! tmp || ! strftime (buf, sizeof(buf), "%Y/%m/%d ", tmp))
             buf[0] = 0;
-        printf ("#\n");
-        printf ("# This configuration was generated %sby BaoClone Utility,\n", buf);
-        printf ("# Version %s, %s\n", version, copyright);
-        printf ("#\n");
+        fprintf (out, "#\n");
+        fprintf (out, "# This configuration was generated %sby BaoClone Utility,\n", buf);
+        fprintf (out, "# Version %s, %s\n", version, copyright);
+        fprintf (out, "#\n");
     }
     device->print_config (out, verbose);
 }
