@@ -104,6 +104,9 @@ static int open_port (char *portname)
     timo.WriteTotalTimeoutMultiplier = 1;
     timo.WriteTotalTimeoutConstant = 1000;
     SetCommTimeouts (fd, &timo);
+
+    // Flush received data pending on the port.
+    PurgeComm ((HANDLE) radio_port, PURGE_RXCLEAR);
     return (int) fd;
 #else
     int fd;
@@ -200,6 +203,7 @@ static int try_magic (const unsigned char *magic)
         printf ("\n");
     }
 #ifdef MINGW32
+    PurgeComm ((HANDLE) radio_port, PURGE_RXCLEAR);
 #else
     tcflush (radio_port, TCIFLUSH);
 #endif
