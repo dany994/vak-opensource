@@ -61,7 +61,17 @@ void print_hex (const unsigned char *data, int len);
 // Return 0 when no data available.
 // Use 200-msec timeout.
 //
-int read_with_timeout (int fd, unsigned char *data, int len);
+int serial_read (int fd, unsigned char *data, int len);
+
+//
+// Write data to serial port.
+//
+void serial_write (int fd, const void *data, int len);
+
+//
+// Delay in milliseconds.
+//
+void mdelay (unsigned msec);
 
 //
 // Check for a regular file.
