@@ -9,7 +9,8 @@ programming cable.  Supported radios:
 
 === Usage ===
 
-Save device binary image to file 'device.img', and text configuration to 'device.cfg':
+Save device binary image to file 'device.img', and text configuration
+to 'device.conf':
 
     baoclone [-v] port
 
@@ -20,7 +21,7 @@ Write image to device.
 Configure device from text file.
 Previous device image saved to 'backup.img':
 
-    baoclone -c [-v] port file.cfg
+    baoclone -c [-v] port file.conf
 
 Show configuration from image file:
 
