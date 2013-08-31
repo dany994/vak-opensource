@@ -41,13 +41,19 @@ void usage ()
 {
     fprintf (stderr, "BaoClone Utility, Version %s, %s\n", version, copyright);
     fprintf (stderr, "Usage:\n");
-    fprintf (stderr, "    baoclone [-v] port                Save device binary image to file 'device.img',\n");
-    fprintf (stderr, "                                      and text configuration to 'device.cfg'.\n");
-    fprintf (stderr, "    baoclone -w [-v] port file.img    Write image to device.\n");
-    fprintf (stderr, "    baoclone -c [-v] port file.cfg    Configure device from text file.\n");
-    fprintf (stderr, "    baoclone file.img                 Show configuration from image file.\n");
+    fprintf (stderr, "    baoclone [-v] port\n");
+    fprintf (stderr, "                          Save device binary image to file 'device.img',\n");
+    fprintf (stderr, "                          and text configuration to 'device.conf'.\n");
+    fprintf (stderr, "    baoclone -w [-v] port file.img\n");
+    fprintf (stderr, "                          Write image to device.\n");
+    fprintf (stderr, "    baoclone -c [-v] port file.conf\n");
+    fprintf (stderr, "                          Configure device from text file.\n");
+    fprintf (stderr, "    baoclone file.img\n");
+    fprintf (stderr, "                          Display configuration from image file.\n");
     fprintf (stderr, "Options:\n");
-    fprintf (stderr, "    -v                                Verbose mode.\n");
+    fprintf (stderr, "    -w                    Write image to device.\n");
+    fprintf (stderr, "    -c                    Configure device from text file.\n");
+    fprintf (stderr, "    -v                    Trace serial protocol.\n");
     exit (-1);
 }
 
@@ -121,16 +127,16 @@ int main (int argc, char **argv)
             radio_save_image ("device.img");
 
             // Print configuration to file.
-            const char *filename = "device.cfg";
+            const char *filename = "device.conf";
             printf ("Print configuration to file '%s'.\n", filename);
-            FILE *cfg = fopen (filename, "w");
-            if (! cfg) {
+            FILE *conf = fopen (filename, "w");
+            if (! conf) {
                 perror (filename);
                 exit (-1);
             }
-            radio_print_version (cfg);
-            radio_print_config (cfg, 1);
-            fclose (cfg);
+            radio_print_version (conf);
+            radio_print_config (conf, 1);
+            fclose (conf);
         }
     }
     return (0);

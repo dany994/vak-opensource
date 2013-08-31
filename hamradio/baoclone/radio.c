@@ -394,18 +394,18 @@ void radio_save_image (char *filename)
 //
 void radio_parse_config (char *filename)
 {
-    FILE *cfg;
+    FILE *conf;
     char line [256], *p, *v;
     int table_id = 0, table_dirty = 0;
 
     fprintf (stderr, "Read configuration from file '%s'.\n", filename);
-    cfg = fopen (filename, "r");
-    if (! cfg) {
+    conf = fopen (filename, "r");
+    if (! conf) {
         perror (filename);
         exit (-1);
     }
 
-    while (fgets (line, sizeof(line), cfg)) {
+    while (fgets (line, sizeof(line), conf)) {
         // Strip trailing spaces and newline.
         line[sizeof(line)-1] = 0;
         v = line + strlen(line) - 1;
@@ -459,7 +459,7 @@ badline:            fprintf (stderr, "Invalid line: '%s'\n", line);
             table_dirty = 1;
         }
     }
-    fclose (cfg);
+    fclose (conf);
 }
 
 //
