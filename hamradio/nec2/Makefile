@@ -1,12 +1,15 @@
 
-FC              = g95 -fsecond-underscore -fsloppy-char
-VERSION         = $(shell $(FC) --version | head -1)
+#--- Mac OS X, g95
+#FC              = g95 -fsecond-underscore -fsloppy-char
+#VERSION         = $(shell $(FC) --version | head -1)
 
+#--- Linux, gfortran
 #FC              = gfortran -fno-automatic -fsecond-underscore
 #VERSION         = $(shell $(FC) --version | head -1)
 
-#FC              = fort77
-#VERSION         = $(shell f2c --version)
+#--- Linux, f2c and fort77
+FC              = fort77
+VERSION         = $(shell f2c --version)
 
 CFLAGS          = -O -Wall
 
@@ -25,8 +28,8 @@ $(PROG).o:      $(PROG).f
 clean:
 		rm -f $(PROG) *.o
 
-example1:       $(PROG) Example1.nec
-		(echo Example1.nec; echo Example1.out) | ./$(PROG)
+example1:       $(PROG) example1.nec
+		(echo example1.nec; echo example1.out) | ./$(PROG)
 
 gwave:          $(PROG) Gwave.nec
 		(echo Gwave.nec; echo Gwave.out) | ./$(PROG)
