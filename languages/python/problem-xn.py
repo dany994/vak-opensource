@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- encoding: utf-8 -*-
 
 for n in range(2,10):
 	for k in range(1,100):
