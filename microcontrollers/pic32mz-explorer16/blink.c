@@ -9,23 +9,18 @@
  * Chip configuration.
  */
 PIC32_DEVCFG (
-    DEVCFG0_DEBUG_ENABLED,      /* ICE debugger enabled */
+    DEVCFG0_TRC_DISABLE,        /* Disable trace port */
 
-    DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
+    DEVCFG1_FNOSC_POSC |        /* Primary oscillator */
     DEVCFG1_POSCMOD_HS |        /* HS oscillator */
-    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
-    DEVCFG1_FPBDIV_8 |          /* Peripheral bus clock = SYSCLK/8 */
-    DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
-    DEVCFG1_FCKS_DISABLE,       /* Clock switching disable */
+    DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
 
-    DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
-    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
-    DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
-    DEVCFG2_UPLLDIS |           /* Disable USB PLL */
-    DEVCFG2_FPLLODIV_1,         /* PLL postscaler = 1/1 */
+    DEVCFG2_FPLLRNG_8_16 |      /* PLL input range is 8-16 MHz */
+    DEVCFG2_FPLLIDIV_1 |        /* PLL divider = 1 */
+    DEVCFG1_FPLLMULT(20) |      /* PLL multiplier = 20x */
+    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 
-    DEVCFG3_USERID(0xffff) |    /* User-defined ID */
-    DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
+    DEVCFG3_USERID(0xffff));    /* User-defined ID */
 
 PIC32_DEVSIGN (0x7fffffff,
                0xffffffff,
