@@ -9,15 +9,17 @@
  * Chip configuration.
  */
 PIC32_DEVCFG (
+    DEVCFG0_JTAG_DISABLE |      /* Disable JTAG port */
     DEVCFG0_TRC_DISABLE,        /* Disable trace port */
 
-    DEVCFG1_FNOSC_POSC |        /* Primary oscillator */
-    DEVCFG1_POSCMOD_HS |        /* HS oscillator */
+//    DEVCFG1_FNOSC_POSC |        /* Primary oscillator */
+//    DEVCFG1_POSCMOD_HS |        /* HS oscillator */
+    DEVCFG1_FNOSC_FRCDIV |      /* Fast RC with divide-by-N */
     DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
 
     DEVCFG2_FPLLRNG_8_16 |      /* PLL input range is 8-16 MHz */
     DEVCFG2_FPLLIDIV_1 |        /* PLL divider = 1 */
-    DEVCFG1_FPLLMULT(20) |      /* PLL multiplier = 20x */
+    DEVCFG1_FPLLMULT(40) |      /* PLL multiplier = 40x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
@@ -72,9 +74,6 @@ int main()
     mtc0 (C0_INTCTL, 1, 1 << 5);        /* Vector spacing 32 bytes */
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
-
-    /* Disable JTAG port, to make all LEDs available. */
-    //DDPCON = 0;
 
     /* Use pins PA0-PA7 as output: LED control. */
     LATACLR = 0xFF;
