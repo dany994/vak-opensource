@@ -189,6 +189,7 @@
 #define DEVCFG0_ICESEL_PGE2     0x00000008 /* Use PGC2/PGD2 (default PGC1/PGD1) */
 #define DEVCFG0_TRC_DISABLE     0x00000020 /* Disable Trace port */
 #define DEVCFG0_MICROMIPS       0x00000040 /* Boot in microMIPS mode */
+#define DEVCFG0_ECC_MASK        0x00000300 /* Flash ECC mode mask */
 #define DEVCFG0_ECC_ENABLE      0x00000300 /* Enable Flash ECC */
 #define DEVCFG0_DECC_ENABLE     0x00000200 /* Enable Dynamic Flash ECC */
 #define DEVCFG0_ECC_DIS_LOCK    0x00000100 /* Disable ECC, lock ECCCON */
@@ -196,9 +197,9 @@
 #define DEVCFG0_DBGPER0         0x00001000 /* In Debug mode, deny CPU access to
                                             * Permission Group 0 permission regions */
 #define DEVCFG0_DBGPER1         0x00002000 /* In Debug mode, deny CPU access to
-                                            * Permission Group 0 permission regions */
+                                            * Permission Group 1 permission regions */
 #define DEVCFG0_DBGPER2         0x00004000 /* In Debug mode, deny CPU access to
-                                            * Permission Group 0 permission regions */
+                                            * Permission Group 2 permission regions */
 #define DEVCFG0_EJTAG_REDUCED   0x40000000 /* Reduced EJTAG functionality */
 
 /*
