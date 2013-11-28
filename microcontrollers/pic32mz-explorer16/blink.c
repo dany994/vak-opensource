@@ -3,7 +3,7 @@
  */
 #include "pic32mz.h"
 
-#define MHZ     80              /* CPU clock is 80 MHz. */
+#define MHZ     200             /* CPU clock. */
 
 /*
  * Chip configuration.
@@ -11,23 +11,34 @@
 PIC32_DEVCFG (
     DEVCFG0_JTAG_DISABLE |      /* Disable JTAG port */
     DEVCFG0_TRC_DISABLE,        /* Disable trace port */
-
-//    DEVCFG1_FNOSC_POSC |        /* Primary oscillator */
-//    DEVCFG1_POSCMOD_HS |        /* HS oscillator */
-    DEVCFG1_FNOSC_FRCDIV |      /* Fast RC with divide-by-N */
+#if 1
+    /* Case #1: using internal fast RC oscillator.
+     * The frequency is around 8 MHz.
+     * PLL multiplies it to 200 MHz. */
+    DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
+    DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
     DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
 
-    DEVCFG2_FPLLRNG_8_16 |      /* PLL input range is 8-16 MHz */
-    DEVCFG2_FPLLIDIV_1 |        /* PLL divider = 1 */
-    DEVCFG1_FPLLMULT(40) |      /* PLL multiplier = 40x */
+    DEVCFG2_FPLLIDIV_1 |        /* PLL input divider = 1 */
+    DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
+    DEVCFG2_FPLLICLK_FRC |      /* Select FRC as input to PLL */
+    DEVCFG1_FPLLMULT(50) |      /* PLL multiplier = 50x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
+#endif
+#if 0
+    /* THIS DOES NOT WORK!
+     * Case #2: using primary oscillator with external crystal 24 MHz.
+     * PLL multiplies it to 200 MHz. */
+    DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
+    DEVCFG1_POSCMOD_HS |        /* Using primary oscillator */
+    DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
 
+    DEVCFG2_FPLLIDIV_3 |        /* PLL input divider = 3 */
+    DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
+    DEVCFG1_FPLLMULT(50) |      /* PLL multiplier = 50x */
+    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
+#endif
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
-
-PIC32_DEVSIGN (0x7fffffff,
-               0xffffffff,
-               0xffffffff,
-               0xffffffff);
 
 /*
  * Boot code at bfc00000.
@@ -75,20 +86,23 @@ int main()
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
-    /* Use pins PA0-PA7 as output: LED control. */
-    LATACLR = 0xFF;
-    TRISACLR = 0xFF;
+    /* Use pins PA0-PA3, PF13, PF12, PA6-PA7 as output: LED control. */
+    LATACLR = 0xCF;
+    TRISACLR = 0xCF;
+    LATFCLR = 0x3000;
+    TRISFCLR = 0x3000;
 
     while (1) {
         /* Invert pins PA7-PA0. */
-        LATAINV = 1 << 0; udelay (100000);
-        LATAINV = 1 << 1; udelay (100000);
-        LATAINV = 1 << 2; udelay (100000);
-        LATAINV = 1 << 3; udelay (100000);
-        LATAINV = 1 << 4; udelay (100000);
-        LATAINV = 1 << 5; udelay (100000);
-        LATAINV = 1 << 6; udelay (100000);
-        LATAINV = 1 << 7; udelay (100000);
+        LATAINV = 1 << 0;  udelay (100000);
+        LATAINV = 1 << 1;  udelay (100000);
+        LATAINV = 1 << 2;  udelay (100000);
+        LATAINV = 1 << 3;  udelay (100000);
+        LATFINV = 1 << 13; udelay (100000);
+        LATFINV = 1 << 12; udelay (100000);
+        LATAINV = 1 << 6;  udelay (100000);
+        LATAINV = 1 << 7;  udelay (100000);
+
         loop++;
     }
 }
