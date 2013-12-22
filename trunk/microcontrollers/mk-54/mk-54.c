@@ -295,29 +295,21 @@ fifo_t fifo1, fifo2;
 #include "ik1303.c"
 
 //
-// Switch radians/grads/degrees.
-//
-unsigned rad_grad_deg = 10;
-
-//
 // Initialize the calculator.
 //
 void calc_init()
 {
-    fifo_init (&fifo1);
-    fifo_init (&fifo2);
     plm_init (&ik1302, ik1302_ucmd_rom, ik1302_cmd_rom, ik1302_prog_rom);
     plm_init (&ik1303, ik1303_ucmd_rom, ik1303_cmd_rom, ik1303_prog_rom);
-    rad_grad_deg = 10;
+    fifo_init (&fifo1);
+    fifo_init (&fifo2);
 }
 
 //
 // Symbols on display.
 //
 unsigned char display [12];
-
 unsigned char display_old [12];         // Previous state
-
 unsigned char show_dot [12];            // Show a decimal dot
 
 unsigned step_num = 0;
@@ -333,8 +325,8 @@ int calc_step (int x, int y, unsigned rgd)
     step_num++;
     ik1302.keyb_x = x;
     ik1302.keyb_y = y;
-    ik1303.keyb_y = 1;
     ik1303.keyb_x = rgd;
+    ik1303.keyb_y = 1;
     for (k=1; k<=560; k++) {
         for (i=0; i<REG_NWORDS; i++) {
             ik1302.input = fifo2.output;
@@ -413,6 +405,7 @@ int calc_step (int x, int y, unsigned rgd)
 
 int main()
 {
+    // 10 - radians, 11 - grads, 12 - degrees
     unsigned rad_grad_deg = 10;
 
     printf ("Started MK-54.\n");
