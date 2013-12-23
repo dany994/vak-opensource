@@ -17,34 +17,34 @@ PGED3/VREF+/CVREF+/AN0/C3INC/RPA0/CTED1/PMD7/RA0 | 2  27 | AVSS
                               TMS/RPB5/USBID/RB5 | 14 15 | VBUS
                                                  ---------
 
-Arduino Pin Power   USB GPIO Debug JTAG ADC  Parallel SPI I2C   CTMU  Function
------------------------------------------------------------------------------------------
+Arduino Pin Power   USB GPIO Debug JTAG ADC  Parallel SPI I2C   CTMU  Function            Firewing
+----------------------------------------------------------------------------------------- --------
 Reset   1   MCLR
-A0      2               RA0  PGED3      AN0  PMD7               CTED1  VREF+/CVREF+/C3INC
-A1      3               RA1  PGEC3      AN1  PMD6               CTED2  VREF-/CVREF-
-A2      4               RB0  PGED1      AN2  PMD0                      C1IND/C2INB/C3IND
-A3      5               RB1  PGEC1      AN3  PMD1               CTED12 C1INC/C2INA
-A4      6               RB2             AN4  PMD2          SDA2 CTED13 C1INB/C2IND
-A5,D9   7               RB3             AN5  PMWR          SCL2        C1INA/C2INC/RTCC
+A0      2               RA0  PGED3      AN0  PMD7               CTED1  VREF+/CVREF+/C3INC AREF
+A1      3               RA1  PGEC3      AN1  PMD6               CTED2  VREF-/CVREF-       A0
+A2      4               RB0  PGED1      AN2  PMD0                      C1IND/C2INB/C3IND  A1
+A3      5               RB1  PGEC1      AN3  PMD1               CTED12 C1INC/C2INA        A2
+A4      6               RB2             AN4  PMD2          SDA2 CTED13 C1INB/C2IND        A3
+A5,D9   7               RB3             AN5  PMWR          SCL2        C1INA/C2INC/RTCC   A4/SDA
 GND     8   VSS
-D4      9               RA2                                            OSC1/CLKI
-D5      10              RA3                  PMA0                      OSC2/CLKO
-D6      11              RB4                                            SOSCI
-D7      12              RA4                  PMA1               CTED9  SOSCO/T1CK
+D4      9               RA2                                            OSC1/CLKI          D8
+D5      10              RA3                  PMA0                      OSC2/CLKO          D7
+D6      11              RB4                                            SOSCI              D0/PTX
+D7      12              RA4                  PMA1               CTED9  SOSCO/T1CK         D4
 3.3V    13  VDD
-D8      14              RB5        TMS                                 USBID
-5V      15  VBUS
-D2      16              RB7        TDI       PMD5               CTED3  INT0
-D10     17              RB8        TCK       PMD4          SCL1 CTED10
-D11     18              RB9        TDO       PMD3          SDA1 CTED4
+D8      14              RB5        TMS                                 USBID              D1/PRX
+5V      15  VBUS        RB6                                                               D2
+D2      16              RB7        TDI       PMD5               CTED3  INT0               D3
+D10     17              RB8        TCK       PMD4          SCL1 CTED10                    D5
+D11     18              RB9        TDO       PMD3          SDA1 CTED4                     D6
 GND     19  VSS
 --      20  VCAP
-D0      21          D+  RB10 PGED2                              CTED11
-D1      22          D-  RB11 PGEC2
-3.3V    23  VUSB3V3
-D12     24              RB13            AN11 PMRD               CTPLS
-D13     25              RB14            AN10          SCK1      CTED5  CVREF/C3INB/VBUSON
-D3      26              RB15            AN9  PMCS1    SCK2      CTED6  C3INA
+D1      21          D+  RB10 PGED2                              CTED11                    D9
+D0      22          D-  RB11 PGEC2                                                        D10/SS
+3.3V    23  VUSB3V3     RB12            AN12                                              D11/MOSI
+D12     24              RB13            AN11 PMRD               CTPLS                     D12/MISO
+D13     25              RB14            AN10          SCK1      CTED5  CVREF/C3INB/VBUSON D13/SCK/LED
+D3      26              RB15            AN9  PMCS1    SCK2      CTED6  C3INA              A5/SCL
 GND     27  AVSS
 3.3V    28  AVDD
 -----------------------------------------------------------------------------------------

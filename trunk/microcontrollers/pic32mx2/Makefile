@@ -1,6 +1,8 @@
-CC              = /usr/local/mipsel441/bin/mipsel-elf32-gcc -mips32r2 -g -nostdlib
-OBJCOPY         = /usr/local/mipsel441/bin/mipsel-elf32-objcopy
-OBJDUMP         = /usr/local/mipsel441/bin/mipsel-elf32-objdump
+#P               = /usr/local/pic32-tools/bin/pic32-
+P               = /usr/local/mips-gcc-4.7.2/bin/mips-elf-
+CC              = $(P)gcc -EL -mips32r2 -g -nostdlib
+OBJCOPY         = $(P)objcopy
+OBJDUMP         = $(P)objdump
 #GDB             = /mips/arch/overflow/codesourcery/mips-sde-elf/lite/release/2012.03-64/Linux/bin/mips-sde-elf-gdb
 #GDB             = mipsel-elf32-gdb
 #GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
