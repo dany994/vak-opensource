@@ -1,6 +1,8 @@
-CC              = /usr/local/mipsel441/bin/mipsel-elf32-gcc -mips32r2 -g -nostdlib
-OBJCOPY         = /usr/local/mipsel441/bin/mipsel-elf32-objcopy
-OBJDUMP         = /usr/local/mipsel441/bin/mipsel-elf32-objdump
+#P               = /usr/local/mipsel441/bin/mipsel-elf32-
+P               = /usr/local/mips-gcc-4.7.2/bin/mips-elf-
+CC              = $(P)gcc -EL -mips32r2 -g -nostdlib
+OBJCOPY         = $(P)objcopy
+OBJDUMP         = $(P)objdump
 CFLAGS          = -O -Wall -Werror -DPIC32MX2
 LDFLAGS         = -T mx2-ram4k.ld -e _start
 

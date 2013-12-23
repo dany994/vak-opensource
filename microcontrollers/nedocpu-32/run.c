@@ -102,6 +102,6 @@ int main()
             to_left = 1;
 
         /* Wait 10 msec. */
-        //udelay (10000);
+        udelay (10000);
     }
 }

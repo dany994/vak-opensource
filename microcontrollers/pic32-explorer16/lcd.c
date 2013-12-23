@@ -191,7 +191,7 @@ int main()
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
     /* Disable JTAG port, to make all LEDs available. */
-    //DDPCON = 0;
+    DDPCON = 0;
 
     /* Set A and B ports as output. */
     LATA = 0;

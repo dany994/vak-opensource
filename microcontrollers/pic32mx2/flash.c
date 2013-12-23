@@ -78,19 +78,19 @@ int main()
     LATA = 0;
     LATB = 0;
 
-    /* Use pin RA0 as output: LED1 control. */
-    TRISACLR = 1 << 0;
+    /* Use pin RA10 as output: LED1 control. */
+    TRISACLR = 1 << 10;
 
-    /* Use pin RB8 as output: LED2 control. */
-    TRISBCLR = 1 << 8;
-    LATBSET = 1 << 8;
+    /* Use pin RB15 as output: LED2 control. */
+    TRISBCLR = 1 << 15;
+    LATBSET = 1 << 15;
 
     for (;;) {
-        /* Invert pin RA0. */
-        LATAINV = 1 << 0;
+        /* Invert pin RA10. */
+        LATAINV = 1 << 10;
 
-        /* Invert pin RB8. */
-        LATBINV = 1 << 8;
+        /* Invert pin RB15. */
+        LATBINV = 1 << 15;
 
         /* Delay. */
         udelay (500000);
