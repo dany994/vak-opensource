@@ -1,12 +1,29 @@
+P               = /usr/local/pic32-tools/bin/pic32-
+CC              = $(P)gcc -mips32r2 -g -nostdlib
+OBJCOPY         = $(P)objcopy
+OBJDUMP         = $(P)objdump
+#GDB             = /mips/arch/overflow/codesourcery/mips-sde-elf/lite/release/2012.03-64/Linux/bin/mips-sde-elf-gdb
+#GDB             = mipsel-elf32-gdb
+#GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
+GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
+CFLAGS          = -O -Wall -Werror -DPIC32MX7
+LDFLAGS         = -T using-bootloader.ld -e _start
+
 PROG            = mk-54
-CFLAGS		= -m32 -O -Wall
-LDFLAGS		= -m32
-OBJS            = ir2.o ik13.o mk-54.o test.o
+OBJS            = ir2.o ik13.o mk-54.o proto.o
 
-all:		$(PROG)
+all:            $(PROG).srec
 
-$(PROG):        $(OBJS)
-		$(CC) $(LDFLAGS) $(OBJS) -o $@
+$(PROG).srec:   $(OBJS)
+		$(CC) $(LDFLAGS) $(OBJS) -o $(PROG).elf
+		$(OBJCOPY) -O srec $(PROG).elf $@
+		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
+
+load:           $(PROG).srec
+		pic32prog -p $(PROG).srec
 
 clean:
-		rm -f $(PROG) *.o *~ a.out
+		rm -f *.o *.lst *~ *.elf *.srec *.dis
+
+debug:          $(PROG).srec
+		$(GDB) $(PROG).elf
