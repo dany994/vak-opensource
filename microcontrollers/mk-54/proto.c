@@ -151,6 +151,74 @@ static inline void data (int on)
 unsigned char display [12];
 unsigned char dot [12];                 // Show a decimal dot
 
+unsigned rgd = MODE_GRADS;              // Radians/grads/degrees
+unsigned keycode;                       // Button pressed
+
+//
+// Poll keypad: input pins RD4-RD7.
+//
+int scan_keys (int row)
+{
+    static const int col1 [8] = {
+        KEY_7,      //  7   sin
+        KEY_4,      //  4   sin-1
+        KEY_1,      //  1   e^x
+        KEY_0,      //  0   10^x
+        KEY_DOT,    //  ,   O
+        KEY_NEG,    //  /-/ АВТ
+        KEY_EXP,    //  ВП  ПРГ
+        KEY_CLEAR,  //  Cx  CF
+    };
+    static const int col2 [8] = {
+        KEY_K,      //  K
+        KEY_IP,     //  ИП  L0
+        KEY_8,      //  8   cos
+        KEY_5,      //  5   cos-1
+        KEY_2,      //  2   lg
+        KEY_3,      //  3   ln
+        KEY_XY,     //  xy  x^y
+        KEY_ENTER,  //  B^  Bx
+    };
+    static const int col3 [8] = {
+        KEY_F,      //  F
+        KEY_NEXT,   //  ШГ> x<0
+        KEY_PREV,   //  <ШГ x=0
+        KEY_P,      //  П   L1
+        KEY_9,      //  9   tg
+        KEY_6,      //  6   tg-1
+        KEY_DIV,    //  /   1/x
+        KEY_SUB,    //  -   sqrt
+    };
+    static const int col4 [8] = {
+        0,
+        KEY_RET,    //  B/O x>=0
+        KEY_GOTO,   //  БП  L2
+        KEY_MUL,    //  *   x^2
+        KEY_ADD,    //  +   pi
+        KEY_PP,     //  ПП  L3
+        KEY_STOPGO, //  C/П x!=0
+        0,
+    };
+    int pins = PORTD & 0xf0;
+
+    if (pins) {
+        if (pins & 0x10)
+            return col1[row];
+        if (pins & 0x20)
+            return col2[row];
+        if (pins & 0x40)
+            return col3[row];
+        if (pins & 0x80) {
+            switch (row) {
+            case 0: rgd = MODE_RADIANS; return 0;
+            case 7: rgd = MODE_DEGREES; return 0;
+            }
+            return col4[row];
+        }
+    }
+    return 0;
+}
+
 //
 // Show the next display symbol.
 // Progress counter is in range 0..11.
@@ -167,16 +235,9 @@ void show (int i)
     }
     clk();                              // toggle clock
     set_segments (display[11-i], dot[11-i]);
-}
 
-//
-// Simulate one cycle of the calculator.
-// Return 0 when stopped, or 1 when running a user program.
-//
-void step (unsigned x, unsigned y)
-{
-    calc_step (x, y, 10, display, dot, show);
-    calc_step (0, 0, 10, display, dot, show);
+    if (i < 8 && ! keycode)             // scan keypad
+        keycode = scan_keys (i);
 }
 
 int main()
@@ -212,6 +273,9 @@ int main()
     TRISBCLR = PIN(15);
     TRISBCLR = PIN(12);
 
+    /* RD4-RD7 - keypad. */
+    TRISDSET = 0xf0;
+
     /* RF0 - clock, RF1 - data. */
     TRISFCLR = PIN(0) | PIN(1);
 
@@ -225,29 +289,45 @@ int main()
         clk();
 
     calc_init();
-    calc_step (0, 0, 10, display, dot, 0);
 
     for (;;) {
-        step (10, 8);           // Cx
-        step (5,  1);           // 3
-        step (6,  1);           // 4
-        step (7,  1);           // 5
-        step (8,  1);           // 6
-        step (9,  1);           // 7
-        step (10, 1);           // 8
-        step (11, 1);           // 9
-        step (11, 8);           // B^
-        step (9,  1);           // 7
-        step (9,  1);           // 7
-        step (5,  8);           // /
-        step (11, 8);           // B^
-        step (3,  1);           // 1
-        step (9,  8);           // ВП
-        step (7,  1);           // 5
-        step (2,  1);           // 0
-        step (11, 9);           // F
-        step (4,  8);           // x^2
-        step (11, 9);           // F
-        step (4,  8);           // x^2
+        // Simulate one cycle of the calculator.
+        int k = keycode;
+        int r = rgd;
+        keycode = 0;
+        rgd = MODE_GRADS;
+
+        calc_step (k, r, display, dot, show);
+#if 1
+        // Simple test.
+        static int next;
+        static const unsigned char test[] = {
+            KEY_CLEAR,  0,      // Cx
+            KEY_3,      0,      // 3
+            KEY_4,      0,      // 4
+            KEY_5,      0,      // 5
+            KEY_6,      0,      // 6
+            KEY_7,      0,      // 7
+            KEY_8,      0,      // 8
+            KEY_9,      0,      // 9
+            KEY_ENTER,  0,      // B^
+            KEY_7,      0,      // 7
+            KEY_7,      0,      // 7
+            KEY_DIV,    0,      // /
+            KEY_ENTER,  0,      // B^
+            KEY_1,      0,      // 1
+            KEY_EXP,    0,      // ВП
+            KEY_5,      0,      // 5
+            KEY_0,      0,      // 0
+            KEY_F,      0,      // F
+            KEY_MUL,    0,      // x^2
+            KEY_F,      0,      // F
+            KEY_MUL,    0,      // x^2
+            0xff,
+        };
+        if (test [next] == 0xff)
+            next = 0;
+        keycode = test [next++];
+#endif
     }
 }
