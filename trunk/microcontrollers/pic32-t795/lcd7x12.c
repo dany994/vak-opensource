@@ -53,9 +53,10 @@ void udelay (unsigned usec)
 //
 // Display a symbol on 7-segment LED
 //
-void set_segments (unsigned digit)
+void set_segments (unsigned digit, unsigned dot)
 {
-    static const unsigned pattern[16] = {
+    static const unsigned segments[16] = {
+    //- A - B - C - D - E -- F -- G --
         1 + 2 + 4 + 8 + 16 + 32,        // digit 0
             2 + 4,                      // digit 1
         1 + 2     + 8 + 16      + 64,   // digit 2
@@ -82,23 +83,45 @@ void set_segments (unsigned digit)
     case 'E': digit = 14; break;
     case ' ': digit = 15; break;
     }
-    unsigned mask = pattern [digit & 15];
+    unsigned mask = segments [digit & 15];
 
-    if (mask & 1)   TRISECLR = PIN(0);  // signal RE0
-    if (mask & 2)   TRISECLR = PIN(1);  // signal RE1
-    if (mask & 4)   TRISECLR = PIN(2);  // signal RE2
-    if (mask & 8)   TRISECLR = PIN(3);  // signal RE3
-    if (mask & 16)  TRISECLR = PIN(4);  // signal RE4
-    if (mask & 32)  TRISECLR = PIN(5);  // signal RE5
-    if (mask & 64)  TRISECLR = PIN(6);  // signal RE6
-    if (mask & 128) TRISECLR = PIN(7);  // signal RE7
+    if (mask & 1)   TRISECLR = PIN(0);  // segment A - signal RE0
+    if (mask & 2)   TRISECLR = PIN(1);  // segment B - signal RE1
+    if (mask & 4)   TRISECLR = PIN(2);  // segment C - signal RE2
+    if (mask & 8)   TRISECLR = PIN(3);  // segment D - signal RE3
+    if (mask & 16)  TRISECLR = PIN(4);  // segment E - signal RE4
+    if (mask & 32)  TRISECLR = PIN(5);  // segment F - signal RE5
+    if (mask & 64)  TRISECLR = PIN(6);  // segment G - signal RE6
+    if (dot)        TRISECLR = PIN(7);  // dot       - signal RE7
 }
 
-void toggle_clk()
+//
+// Set or clear data signal.
+//
+static inline void clear_segments()
 {
-    LATFSET = PIN(0);               // set clock
-    udelay (1);                     // 1 usec
-    LATFCLR = PIN(0);               // clear clock
+    TRISESET = 0xff;                    // tristate
+}
+
+//
+// Toggle clock signal.
+//
+static inline void clk()
+{
+    LATFSET = PIN(0);                   // set clock
+    udelay (1);                         // 1 usec
+    LATFCLR = PIN(0);                   // clear clock
+}
+
+//
+// Set or clear data signal.
+//
+static inline void data (int on)
+{
+    if (on)
+        LATFSET = PIN(1);               // set data
+    else
+        LATFCLR = PIN(1);               // clear data
 }
 
 int main()
@@ -132,12 +155,9 @@ int main()
     LATE = 0;
     LATF = 0;
 
-    /* Use pin RB15 as output: LED1 control. */
+    /* Use pins RB15, RB12 as output: LED1 and LED2 control. */
     TRISBCLR = PIN(15);
-
-    /* Use pin RB12 as output: LED2 control. */
     TRISBCLR = PIN(12);
-    LATBSET = PIN(12);
 
     /*
      * RF0 - clock
@@ -158,32 +178,21 @@ int main()
     TRISESET = 0xff;                    // tristate
     LATECLR = 0xff;
 
-    int count = 0;
+    int i;
+    data (0);                           // clear data
+    for (i=0; i<16; i++)                // clear register
+        clk();
+
     for (;;) {
-        if (++count >= 40) {
-            count = 0;
-
-            /* Invert pin RB15. */
-            LATBINV = PIN(15);
-
-            /* Invert pin RB12. */
-            LATBINV = PIN(12);
-        }
-
-        LATFCLR = PIN(1);               // clear data
-        int i;
-        for (i=0; i<16; i++)            // clear register
-            toggle_clk();
-
-        LATFSET = PIN(1);               // set data
-        toggle_clk();
-        LATFCLR = PIN(1);               // clear data
+        data (1);                       // set data
+        clk();                          // toggle clock
+        data (0);                       // clear data
 
         for (i=0; i<12; i++) {
-            toggle_clk();
-            set_segments (display[11-i]);
+            clk();                      // toggle clock
+            set_segments (display[11-i], 0);
             udelay (1000);              // 1 msec
-            TRISESET = 0xff;            // tristate
+            clear_segments();
         }
     }
 }
