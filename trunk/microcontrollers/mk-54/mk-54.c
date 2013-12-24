@@ -51,7 +51,8 @@ void calc_init()
 // Fill digit[] and dit[] arrays with the indicator contents.
 //
 int calc_step (unsigned x, unsigned y, unsigned rgd,
-    unsigned char digit[], unsigned char dot[])
+    unsigned char digit[], unsigned char dot[],
+    void (*callback) (int progress))
 {
     int k, i;
 
@@ -82,6 +83,10 @@ int calc_step (unsigned x, unsigned y, unsigned rgd,
                 dot[i + 9] = ik1302.show_dot[12 - i];
             ik1302.enable_display = 0;
         }
+        if (callback != 0 && k < 552 && ! (k & 1))
+            callback ((k >> 1) % 12);
     }
+    if (callback != 0)
+        callback (-1);
     return (ik1302.dot == 11);
 }
