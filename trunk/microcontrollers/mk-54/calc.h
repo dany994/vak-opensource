@@ -100,39 +100,42 @@ void calc_init();
 // See table below for keycodes x and y.
 // Values for rgd are: 10 - radians, 11 - grads, 12 - degrees.
 //
-int calc_step (unsigned x, unsigned y, unsigned rgd,
+int calc_step (unsigned keycode, unsigned rgd,
     unsigned char digit[], unsigned char dot[],
     void (*callback) (int progress));
 
-//  Key Function    X,Y
-// ---------------------
-//  0   10^x        2,1
-//  1   e^x         3,1
-//  2   lg          4,1
-//  3   ln          5,1
-//  4   sin-1       6,1
-//  5   cos-1       7,1
-//  6   tg-1        8,1
-//  7   sin         9,1
-//  8   cos        10,1
-//  9   tg         11,1
-//  +   pi          2,8
-//  -   sqrt        3,8
-//  *   x^2         4,8
-//  /   1/x         5,8
-//  xy  x^y         6,8
-//  ,   O           7,8
-//  /-/ АВТ         8,8
-//  ВП  ПРГ         9,8
-//  Cx  CF         10,8
-//  B^  Bx         11,8
-//  C/П x!=0        2,9
-//  БП  L2          3,9
-//  B/O x>=0        4,9
-//  ПП  L3          5,9
-//  П   L1          6,9
-//  ШГ> x<0         7,9
-//  ИП  L0          8,9
-//  <ШГ x=0         9,9
-//  K              10,9
-//  F              11,9
+                            //  Key Function
+#define KEY_0       0x21    //  0   10^x
+#define KEY_1       0x31    //  1   e^x
+#define KEY_2       0x41    //  2   lg
+#define KEY_3       0x51    //  3   ln
+#define KEY_4       0x61    //  4   sin-1
+#define KEY_5       0x71    //  5   cos-1
+#define KEY_6       0x81    //  6   tg-1
+#define KEY_7       0x91    //  7   sin
+#define KEY_8       0xa1    //  8   cos
+#define KEY_9       0xb1    //  9   tg
+#define KEY_ADD     0x28    //  +   pi
+#define KEY_SUB     0x38    //  -   sqrt
+#define KEY_MUL     0x48    //  *   x^2
+#define KEY_DIV     0x58    //  /   1/x
+#define KEY_XY      0x68    //  xy  x^y
+#define KEY_DOT     0x78    //  ,   O
+#define KEY_NEG     0x88    //  /-/ АВТ
+#define KEY_EXP     0x98    //  ВП  ПРГ
+#define KEY_CLEAR   0xa8    //  Cx  CF
+#define KEY_ENTER   0xb8    //  B^  Bx
+#define KEY_STOPGO  0x29    //  C/П x!=0
+#define KEY_GOTO    0x39    //  БП  L2
+#define KEY_RET     0x49    //  B/O x>=0
+#define KEY_PP      0x59    //  ПП  L3
+#define KEY_P       0x69    //  П   L1
+#define KEY_NEXT    0x79    //  ШГ> x<0
+#define KEY_IP      0x89    //  ИП  L0
+#define KEY_PREV    0x99    //  <ШГ x=0
+#define KEY_K       0xa9    //  K
+#define KEY_F       0xb9    //  F
+
+#define MODE_RADIANS    10
+#define MODE_GRADS      11
+#define MODE_DEGREES    12

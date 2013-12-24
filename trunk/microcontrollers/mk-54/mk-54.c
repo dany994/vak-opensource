@@ -50,14 +50,14 @@ void calc_init()
 // Return 0 when stopped, or 1 when running a user program.
 // Fill digit[] and dit[] arrays with the indicator contents.
 //
-int calc_step (unsigned x, unsigned y, unsigned rgd,
+int calc_step (unsigned keycode, unsigned rgd,
     unsigned char digit[], unsigned char dot[],
     void (*callback) (int progress))
 {
     int k, i;
 
-    ik1302.keyb_x = x;
-    ik1302.keyb_y = y;
+    ik1302.keyb_x = keycode >> 4;
+    ik1302.keyb_y = keycode & 0xf;
     ik1303.keyb_x = rgd;
     ik1303.keyb_y = 1;
     for (k=0; k<560; k++) {
