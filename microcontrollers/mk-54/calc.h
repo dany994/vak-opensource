@@ -101,7 +101,8 @@ void calc_init();
 // Values for rgd are: 10 - radians, 11 - grads, 12 - degrees.
 //
 int calc_step (unsigned x, unsigned y, unsigned rgd,
-    unsigned char digit[], unsigned char dot[]);
+    unsigned char digit[], unsigned char dot[],
+    void (*callback) (int progress));
 
 //  Key Function    X,Y
 // ---------------------

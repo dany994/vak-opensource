@@ -117,7 +117,7 @@ void set_segments (unsigned digit, unsigned dot)
 }
 
 //
-// Set or clear data signal.
+// Clear 7-segment LED.
 //
 static inline void clear_segments()
 {
@@ -152,32 +152,21 @@ unsigned char display [12];
 unsigned char dot [12];                 // Show a decimal dot
 
 //
-// Show the display contents for a given number of milliseconds.
+// Show the next display symbol.
+// Progress counter is in range 0..11.
 //
-void show (unsigned msec)
+void show (int i)
 {
-    unsigned now = mfc0 (C0_COUNT, 0);
-    unsigned final = now + msec * MHZ * 500;
-    int i;
-
-    for (;;) {
-        now = mfc0 (C0_COUNT, 0);
-
-        /* This comparison is valid only when using a signed type. */
-        if ((int) (now - final) >= 0)
-            break;
-
+    clear_segments();
+    if (i < 0)
+        return;
+    if (i == 0) {
         data (1);                       // set data
         clk();                          // toggle clock
         data (0);                       // clear data
-
-        for (i=0; i<12; i++) {
-            clk();                      // toggle clock
-            set_segments (display[11-i], dot[11-i]);
-            udelay (1000);              // 1 msec
-            clear_segments();
-        }
     }
+    clk();                              // toggle clock
+    set_segments (display[11-i], dot[11-i]);
 }
 
 //
@@ -186,9 +175,8 @@ void show (unsigned msec)
 //
 void step (unsigned x, unsigned y)
 {
-    show (500);
-    calc_step (x, y, 10, display, dot);
-    calc_step (0, 0, 10, display, dot);
+    calc_step (x, y, 10, display, dot, show);
+    calc_step (0, 0, 10, display, dot, show);
 }
 
 int main()
@@ -224,22 +212,10 @@ int main()
     TRISBCLR = PIN(15);
     TRISBCLR = PIN(12);
 
-    /*
-     * RF0 - clock
-     * RF1 - data
-     */
+    /* RF0 - clock, RF1 - data. */
     TRISFCLR = PIN(0) | PIN(1);
 
-    /*
-     * RE0 - segment A
-     * RE1 - segment B
-     * RE2 - segment C
-     * RE3 - segment D
-     * RE4 - segment E
-     * RE5 - segment F
-     * RE6 - segment G
-     * RE7 - dot
-     */
+    /* RE0-RE6,RE7 - segments A-G and dot. */
     TRISESET = 0xff;                    // tristate
     LATECLR = 0xff;
 
@@ -249,14 +225,22 @@ int main()
         clk();
 
     calc_init();
-    calc_step (0, 0, 10, display, dot);
+    calc_step (0, 0, 10, display, dot, 0);
 
     for (;;) {
+        step (10, 8);           // Cx
         step (5,  1);           // 3
         step (6,  1);           // 4
+        step (7,  1);           // 5
+        step (8,  1);           // 6
+        step (9,  1);           // 7
+        step (10, 1);           // 8
+        step (11, 1);           // 9
         step (11, 8);           // B^
         step (9,  1);           // 7
+        step (9,  1);           // 7
         step (5,  8);           // /
+        step (11, 8);           // B^
         step (3,  1);           // 1
         step (9,  8);           // ВП
         step (7,  1);           // 5
@@ -265,6 +249,5 @@ int main()
         step (4,  8);           // x^2
         step (11, 9);           // F
         step (4,  8);           // x^2
-        step (10, 8);           // Cx
     }
 }
