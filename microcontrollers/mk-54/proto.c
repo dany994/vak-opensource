@@ -145,7 +145,7 @@ static inline void data (int on)
         LATFCLR = PIN(1);               // clear data
 }
 
-static unsigned rgd = MODE_GRADS;       // Radians/grads/degrees
+static unsigned rgd;                    // Radians/grads/degrees
 static unsigned keycode;                // Code of pressed button
 static unsigned key_pressed;            // Bitmask of active key
 
@@ -166,7 +166,7 @@ int scan_keys (int row)
     };
     static const int col_b [8] = {
         KEY_K,      //  K
-        KEY_IP,     //  ИП  L0
+        KEY_LOAD,   //  ИП  L0
         KEY_8,      //  8   cos
         KEY_5,      //  5   cos-1
         KEY_2,      //  2   lg
@@ -178,19 +178,19 @@ int scan_keys (int row)
         KEY_F,      //  F
         KEY_NEXT,   //  ШГ> x<0
         KEY_PREV,   //  <ШГ x=0
-        KEY_P,      //  П   L1
+        KEY_STORE,  //  П   L1
         KEY_9,      //  9   tg
         KEY_6,      //  6   tg-1
-        KEY_DIV,    //  /   1/x
-        KEY_SUB,    //  -   sqrt
+        KEY_ADD,    //  +   pi
+        KEY_MUL,    //  *   x^2
     };
     static const int col_d [8] = {
         0,
         KEY_RET,    //  B/O x>=0
         KEY_GOTO,   //  БП  L2
-        KEY_MUL,    //  *   x^2
-        KEY_ADD,    //  +   pi
-        KEY_PP,     //  ПП  L3
+        KEY_SUB,    //  -   sqrt
+        KEY_DIV,    //  /   1/x
+        KEY_CALL,   //  ПП  L3
         KEY_STOPGO, //  C/П x!=0
         0,
     };
@@ -223,7 +223,7 @@ int scan_keys (int row)
 // Show the next display symbol.
 // Index counter is in range 0..11.
 //
-void calc_display (int i, unsigned digit, unsigned dot)
+void calc_display (int i, int digit, int dot)
 {
     clear_segments();
     if (i >= 0) {
@@ -315,6 +315,9 @@ int main()
         clk();
 
     calc_init();
+    rgd = MODE_DEGREES;
+    keycode = 0;
+    key_pressed = 0;
 
     for (;;) {
         // Simulate one cycle of the calculator.

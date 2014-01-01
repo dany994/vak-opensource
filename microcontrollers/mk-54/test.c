@@ -4,80 +4,203 @@
 #include "calc.h"
 
 //
+// Test from MK-54 user manual.
+//
+static const unsigned char test[] = {
+    KEY_F, 0,       KEY_ADD, 0,                 // 1: F pi
+    KEY_F, 0,       KEY_3, 0,                   // 2: F ln
+    KEY_F, 0,       KEY_2, 0,                   // 3: F lg
+    KEY_F, 0,       KEY_0, 0,                   // 4: F 10^x
+    KEY_F, 0,       KEY_XY, 0,                  // 5: F x^y
+    MODE_DEGREES,
+    KEY_F, 0,       KEY_7, 0,                   // 6: F sin
+    KEY_F, 0,       KEY_8, 0,                   // 7: F cos
+    KEY_F, 0,       KEY_9, 0,                   // 8: F tg
+    KEY_F, 0,       KEY_6, 0,                   // 9: F tg-1
+    MODE_RADIANS,
+    KEY_F, 0,       KEY_5, 0,                   // 10: F cos-1
+    KEY_F, 0,       KEY_4, 0,                   // 11: F sin-1
+    KEY_CLEAR, 0,                               // 12: Cx
+    KEY_STORE, 0,   KEY_4, 0,                   // 13: П 4
+    KEY_1, 0,       KEY_4, 0,                   // 14: 1 4
+    KEY_STORE, 0,   KEY_0, 0,                   // 15: П 0
+    KEY_RET, 0,                                 // 16: B/O
+    KEY_F, 0,       KEY_EXP, 0,                 // 17: F ПРГ
+    KEY_K, 0,       KEY_STORE, 0,   KEY_0, 0,   // 18: K П 0
+    KEY_F, 0,       KEY_LOAD, 0,                // 19: F L0
+    KEY_1, 0,       KEY_3, 0,                   // 20: 1 3
+    KEY_F, 0,       KEY_STORE, 0,               // 21: F L1
+    KEY_0, 0,       KEY_9, 0,                   // 22: 0 9
+    KEY_1, 0,                                   // 23: 1
+    KEY_7, 0,                                   // 24: 7
+    KEY_STORE, 0,   KEY_3, 0,                   // 25: П 3
+    KEY_K, 0,       KEY_GOTO, 0,    KEY_3, 0,   // 26: K БП 3
+    KEY_LOAD, 0,    KEY_CLEAR, 0,               // 27: ИП d
+    KEY_DIV, 0,                                 // 28: /
+    KEY_GOTO, 0,                                // 29: БП
+    KEY_0, 0,       KEY_3, 0,                   // 30: 0 3
+    KEY_LOAD, 0,    KEY_0, 0,                   // 31: ИП 0
+    KEY_GOTO, 0,                                // 32: БП
+    KEY_0, 0,       KEY_0, 0,                   // 33: 0 0
+    KEY_MUL, 0,                                 // 34: *
+    KEY_LOAD, 0,    KEY_7, 0,                   // 35: ИП 7
+    KEY_ADD, 0,                                 // 36: +
+    KEY_F, 0,       KEY_GOTO, 0,                // 37: F L2
+    KEY_2, 0,       KEY_5, 0,                   // 38: 2 5
+    KEY_F, 0,       KEY_CALL, 0,                // 39: F L3
+    KEY_2, 0,       KEY_5, 0,                   // 40: 2 5
+    KEY_GOTO, 0,                                // 41: БП
+    KEY_2, 0,       KEY_7, 0,                   // 42: 2 7
+    KEY_GOTO, 0,                                // 43: БП
+    KEY_2, 0,       KEY_1, 0,                   // 44: 2 1
+    KEY_K, 0,       KEY_STORE, 0,   KEY_4, 0,   // 45: K П 4
+    KEY_F, 0,       KEY_NEXT, 0,                // 46: F x<0
+    KEY_3, 0,       KEY_1, 0,                   // 47: 3 1
+    KEY_K, 0,       KEY_0, 0,                   // 48: K НОП
+    KEY_F, 0,       KEY_PREV, 0,                // 49: F x=0
+    KEY_3, 0,       KEY_5, 0,                   // 50: 3 5
+    KEY_GOTO, 0,                                // 51: БП
+    KEY_3, 0,       KEY_9, 0,                   // 52: 3 9
+    KEY_CALL, 0,                                // 53: ПП
+    KEY_5, 0,       KEY_4, 0,                   // 54: 5 4
+    KEY_F, 0,       KEY_RET, 0,                 // 55: F x>=0
+    KEY_3, 0,       KEY_3, 0,                   // 56: 3 3
+    KEY_LOAD, 0,    KEY_9, 0,                   // 57: ИП 7
+    KEY_SUB, 0,                                 // 58: -
+    KEY_F, 0,       KEY_STOPGO, 0,              // 59: F x!=0
+    KEY_6, 0,       KEY_0, 0,                   // 60: 6 0
+    KEY_4, 0,                                   // 61: 4
+    KEY_7, 0,                                   // 62: 7
+    KEY_STORE, 0,   KEY_6, 0,                   // 63: П 6
+    KEY_XY, 0,                                  // 64: xy
+    KEY_K, 0,       KEY_RET, 0,     KEY_6, 0,   // 65: K x>=0 6
+    KEY_K, 0,       KEY_PREV, 0,    KEY_6, 0,   // 66: K x=0 6
+    KEY_K, 0,       KEY_STOPGO, 0,  KEY_6, 0,   // 67: K x!=0 6
+    KEY_K, 0,       KEY_NEXT, 0,    KEY_6, 0,   // 68: K x<0 6
+    KEY_F, 0,       KEY_MUL, 0,                 // 69: F x^2
+    KEY_GOTO, 0,                                // 70: БП
+    KEY_5, 0,       KEY_7, 0,                   // 71: 5 7
+    KEY_F, 0,       KEY_SUB, 0,                 // 72: F sqrt
+    KEY_F, 0,       KEY_DIV, 0,                 // 73: F 1/x
+    KEY_RET, 0,                                 // 74: B/O
+    KEY_6, 0,                                   // 75: 6
+    KEY_2, 0,                                   // 76: 2
+    KEY_STORE, 0,   KEY_NEG, 0,                 // 77: П b
+    KEY_K, 0,       KEY_CALL, 0,    KEY_NEG, 0, // 78: K ПП b
+    KEY_STOPGO, 0,                              // 79: С/П
+    KEY_F, 0,       KEY_ENTER, 0,               // 80: F Bx
+    KEY_F, 0,       KEY_1, 0,                   // 81: F e^x
+    KEY_RET, 0,                                 // 82: B/O
+    KEY_F, 0,       KEY_NEG, 0,                 // 83: F ABT
+    KEY_RET, 0,                                 // 84: B/O
+    KEY_STOPGO, 0,                              // 85: С/П
+    KEY_F, 0,       KEY_DOT, 0,                 // 86: F O
+    KEY_F, 0,       KEY_DOT, 0,                 // 87: F O
+    KEY_F, 0,       KEY_DOT, 0,                 // 88: F O
+    KEY_LOAD, 0,    KEY_1, 0,                   // 89: ИП 1
+    KEY_LOAD, 0,    KEY_2, 0,                   // 90: ИП 2
+    KEY_LOAD, 0,    KEY_3, 0,                   // 91: ИП 3
+    KEY_LOAD, 0,    KEY_4, 0,                   // 92: ИП 4
+    KEY_LOAD, 0,    KEY_5, 0,                   // 93: ИП 5
+    KEY_LOAD, 0,    KEY_8, 0,                   // 94: ИП 8
+    KEY_LOAD, 0,    KEY_DOT, 0,                 // 95: ИП a
+    KEY_LOAD, 0,    KEY_CLEAR, 0,               // 96: ИП d
+    KEY_NEG, 0,                                 // 97: /-/
+    KEY_F, 0,       KEY_SUB, 0,                 // 98: F sqrt
+    KEY_CLEAR,      KEY_CLEAR, 0, KEY_CLEAR, 0, // 99: Cx
+    KEY_EXP, 0,                                 // 100: ВП
+    MODE_GRADS,
+    KEY_F, 0,       KEY_7, 0,                   // 101: F sin
+
+    0xff,
+};
+
+//
 // Symbols on display.
 //
 unsigned char display [12];
-unsigned char display_old [12];         // Previous state
 unsigned char show_dot [12];            // Show a decimal dot
+unsigned display_changed = 0;
 
 unsigned step_num = 0;
 
+unsigned rad_grad_deg = MODE_DEGREES;   // Switch radians/grads/degrees
+
+unsigned keycode = 0;
+
 //
-// Simulate one cycle of the calculator.
-// Return 0 when stopped, or 1 when running a user program.
+// Show the next display symbol.
+// Index counter is in range 0..11.
 //
-void step (int x, int y, unsigned rgd)
+void calc_display (int i, int digit, int dot)
 {
-    int i, refresh;
-
-    step_num++;
-    calc_step (x, y, rgd, display, show_dot);
-
-    refresh = 0;
-    for (i=0; i<12; i++) {
-        if (display_old[i] != display[i])
-            refresh = 1;
-        display_old[i] = display[i];
-    }
-    if (refresh) {
-        printf ("%3u -- '", step_num);
-        for (i=0; i<12; i++) {
-            putchar ("0123456789-LCRE " [display[i]]);
-            if (show_dot[i])
-                putchar ('.');
+    if (i >= 0) {
+        if (digit >= 0) {
+            if (digit != display[i] || dot != show_dot[i]) {
+                display[i] = digit;
+                show_dot[i] = dot;
+                display_changed = 1;
+            }
         }
-        printf ("'\n");
     }
+}
+
+//
+// Poll the radians/grads/degrees switch.
+//
+int calc_rgd()
+{
+    return rad_grad_deg;
+}
+
+//
+// Poll the keypad.
+//
+int calc_keypad()
+{
+    return keycode;
 }
 
 int main()
 {
-    // 10 - radians, 11 - grads, 12 - degrees
-    unsigned rad_grad_deg = 10;
+    int running, next = 0;
 
     printf ("Started MK-54.\n");
     calc_init();
 
-    usleep (100000); step (0, 0, rad_grad_deg);
-    usleep (100000); step (5, 1, rad_grad_deg);    // 3
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (6, 1, rad_grad_deg);    // 4
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (11,8, rad_grad_deg);    // B^
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (9, 1, rad_grad_deg);    // 7
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (5, 8, rad_grad_deg);    // /
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (3, 1, rad_grad_deg);    // 1
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (9, 8, rad_grad_deg);    // ВП
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (7, 1, rad_grad_deg);    // 5
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (2, 1, rad_grad_deg);    // 0
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (11,9, rad_grad_deg);    // F
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (4, 8, rad_grad_deg);    // x^2
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (11,9, rad_grad_deg);    // F
-                     step (0, 0, rad_grad_deg);
-    usleep (100000); step (4, 8, rad_grad_deg);    // x^2
-#if 0
     for (;;) {
-        usleep (100000); step (0, 0, rad_grad_deg);
+        // Simulate one cycle of the calculator.
+        running = calc_step();
+        step_num++;
+
+        if (running) {
+            printf ("%3u -- running\n", step_num);
+            display_changed = 1;
+            continue;
+        }
+
+        if (display_changed) {
+            int i;
+
+            printf ("%3u -- '", step_num);
+            for (i=0; i<12; i++) {
+                putchar ("0123456789-LCRE " [display[11-i]]);
+                if (show_dot[11-i])
+                    putchar ('.');
+            }
+            printf ("'\n");
+            display_changed = 0;
+        }
+
+        if (test [next] == 0xff)
+            break;
+
+        // Switch radians/grads/degrees mode.
+        if (test [next] > 0 && test [next] < 16)
+            rad_grad_deg = test [next++];
+
+        keycode = test [next++];
     }
-#endif
+    printf ("Finished.\n");
     return 0;
 }
