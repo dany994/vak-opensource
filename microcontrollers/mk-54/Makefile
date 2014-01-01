@@ -23,7 +23,7 @@ load:           $(PROG).srec
 		pic32prog -p $(PROG).srec
 
 clean:
-		rm -f *.o *.lst *~ *.elf *.srec *.dis
+		rm -f *.o *.lst *~ *.elf *.srec *.dis $(PROG)
 
 debug:          $(PROG).srec
 		$(GDB) $(PROG).elf
