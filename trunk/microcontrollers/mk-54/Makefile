@@ -23,7 +23,13 @@ load:           $(PROG).srec
 		pic32prog -p $(PROG).srec
 
 clean:
-		rm -f *.o *.lst *~ *.elf *.srec *.dis $(PROG)
+		rm -f *.o *.lst *~ *.elf *.srec *.dis test $(PROG)
 
 debug:          $(PROG).srec
 		$(GDB) $(PROG).elf
+
+###
+ik13.o: ik13.c calc.h
+ir2.o: ir2.c calc.h
+mk-54.o: mk-54.c calc.h ik1302.c ik1303.c
+proto.o: proto.c calc.h pic32mx.h

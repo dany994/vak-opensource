@@ -91,7 +91,7 @@ void plm_step (plm_t *t);
 //
 // Initialize the calculator.
 //
-void calc_init();
+void calc_init (void);
 
 //
 // Simulate one cycle of the calculator.
@@ -99,12 +99,12 @@ void calc_init();
 // Call calc_keypad(), calc_rgd() and calc_display functions,
 // supplied by user.
 //
-int calc_step();
+int calc_step (void);
 
 //
 // User function: show one digit on the LED display.
 //
-extern void calc_display (int i, unsigned digit, unsigned dot);
+extern void calc_display (int i, int digit, int dot);
 
 //
 // User function: poll the radians/grads/degrees switch.
@@ -112,8 +112,8 @@ extern void calc_display (int i, unsigned digit, unsigned dot);
 extern int calc_rgd(void);
 
 #define MODE_RADIANS    10
-#define MODE_GRADS      11
-#define MODE_DEGREES    12
+#define MODE_DEGREES    11
+#define MODE_GRADS      12
 
 //
 // User function: poll the keypad.
@@ -121,7 +121,7 @@ extern int calc_rgd(void);
 //
 extern int calc_keypad(void);
                             //  Key Function
-#define KEY_0       0x21    //  0   10^x
+#define KEY_0       0x21    //  0   10^x    НОП
 #define KEY_1       0x31    //  1   e^x
 #define KEY_2       0x41    //  2   lg
 #define KEY_3       0x51    //  3   ln
@@ -136,18 +136,18 @@ extern int calc_keypad(void);
 #define KEY_MUL     0x48    //  *   x^2
 #define KEY_DIV     0x58    //  /   1/x
 #define KEY_XY      0x68    //  xy  x^y
-#define KEY_DOT     0x78    //  ,   O
-#define KEY_NEG     0x88    //  /-/ АВТ
-#define KEY_EXP     0x98    //  ВП  ПРГ
-#define KEY_CLEAR   0xa8    //  Cx  CF
+#define KEY_DOT     0x78    //  ,   O       a
+#define KEY_NEG     0x88    //  /-/ АВТ     b
+#define KEY_EXP     0x98    //  ВП  ПРГ     c
+#define KEY_CLEAR   0xa8    //  Cx  CF      d
 #define KEY_ENTER   0xb8    //  B^  Bx
 #define KEY_STOPGO  0x29    //  C/П x!=0
 #define KEY_GOTO    0x39    //  БП  L2
 #define KEY_RET     0x49    //  B/O x>=0
-#define KEY_PP      0x59    //  ПП  L3
-#define KEY_P       0x69    //  П   L1
+#define KEY_CALL    0x59    //  ПП  L3
+#define KEY_STORE   0x69    //  П   L1
 #define KEY_NEXT    0x79    //  ШГ> x<0
-#define KEY_IP      0x89    //  ИП  L0
+#define KEY_LOAD    0x89    //  ИП  L0
 #define KEY_PREV    0x99    //  <ШГ x=0
 #define KEY_K       0xa9    //  K
 #define KEY_F       0xb9    //  F

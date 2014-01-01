@@ -1,5 +1,5 @@
-PROG            = mk-54
-CFLAGS		= -m32 -O -Wall
+PROG            = test
+CFLAGS		= -m32 -O -Wall -Werror
 LDFLAGS		= -m32
 OBJS            = ir2.o ik13.o mk-54.o test.o
 
@@ -10,3 +10,9 @@ $(PROG):        $(OBJS)
 
 clean:
 		rm -f $(PROG) *.o *~ a.out
+
+###
+ik13.o: ik13.c calc.h
+ir2.o: ir2.c calc.h
+mk-54.o: mk-54.c calc.h ik1302.c ik1303.c
+test.o: test.c calc.h
