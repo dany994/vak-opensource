@@ -50,17 +50,19 @@ void calc_init()
 // Return 0 when stopped, or 1 when running a user program.
 // Fill digit[] and dit[] arrays with the indicator contents.
 //
-int calc_step (unsigned keycode, unsigned rgd,
-    unsigned char digit[], unsigned char dot[],
-    void (*callback) (int progress))
+int calc_step()
 {
-    int k, i;
+    int k, i, digit, dot;
 
-    ik1302.keyb_x = keycode >> 4;
-    ik1302.keyb_y = keycode & 0xf;
-    ik1303.keyb_x = rgd;
-    ik1303.keyb_y = 1;
     for (k=0; k<560; k++) {
+        // Scan keypad.
+        i = calc_keypad();
+        ik1302.keyb_x = i >> 4;
+        ik1302.keyb_y = i & 0xf;
+        ik1303.keyb_x = calc_rgd();
+        ik1303.keyb_y = 1;
+
+        // Do computations.
         for (i=0; i<REG_NWORDS; i++) {
             ik1302.input = fifo2.output;
             plm_step (&ik1302);
@@ -72,21 +74,30 @@ int calc_step (unsigned keycode, unsigned rgd,
             fifo_step (&fifo2);
             ik1302.M[((ik1302.ucycle >> 2) - 1 + REG_NWORDS) % REG_NWORDS] = fifo2.output;
         }
-        if (ik1302.enable_display) {
-            for (i=0; i<=8; i++)
-                digit[i] = ik1302.R[(8 - i) * 3];
-            for (i=0; i<=2; i++)
-                digit[i + 9] = ik1302.R[(11 - i) * 3];
-            for (i=0; i<=8; i++)
-                dot[i] = ik1302.show_dot[9 - i];
-            for (i=0; i<=2; i++)
-                dot[i + 9] = ik1302.show_dot[12 - i];
-            ik1302.enable_display = 0;
+
+        if (k >= 552) {
+            // Clear display.
+            calc_display (-1, 0, 0);
+        } else {
+            i = k % 12;
+            if (ik1302.enable_display) {
+                if (i < 3) {
+                    // Exponent.
+                    digit = ik1302.R [(i + 9) * 3];
+                    dot = ik1302.show_dot [i + 10];
+                } else {
+                    // Mantissa.
+                    digit = ik1302.R [(i - 3) * 3];
+                    dot = ik1302.show_dot [i - 2];
+                }
+                ik1302.enable_display = 0;
+            } else {
+                // Clear display.
+                digit = -1;
+                dot = -1;
+            }
+            calc_display (i, digit, dot);
         }
-        if (callback != 0 && k < 552 && ! (k & 1))
-            callback ((k >> 1) % 12);
     }
-    if (callback != 0)
-        callback (-1);
     return (ik1302.dot == 11);
 }

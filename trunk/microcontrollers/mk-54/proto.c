@@ -145,21 +145,16 @@ static inline void data (int on)
         LATFCLR = PIN(1);               // clear data
 }
 
-//
-// Symbols on display.
-//
-unsigned char display [12];
-unsigned char dot [12];                 // Show a decimal dot
-
-unsigned rgd = MODE_GRADS;              // Radians/grads/degrees
-unsigned keycode;                       // Button pressed
+static unsigned rgd = MODE_GRADS;       // Radians/grads/degrees
+static unsigned keycode;                // Code of pressed button
+static unsigned key_pressed;            // Bitmask of active key
 
 //
 // Poll keypad: input pins RD4-RD7.
 //
 int scan_keys (int row)
 {
-    static const int col1 [8] = {
+    static const int col_a [8] = {
         KEY_7,      //  7   sin
         KEY_4,      //  4   sin-1
         KEY_1,      //  1   e^x
@@ -169,7 +164,7 @@ int scan_keys (int row)
         KEY_EXP,    //  ВП  ПРГ
         KEY_CLEAR,  //  Cx  CF
     };
-    static const int col2 [8] = {
+    static const int col_b [8] = {
         KEY_K,      //  K
         KEY_IP,     //  ИП  L0
         KEY_8,      //  8   cos
@@ -179,7 +174,7 @@ int scan_keys (int row)
         KEY_XY,     //  xy  x^y
         KEY_ENTER,  //  B^  Bx
     };
-    static const int col3 [8] = {
+    static const int col_c [8] = {
         KEY_F,      //  F
         KEY_NEXT,   //  ШГ> x<0
         KEY_PREV,   //  <ШГ x=0
@@ -189,7 +184,7 @@ int scan_keys (int row)
         KEY_DIV,    //  /   1/x
         KEY_SUB,    //  -   sqrt
     };
-    static const int col4 [8] = {
+    static const int col_d [8] = {
         0,
         KEY_RET,    //  B/O x>=0
         KEY_GOTO,   //  БП  L2
@@ -200,44 +195,75 @@ int scan_keys (int row)
         0,
     };
     int pins = PORTD & 0xf0;
+    int pins2 = PORTD & 0xf0;
 
-    if (pins) {
+    if (pins && pins == pins2) {
         if (pins & 0x10)
-            return col1[row];
+            return col_a[row];
         if (pins & 0x20)
-            return col2[row];
+            return col_b[row];
         if (pins & 0x40)
-            return col3[row];
-        if (pins & 0x80) {
+            return col_c[row];
+        if (pins & 0x80)
+            return col_d[row];
+#if 0
+        // TODO: poll radians/grads/degrees switch
+        if (?) {
             switch (row) {
-            case 0: rgd = MODE_RADIANS; return 0;
-            case 7: rgd = MODE_DEGREES; return 0;
+            case 0: rgd = MODE_RADIANS; break;
+            case 7: rgd = MODE_DEGREES; break;
             }
-            return col4[row];
         }
+#endif
     }
     return 0;
 }
 
 //
 // Show the next display symbol.
-// Progress counter is in range 0..11.
+// Index counter is in range 0..11.
 //
-void show (int i)
+void calc_display (int i, unsigned digit, unsigned dot)
 {
     clear_segments();
-    if (i < 0)
-        return;
-    if (i == 0) {
-        data (1);                       // set data
+    if (i >= 0) {
+        if (i == 0) {
+            data (1);                   // set data
+            clk();                      // toggle clock
+            data (0);                   // clear data
+        }
         clk();                          // toggle clock
-        data (0);                       // clear data
-    }
-    clk();                              // toggle clock
-    set_segments (display[11-i], dot[11-i]);
+        if (digit >= 0)
+            set_segments (digit, dot);
 
-    if (i < 8 && ! keycode)             // scan keypad
-        keycode = scan_keys (i);
+        if (i < 8) {                    // scan keypad
+            int key = scan_keys (i);
+            if (key) {
+                keycode = key;
+                key_pressed |= (1 << i);
+            } else {
+                key_pressed &= ~(1 << i);
+            }
+        }
+    }
+}
+
+//
+// Poll the radians/grads/degrees switch.
+//
+int calc_rgd()
+{
+    return rgd;
+}
+
+//
+// Poll the keypad.
+//
+int calc_keypad()
+{
+    if (! key_pressed)
+        return 0;
+    return keycode;
 }
 
 int main()
@@ -292,13 +318,8 @@ int main()
 
     for (;;) {
         // Simulate one cycle of the calculator.
-        int k = keycode;
-        int r = rgd;
-        keycode = 0;
-        rgd = MODE_GRADS;
-
-        calc_step (k, r, display, dot, show);
-#if 1
+        calc_step();
+#if 0
         // Simple test.
         static int next;
         static const unsigned char test[] = {

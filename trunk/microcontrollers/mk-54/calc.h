@@ -96,14 +96,30 @@ void calc_init();
 //
 // Simulate one cycle of the calculator.
 // Return 0 when stopped, or 1 when running a user program.
-// Fill digit[] and dit[] arrays with the indicator contents.
-// See table below for keycodes x and y.
-// Values for rgd are: 10 - radians, 11 - grads, 12 - degrees.
+// Call calc_keypad(), calc_rgd() and calc_display functions,
+// supplied by user.
 //
-int calc_step (unsigned keycode, unsigned rgd,
-    unsigned char digit[], unsigned char dot[],
-    void (*callback) (int progress));
+int calc_step();
 
+//
+// User function: show one digit on the LED display.
+//
+extern void calc_display (int i, unsigned digit, unsigned dot);
+
+//
+// User function: poll the radians/grads/degrees switch.
+//
+extern int calc_rgd(void);
+
+#define MODE_RADIANS    10
+#define MODE_GRADS      11
+#define MODE_DEGREES    12
+
+//
+// User function: poll the keypad.
+// Return the keycode value.
+//
+extern int calc_keypad(void);
                             //  Key Function
 #define KEY_0       0x21    //  0   10^x
 #define KEY_1       0x31    //  1   e^x
@@ -135,7 +151,3 @@ int calc_step (unsigned keycode, unsigned rgd,
 #define KEY_PREV    0x99    //  <ШГ x=0
 #define KEY_K       0xa9    //  K
 #define KEY_F       0xb9    //  F
-
-#define MODE_RADIANS    10
-#define MODE_GRADS      11
-#define MODE_DEGREES    12
