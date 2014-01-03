@@ -454,6 +454,14 @@
 #define ODCACLR		PIC32_R8 (0x6044)
 #define ODCASET		PIC32_R8 (0x6048)
 #define ODCAINV		PIC32_R8 (0x604C)
+#define CNPUA		PIC32_R8 (0x6050) /* Port A: pull up enable */
+#define CNPUACLR	PIC32_R8 (0x6054)
+#define CNPUASET	PIC32_R8 (0x6058)
+#define CNPUAINV	PIC32_R8 (0x605C)
+#define CNPDA		PIC32_R8 (0x6060) /* Port A: pull down enable */
+#define CNPDACLR	PIC32_R8 (0x6064)
+#define CNPDASET	PIC32_R8 (0x6068)
+#define CNPDAINV	PIC32_R8 (0x606C)
 
 #define ANSELB		PIC32_R8 (0x6100) /* Port B: analog select */
 #define ANSELBCLR	PIC32_R8 (0x6104)
@@ -475,6 +483,14 @@
 #define ODCBCLR		PIC32_R8 (0x6144)
 #define ODCBSET		PIC32_R8 (0x6148)
 #define ODCBINV		PIC32_R8 (0x614C)
+#define CNPUB		PIC32_R8 (0x6150) /* Port B: pull up enable */
+#define CNPUBCLR	PIC32_R8 (0x6154)
+#define CNPUBSET	PIC32_R8 (0x6158)
+#define CNPUBINV	PIC32_R8 (0x615C)
+#define CNPDB		PIC32_R8 (0x6160) /* Port B: pull down enable */
+#define CNPDBCLR	PIC32_R8 (0x6164)
+#define CNPDBSET	PIC32_R8 (0x6168)
+#define CNPDBINV	PIC32_R8 (0x616C)
 
 #define ANSELC		PIC32_R8 (0x6200) /* Port C: analog select */
 #define ANSELCCLR	PIC32_R8 (0x6204)
@@ -496,6 +512,14 @@
 #define ODCCCLR		PIC32_R8 (0x6244)
 #define ODCCSET		PIC32_R8 (0x6248)
 #define ODCCINV		PIC32_R8 (0x624C)
+#define CNPUC		PIC32_R8 (0x6250) /* Port C: pull up enable */
+#define CNPUCCLR	PIC32_R8 (0x6254)
+#define CNPUCSET	PIC32_R8 (0x6258)
+#define CNPUCINV	PIC32_R8 (0x625C)
+#define CNPDC		PIC32_R8 (0x6260) /* Port C: pull down enable */
+#define CNPDCCLR	PIC32_R8 (0x6264)
+#define CNPDCSET	PIC32_R8 (0x6268)
+#define CNPDCINV	PIC32_R8 (0x626C)
 
 #endif
 
