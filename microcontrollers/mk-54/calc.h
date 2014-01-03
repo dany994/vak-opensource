@@ -61,13 +61,10 @@ typedef struct {
     unsigned S1;
     unsigned L;
     unsigned T;
-    unsigned carry;
     unsigned opcode;
     unsigned keyb_x;
     unsigned keyb_y;
     unsigned dot;
-    unsigned AMK;
-    unsigned ASP;
     unsigned PC;
     unsigned MOD;
     unsigned enable_display;

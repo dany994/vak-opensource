@@ -294,8 +294,40 @@ int calc_rgd()
 //
 int calc_keypad()
 {
+#if 1
     if (! key_pressed)
         return 0;
+#else
+    // Simple test.
+    static int next;
+    static const unsigned char test[] = {
+        KEY_CLEAR,  0,      // Cx
+        KEY_3,      0,      // 3
+        KEY_4,      0,      // 4
+        KEY_5,      0,      // 5
+        KEY_6,      0,      // 6
+        KEY_7,      0,      // 7
+        KEY_8,      0,      // 8
+        KEY_9,      0,      // 9
+        KEY_ENTER,  0,      // B^
+        KEY_7,      0,      // 7
+        KEY_7,      0,      // 7
+        KEY_DIV,    0,      // /
+        KEY_ENTER,  0,      // B^
+        KEY_1,      0,      // 1
+        KEY_EXP,    0,      // ВП
+        KEY_5,      0,      // 5
+        KEY_0,      0,      // 0
+        KEY_F,      0,      // F
+        KEY_MUL,    0,      // x^2
+        KEY_F,      0,      // F
+        KEY_MUL,    0,      // x^2
+        0xff,
+    };
+    if (test [next] == 0xff)
+        next = 0;
+    keycode = test [next++];
+#endif
     return keycode;
 }
 
@@ -349,36 +381,5 @@ int main()
     for (;;) {
         // Simulate one cycle of the calculator.
         calc_step();
-#if 0
-        // Simple test.
-        static int next;
-        static const unsigned char test[] = {
-            KEY_CLEAR,  0,      // Cx
-            KEY_3,      0,      // 3
-            KEY_4,      0,      // 4
-            KEY_5,      0,      // 5
-            KEY_6,      0,      // 6
-            KEY_7,      0,      // 7
-            KEY_8,      0,      // 8
-            KEY_9,      0,      // 9
-            KEY_ENTER,  0,      // B^
-            KEY_7,      0,      // 7
-            KEY_7,      0,      // 7
-            KEY_DIV,    0,      // /
-            KEY_ENTER,  0,      // B^
-            KEY_1,      0,      // 1
-            KEY_EXP,    0,      // ВП
-            KEY_5,      0,      // 5
-            KEY_0,      0,      // 0
-            KEY_F,      0,      // F
-            KEY_MUL,    0,      // x^2
-            KEY_F,      0,      // F
-            KEY_MUL,    0,      // x^2
-            0xff,
-        };
-        if (test [next] == 0xff)
-            next = 0;
-        keycode = test [next++];
-#endif
     }
 }

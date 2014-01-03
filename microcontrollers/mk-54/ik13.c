@@ -48,13 +48,10 @@ void plm_init (plm_t *t, const unsigned ucmd_rom[],
     t->S1 = 0;
     t->L = 0;
     t->T = 0;
-    t->carry = 0;
     t->opcode = 0;
     t->keyb_x = 0;
     t->keyb_y = 0;
     t->dot = 0;
-    t->AMK = 0;
-    t->ASP = 0;
     t->PC = 0;
     t->MOD = 0;
     t->enable_display = 0;
@@ -87,31 +84,33 @@ void plm_step (plm_t *t)
             t->T = 0;
     }
     if (phase == 0) {
+        unsigned ASP;
         unsigned k = t->ucycle / 36;
+
         if (k < 3)
-            t->ASP = 0xff & t->cmd_rom[t->PC];
+            ASP = 0xff & t->cmd_rom[t->PC];
         else if (k == 3)
-            t->ASP = 0xff & t->cmd_rom[t->PC] >> 8;
-        else if (k == 4) {
-            t->ASP = 0xff & t->cmd_rom[t->PC] >> 16;
-            if (t->ASP > 0x1f) {
+            ASP = 0xff & t->cmd_rom[t->PC] >> 8;
+        else {
+            ASP = 0xff & t->cmd_rom[t->PC] >> 16;
+            if (ASP > 0x1f) {
                 if (t->ucycle == 144) {
-                    t->R[37] = t->ASP & 0xf;
-                    t->R[40] = t->ASP >> 4;
+                    t->R[37] = ASP & 0xf;
+                    t->R[40] = ASP >> 4;
                 }
-                t->ASP = 0x5f;
+                ASP = 0x5f;
             }
         }
         t->MOD = 0xff & t->cmd_rom[t->PC] >> 24;
-        t->AMK = t->prog_rom[t->ASP * 9 + remap[t->ucycle >> 2]];
-        t->AMK = t->AMK & 0x3f;
-        if (t->AMK > 59) {
-            t->AMK = (t->AMK - 60) * 2;
+        unsigned AMK = t->prog_rom[ASP * 9 + remap[t->ucycle >> 2]];
+        AMK &= 0x3f;
+        if (AMK > 59) {
+            AMK = (AMK - 60) * 2;
             if (t->L == 0)
-                t->AMK++;
-            t->AMK += 60;
+                AMK++;
+            AMK += 60;
         }
-        t->opcode = t->ucmd_rom[t->AMK];
+        t->opcode = t->ucmd_rom[AMK];
     }
 
     unsigned alpha = 0, beta = 0, gamma = 0;
@@ -157,16 +156,16 @@ void plm_step (plm_t *t)
 
     unsigned sum = alpha + beta + gamma;
     unsigned sigma = sum & 0xf;
-    t->carry = (sum >> 4) & 1;
+    unsigned carry = (sum >> 4) & 1;
     if (t->MOD == 0 || (t->ucycle >> 2) >= 36) {
         switch (t->opcode >> 15 & 7) {
         case 1: t->R[signal_I] = t->R[(signal_I + 3) % REG_NWORDS]; break;
-        case 2: t->R[signal_I] = sigma; break;
-        case 3: t->R[signal_I] = t->S; break;
-        case 4: t->R[signal_I] = t->R[signal_I] | t->S | sigma; break;
-        case 5: t->R[signal_I] = t->S | sigma; break;
-        case 6: t->R[signal_I] = t->R[signal_I] | t->S; break;
-        case 7: t->R[signal_I] = t->R[signal_I] | sigma; break;
+        case 2: t->R[signal_I] = sigma;                             break;
+        case 3: t->R[signal_I] = t->S;                              break;
+        case 4: t->R[signal_I] = t->R[signal_I] | t->S | sigma;     break;
+        case 5: t->R[signal_I] = t->S | sigma;                      break;
+        case 6: t->R[signal_I] = t->R[signal_I] | t->S;             break;
+        case 7: t->R[signal_I] = t->R[signal_I] | sigma;            break;
         }
         if (t->opcode >> 18 & 1)
             t->R[(signal_I - 1 + REG_NWORDS) % REG_NWORDS] = sigma;
@@ -174,19 +173,19 @@ void plm_step (plm_t *t)
             t->R[(signal_I - 2 + REG_NWORDS) % REG_NWORDS] = sigma;
     }
     if (t->opcode >> 21 & 1)
-        t->L = t->carry;
+        t->L = carry;
     if (t->opcode >> 20 & 1)
         t->M[signal_I] = t->S;
 
     switch (t->opcode >> 22 & 3) {
-    case 1: t->S = t->S1; break;
-    case 2: t->S = sigma; break;
-    case 3: t->S = t->S1 | sigma; break;
+    case 1: t->S = t->S1;           break;
+    case 2: t->S = sigma;           break;
+    case 3: t->S = t->S1 | sigma;   break;
     }
     switch (t->opcode >> 24 & 3) {
-    case 1: t->S1 = sigma; break;
-    case 2: t->S1 = t->S1; break;
-    case 3: t->S1 = t->S1 | sigma; break;
+    case 1: t->S1 = sigma;          break;
+    case 2: t->S1 = t->S1;          break;
+    case 3: t->S1 = t->S1 | sigma;  break;
     }
 
     unsigned x, y, z;
@@ -213,6 +212,7 @@ void plm_step (plm_t *t)
     }
     t->output = 0xf & t->M[signal_I];
     t->M[signal_I] = t->input;
+
     t->ucycle += 4;
     if (t->ucycle > 167)
         t->ucycle = 0;
