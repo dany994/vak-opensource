@@ -74,7 +74,7 @@ PIC32_DEVCFG (
  * Boot code at bfc00000.
  * Setup stack pointer and $gp registers, and jump to main().
  */
-asm ("          .section .exception");
+asm ("          .section .exception,\"ax\",@progbits");
 asm ("          .globl _start");
 asm ("          .type _start, function");
 asm ("_start:   la      $sp, _estack");
@@ -268,7 +268,7 @@ void calc_display (int i, int digit, int dot)
         clk();                          // toggle clock
         if (digit >= 0)
             set_segments (digit, dot);
-
+#if 0
         if (i < 8) {                    // scan keypad
             int key = scan_keys (i);
             if (key) {
@@ -278,6 +278,7 @@ void calc_display (int i, int digit, int dot)
                 key_pressed &= ~(1 << i);
             }
         }
+#endif
     }
 }
 
@@ -294,40 +295,8 @@ int calc_rgd()
 //
 int calc_keypad()
 {
-#if 1
     if (! key_pressed)
         return 0;
-#else
-    // Simple test.
-    static int next;
-    static const unsigned char test[] = {
-        KEY_CLEAR,  0,      // Cx
-        KEY_3,      0,      // 3
-        KEY_4,      0,      // 4
-        KEY_5,      0,      // 5
-        KEY_6,      0,      // 6
-        KEY_7,      0,      // 7
-        KEY_8,      0,      // 8
-        KEY_9,      0,      // 9
-        KEY_ENTER,  0,      // B^
-        KEY_7,      0,      // 7
-        KEY_7,      0,      // 7
-        KEY_DIV,    0,      // /
-        KEY_ENTER,  0,      // B^
-        KEY_1,      0,      // 1
-        KEY_EXP,    0,      // ВП
-        KEY_5,      0,      // 5
-        KEY_0,      0,      // 0
-        KEY_F,      0,      // F
-        KEY_MUL,    0,      // x^2
-        KEY_F,      0,      // F
-        KEY_MUL,    0,      // x^2
-        0xff,
-    };
-    if (test [next] == 0xff)
-        next = 0;
-    keycode = test [next++];
-#endif
     return keycode;
 }
 
@@ -380,6 +349,46 @@ int main()
 
     for (;;) {
         // Simulate one cycle of the calculator.
-        calc_step();
+        int running = calc_step();
+#if 1
+        // Simple test.
+        static int next;
+        static const unsigned char test[] = {
+            KEY_CLEAR,  0,      // Cx
+            KEY_3,      0,      // 3
+            KEY_4,      0,      // 4
+            KEY_5,      0,      // 5
+            KEY_6,      0,      // 6
+            KEY_7,      0,      // 7
+            KEY_8,      0,      // 8
+            KEY_9,      0,      // 9
+            KEY_ENTER,  0,      // B^
+            KEY_7,      0,      // 7
+            KEY_7,      0,      // 7
+            KEY_DIV,    0,      // /
+            KEY_ENTER,  0,      // B^
+            KEY_1,      0,      // 1
+            KEY_EXP,    0,      // ВП
+            KEY_5,      0,      // 5
+            KEY_0,      0,      // 0
+            KEY_F,      0,      // F
+            KEY_MUL,    0,      // x^2
+            KEY_F,      0,      // F
+            KEY_MUL,    0,      // x^2
+            0xff,
+        };
+
+        if (! running) {
+            if (test [next] == 0xff)
+                next = 0;
+
+            // Switch radians/grads/degrees mode.
+            if (test [next] > 0 && test [next] < 16)
+                rgd = test [next++];
+
+            keycode = test [next++];
+            key_pressed = (keycode != 0);
+        }
+#endif
     }
 }

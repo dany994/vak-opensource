@@ -7,19 +7,25 @@ OBJDUMP         = $(P)objdump
 #GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
 GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
 CFLAGS          = -O3 -Wall -Werror
-LDFLAGS         = -T using-bootloader.ld -e _start
+LDFLAGS         = -e _start
 
 OBJS            = ir2.o ik13.o mk-54.o
 
+#
 # Olimex T795 board with pic32mx7 processor.
+#
 #PROG            = olimex-mx7
 #CFLAGS          += -DPIC32MX7
 #OBJS            += olimex-mx7.o
+#LDFLAGS         += -T using-bootloader.ld
 
+#
 # Homemade board with pic32mx2 processor.
+#
 PROG            = bare-mx2
 CFLAGS          += -DPIC32MX2
 OBJS            += bare-mx2.o
+LDFLAGS         += -T mx2-ram4k.ld
 
 all:            $(PROG).srec
 
@@ -29,7 +35,7 @@ $(PROG).srec:   $(OBJS)
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
 
 load:           $(PROG).srec
-		pic32prog -p $(PROG).srec
+		pic32prog $(PROG).srec
 
 clean:
 		rm -f *.o *.lst *~ *.elf *.srec *.dis test $(PROG)
