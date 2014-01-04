@@ -321,8 +321,8 @@ int main()
 
     for (;;) {
         // Simulate one cycle of the calculator.
-        calc_step();
-#if 0
+        int running = calc_step();
+#if 1
         // Simple test.
         static int next;
         static const unsigned char test[] = {
@@ -349,9 +349,18 @@ int main()
             KEY_MUL,    0,      // x^2
             0xff,
         };
-        if (test [next] == 0xff)
-            next = 0;
-        keycode = test [next++];
+
+        if (! running) {
+            if (test [next] == 0xff)
+                next = 0;
+
+            // Switch radians/grads/degrees mode.
+            if (test [next] > 0 && test [next] < 16)
+                rgd = test [next++];
+
+            keycode = test [next++];
+            key_pressed = (keycode != 0);
+        }
 #endif
     }
 }
