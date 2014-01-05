@@ -41,9 +41,9 @@
  *                  | 21     8 |
  *                  | 20     9 |
  *                  | 19    10 |
- *   keypad C - RB9 | 18    11 | RB4 - segment E
+ *   keypad E - RB9 | 18    11 | RB4 - segment E
  *   keypad D - RB8 | 17    12 | RA4 - segment D
- *   keypad E - RB7 | 16    13 |
+ *   keypad C - RB7 | 16    13 |
  *                  | 15    14 |
  *                  ------------
  */
@@ -224,7 +224,7 @@ int scan_keys (int row)
     int portb = PORTB;
 
     // Poll radians/grads/degrees switch
-    if (portb & PIN(7)) {   // RB7 - keypad E
+    if (portb & PIN(9)) {   // RB9 - keypad E
         switch (row) {
         case 0: rgd = MODE_RADIANS; break;
         case 7: rgd = MODE_DEGREES; break;
@@ -235,7 +235,7 @@ int scan_keys (int row)
         return col_a[row];
     if (porta & PIN(1))     // RA1 - keypad B
         return col_b[row];
-    if (portb & PIN(9))     // RB9 - keypad C
+    if (portb & PIN(7))     // RB7 - keypad C
         return col_c[row];
     if (portb & PIN(8))     // RB8 - keypad D
         return col_d[row];
@@ -314,20 +314,17 @@ int main()
      * Enable pull-down resistors. */
     TRISASET = PIN(1);          // keypad B - signal RA1
     TRISBSET = PIN(2) |         // keypad A - signal RB2
-               PIN(9) |         // keypad C - signal RB9
+               PIN(9) |         // keypad E - signal RB9
                PIN(8) |         // keypad D - signal RB8
-               PIN(7);          // keypad E - signal RB7
+               PIN(7);          // keypad C - signal RB7
     CNPDASET = PIN(1);
-    CNPDBSET = PIN(2) | PIN(7) | PIN(8) | PIN(9);
+    CNPDBSET = PIN(2);
 
     /* RA0 - clock. */
     TRISACLR = PIN(0);
 
     /* Output/tristate pins: segments A-G and dot. */
     clear_segments();
-    LATBCLR = PIN(0) | PIN(1) | PIN(3) | PIN(4) |
-              PIN(13) | PIN(14) | PIN(15);
-    LATACLR = PIN(4);
 
     int i;
     data (0);                           // clear data
