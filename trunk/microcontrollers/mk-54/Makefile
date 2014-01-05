@@ -5,7 +5,8 @@ OBJDUMP         = $(P)objdump
 #GDB             = /mips/arch/overflow/codesourcery/mips-sde-elf/lite/release/2012.03-64/Linux/bin/mips-sde-elf-gdb
 #GDB             = mipsel-elf32-gdb
 #GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
-GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
+#GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
+GDB             = /usr/local/mips-gcc-4.7.2/bin/mips-elf-gdb
 CFLAGS          = -O3 -Wall -Werror
 LDFLAGS         = -e _start
 
