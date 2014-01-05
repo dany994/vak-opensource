@@ -37,14 +37,14 @@
  * segment G - RB14 | 25     4 | RB0 - segment A
  * segment F - RB13 | 24     5 | RB1 - segment B
  *                  | 23     6 | RB2 - keypad A
- *                  | 22     7 | RB3 - keypad B
+ *                  | 22     7 | RB3 - segment C
  *                  | 21     8 |
  *                  | 20     9 |
  *                  | 19    10 |
- *  segment E - RB9 | 18    11 | RB4 - keypad C
- *  segment D - RB8 | 17    12 | RA4 - keypad D
- *  segment C - RB7 | 16    13 |
- *                  | 15    14 | RB5 - keypad E
+ *   keypad C - RB9 | 18    11 | RB4 - segment E
+ *   keypad D - RB8 | 17    12 | RA4 - segment D
+ *   keypad E - RB7 | 16    13 |
+ *                  | 15    14 | RB5 - keypad B
  *                  ------------
  */
 #define PIN(n)  (1 << (n))
@@ -84,28 +84,8 @@ asm ("          jr      $ra");
 asm ("          .text");
 
 /*
- * Delay for a given number of microseconds.
- * The processor has a 32-bit hardware Count register,
- * which increments at half CPU rate.
- * We use it to get a precise delay.
+ * Display a symbol on 7-segment LED
  */
-void udelay (unsigned usec)
-{
-    unsigned now = mfc0 (C0_COUNT, 0);
-    unsigned final = now + usec * MHZ / 2;
-
-    for (;;) {
-        now = mfc0 (C0_COUNT, 0);
-
-        /* This comparison is valid only when using a signed type. */
-        if ((int) (now - final) >= 0)
-            break;
-    }
-}
-
-//
-// Display a symbol on 7-segment LED
-//
 void set_segments (unsigned digit, unsigned dot)
 {
     static const unsigned segments[16] = {
@@ -140,37 +120,44 @@ void set_segments (unsigned digit, unsigned dot)
 
     if (mask & 1)   TRISBCLR = PIN(0);  // segment A - signal RB0
     if (mask & 2)   TRISBCLR = PIN(1);  // segment B - signal RB1
-    if (mask & 4)   TRISBCLR = PIN(7);  // segment C - signal RB7
-    if (mask & 8)   TRISBCLR = PIN(8);  // segment D - signal RB8
-    if (mask & 16)  TRISBCLR = PIN(9);  // segment E - signal RB9
+    if (mask & 4)   TRISBCLR = PIN(3);  // segment C - signal RB3
+    if (mask & 8)   TRISACLR = PIN(4);  // segment D - signal RA4
+    if (mask & 16)  TRISBCLR = PIN(4);  // segment E - signal RB4
     if (mask & 32)  TRISBCLR = PIN(13); // segment F - signal RB13
     if (mask & 64)  TRISBCLR = PIN(14); // segment G - signal RB14
     if (dot)        TRISBCLR = PIN(15); // dot       - signal RB15
 }
 
-//
-// Clear 7-segment LED.
-//
+/*
+ * Clear 7-segment LED.
+ */
 static inline void clear_segments()
 {
     // Set segment and dot pins to tristate.
-    TRISBSET = PIN(0) | PIN(1) | PIN(7) | PIN(8) |
-               PIN(9) | PIN(13) | PIN(14) | PIN(15);
+    TRISBSET = PIN(0) | PIN(1) | PIN(3) | PIN(4) |
+               PIN(13) | PIN(14) | PIN(15);
+    TRISASET = PIN(4);
 }
 
-//
-// Toggle clock signal.
-//
+/*
+ * Toggle clock signal.
+ */
 static inline void clk()
 {
     LATASET = PIN(0);                   // set clock
-    udelay (1);                         // 1 usec
+    LATASET = PIN(0);                   // pulse 200 usec
+    LATASET = PIN(0);
+    LATASET = PIN(0);
+    LATASET = PIN(0);
+    LATASET = PIN(0);
+    LATASET = PIN(0);
+    LATASET = PIN(0);
     LATACLR = PIN(0);                   // clear clock
 }
 
-//
-// Set or clear data signal.
-//
+/*
+ * Set or clear data signal.
+ */
 static inline void data (int on)
 {
     if (on)
@@ -183,9 +170,9 @@ static unsigned rgd;                    // Radians/grads/degrees
 static unsigned keycode;                // Code of pressed button
 static unsigned key_pressed;            // Bitmask of active key
 
-//
-// Poll keypad: input pins RD4-RD7.
-//
+/*
+ * Poll keypad: input pins RD4-RD7.
+ */
 int scan_keys (int row)
 {
     static const int col_a [8] = {
@@ -228,34 +215,31 @@ int scan_keys (int row)
         KEY_STOPGO, //  C/П x!=0
         0,
     };
-
-    int porta = PORTA;
-    if (porta & PIN(4))     // RA4 - keypad D
-        return col_d[row];
-
     int portb = PORTB;
-    if (portb & PIN(2))     // RB2 - keypad A
-        return col_a[row];
-    if (portb & PIN(3))     // RB3 - keypad B
-        return col_b[row];
-    if (portb & PIN(4))     // RB4 - keypad C
-        return col_c[row];
-#if 0
-    // TODO: poll radians/grads/degrees switch
-    if (portb & PIN(5))     // RB5 - keypad E
+
+    // Poll radians/grads/degrees switch
+    if (portb & PIN(7)) {   // RB7 - keypad E
         switch (row) {
         case 0: rgd = MODE_RADIANS; break;
         case 7: rgd = MODE_DEGREES; break;
         }
     }
-#endif
+
+    if (portb & PIN(2))     // RB2 - keypad A
+        return col_a[row];
+    if (portb & PIN(5))     // RB5 - keypad B
+        return col_b[row];
+    if (portb & PIN(9))     // RB9 - keypad C
+        return col_c[row];
+    if (portb & PIN(8))     // RB8 - keypad D
+        return col_d[row];
     return 0;
 }
 
-//
-// Show the next display symbol.
-// Index counter is in range 0..11.
-//
+/*
+ * Show the next display symbol.
+ * Index counter is in range 0..11.
+ */
 void calc_display (int i, int digit, int dot)
 {
     clear_segments();
@@ -282,17 +266,17 @@ void calc_display (int i, int digit, int dot)
     }
 }
 
-//
-// Poll the radians/grads/degrees switch.
-//
+/*
+ * Poll the radians/grads/degrees switch.
+ */
 int calc_rgd()
 {
     return rgd;
 }
 
-//
-// Poll the keypad.
-//
+/*
+ * Poll the keypad.
+ */
 int calc_keypad()
 {
     if (! key_pressed)
@@ -322,20 +306,20 @@ int main()
     /* Input pins: keypad.
      * Enable pull-down resistors. */
     TRISBSET = PIN(2) |         // keypad A - signal RB2
-               PIN(3) |         // keypad B - signal RB3
-               PIN(4) |         // keypad C - signal RB4
-               PIN(5);          // keypad E - signal RB5
-    TRISASET = PIN(4);          // keypad D - signal RA4
-    CNPDBSET = PIN(2) | PIN(3) | PIN(4) | PIN(5);
-    CNPDASET = PIN(4);
+               PIN(5) |         // keypad B - signal RB5
+               PIN(9) |         // keypad C - signal RB9
+               PIN(8) |         // keypad D - signal RB8
+               PIN(7);          // keypad E - signal RB7
+    CNPDBSET = PIN(2) | PIN(5) | PIN(7) | PIN(8) | PIN(9);
 
     /* RA0 - clock, RA1 - data. */
     TRISACLR = PIN(0) | PIN(1);
 
-    /* RB0, RB1, RB7-RB9, RB13-RB15 - segments A-G and dot. */
+    /* Output/tristate pins: segments A-G and dot. */
     clear_segments();
-    LATBCLR = PIN(0) | PIN(1) | PIN(7) | PIN(8) |
-              PIN(9) | PIN(13) | PIN(14) | PIN(15);
+    LATBCLR = PIN(0) | PIN(1) | PIN(3) | PIN(4) |
+              PIN(13) | PIN(14) | PIN(15);
+    LATACLR = PIN(4);
 
     int i;
     data (0);                           // clear data
@@ -346,13 +330,18 @@ int main()
     rgd = MODE_DEGREES;
     keycode = 0;
     key_pressed = 0;
-
+#if 0
+    for (;;) {
+        // Simulate one cycle of the calculator.
+        calc_step();
+    }
+#else
+    int next = 0;
     for (;;) {
         // Simulate one cycle of the calculator.
         int running = calc_step();
-#if 1
+
         // Simple test.
-        static int next;
         static const unsigned char test[] = {
             KEY_CLEAR,  0,      // Cx
             KEY_3,      0,      // 3
@@ -389,6 +378,6 @@ int main()
             keycode = test [next++];
             key_pressed = (keycode != 0);
         }
-#endif
     }
+#endif
 }
