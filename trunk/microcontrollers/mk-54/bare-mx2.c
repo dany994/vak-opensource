@@ -33,8 +33,8 @@
  *                  ------------
  *                  | 28     1 |
  *                  | 27     2 | RA0 - clk
- *       dot - RB15 | 26     3 | RA1 - data
- * segment G - RB14 | 25     4 | RB0 - segment A
+ *       dot - RB15 | 26     3 | RA1 - keypad B
+ * segment G - RB14 | 25     4 | RB0 - segment A, data
  * segment F - RB13 | 24     5 | RB1 - segment B
  *                  | 23     6 | RB2 - keypad A
  *                  | 22     7 | RB3 - segment C
@@ -44,7 +44,7 @@
  *   keypad C - RB9 | 18    11 | RB4 - segment E
  *   keypad D - RB8 | 17    12 | RA4 - segment D
  *   keypad E - RB7 | 16    13 |
- *                  | 15    14 | RB5 - keypad B
+ *                  | 15    14 |
  *                  ------------
  */
 #define PIN(n)  (1 << (n))
@@ -152,18 +152,23 @@ static inline void clk()
     LATASET = PIN(0);
     LATASET = PIN(0);
     LATASET = PIN(0);
+
     LATACLR = PIN(0);                   // clear clock
 }
 
 /*
- * Set or clear data signal.
+ * Set or clear data signal: segment A - RB0.
  */
 static inline void data (int on)
 {
-    if (on)
-        LATASET = PIN(1);               // set data
-    else
-        LATACLR = PIN(1);               // clear data
+    if (on >= 0) {
+        if (on)
+            LATBSET = PIN(0);           // set data
+        else
+            LATBCLR = PIN(0);           // clear data
+        TRISBCLR = PIN(0);              // activate
+    } else
+        TRISBSET = PIN(0);              // tristate
 }
 
 static unsigned rgd;                    // Radians/grads/degrees
@@ -215,6 +220,7 @@ int scan_keys (int row)
         KEY_STOPGO, //  C/П x!=0
         0,
     };
+    int porta = PORTA;
     int portb = PORTB;
 
     // Poll radians/grads/degrees switch
@@ -227,7 +233,7 @@ int scan_keys (int row)
 
     if (portb & PIN(2))     // RB2 - keypad A
         return col_a[row];
-    if (portb & PIN(5))     // RB5 - keypad B
+    if (porta & PIN(1))     // RA1 - keypad B
         return col_b[row];
     if (portb & PIN(9))     // RB9 - keypad C
         return col_c[row];
@@ -247,12 +253,14 @@ void calc_display (int i, int digit, int dot)
         if (i == 0) {
             data (1);                   // set data
             clk();                      // toggle clock
-            data (0);                   // clear data
         }
+        data (0);                       // clear data
         clk();                          // toggle clock
+        data (-1);                      // tristate data
+
         if (digit >= 0)
-            set_segments (digit, dot);
-#if 0
+            set_segments (digit, dot);  // display a digit
+
         if (i < 8) {                    // scan keypad
             int key = scan_keys (i);
             if (key) {
@@ -262,7 +270,6 @@ void calc_display (int i, int digit, int dot)
                 key_pressed &= ~(1 << i);
             }
         }
-#endif
     }
 }
 
@@ -305,15 +312,16 @@ int main()
 
     /* Input pins: keypad.
      * Enable pull-down resistors. */
+    TRISASET = PIN(1);          // keypad B - signal RA1
     TRISBSET = PIN(2) |         // keypad A - signal RB2
-               PIN(5) |         // keypad B - signal RB5
                PIN(9) |         // keypad C - signal RB9
                PIN(8) |         // keypad D - signal RB8
                PIN(7);          // keypad E - signal RB7
-    CNPDBSET = PIN(2) | PIN(5) | PIN(7) | PIN(8) | PIN(9);
+    CNPDASET = PIN(1);
+    CNPDBSET = PIN(2) | PIN(7) | PIN(8) | PIN(9);
 
-    /* RA0 - clock, RA1 - data. */
-    TRISACLR = PIN(0) | PIN(1);
+    /* RA0 - clock. */
+    TRISACLR = PIN(0);
 
     /* Output/tristate pins: segments A-G and dot. */
     clear_segments();
@@ -325,12 +333,14 @@ int main()
     data (0);                           // clear data
     for (i=0; i<16; i++)                // clear register
         clk();
+    data (-1);                          // tristate data
 
     calc_init();
     rgd = MODE_DEGREES;
     keycode = 0;
     key_pressed = 0;
-#if 0
+
+#if 1
     for (;;) {
         // Simulate one cycle of the calculator.
         calc_step();
