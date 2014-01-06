@@ -43,7 +43,7 @@ void plm_init (plm_t *t, const unsigned ucmd_rom[],
     }
     t->input = 0;
     t->output = 0;
-    t->ucycle = 0;
+    t->cycle = 0;
     t->S = 0;
     t->S1 = 0;
     t->L = 0;
@@ -53,7 +53,6 @@ void plm_init (plm_t *t, const unsigned ucmd_rom[],
     t->keyb_y = 0;
     t->dot = 0;
     t->PC = 0;
-    t->MOD = 0;
     t->enable_display = 0;
     for (i=0; i<14; i++) {
         t->show_dot[i] = 0;
@@ -74,58 +73,54 @@ void plm_step (plm_t *t)
         3, 4, 5, 6, 7, 8,
         0, 1, 2, 3, 4, 5,
     };
-    unsigned phase = t->ucycle & 3;
-    unsigned signal_I = t->ucycle >> 2;
-    unsigned signal_D = t->ucycle / 12;
+    unsigned signal_d = t->cycle / 3;
 
-    if (t->ucycle == 0) {
+    if (t->cycle == 0) {
         t->PC = t->R[36] + 16 * t->R[39];
         if ((t->cmd_rom[t->PC] & 0xfc0000) == 0)
             t->T = 0;
     }
-    if (phase == 0) {
-        unsigned ASP;
-        unsigned k = t->ucycle / 36;
 
-        if (k < 3)
-            ASP = 0xff & t->cmd_rom[t->PC];
-        else if (k == 3)
-            ASP = 0xff & t->cmd_rom[t->PC] >> 8;
-        else {
-            ASP = 0xff & t->cmd_rom[t->PC] >> 16;
-            if (ASP > 0x1f) {
-                if (t->ucycle == 144) {
-                    t->R[37] = ASP & 0xf;
-                    t->R[40] = ASP >> 4;
-                }
-                ASP = 0x5f;
+    unsigned asp;
+    unsigned k = t->cycle / 9;
+
+    if (k < 3)
+        asp = t->cmd_rom[t->PC] & 0xff;
+    else if (k == 3)
+        asp = (t->cmd_rom[t->PC] >> 8) & 0xff;
+    else {
+        asp =(t->cmd_rom[t->PC] >> 16) & 0xff;
+        if (asp > 0x1f) {
+            if (t->cycle == 36) {
+                t->R[37] = asp & 0xf;
+                t->R[40] = asp >> 4;
             }
+            asp = 0x5f;
         }
-        t->MOD = 0xff & t->cmd_rom[t->PC] >> 24;
-        unsigned AMK = t->prog_rom[ASP * 9 + remap[t->ucycle >> 2]];
-        AMK &= 0x3f;
-        if (AMK > 59) {
-            AMK = (AMK - 60) * 2;
-            if (t->L == 0)
-                AMK++;
-            AMK += 60;
-        }
-        t->opcode = t->ucmd_rom[AMK];
     }
+    unsigned mod = (t->cmd_rom[t->PC] >> 24) & 0xff;
+
+    unsigned amk = t->prog_rom[asp*9 + remap[t->cycle]] & 0x3f;
+    if (amk > 59) {
+        amk = (amk - 60) * 2;
+        if (t->L == 0)
+            amk++;
+        amk += 60;
+    }
+    t->opcode = t->ucmd_rom[amk];
 
     unsigned alpha = 0, beta = 0, gamma = 0;
-    switch (t->opcode >> 24 & 3) {
+    switch ((t->opcode >> 24) & 3) {
     case 2:
     case 3:
-        if ((t->ucycle / 12) != (t->keyb_x - 1) &&
-            t->keyb_y > 0 && phase == 0)
+        if (signal_d != (t->keyb_x - 1) && t->keyb_y > 0)
             t->S1 |= t->keyb_y;
         break;
     }
-    if (t->opcode & 1)     alpha |= t->R[signal_I];
-    if (t->opcode & 2)     alpha |= t->M[signal_I];
-    if (t->opcode & 4)     alpha |= t->ST[signal_I];
-    if (t->opcode & 8)     alpha |= ~t->R[signal_I] & 0xf;
+    if (t->opcode & 1)     alpha |= t->R[t->cycle];
+    if (t->opcode & 2)     alpha |= t->M[t->cycle];
+    if (t->opcode & 4)     alpha |= t->ST[t->cycle];
+    if (t->opcode & 8)     alpha |= ~t->R[t->cycle] & 0xf;
     if (t->opcode & 0x10 && t->L == 0) alpha |= 0xa;
     if (t->opcode & 0x20)  alpha |= t->S;
     if (t->opcode & 0x40)  alpha |= 4;
@@ -140,15 +135,15 @@ void plm_step (plm_t *t)
             t->T = 0;
     } else {
         t->enable_display = 1;
-        if ((t->ucycle / 12) == (t->keyb_x - 1)) {
+        if (signal_d == (t->keyb_x - 1)) {
             if (t->keyb_y > 0) {
                 t->S1 = t->keyb_y;
                 t->T = 1;
             }
         }
-        if (phase == 0 && signal_D < 12 && t->L > 0)
-            t->dot = signal_D;
-        t->show_dot[signal_D] = (t->L > 0);
+        if (signal_d < 12 && t->L > 0)
+            t->dot = signal_d;
+        t->show_dot[signal_d] = (t->L > 0);
     }
     if (t->opcode & 0x4000) gamma = ~t->T & 1;
     if (t->opcode & 0x2000) gamma |= ~t->L & 1;
@@ -157,63 +152,63 @@ void plm_step (plm_t *t)
     unsigned sum = alpha + beta + gamma;
     unsigned sigma = sum & 0xf;
     unsigned carry = (sum >> 4) & 1;
-    if (t->MOD == 0 || (t->ucycle >> 2) >= 36) {
-        switch (t->opcode >> 15 & 7) {
-        case 1: t->R[signal_I] = t->R[(signal_I + 3) % REG_NWORDS]; break;
-        case 2: t->R[signal_I] = sigma;                             break;
-        case 3: t->R[signal_I] = t->S;                              break;
-        case 4: t->R[signal_I] = t->R[signal_I] | t->S | sigma;     break;
-        case 5: t->R[signal_I] = t->S | sigma;                      break;
-        case 6: t->R[signal_I] = t->R[signal_I] | t->S;             break;
-        case 7: t->R[signal_I] = t->R[signal_I] | sigma;            break;
+    if (mod == 0 || t->cycle >= 36) {
+        switch ((t->opcode >> 15) & 7) {
+        case 1: t->R[t->cycle] = t->R[(t->cycle + 3) % REG_NWORDS]; break;
+        case 2: t->R[t->cycle] = sigma;                             break;
+        case 3: t->R[t->cycle] = t->S;                              break;
+        case 4: t->R[t->cycle] = t->R[t->cycle] | t->S | sigma;     break;
+        case 5: t->R[t->cycle] = t->S | sigma;                      break;
+        case 6: t->R[t->cycle] = t->R[t->cycle] | t->S;             break;
+        case 7: t->R[t->cycle] = t->R[t->cycle] | sigma;            break;
         }
-        if (t->opcode >> 18 & 1)
-            t->R[(signal_I - 1 + REG_NWORDS) % REG_NWORDS] = sigma;
-        if (t->opcode >> 19 & 1)
-            t->R[(signal_I - 2 + REG_NWORDS) % REG_NWORDS] = sigma;
+        if ((t->opcode >> 18) & 1)
+            t->R[(t->cycle - 1 + REG_NWORDS) % REG_NWORDS] = sigma;
+        if ((t->opcode >> 19) & 1)
+            t->R[(t->cycle - 2 + REG_NWORDS) % REG_NWORDS] = sigma;
     }
-    if (t->opcode >> 21 & 1)
+    if ((t->opcode >> 21) & 1)
         t->L = carry;
-    if (t->opcode >> 20 & 1)
-        t->M[signal_I] = t->S;
+    if ((t->opcode >> 20) & 1)
+        t->M[t->cycle] = t->S;
 
-    switch (t->opcode >> 22 & 3) {
+    switch ((t->opcode >> 22) & 3) {
     case 1: t->S = t->S1;           break;
     case 2: t->S = sigma;           break;
     case 3: t->S = t->S1 | sigma;   break;
     }
-    switch (t->opcode >> 24 & 3) {
+    switch ((t->opcode >> 24) & 3) {
     case 1: t->S1 = sigma;          break;
     case 2: t->S1 = t->S1;          break;
-    case 3: t->S1 = t->S1 | sigma;  break;
+    case 3: t->S1 |= sigma;         break;
     }
 
     unsigned x, y, z;
-    switch (t->opcode >> 26 & 3) {
+    switch ((t->opcode >> 26) & 3) {
     case 1:
-        t->ST[(signal_I + 2) % REG_NWORDS] = t->ST[(signal_I + 1) % REG_NWORDS];
-        t->ST[(signal_I + 1) % REG_NWORDS] = t->ST[signal_I];
-        t->ST[signal_I] = sigma;
+        t->ST[(t->cycle + 2) % REG_NWORDS] = t->ST[(t->cycle + 1) % REG_NWORDS];
+        t->ST[(t->cycle + 1) % REG_NWORDS] = t->ST[t->cycle];
+        t->ST[t->cycle] = sigma;
         break;
     case 2:
-        x = t->ST[signal_I];
-        t->ST[signal_I] = t->ST[(signal_I + 1) % REG_NWORDS];
-        t->ST[(signal_I + 1) % REG_NWORDS] = t->ST[(signal_I + 2) % REG_NWORDS];
-        t->ST[(signal_I + 2) % REG_NWORDS] = x;
+        x = t->ST[t->cycle];
+        t->ST[t->cycle] = t->ST[(t->cycle + 1) % REG_NWORDS];
+        t->ST[(t->cycle + 1) % REG_NWORDS] = t->ST[(t->cycle + 2) % REG_NWORDS];
+        t->ST[(t->cycle + 2) % REG_NWORDS] = x;
         break;
     case 3:
-        x = t->ST[signal_I];
-        y = t->ST[(signal_I + 1) % REG_NWORDS];
-        z = t->ST[(signal_I + 2) % REG_NWORDS];
-        t->ST[(signal_I + 0) % REG_NWORDS] = sigma | y;
-        t->ST[(signal_I + 1) % REG_NWORDS] = x | z;
-        t->ST[(signal_I + 2) % REG_NWORDS] = y | x;
+        x = t->ST[t->cycle];
+        y = t->ST[(t->cycle + 1) % REG_NWORDS];
+        z = t->ST[(t->cycle + 2) % REG_NWORDS];
+        t->ST[(t->cycle + 0) % REG_NWORDS] = sigma | y;
+        t->ST[(t->cycle + 1) % REG_NWORDS] = x | z;
+        t->ST[(t->cycle + 2) % REG_NWORDS] = y | x;
         break;
     }
-    t->output = 0xf & t->M[signal_I];
-    t->M[signal_I] = t->input;
+    t->output = t->M[t->cycle] & 0xf;
+    t->M[t->cycle] = t->input;
 
-    t->ucycle += 4;
-    if (t->ucycle > 167)
-        t->ucycle = 0;
+    t->cycle++;
+    if (t->cycle >= REG_NWORDS)
+        t->cycle = 0;
 }
