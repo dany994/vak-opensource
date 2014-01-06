@@ -59,8 +59,8 @@ typedef struct {
     unsigned char ST [REG_NWORDS];      // ST register
     unsigned S;
     unsigned S1;
-    unsigned L;
-    unsigned T;
+    unsigned carry;
+    unsigned keypad_event;
     unsigned opcode;
     unsigned keyb_x;
     unsigned keyb_y;
@@ -68,7 +68,7 @@ typedef struct {
     unsigned PC;
     unsigned enable_display;
     unsigned char show_dot [14];
-    const unsigned *ucmd_rom;           // Micro-instructions
+    const unsigned *inst_rom;           // Micro-instructions
     const unsigned *cmd_rom;            // Instructions
     const unsigned char *prog_rom;      // Program
 } plm_t;
@@ -76,7 +76,7 @@ typedef struct {
 //
 // Initialize the PLM data structure.
 //
-void plm_init (plm_t *t, const unsigned ucmd_rom[],
+void plm_init (plm_t *t, const unsigned inst_rom[],
     const unsigned cmd_rom[], const unsigned char prog_rom[]);
 
 //
