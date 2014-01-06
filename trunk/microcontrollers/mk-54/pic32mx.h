@@ -1147,7 +1147,7 @@
 #define DEVCFG1_POSCMOD_XT      0x00000100 /* XT oscillator */
 #define DEVCFG1_POSCMOD_HS      0x00000200 /* HS oscillator */
 #define DEVCFG1_POSCMOD_DISABLE 0x00000300 /* Disabled */
-#define DEVCFG1_OSCIOFNC_OFF    0x00000400 /* CLKO output active */
+#define DEVCFG1_OSCIOFNC_OFF    0x00000400 /* CLKO output disable */
 #define DEVCFG1_FPBDIV_MASK     0x00003000 /* Peripheral bus clock divisor */
 #define DEVCFG1_FPBDIV_1        0x00000000 /* SYSCLK / 1 */
 #define DEVCFG1_FPBDIV_2        0x00001000 /* SYSCLK / 2 */
