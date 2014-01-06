@@ -75,11 +75,11 @@ int calc_step()
             ik1302.M[(ik1302.cycle - 1 + REG_NWORDS) % REG_NWORDS] = fifo2.output;
         }
 
-        if (k >= 552) {
+        i = k % 14;
+        if (i >= 12) {
             // Clear display.
             calc_display (-1, 0, 0);
         } else {
-            i = k % 12;
             if (ik1302.enable_display) {
                 if (i < 3) {
                     // Exponent.
@@ -91,6 +91,16 @@ int calc_step()
                     dot = ik1302.show_dot [i - 2];
                 }
                 ik1302.enable_display = 0;
+            } else if (ik1302.dot == 11 && k < 14) {
+                // Run mode.
+                if (i < 3) {
+                    // Exponent.
+                    digit = ik1302.R [(i + 9) * 3];
+                } else {
+                    // Mantissa.
+                    digit = ik1302.R [(i - 3) * 3];
+                }
+                dot = 1;
             } else {
                 // Clear display.
                 digit = -1;
