@@ -35,7 +35,7 @@ void fifo_init (fifo_t *t)
         t->data[i] = 0;
     t->input = 0;
     t->output = 0;
-    t->ucycle = 0;
+    t->cycle = 0;
 }
 
 //
@@ -43,9 +43,9 @@ void fifo_init (fifo_t *t)
 //
 void fifo_step (fifo_t *t)
 {
-    if (t->ucycle >= FIFO_NWORDS)
-        t->ucycle = 0;
-    t->output = t->data[t->ucycle];
-    t->data[t->ucycle] = t->input;
-    t->ucycle++;
+    if (t->cycle >= FIFO_NWORDS)
+        t->cycle = 0;
+    t->output = t->data[t->cycle];
+    t->data[t->cycle] = t->input;
+    t->cycle++;
 }

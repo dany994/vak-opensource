@@ -31,7 +31,7 @@
 typedef struct {
     unsigned input;                     // Input word
     unsigned output;                    // Output word
-    unsigned ucycle;                    // Micro-cycle counter
+    unsigned cycle;                     // Cycle counter
     unsigned char data [FIFO_NWORDS];   // FIFO memory
 } fifo_t;
 
@@ -53,7 +53,7 @@ void fifo_step (fifo_t *t);
 typedef struct {
     unsigned input;                     // Input word
     unsigned output;                    // Output word
-    unsigned ucycle;                    // Micro-cycle counter
+    unsigned cycle;                     // Cycle counter
     unsigned char R [REG_NWORDS];       // R register
     unsigned char M [REG_NWORDS];       // M register
     unsigned char ST [REG_NWORDS];      // ST register
@@ -66,7 +66,6 @@ typedef struct {
     unsigned keyb_y;
     unsigned dot;
     unsigned PC;
-    unsigned MOD;
     unsigned enable_display;
     unsigned char show_dot [14];
     const unsigned *ucmd_rom;           // Micro-instructions

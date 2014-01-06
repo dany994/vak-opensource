@@ -72,7 +72,7 @@ int calc_step()
             fifo_step (&fifo1);
             fifo2.input = fifo1.output;
             fifo_step (&fifo2);
-            ik1302.M[((ik1302.ucycle >> 2) - 1 + REG_NWORDS) % REG_NWORDS] = fifo2.output;
+            ik1302.M[(ik1302.cycle - 1 + REG_NWORDS) % REG_NWORDS] = fifo2.output;
         }
 
         if (k >= 552) {
