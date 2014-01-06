@@ -27,12 +27,12 @@
 //
 // Initialize the PLM data structure.
 //
-void plm_init (plm_t *t, const unsigned ucmd_rom[],
+void plm_init (plm_t *t, const unsigned inst_rom[],
     const unsigned cmd_rom[], const unsigned char prog_rom[])
 {
     int i;
 
-    t->ucmd_rom = ucmd_rom;
+    t->inst_rom = inst_rom;
     t->cmd_rom = cmd_rom;
     t->prog_rom = prog_rom;
 
@@ -46,8 +46,8 @@ void plm_init (plm_t *t, const unsigned ucmd_rom[],
     t->cycle = 0;
     t->S = 0;
     t->S1 = 0;
-    t->L = 0;
-    t->T = 0;
+    t->carry = 0;
+    t->keypad_event = 0;
     t->opcode = 0;
     t->keyb_x = 0;
     t->keyb_y = 0;
@@ -64,95 +64,114 @@ void plm_init (plm_t *t, const unsigned ucmd_rom[],
 //
 void plm_step (plm_t *t)
 {
-    const unsigned char remap[] = {
-        0, 1, 2, 3, 4, 5,
-        3, 4, 5, 3, 4, 5,
-        3, 4, 5, 3, 4, 5,
-        3, 4, 5, 3, 4, 5,
-        6, 7, 8, 0, 1, 2,
-        3, 4, 5, 6, 7, 8,
-        0, 1, 2, 3, 4, 5,
-    };
-    unsigned signal_d = t->cycle / 3;
+    unsigned d = t->cycle / 3;          // in range 0...13
 
+    /*
+     * Fetch program counter from the R register.
+     */
     if (t->cycle == 0) {
         t->PC = t->R[36] + 16 * t->R[39];
         if ((t->cmd_rom[t->PC] & 0xfc0000) == 0)
-            t->T = 0;
+            t->keypad_event = 0;
     }
 
-    unsigned asp;
-    unsigned k = t->cycle / 9;
-
-    if (k < 3)
-        asp = t->cmd_rom[t->PC] & 0xff;
-    else if (k == 3)
-        asp = (t->cmd_rom[t->PC] >> 8) & 0xff;
+    /*
+     * Use PC to get the program index.
+     */
+    unsigned prog_index;
+    if (t->cycle < 27)
+        prog_index = t->cmd_rom[t->PC] & 0xff;
+    else if (t->cycle < 36)
+        prog_index = (t->cmd_rom[t->PC] >> 8) & 0xff;
     else {
-        asp =(t->cmd_rom[t->PC] >> 16) & 0xff;
-        if (asp > 0x1f) {
+        prog_index = (t->cmd_rom[t->PC] >> 16) & 0xff;
+        if (prog_index > 0x1f) {
             if (t->cycle == 36) {
-                t->R[37] = asp & 0xf;
-                t->R[40] = asp >> 4;
+                t->R[37] = prog_index & 0xf;
+                t->R[40] = prog_index >> 4;
             }
-            asp = 0x5f;
+            prog_index = 0x5f;
         }
     }
-    unsigned mod = (t->cmd_rom[t->PC] >> 24) & 0xff;
+    unsigned modifier = (t->cmd_rom[t->PC] >> 24) & 0xff;
 
-    unsigned amk = t->prog_rom[asp*9 + remap[t->cycle]] & 0x3f;
-    if (amk > 59) {
-        amk = (amk - 60) * 2;
-        if (t->L == 0)
-            amk++;
-        amk += 60;
+    /*
+     * Fetch the instruction opcode.
+     */
+    const unsigned char remap[42] = {
+        0, 1, 2, 3, 4, 5, 3, 4, 5, 3, 4, 5, 3, 4,
+        5, 3, 4, 5, 3, 4, 5, 3, 4, 5, 6, 7, 8, 0,
+        1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5,
+    };
+    unsigned inst_addr = t->prog_rom[prog_index*9 + remap[t->cycle]] & 0x3f;
+    if (inst_addr > 59) {
+        inst_addr = (inst_addr - 60) * 2;
+        if (! t->carry)
+            inst_addr++;
+        inst_addr += 60;
     }
-    t->opcode = t->ucmd_rom[amk];
+    t->opcode = t->inst_rom[inst_addr];
 
+    /*
+     * Execute the opcode.
+     */
     unsigned alpha = 0, beta = 0, gamma = 0;
     switch ((t->opcode >> 24) & 3) {
     case 2:
     case 3:
-        if (signal_d != (t->keyb_x - 1) && t->keyb_y > 0)
+        if (d != (t->keyb_x - 1) && t->keyb_y > 0)
             t->S1 |= t->keyb_y;
         break;
     }
     if (t->opcode & 1)     alpha |= t->R[t->cycle];
     if (t->opcode & 2)     alpha |= t->M[t->cycle];
     if (t->opcode & 4)     alpha |= t->ST[t->cycle];
-    if (t->opcode & 8)     alpha |= ~t->R[t->cycle] & 0xf;
-    if (t->opcode & 0x10 && t->L == 0) alpha |= 0xa;
+    if (t->opcode & 8)     alpha |= t->R[t->cycle] ^ 0xf;
+    if (t->opcode & 0x10
+        && ! t->carry)     alpha |= 0xa;
     if (t->opcode & 0x20)  alpha |= t->S;
     if (t->opcode & 0x40)  alpha |= 4;
-    if (t->opcode & 0x800) beta |= 1;
-    if (t->opcode & 0x400) beta |= 6;
-    if (t->opcode & 0x200) beta |= t->S1;
-    if (t->opcode & 0x100) beta |= ~t->S & 0xf;
-    if (t->opcode & 0x80)  beta |= t->S;
 
+    if (t->opcode & 0x80)  beta |= t->S;
+    if (t->opcode & 0x100) beta |= t->S ^ 0xf;
+    if (t->opcode & 0x200) beta |= t->S1;
+    if (t->opcode & 0x400) beta |= 6;
+    if (t->opcode & 0x800) beta |= 1;
+
+    /*
+     * Poll keypad.
+     */
     if (t->cmd_rom[t->PC] & 0xfc0000) {
         if (t->keyb_y == 0)
-            t->T = 0;
+            t->keypad_event = 0;
     } else {
         t->enable_display = 1;
-        if (signal_d == (t->keyb_x - 1)) {
+        if (d == (t->keyb_x - 1)) {
             if (t->keyb_y > 0) {
                 t->S1 = t->keyb_y;
-                t->T = 1;
+                t->keypad_event = 1;
             }
         }
-        if (signal_d < 12 && t->L > 0)
-            t->dot = signal_d;
-        t->show_dot[signal_d] = (t->L > 0);
+        if (t->carry && d < 12)
+            t->dot = d;
+        t->show_dot[d] = t->carry;
     }
-    if (t->opcode & 0x4000) gamma = ~t->T & 1;
-    if (t->opcode & 0x2000) gamma |= ~t->L & 1;
-    if (t->opcode & 0x1000) gamma |= t->L & 1;
+    if (t->opcode & 0x1000) gamma |= t->carry;
+    if (t->opcode & 0x2000) gamma |= t->carry ^ 1;
+    if (t->opcode & 0x4000) gamma |= t->keypad_event ^ 1;
 
+    /*
+     * Update carry bit.
+     */
     unsigned sum = alpha + beta + gamma;
     unsigned sigma = sum & 0xf;
-    unsigned carry = (sum >> 4) & 1;
-    if (mod == 0 || t->cycle >= 36) {
+    if ((t->opcode >> 21) & 1)
+        t->carry = (sum >> 4) & 1;
+
+    if (modifier == 0 || t->cycle >= 36) {
+        /*
+         * Update R register.
+         */
         switch ((t->opcode >> 15) & 7) {
         case 1: t->R[t->cycle] = t->R[(t->cycle + 3) % REG_NWORDS]; break;
         case 2: t->R[t->cycle] = sigma;                             break;
@@ -167,8 +186,10 @@ void plm_step (plm_t *t)
         if ((t->opcode >> 19) & 1)
             t->R[(t->cycle - 2 + REG_NWORDS) % REG_NWORDS] = sigma;
     }
-    if ((t->opcode >> 21) & 1)
-        t->L = carry;
+
+    /*
+     * Update M register.
+     */
     if ((t->opcode >> 20) & 1)
         t->M[t->cycle] = t->S;
 
@@ -183,6 +204,9 @@ void plm_step (plm_t *t)
     case 3: t->S1 |= sigma;         break;
     }
 
+    /*
+     * Update ST register.
+     */
     unsigned x, y, z;
     switch ((t->opcode >> 26) & 3) {
     case 1:
@@ -205,9 +229,16 @@ void plm_step (plm_t *t)
         t->ST[(t->cycle + 2) % REG_NWORDS] = y | x;
         break;
     }
+
+    /*
+     * Store input, pass output.
+     */
     t->output = t->M[t->cycle] & 0xf;
     t->M[t->cycle] = t->input;
 
+    /*
+     * Increase the cycle counter.
+     */
     t->cycle++;
     if (t->cycle >= REG_NWORDS)
         t->cycle = 0;
