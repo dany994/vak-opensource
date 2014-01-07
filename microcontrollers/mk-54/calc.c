@@ -53,6 +53,7 @@ void calc_init()
 int calc_step()
 {
     int k, i, digit, dot;
+    unsigned cycle;
 
     for (k=0; k<560; k++) {
         // Scan keypad.
@@ -63,16 +64,16 @@ int calc_step()
         ik1303.keyb_y = 1;
 
         // Do computations.
-        for (i=0; i<REG_NWORDS; i++) {
+        for (cycle=0; cycle<REG_NWORDS; cycle++) {
             ik1302.input = fifo2.output;
-            plm_step (&ik1302);
+            plm_step (&ik1302, cycle);
             ik1303.input = ik1302.output;
-            plm_step (&ik1303);
+            plm_step (&ik1303, cycle);
             fifo1.input = ik1303.output;
             fifo_step (&fifo1);
             fifo2.input = fifo1.output;
             fifo_step (&fifo2);
-            ik1302.M[(ik1302.cycle - 1 + REG_NWORDS) % REG_NWORDS] = fifo2.output;
+            ik1302.M[cycle] = fifo2.output;
         }
 
         i = k % 14;
@@ -80,33 +81,28 @@ int calc_step()
             // Clear display.
             calc_display (-1, 0, 0);
         } else {
-            if (ik1302.enable_display) {
-                if (i < 3) {
-                    // Exponent.
-                    digit = ik1302.R [(i + 9) * 3];
-                    dot = ik1302.show_dot [i + 10];
-                } else {
-                    // Mantissa.
-                    digit = ik1302.R [(i - 3) * 3];
-                    dot = ik1302.show_dot [i - 2];
-                }
+            if (i < 3) {
+                // Exponent.
+                digit = ik1302.R [(i + 9) * 3];
+                dot = ik1302.show_dot [i + 10];
+            } else {
+                // Mantissa.
+                digit = ik1302.R [(i - 3) * 3];
+                dot = ik1302.show_dot [i - 2];
+            }
+
+            if (ik1302.dot == 11) {
+                // Run mode: blink once per step with dots enabled.
+                calc_display (i, k < 14 ? digit : -1, 1);
+
+            } else if (ik1302.enable_display) {
+                // Manual mode.
+                calc_display (i, digit, dot);
                 ik1302.enable_display = 0;
-            } else if (ik1302.dot == 11 && k < 14) {
-                // Run mode.
-                if (i < 3) {
-                    // Exponent.
-                    digit = ik1302.R [(i + 9) * 3];
-                } else {
-                    // Mantissa.
-                    digit = ik1302.R [(i - 3) * 3];
-                }
-                dot = 1;
             } else {
                 // Clear display.
-                digit = -1;
-                dot = -1;
+                calc_display (i, -1, -1);
             }
-            calc_display (i, digit, dot);
         }
     }
     return (ik1302.dot == 11);

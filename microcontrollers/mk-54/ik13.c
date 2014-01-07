@@ -43,7 +43,6 @@ void plm_init (plm_t *t, const unsigned inst_rom[],
     }
     t->input = 0;
     t->output = 0;
-    t->cycle = 0;
     t->S = 0;
     t->S1 = 0;
     t->carry = 0;
@@ -62,14 +61,15 @@ void plm_init (plm_t *t, const unsigned inst_rom[],
 //
 // Simulate one cycle of the PLM chip.
 //
-void plm_step (plm_t *t)
+void plm_step (plm_t *t, unsigned cycle)
 {
-    unsigned d = t->cycle / 3;          // in range 0...13
+    /* D stage in range 0...13 */
+    unsigned d = cycle / 3;
 
     /*
      * Fetch program counter from the R register.
      */
-    if (t->cycle == 0) {
+    if (cycle == 0) {
         t->PC = t->R[36] + 16 * t->R[39];
         if ((t->cmd_rom[t->PC] & 0xfc0000) == 0)
             t->keypad_event = 0;
@@ -79,14 +79,14 @@ void plm_step (plm_t *t)
      * Use PC to get the program index.
      */
     unsigned prog_index;
-    if (t->cycle < 27)
+    if (cycle < 27)
         prog_index = t->cmd_rom[t->PC] & 0xff;
-    else if (t->cycle < 36)
+    else if (cycle < 36)
         prog_index = (t->cmd_rom[t->PC] >> 8) & 0xff;
     else {
         prog_index = (t->cmd_rom[t->PC] >> 16) & 0xff;
         if (prog_index > 0x1f) {
-            if (t->cycle == 36) {
+            if (cycle == 36) {
                 t->R[37] = prog_index & 0xf;
                 t->R[40] = prog_index >> 4;
             }
@@ -103,7 +103,7 @@ void plm_step (plm_t *t)
         5, 3, 4, 5, 3, 4, 5, 3, 4, 5, 6, 7, 8, 0,
         1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5,
     };
-    unsigned inst_addr = t->prog_rom[prog_index*9 + remap[t->cycle]] & 0x3f;
+    unsigned inst_addr = t->prog_rom[prog_index*9 + remap[cycle]] & 0x3f;
     if (inst_addr > 59) {
         inst_addr = (inst_addr - 60) * 2;
         if (! t->carry)
@@ -123,15 +123,18 @@ void plm_step (plm_t *t)
             t->S1 |= t->keyb_y;
         break;
     }
-    if (t->opcode & 1)     alpha |= t->R[t->cycle];
-    if (t->opcode & 2)     alpha |= t->M[t->cycle];
-    if (t->opcode & 4)     alpha |= t->ST[t->cycle];
-    if (t->opcode & 8)     alpha |= t->R[t->cycle] ^ 0xf;
-    if (t->opcode & 0x10
-        && ! t->carry)     alpha |= 0xa;
-    if (t->opcode & 0x20)  alpha |= t->S;
-    if (t->opcode & 0x40)  alpha |= 4;
 
+    /* Alpha. */
+    if (t->opcode & 1)    alpha |= t->R[cycle];
+    if (t->opcode & 2)    alpha |= t->M[cycle];
+    if (t->opcode & 4)    alpha |= t->ST[cycle];
+    if (t->opcode & 8)    alpha |= t->R[cycle] ^ 0xf;
+    if (t->opcode & 0x10
+        && ! t->carry)    alpha |= 0xa;
+    if (t->opcode & 0x20) alpha |= t->S;
+    if (t->opcode & 0x40) alpha |= 4;
+
+    /* Beta. */
     if (t->opcode & 0x80)  beta |= t->S;
     if (t->opcode & 0x100) beta |= t->S ^ 0xf;
     if (t->opcode & 0x200) beta |= t->S1;
@@ -156,6 +159,8 @@ void plm_step (plm_t *t)
             t->dot = d;
         t->show_dot[d] = t->carry;
     }
+
+    /* Gamma. */
     if (t->opcode & 0x1000) gamma |= t->carry;
     if (t->opcode & 0x2000) gamma |= t->carry ^ 1;
     if (t->opcode & 0x4000) gamma |= t->keypad_event ^ 1;
@@ -168,30 +173,30 @@ void plm_step (plm_t *t)
     if ((t->opcode >> 21) & 1)
         t->carry = (sum >> 4) & 1;
 
-    if (modifier == 0 || t->cycle >= 36) {
+    if (modifier == 0 || cycle >= 36) {
         /*
          * Update R register.
          */
         switch ((t->opcode >> 15) & 7) {
-        case 1: t->R[t->cycle] = t->R[(t->cycle + 3) % REG_NWORDS]; break;
-        case 2: t->R[t->cycle] = sigma;                             break;
-        case 3: t->R[t->cycle] = t->S;                              break;
-        case 4: t->R[t->cycle] = t->R[t->cycle] | t->S | sigma;     break;
-        case 5: t->R[t->cycle] = t->S | sigma;                      break;
-        case 6: t->R[t->cycle] = t->R[t->cycle] | t->S;             break;
-        case 7: t->R[t->cycle] = t->R[t->cycle] | sigma;            break;
+        case 1: t->R[cycle] = t->R[(cycle + 3) % REG_NWORDS];   break;
+        case 2: t->R[cycle] = sigma;                            break;
+        case 3: t->R[cycle] = t->S;                             break;
+        case 4: t->R[cycle] = t->R[cycle] | t->S | sigma;       break;
+        case 5: t->R[cycle] = t->S | sigma;                     break;
+        case 6: t->R[cycle] = t->R[cycle] | t->S;               break;
+        case 7: t->R[cycle] = t->R[cycle] | sigma;              break;
         }
         if ((t->opcode >> 18) & 1)
-            t->R[(t->cycle - 1 + REG_NWORDS) % REG_NWORDS] = sigma;
+            t->R[(cycle - 1 + REG_NWORDS) % REG_NWORDS] = sigma;
         if ((t->opcode >> 19) & 1)
-            t->R[(t->cycle - 2 + REG_NWORDS) % REG_NWORDS] = sigma;
+            t->R[(cycle - 2 + REG_NWORDS) % REG_NWORDS] = sigma;
     }
 
     /*
      * Update M register.
      */
     if ((t->opcode >> 20) & 1)
-        t->M[t->cycle] = t->S;
+        t->M[cycle] = t->S;
 
     switch ((t->opcode >> 22) & 3) {
     case 1: t->S = t->S1;           break;
@@ -210,36 +215,29 @@ void plm_step (plm_t *t)
     unsigned x, y, z;
     switch ((t->opcode >> 26) & 3) {
     case 1:
-        t->ST[(t->cycle + 2) % REG_NWORDS] = t->ST[(t->cycle + 1) % REG_NWORDS];
-        t->ST[(t->cycle + 1) % REG_NWORDS] = t->ST[t->cycle];
-        t->ST[t->cycle] = sigma;
+        t->ST[(cycle + 2) % REG_NWORDS] = t->ST[(cycle + 1) % REG_NWORDS];
+        t->ST[(cycle + 1) % REG_NWORDS] = t->ST[cycle];
+        t->ST[cycle] = sigma;
         break;
     case 2:
-        x = t->ST[t->cycle];
-        t->ST[t->cycle] = t->ST[(t->cycle + 1) % REG_NWORDS];
-        t->ST[(t->cycle + 1) % REG_NWORDS] = t->ST[(t->cycle + 2) % REG_NWORDS];
-        t->ST[(t->cycle + 2) % REG_NWORDS] = x;
+        x = t->ST[cycle];
+        t->ST[cycle] = t->ST[(cycle + 1) % REG_NWORDS];
+        t->ST[(cycle + 1) % REG_NWORDS] = t->ST[(cycle + 2) % REG_NWORDS];
+        t->ST[(cycle + 2) % REG_NWORDS] = x;
         break;
     case 3:
-        x = t->ST[t->cycle];
-        y = t->ST[(t->cycle + 1) % REG_NWORDS];
-        z = t->ST[(t->cycle + 2) % REG_NWORDS];
-        t->ST[(t->cycle + 0) % REG_NWORDS] = sigma | y;
-        t->ST[(t->cycle + 1) % REG_NWORDS] = x | z;
-        t->ST[(t->cycle + 2) % REG_NWORDS] = y | x;
+        x = t->ST[cycle];
+        y = t->ST[(cycle + 1) % REG_NWORDS];
+        z = t->ST[(cycle + 2) % REG_NWORDS];
+        t->ST[cycle] = sigma | y;
+        t->ST[(cycle + 1) % REG_NWORDS] = x | z;
+        t->ST[(cycle + 2) % REG_NWORDS] = y | x;
         break;
     }
 
     /*
      * Store input, pass output.
      */
-    t->output = t->M[t->cycle] & 0xf;
-    t->M[t->cycle] = t->input;
-
-    /*
-     * Increase the cycle counter.
-     */
-    t->cycle++;
-    if (t->cycle >= REG_NWORDS)
-        t->cycle = 0;
+    t->output = t->M[cycle] & 0xf;
+    t->M[cycle] = t->input;
 }
