@@ -10,7 +10,7 @@ GDB             = /usr/local/mips-gcc-4.7.2/bin/mips-elf-gdb
 CFLAGS          = -O3 -Wall -Werror
 LDFLAGS         = -e _start
 
-OBJS            = ir2.o ik13.o mk-54.o
+OBJS            = ir2.o ik13.o calc.o
 
 #
 # Olimex T795 board with pic32mx7 processor.
@@ -47,6 +47,6 @@ debug:          $(PROG).srec
 ###
 ik13.o: ik13.c calc.h
 ir2.o: ir2.c calc.h
-mk-54.o: mk-54.c calc.h ik1302.c ik1303.c
+calc.o: calc.c calc.h ik1302.c ik1303.c
 bare-mx2.o: bare-mx2.c calc.h pic32mx.h
 olimex-mx7.o: olimex-mx7.c calc.h pic32mx.h

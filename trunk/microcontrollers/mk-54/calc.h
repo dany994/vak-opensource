@@ -24,28 +24,6 @@
  */
 
 //
-// FIFO serial memory chip К145ИР2.
-//
-#define FIFO_NWORDS 252                 // Number of words in FIFO chip
-
-typedef struct {
-    unsigned input;                     // Input word
-    unsigned output;                    // Output word
-    unsigned cycle;                     // Cycle counter
-    unsigned char data [FIFO_NWORDS];   // FIFO memory
-} fifo_t;
-
-//
-// Initialize the FIFO register data structure.
-//
-void fifo_init (fifo_t *t);
-
-//
-// Simulate one cycle of the FIFO chip.
-//
-void fifo_step (fifo_t *t);
-
-//
 // Specialized PLM chips К145ИК130x.
 //
 #define REG_NWORDS  42                  // Number of words in data register
@@ -53,7 +31,6 @@ void fifo_step (fifo_t *t);
 typedef struct {
     unsigned input;                     // Input word
     unsigned output;                    // Output word
-    unsigned cycle;                     // Cycle counter
     unsigned char R [REG_NWORDS];       // R register
     unsigned char M [REG_NWORDS];       // M register
     unsigned char ST [REG_NWORDS];      // ST register
@@ -82,7 +59,29 @@ void plm_init (plm_t *t, const unsigned inst_rom[],
 //
 // Simulate one cycle of the PLM chip.
 //
-void plm_step (plm_t *t);
+void plm_step (plm_t *t, unsigned cycle);
+
+//
+// FIFO serial memory chip К145ИР2.
+//
+#define FIFO_NWORDS (6*REG_NWORDS)      // Number of words in FIFO chip
+
+typedef struct {
+    unsigned input;                     // Input word
+    unsigned output;                    // Output word
+    unsigned cycle;                     // Cycle counter
+    unsigned char data [FIFO_NWORDS];   // FIFO memory
+} fifo_t;
+
+//
+// Initialize the FIFO register data structure.
+//
+void fifo_init (fifo_t *t);
+
+//
+// Simulate one cycle of the FIFO chip.
+//
+void fifo_step (fifo_t *t);
 
 //
 // Initialize the calculator.
