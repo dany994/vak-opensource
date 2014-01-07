@@ -42,7 +42,7 @@ typedef struct {
     unsigned keyb_x;
     unsigned keyb_y;
     unsigned dot;
-    unsigned PC;
+    unsigned command;
     unsigned enable_display;
     unsigned char show_dot [14];
     const unsigned *inst_rom;           // Micro-instructions
