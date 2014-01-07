@@ -23,6 +23,7 @@
  * this software.
  */
 #include "calc.h"
+//#include <stdio.h>
 
 //
 // MK-54 calculator consists of two PLM chips ИК1301 and ИК1303,
@@ -75,6 +76,26 @@ int calc_step()
             fifo_step (&fifo2);
             ik1302.M[cycle] = fifo2.output;
         }
+#if 0
+        if (ik1302.dot == 11 && k%14 == 0) {
+            printf ("             %-2u :", k/14);
+            for (i=0; i<12; i++) {
+                if (11-i < 3) {
+                    // Exponent.
+                    digit = ik1302.R [(11-i + 9) * 3];
+                    dot = ik1302.show_dot [11-i + 10];
+                } else {
+                    // Mantissa.
+                    digit = ik1302.R [(11-i - 3) * 3];
+                    dot = ik1302.show_dot [11-i - 2];
+                }
+                putchar ("0123456789-LCRE " [digit]);
+                if (dot)
+                    putchar ('.');
+            }
+            printf ("' (%x %x) %08x\n", ik1302.R[39], ik1302.R[36], ik1302.command);
+        }
+#endif
 
         i = k % 14;
         if (i >= 12) {
@@ -93,7 +114,9 @@ int calc_step()
 
             if (ik1302.dot == 11) {
                 // Run mode: blink once per step with dots enabled.
-                calc_display (i, k < 14 ? digit : -1, 1);
+                if (ik1302.command != 0x00117360)
+                    digit = -1;
+                calc_display (i, digit, 1);
 
             } else if (ik1302.enable_display) {
                 // Manual mode.
