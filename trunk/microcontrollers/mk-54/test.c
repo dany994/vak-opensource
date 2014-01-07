@@ -7,6 +7,7 @@
 // Test from MK-54 user manual.
 //
 static const unsigned char test[] = {
+#if 1
     KEY_F, 0,       KEY_ADD, 0,                 // 1: F pi
     KEY_F, 0,       KEY_3, 0,                   // 2: F ln
     KEY_F, 0,       KEY_2, 0,                   // 3: F lg
@@ -111,7 +112,25 @@ static const unsigned char test[] = {
     KEY_EXP, 0,                                 // 100: ВП
     MODE_GRADS,
     KEY_F, 0,       KEY_7, 0,                   // 101: F sin
-
+#endif
+#if 0
+    KEY_RET, 0,                                 // B/O
+    KEY_F, 0,       KEY_EXP, 0,                 // F ПРГ
+    KEY_1, 0,                                   // 1
+    KEY_2, 0,                                   // 2
+    KEY_3, 0,                                   // 3
+    KEY_4, 0,                                   // 4
+    KEY_5, 0,                                   // 5
+    KEY_6, 0,                                   // 6
+    KEY_7, 0,                                   // 7
+    KEY_8, 0,                                   // 8
+    KEY_9, 0,                                   // 9
+    KEY_GOTO, 0,                                // БП
+    KEY_0, 0,       KEY_0, 0,                   // 0 0
+    KEY_F, 0,       KEY_NEG, 0,                 // F ABT
+    KEY_RET, 0,                                 // B/O
+    KEY_STOPGO, 0,                              // С/П
+#endif
     0xff,
 };
 

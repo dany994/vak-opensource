@@ -66,7 +66,7 @@ asm ("          .text");
 /*
  * Display a symbol on 7-segment LED
  */
-void set_segments (unsigned digit, unsigned dot)
+void set_segments (unsigned digit, unsigned dot, int upper_flag)
 {
     static const unsigned segments[16] = {
     //- A - B - C - D - E -- F -- G --
@@ -97,6 +97,8 @@ void set_segments (unsigned digit, unsigned dot)
     case ' ': digit = 15; break;
     }
     unsigned mask = segments [digit & 15];
+    if (upper_flag)
+        mask &= ~(4 + 8 + 16);
 
     if (mask & 1)   TRISBCLR = PIN(0);  // segment A - signal RB0
     if (mask & 2)   TRISBCLR = PIN(1);  // segment B - signal RB1
@@ -238,8 +240,8 @@ void calc_display (int i, int digit, int dot)
         clk();                          // toggle clock
         data (-1);                      // tristate data
 
-        if (digit >= 0)
-            set_segments (digit, dot);  // display a digit
+        if (digit >= 0)                 // display a digit
+            set_segments (digit, dot, i==2);
 
         if (i < 8) {                    // scan keypad
             int key = scan_keys (i);

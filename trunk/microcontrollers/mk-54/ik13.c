@@ -70,7 +70,7 @@ void plm_step (plm_t *t, unsigned cycle)
      * Fetch program counter from the R register.
      */
     if (cycle == 0) {
-        unsigned pc = t->R[36] + 16 * t->R[39];
+        unsigned pc = t->R[36] + (t->R[39] << 4);
 
         t->command = t->cmd_rom[pc];
         if ((t->command & 0xfc0000) == 0)
@@ -106,11 +106,10 @@ void plm_step (plm_t *t, unsigned cycle)
         1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5,
     };
     unsigned inst_addr = t->prog_rom[prog_index*9 + remap[cycle]] & 0x3f;
-    if (inst_addr > 59) {
-        inst_addr = (inst_addr - 60) * 2;
+    if (inst_addr >= 60) {
+        inst_addr += inst_addr - 60;
         if (! t->carry)
             inst_addr++;
-        inst_addr += 60;
     }
     t->opcode = t->inst_rom[inst_addr];
 
