@@ -401,9 +401,18 @@ int main()
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
+    /* Copy the .data image from flash to ram.
+     * Linker places it at the end of .text segment. */
+    extern void _etext();
+    extern unsigned __data_start, _edata;
+    unsigned *src = (unsigned*) &_etext;
+    unsigned *dest = &__data_start;
+    while (dest < &_edata)
+        *dest++ = *src++;
+
     /* Initialize .bss segment by zeroes. */
-    extern unsigned _edata, _end;
-    unsigned *dest = &_edata;
+    extern unsigned _end;
+    dest = &_edata;
     while (dest < &_end)
         *dest++ = 0;
 
@@ -416,13 +425,15 @@ int main()
     /* Disable JTAG ports, to make more pins available. */
     CFGCON &= (1 << 3);                 // clear JTAGEN
 
-    PMCON = 0;
-
     /* Use all ports as digital. */
     ANSELA = 0;
     ANSELB = 0;
     LATA = 0;
     LATB = 0;
+
+    USBDeviceInit();                    // initialize USB port
+
+    PMCON = 0;
 
     /* Input pins: keypad.
      * Enable pull-down resistors. */
@@ -439,8 +450,6 @@ int main()
 
     /* Output/tristate pins: segments A-G and dot. */
     clear_segments();
-
-    USBDeviceInit();                    // initialize USB port
 
     int i;
     data (0);                           // clear data

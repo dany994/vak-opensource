@@ -108,7 +108,7 @@ SECTIONS
   {
    __bss_start = .;
    *(.dynbss)
-   *(.sbss)
+   *(.sbss .sbss.*)
    *(.scommon)
    *(.bss .bss.* .gnu.linkonce.b.*)
    *(COMMON)

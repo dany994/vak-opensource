@@ -312,7 +312,7 @@ typedef struct _USB_HID_DSC
 
 } USB_HID_DSC;
 
-extern unsigned char hid_rpt_rx_len;
+extern unsigned hid_rpt_rx_len;
 
 void USBCheckHIDRequest(void);
 

@@ -32,20 +32,20 @@
     #error "PIC32 only supports full ping pong mode."
 #endif
 
-USB_VOLATILE unsigned char USBDeviceState;
-USB_VOLATILE unsigned char USBActiveConfiguration;
+USB_VOLATILE unsigned USBDeviceState;
+USB_VOLATILE unsigned USBActiveConfiguration;
 USB_VOLATILE unsigned char USBAlternateInterface[USB_MAX_NUM_INT];
 volatile BDT_ENTRY *pBDTEntryEP0OutCurrent;
 volatile BDT_ENTRY *pBDTEntryEP0OutNext;
 volatile BDT_ENTRY *pBDTEntryOut[USB_MAX_EP_NUMBER+1];
 volatile BDT_ENTRY *pBDTEntryIn[USB_MAX_EP_NUMBER+1];
-USB_VOLATILE unsigned char shortPacketStatus;
-USB_VOLATILE unsigned char controlTransferState;
+USB_VOLATILE unsigned shortPacketStatus;
+USB_VOLATILE unsigned controlTransferState;
 USB_VOLATILE IN_PIPE inPipes[1];
 USB_VOLATILE OUT_PIPE outPipes[1];
 USB_VOLATILE unsigned char *pDst;
 USB_VOLATILE bool_t RemoteWakeup;
-USB_VOLATILE unsigned char USTATcopy;
+USB_VOLATILE unsigned USTATcopy;
 USB_VOLATILE uint16_t USBInMaxPacketSize[USB_MAX_EP_NUMBER];
 USB_VOLATILE unsigned char *USBInData[USB_MAX_EP_NUMBER];
 
@@ -86,7 +86,7 @@ unsigned nb_inits = 0;
 void USBDeviceInit(void)
 {
 //debug_printf ("USBDeviceInit\n");
-    unsigned char i;
+    unsigned i;
 
     nb_inits++;
 
@@ -183,7 +183,7 @@ static unsigned char *ConvertToPhysicalAddress (volatile void *vaddr)
  */
 void USBDeviceTasks(void)
 {
-    unsigned char i;
+    unsigned i;
 
 #ifdef USB_SUPPORT_OTG
     //SRP Time Out Check
@@ -230,7 +230,7 @@ void USBDeviceTasks(void)
 
         // Enable module & attach to bus
         while (! (U1CON & PIC32_U1CON_USBEN)) {
-		U1CON |= PIC32_U1CON_USBEN;
+            U1CON |= PIC32_U1CON_USBEN;
 	}
 
         //moved to the attached state
@@ -279,7 +279,7 @@ void USBDeviceTasks(void)
     if(USBActivityIF && USBActivityIE)
     {
         #if defined(USB_SUPPORT_OTG)
-        USBClearInterruptFlag(USBActivityIFReg,USBActivityIFBitNum);
+            USBClearInterruptFlag(USBActivityIFReg,USBActivityIFBitNum);
             U1OTGIR = 0x10;
         #else
             USBWakeFromSuspend();
@@ -649,7 +649,7 @@ void USBCtrlTrfOutHandler(void)
 void USBCtrlTrfInHandler(void)
 {
 //debug_printf ("USBCtrlTrfInHandler, pBDTEntryIn[0] = %08X\n", pBDTEntryIn[0]);
-    unsigned char lastDTS;
+    unsigned lastDTS;
 
     lastDTS = pBDTEntryIn[0]->STAT.DTS;
 
@@ -738,7 +738,7 @@ void USBPrepareForNextSetupTrf(void)
        (pBDTEntryEP0OutCurrent->STAT.PID == SETUP_TOKEN) &&
        (pBDTEntryEP0OutNext->STAT.UOWN == 0))
     {
-        unsigned char setup_cnt;
+        unsigned setup_cnt;
 
         pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&SetupPkt);
 
@@ -1327,8 +1327,8 @@ void USBCtrlTrfTxService(void)
 void USBCtrlTrfRxService(void)
 {
 //debug_printf ("USBCtrlTrfRxService\n");
-    unsigned char byteToRead;
-    unsigned char i;
+    unsigned byteToRead;
+    unsigned i;
 
     byteToRead = pBDTEntryEP0OutCurrent->CNT;
 
@@ -1425,7 +1425,7 @@ void USBStdSetCfgHandler(void)
  * Input: unsigned char EPNum - the endpoint to be configured
  *        unsigned char direction - the direction to be configured
  */
-void USBConfigureEndpoint (unsigned char EPNum, unsigned char direction)
+void USBConfigureEndpoint (unsigned EPNum, unsigned direction)
 {
 //debug_printf ("USBConfigureEndpoint\n");
     volatile BDT_ENTRY* handle;
@@ -1502,7 +1502,7 @@ void USBConfigureEndpoint (unsigned char EPNum, unsigned char direction)
  *                   * USB_DISALLOW_SETUP disables control transfers
  *                   * USB_STALL_ENDPOINT STALLs this endpoint
  */
-void USBEnableEndpoint (unsigned char ep, unsigned char options)
+void USBEnableEndpoint (unsigned ep, unsigned options)
 {
 //debug_printf ("USBEnableEndpoint\n");
     //Set the options to the appropriate endpoint control register
@@ -1531,7 +1531,7 @@ void USBEnableEndpoint (unsigned char ep, unsigned char options)
  *   unsigned char ep - the endpoint the data will be transmitted on
  *   unsigned char dir - the direction of the transfer
  */
-void USBStallEndpoint (unsigned char ep, unsigned char dir)
+void USBStallEndpoint (unsigned ep, unsigned dir)
 {
 //debug_printf ("USBStallEndpoint\n");
     BDT_ENTRY *p;
@@ -1575,7 +1575,7 @@ void USBStallEndpoint (unsigned char ep, unsigned char dir)
  *   unsigned char* data - pointer to the data to be sent
  *   unsigned char len - length of the data needing to be sent
  */
-USB_HANDLE USBTransferOnePacket (unsigned char ep, unsigned char dir, unsigned char* data, unsigned char len)
+USB_HANDLE USBTransferOnePacket (unsigned ep, unsigned dir, unsigned char* data, unsigned len)
 {
 //debug_printf ("USBTransferOnePacket\n");
     USB_HANDLE handle;
@@ -1629,7 +1629,7 @@ USB_HANDLE USBTransferOnePacket (unsigned char ep, unsigned char dir, unsigned c
  *   unsigned char* reg - the register address holding the interrupt flag
  *   unsigned char flag - the bit number needing to be cleared
  */
-void USBClearInterruptFlag(unsigned char* reg, unsigned char flag)
+void USBClearInterruptFlag(unsigned char* reg, unsigned flag)
 {
     *reg = (0x01<<flag);
 }
