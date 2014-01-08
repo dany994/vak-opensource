@@ -692,22 +692,7 @@
 #define U1BDTP2		PIC32_R8 (0x52C0) /* Buffer descriptor table pointer 2 */
 #define U1BDTP3		PIC32_R8 (0x52D0) /* Buffer descriptor table pointer 3 */
 #define U1CNFG1		PIC32_R8 (0x52E0) /* Debug and idle */
-#define U1EP0		PIC32_R8 (0x5300) /* Endpoint control */
-#define U1EP1		PIC32_R8 (0x5310)
-#define U1EP2		PIC32_R8 (0x5320)
-#define U1EP3		PIC32_R8 (0x5330)
-#define U1EP4		PIC32_R8 (0x5340)
-#define U1EP5		PIC32_R8 (0x5350)
-#define U1EP6		PIC32_R8 (0x5360)
-#define U1EP7		PIC32_R8 (0x5370)
-#define U1EP8		PIC32_R8 (0x5380)
-#define U1EP9		PIC32_R8 (0x5390)
-#define U1EP10		PIC32_R8 (0x53A0)
-#define U1EP11		PIC32_R8 (0x53B0)
-#define U1EP12		PIC32_R8 (0x53C0)
-#define U1EP13		PIC32_R8 (0x53D0)
-#define U1EP14		PIC32_R8 (0x53E0)
-#define U1EP15		PIC32_R8 (0x53F0)
+#define U1EP(n)         PIC32_R8 (0x5300 + (n << 4)) /* Endpoint control */
 
 /*
  * USB Control register.
@@ -965,10 +950,14 @@
  */
 #define OSCCON          PIC32_R (0xF000)
 #define OSCTUN          PIC32_R (0xF010)
+#if defined(PIC32MX2)
+#define CFGCON          PIC32_R (0xF200)        /* Configuration Control */
+#else
 #define DDPCON          PIC32_R (0xF200)        /* Debug Data Port Control */
-#define DDPCONCLR	PIC32_R (0xF204)
-#define DDPCONSET	PIC32_R (0xF208)
-#define DDPCONINV	PIC32_R (0xF20C)
+#define DDPCONCLR       PIC32_R (0xF204)
+#define DDPCONSET       PIC32_R (0xF208)
+#define DDPCONINV       PIC32_R (0xF20C)
+#endif
 #define DEVID           PIC32_R (0xF220)
 #define SYSKEY          PIC32_R (0xF230)
 #define RCON            PIC32_R (0xF600)
