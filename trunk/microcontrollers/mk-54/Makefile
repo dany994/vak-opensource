@@ -55,8 +55,14 @@ debug:          $(PROG).srec
 		$(GDB) $(PROG).elf
 
 ###
+calc.o: calc.c calc.h ik1302.c ik1303.c
 ik13.o: ik13.c calc.h
 ir2.o: ir2.c calc.h
-calc.o: calc.c calc.h ik1302.c ik1303.c
-bare-mx2.o: bare-mx2.c calc.h pic32mx.h
+mx1.o: mx1.c calc.h pic32mx.h
+mx2-usb.o: mx2-usb.c calc.h pic32mx.h usb-config.h usb.h usb-common.h \
+ usb-ch9.h usb-hal.h usb-hal-pic32.h usb-device.h usb-function-hid.h
 mx7-olimex.o: mx7-olimex.c calc.h pic32mx.h
+usb-device.o: usb-device.c pic32mx.h usb-config.h usb.h usb-common.h \
+ usb-ch9.h usb-hal.h usb-hal-pic32.h usb-device.h
+usb-function-hid.o: usb-function-hid.c usb-config.h usb-device.h \
+ usb-ch9.h usb-hal.h usb-common.h usb-hal-pic32.h usb-function-hid.h

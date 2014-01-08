@@ -51,7 +51,8 @@
  * Chip configuration.
  */
 PIC32_DEVCFG (
-    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
+    DEVCFG0_DEBUG_DISABLED |    /* ICE debugger disabled */
+    DEVCFG0_JTAGDIS,            /* Disable JTAG port */
 
     DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
     DEVCFG1_POSCMOD_HS |        /* HS oscillator */
@@ -78,6 +79,102 @@ asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
 asm ("          jr      $ra");
 asm ("          .text");
+
+/*
+ * Process the received data (hid_report_out) and
+ * prepare the data for transmit (hid_report_in).
+ */
+static void process_data()
+{
+    unsigned int count;
+
+    // TODO
+    for (count=0; count<HID_OUTPUT_REPORT_BYTES; count++) {
+        hid_report_in[count] = hid_report_out[count];
+    }
+}
+
+/*
+ * This routine will poll for a received Input report, process it
+ * and send an Output report to the host.
+ * Both directions use interrupt transfers.
+ * The ownership of the USB buffers will change according
+ * to the required operation.
+ */
+static void send_receive()
+{
+    static int usb_state = 'r';
+    static USB_HANDLE last_transmit = 0;
+    static USB_HANDLE last_receive = 0;
+
+    switch (usb_state) {
+    case 'r':
+        if (! HIDRxHandleBusy (last_receive)) {
+            // The CPU owns the endpoint. Start receiving data.
+            last_receive = HIDRxPacket (HID_EP,
+                (unsigned char*) &hid_report_out,
+                HID_INT_OUT_EP_SIZE);
+            usb_state = 'p';
+        }
+        break;
+    case 'p':
+        if (! HIDRxHandleBusy (last_receive)) {
+            // The CPU owns the endpoint.
+            if (last_receive->CNT > 0) {
+                // Data was received. Copy it to the output buffer for sending.
+                process_data();
+
+                // Ready to transmit the received data back to the host.
+                usb_state = 't';
+            } else {
+                // No data was received. Return to checking for new received data.
+                usb_state = 'r';
+            }
+        }
+        break;
+    case 't':
+        if (! HIDTxHandleBusy (last_transmit)) {
+            // The CPU owns the endpoint. Start sending data.
+            last_transmit = HIDTxPacket (HID_EP,
+                (unsigned char*) &hid_report_in,
+                HID_INPUT_REPORT_BYTES);
+
+            // Return to checking for new received data.
+            usb_state = 'r';
+        }
+        break;
+    default:
+        // Cannot happen.
+        break;
+    }
+}
+
+/*
+ * Check USB status, receive and send data.
+ */
+static void poll_usb()
+{
+    // Check bus status and service USB interrupts.
+    USBDeviceTasks(); // Interrupt or polling method.  If using polling, must call
+                      // this function periodically.  This function will take care
+                      // of processing and responding to SETUP transactions
+                      // (such as during the enumeration process when you first
+                      // plug in).  USB hosts require that USB devices should accept
+                      // and process SETUP packets in a timely fashion.  Therefore,
+                      // when using polling, this function should be called
+                      // frequently (such as once about every 100 microseconds) at any
+                      // time that a SETUP packet might reasonably be expected to
+                      // be sent by the host to your device.  In most cases, the
+                      // USBDeviceTasks() function does not take very long to
+                      // execute (~50 instruction cycles) before it returns.
+
+    // When USB link established - receive and send data
+    if (USBDeviceState >= CONFIGURED_STATE &&
+        ! (U1PWRC & PIC32_U1PWRC_USUSPEND))
+    {
+        send_receive();
+    }
+}
 
 /*
  * Display a symbol on 7-segment LED
@@ -284,105 +381,11 @@ int calc_rgd()
  */
 int calc_keypad()
 {
+    poll_usb();
+
     if (! key_pressed)
         return 0;
     return keycode;
-}
-
-/*
- * Process the received data (hid_report_out) and
- * prepare the data for transmit (hid_report_in).
- */
-static void process_data()
-{
-    unsigned int count;
-
-    // TODO
-    for (count=0; count<HID_OUTPUT_REPORT_BYTES; count++) {
-        hid_report_in[count] = hid_report_out[count];
-    }
-}
-
-/*
- * This routine will poll for a received Input report, process it
- * and send an Output report to the host.
- * Both directions use interrupt transfers.
- * The ownership of the USB buffers will change according
- * to the required operation.
- */
-static void send_receive()
-{
-    static int usb_state = 'r';
-    static USB_HANDLE last_transmit = 0;
-    static USB_HANDLE last_receive = 0;
-
-    switch (usb_state) {
-    case 'r':
-        if (! HIDRxHandleBusy (last_receive)) {
-            // The CPU owns the endpoint. Start receiving data.
-            last_receive = HIDRxPacket (HID_EP,
-                (unsigned char*) &hid_report_out,
-                HID_INT_OUT_EP_SIZE);
-            usb_state = 'p';
-        }
-        break;
-    case 'p':
-        if (! HIDRxHandleBusy (last_receive)) {
-            // The CPU owns the endpoint.
-            if (last_receive->CNT > 0) {
-                // Data was received. Copy it to the output buffer for sending.
-                process_data();
-
-                // Ready to transmit the received data back to the host.
-                usb_state = 't';
-            } else {
-                // No data was received. Return to checking for new received data.
-                usb_state = 'r';
-            }
-        }
-        break;
-    case 't':
-        if (! HIDTxHandleBusy (last_transmit)) {
-            // The CPU owns the endpoint. Start sending data.
-            last_transmit = HIDTxPacket (HID_EP,
-                (unsigned char*) &hid_report_in,
-                HID_INPUT_REPORT_BYTES);
-
-            // Return to checking for new received data.
-            usb_state = 'r';
-        }
-        break;
-    default:
-        // Cannot happen.
-        break;
-    }
-}
-
-/*
- * Check USB status, receive and send data.
- */
-static void poll_usb()
-{
-    // Check bus status and service USB interrupts.
-    USBDeviceTasks(); // Interrupt or polling method.  If using polling, must call
-                      // this function periodically.  This function will take care
-                      // of processing and responding to SETUP transactions
-                      // (such as during the enumeration process when you first
-                      // plug in).  USB hosts require that USB devices should accept
-                      // and process SETUP packets in a timely fashion.  Therefore,
-                      // when using polling, this function should be called
-                      // frequently (such as once about every 100 microseconds) at any
-                      // time that a SETUP packet might reasonably be expected to
-                      // be sent by the host to your device.  In most cases, the
-                      // USBDeviceTasks() function does not take very long to
-                      // execute (~50 instruction cycles) before it returns.
-
-    // When USB link established - receive and send data
-    if (USBDeviceState >= CONFIGURED_STATE &&
-        ! (U1PWRC & PIC32_U1PWRC_USUSPEND))
-    {
-        send_receive();
-    }
 }
 
 /*
@@ -397,6 +400,12 @@ int main()
     mtc0 (C0_INTCTL, 1, 1 << 5);        /* Vector spacing 32 bytes */
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
+
+    /* Initialize .bss segment by zeroes. */
+    extern unsigned _edata, _end;
+    unsigned *dest = &_edata;
+    while (dest < &_end)
+        *dest++ = 0;
 
     /* Unlock CFGCON register. */
     SYSKEY = 0;
@@ -445,8 +454,6 @@ int main()
     key_pressed = 0;
 
     for (;;) {
-        poll_usb();
-
         // Simulate one cycle of the calculator.
         calc_step();
     }
