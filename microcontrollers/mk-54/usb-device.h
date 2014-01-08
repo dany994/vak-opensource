@@ -441,8 +441,8 @@ extern volatile unsigned char CtrlTrfData[USB_EP0_BUFF_SIZE];
 #define RCPT_EP			2
 #define RCPT_OTH		3
 
-extern unsigned char USBDeviceState;
-extern unsigned char USBActiveConfiguration;
+extern unsigned USBDeviceState;
+extern unsigned USBActiveConfiguration;
 extern USB_VOLATILE IN_PIPE inPipes[1];
 extern USB_VOLATILE OUT_PIPE outPipes[1];
 extern volatile BDT_ENTRY *pBDTEntryIn[USB_MAX_EP_NUMBER+1];
@@ -720,17 +720,17 @@ void USBStdSetCfgHandler(void);
 void USBStdGetStatusHandler(void);
 void USBStdFeatureReqHandler(void);
 void USBCtrlTrfOutHandler(void);
-bool_t USBIsTxBusy(unsigned char EPNumber);
-void USBPut(unsigned char EPNum, unsigned char Data);
+bool_t USBIsTxBusy(unsigned EPNumber);
+void USBPut(unsigned EPNum, unsigned Data);
 void USBEPService(void);
-void USBConfigureEndpoint(unsigned char EPNum, unsigned char direction);
+void USBConfigureEndpoint(unsigned EPNum, unsigned direction);
 
 void USBProtocolResetHandler(void);
 void USBWakeFromSuspend(void);
 void USBSuspend(void);
 void USBStallHandler(void);
-volatile USB_HANDLE USBTransferOnePacket(unsigned char ep, unsigned char dir, unsigned char* data, unsigned char len);
-void USBEnableEndpoint(unsigned char ep, unsigned char options);
+volatile USB_HANDLE USBTransferOnePacket(unsigned ep, unsigned dir, unsigned char* data, unsigned len);
+void USBEnableEndpoint(unsigned ep, unsigned options);
 
 #if defined(USB_DYNAMIC_EP_CONFIG)
     void USBInitEP(unsigned char const* pConfig);
@@ -1447,7 +1447,7 @@ void USBCBEP0DataReceived(void);
         None
 
  */
-void USBClearInterruptFlag(unsigned char* reg, unsigned char flag);
+void USBClearInterruptFlag(unsigned char* reg, unsigned flag);
 
 /*
     Function:
@@ -1491,7 +1491,7 @@ void USBClearInterruptFlag(unsigned char* reg, unsigned char flag);
     Remarks:
         None
  */
-void USBStallEndpoint(unsigned char ep, unsigned char dir);
+void USBStallEndpoint(unsigned ep, unsigned dir);
 
 #if (USB_PING_PONG_MODE == USB_PING_PONG__NO_PING_PONG)
     #define USB_NEXT_EP0_OUT_PING_PONG 0x0000   // Used in USB Device Mode only
