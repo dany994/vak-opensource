@@ -7,8 +7,8 @@
  * hardware platforms.
  *
  * The software supplied herewith by Microchip Technology Incorporated
- * (the “Company”) for its PICmicro® Microcontroller is intended and
- * supplied to you, the Company’s customer, for use solely and
+ * (the `Company') for its PICmicro Microcontroller is intended and
+ * supplied to you, the Company's customer, for use solely and
  * exclusively on Microchip PICmicro Microcontroller products. The
  * software is owned by the Company and/or its supplier, and is
  * protected under applicable copyright laws. All rights are reserved.
@@ -17,7 +17,7 @@
  * civil liability for the breach of the terms and conditions of this
  * license.
  *
- * THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
+ * THIS SOFTWARE IS PROVIDED IN AN `AS IS' CONDITION. NO WARRANTIES,
  * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
  * TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
  * PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
@@ -30,20 +30,20 @@
 //
 // Section: All necessary USB Library headers
 //
-#include "usb_common.h"         // Common USB library definitions
-#include "usb_ch9.h"		// USB device framework definitions
-#include "usb_hal.h"		// Hardware Abstraction Layer interface
+#include "usb-common.h"         // Common USB library definitions
+#include "usb-ch9.h"		// USB device framework definitions
+#include "usb-hal.h"		// Hardware Abstraction Layer interface
 
 #if defined( USB_SUPPORT_DEVICE )
-    #include "usb_device.h"	// USB Device abstraction layer interface
+    #include "usb-device.h"	// USB Device abstraction layer interface
 #endif
 
 #if defined( USB_SUPPORT_HOST )
-    #include "usb_host.h"	// USB Host abstraction layer interface
+    #include "usb-host.h"	// USB Host abstraction layer interface
 #endif
 
 #if defined ( USB_SUPPORT_OTG )
-    #include "usb_otg.h"
+    #include "usb-otg.h"
 #endif
 
 //

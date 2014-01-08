@@ -1,11 +1,13 @@
 /*
+ * USB Device Driver.
+ *
  * This file contains functions, macros, definitions, variables,
  * datatypes, etc. that are required for usage with the MCHPFSUSB device
  * stack. This file should be included in projects that use the device stack.
  *
  * The software supplied herewith by Microchip Technology Incorporated
- * (the “Company”) for its PIC® Microcontroller is intended and
- * supplied to you, the Company’s customer, for use solely and
+ * (the `Company') for its PIC Microcontroller is intended and
+ * supplied to you, the Company's customer, for use solely and
  * exclusively on Microchip PIC Microcontroller products. The
  * software is owned by the Company and/or its supplier, and is
  * protected under applicable copyright laws. All rights are reserved.
@@ -13,22 +15,18 @@
  * user to criminal sanctions under applicable laws, as well as to
  * civil liability for the breach of the terms and conditions of this license.
  *
- * THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
+ * THIS SOFTWARE IS PROVIDED IN AN `AS IS' CONDITION. NO WARRANTIES,
  * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
  * TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
  * PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
  * IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR
  * CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
  */
-//#include <runtime/lib.h>
-#include "usb_ch9.h"
+#include <stdint.h>
+#include "pic32mx.h"
+#include "usb-config.h"
 #include "usb.h"
-#include "usb_device.h"
-
-#define LEDUSB	8	/* PE3: green */
-#define LED1	4	/* PE2: white */
-#define LED2	2	/* PE1: red */
-#define LED3	1	/* PE0: yellow */
+#include "usb-device.h"
 
 #if (USB_PING_PONG_MODE != USB_PING_PONG__FULL_PING_PONG)
     #error "PIC32 only supports full ping pong mode."
@@ -63,6 +61,17 @@ volatile BDT_ENTRY BDT [(USB_MAX_EP_NUMBER + 1) * 4] __attribute__ ((aligned (51
  */
 volatile CTRL_TRF_SETUP SetupPkt;           // 8-byte only
 volatile unsigned char CtrlTrfData[USB_EP0_BUFF_SIZE];
+
+/*
+ * Clear a chunk of memory.
+ */
+static void bzero (void *ptr, unsigned nbytes)
+{
+    char *p = ptr;
+
+    while (nbytes-- > 0)
+        *p++ = 0;
+}
 
 /*
  * This function initializes the device stack
@@ -104,7 +113,7 @@ void USBDeviceInit(void)
     U1ADDR = 0x00;
 
     //Clear all of the endpoint control registers
-    memset((void*)&U1EP(1),0x00,(USB_MAX_EP_NUMBER-1));
+    bzero ((void*)&U1EP(1), USB_MAX_EP_NUMBER-1);
 
     //Clear all of the BDT entries
     for(i=0;i<(sizeof(BDT)/sizeof(BDT_ENTRY));i++)
@@ -137,6 +146,25 @@ void USBDeviceInit(void)
 
     //Indicate that we are now in the detached state
     USBDeviceState = DETACHED_STATE;
+}
+
+/*
+ * Translate virtual address to physical one.
+ * Only for fixed mapping.
+ */
+static unsigned char *ConvertToPhysicalAddress (volatile void *vaddr)
+{
+    unsigned virt = (unsigned) vaddr;
+    unsigned segment_desc = virt >> 28;
+
+    if (segment_desc <= 0x7)            // kuseg
+        virt += 0x40000000;             // ...fixed-mapped
+    else if (segment_desc <= 0xb)       // kseg0 or kseg1
+        virt &= 0x1fffffff;             // ...clear bits A[31:29]
+    else                                // kseg2 or kseg3
+        ;                               // ...no translation
+
+    return (unsigned char*) virt;
 }
 
 /*
@@ -291,7 +319,7 @@ void USBDeviceTasks(void)
         send an OUT before sending a SETUP token. The fix allows a SETUP
         transaction to be accepted while stalling OUT transactions.
         */
-        BDT[EP0_OUT_EVEN].ADR = (unsigned char*)ConvertToPhysicalAddress(&SetupPkt);
+        BDT[EP0_OUT_EVEN].ADR = ConvertToPhysicalAddress(&SetupPkt);
         BDT[EP0_OUT_EVEN].CNT = USB_EP0_BUFF_SIZE;
         BDT[EP0_OUT_EVEN].STAT.Val &= ~_STAT_MASK;
         BDT[EP0_OUT_EVEN].STAT.Val |= _USIE|_DAT0|_DTSEN|_BSTALL;
@@ -645,7 +673,7 @@ void USBCtrlTrfInHandler(void)
 
     if(controlTransferState == CTRL_TRF_TX)
     {
-        pBDTEntryIn[0]->ADR = (unsigned char*)ConvertToPhysicalAddress(CtrlTrfData);
+        pBDTEntryIn[0]->ADR = ConvertToPhysicalAddress(CtrlTrfData);
         USBCtrlTrfTxService();
 
         /* v2b fix */
@@ -712,7 +740,7 @@ void USBPrepareForNextSetupTrf(void)
     {
         unsigned char setup_cnt;
 
-        pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&SetupPkt);
+        pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&SetupPkt);
 
         // The Setup data was written to the CtrlTrfData buffer, must copy
         // it back to the SetupPkt buffer so that it can be processed correctly
@@ -727,7 +755,7 @@ void USBPrepareForNextSetupTrf(void)
     {
         controlTransferState = WAIT_SETUP;
         pBDTEntryEP0OutNext->CNT = USB_EP0_BUFF_SIZE;      // Defined in target.cfg
-        pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&SetupPkt);
+        pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&SetupPkt);
 
         /*
         Bug Fix: Feb 26, 2007 v2.1 (#F1)
@@ -1120,7 +1148,7 @@ void USBCtrlEPServiceComplete(void)
              * 2. Prepare OUT EP to receive data.
              */
             pBDTEntryEP0OutNext->CNT = USB_EP0_BUFF_SIZE;
-            pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&CtrlTrfData);
+            pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&CtrlTrfData);
             pBDTEntryEP0OutNext->STAT.Val = _USIE|_DAT1|_DTSEN;
         }
         else
@@ -1131,7 +1159,7 @@ void USBCtrlEPServiceComplete(void)
              * Must also prepare EP0 to receive the next SETUP transaction.
              */
             pBDTEntryEP0OutNext->CNT = USB_EP0_BUFF_SIZE;
-            pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&SetupPkt);
+            pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&SetupPkt);
 
             /* v2b fix */
             pBDTEntryEP0OutNext->STAT.Val = _USIE|_DAT0|_DTSEN|_BSTALL;
@@ -1173,7 +1201,7 @@ void USBCtrlEPServiceComplete(void)
 				 * should be pointed to SetupPkt.
 				 */
 				pBDTEntryEP0OutNext->CNT = USB_EP0_BUFF_SIZE;
-				pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&SetupPkt);
+				pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&SetupPkt);
 				pBDTEntryEP0OutNext->STAT.Val = _USIE;           // Note: DTSEN is 0!
 
 				pBDTEntryEP0OutCurrent->CNT = USB_EP0_BUFF_SIZE;
@@ -1184,7 +1212,7 @@ void USBCtrlEPServiceComplete(void)
 				 * 2. Prepare IN EP to transfer data, Cnt should have
 				 *    been initialized by responsible request owner.
 				 */
-				pBDTEntryIn[0]->ADR = (unsigned char*)ConvertToPhysicalAddress(&CtrlTrfData);
+				pBDTEntryIn[0]->ADR = ConvertToPhysicalAddress(&CtrlTrfData);
 				pBDTEntryIn[0]->STAT.Val = _USIE|_DAT1|_DTSEN;
 			}
 			else   // (SetupPkt.DataDir == HOST_TO_DEVICE)
@@ -1207,7 +1235,7 @@ void USBCtrlEPServiceComplete(void)
 				 * 2. Prepare OUT EP to receive data.
 				 */
 				pBDTEntryEP0OutNext->CNT = USB_EP0_BUFF_SIZE;
-				pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&CtrlTrfData);
+				pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&CtrlTrfData);
 				pBDTEntryEP0OutNext->STAT.Val = _USIE|_DAT1|_DTSEN;
 			}
         }
@@ -1330,7 +1358,7 @@ void USBCtrlTrfRxService(void)
          * generated in the first place.
          */
         pBDTEntryEP0OutNext->CNT = USB_EP0_BUFF_SIZE;
-        pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&CtrlTrfData);
+        pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&CtrlTrfData);
         if(pBDTEntryEP0OutCurrent->STAT.DTS == 0)
         {
             pBDTEntryEP0OutNext->STAT.Val = _USIE|_DAT1|_DTSEN;
@@ -1342,7 +1370,7 @@ void USBCtrlTrfRxService(void)
     }
     else
     {
-        pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&SetupPkt);
+        pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&SetupPkt);
         if (outPipes[0].pFunc != 0) {
             outPipes[0].pFunc();
         }
@@ -1367,10 +1395,10 @@ void USBStdSetCfgHandler(void)
     inPipes[0].info.bits.busy = 1;
 
     //disable all endpoints except endpoint 0
-    memset((void*)&U1EP(1),0x00,(USB_MAX_EP_NUMBER-1));
+    bzero ((void*)&U1EP(1), USB_MAX_EP_NUMBER-1);
 
     //clear the alternate interface settings
-    memset((void*)&USBAlternateInterface,0x00,USB_MAX_NUM_INT);
+    bzero ((void*)&USBAlternateInterface, USB_MAX_NUM_INT);
 
     //set the current configuration
     USBActiveConfiguration = SetupPkt.bConfigurationValue;
@@ -1515,7 +1543,7 @@ void USBStallEndpoint (unsigned char ep, unsigned char dir)
          * Must also prepare EP0 to receive the next SETUP transaction.
          */
         pBDTEntryEP0OutNext->CNT = USB_EP0_BUFF_SIZE;
-        pBDTEntryEP0OutNext->ADR = (unsigned char*)ConvertToPhysicalAddress(&SetupPkt);
+        pBDTEntryEP0OutNext->ADR = ConvertToPhysicalAddress(&SetupPkt);
 
         /* v2b fix */
         pBDTEntryEP0OutNext->STAT.Val = _USIE|_DAT0|_DTSEN|_BSTALL;
@@ -1575,7 +1603,7 @@ USB_HANDLE USBTransferOnePacket (unsigned char ep, unsigned char dir, unsigned c
     #endif
 
     //Set the data pointer, data length, and enable the endpoint
-    handle->ADR = (unsigned char*)ConvertToPhysicalAddress(data);
+    handle->ADR = ConvertToPhysicalAddress(data);
     handle->CNT = len;
     handle->STAT.Val &= _DTSMASK;
     handle->STAT.Val |= _USIE | _DTSEN;

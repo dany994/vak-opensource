@@ -2,8 +2,8 @@
  * This file defines the interface to the USB hardware abstraction layer.
  *
  * The software supplied herewith by Microchip Technology Incorporated
- * (the “Company”) for its PICmicro® Microcontroller is intended and
- * supplied to you, the Company’s customer, for use solely and
+ * (the `Company') for its PICmicro Microcontroller is intended and
+ * supplied to you, the Company's customer, for use solely and
  * exclusively on Microchip PICmicro Microcontroller products. The
  * software is owned by the Company and/or its supplier, and is
  * protected under applicable copyright laws. All rights are reserved.
@@ -12,7 +12,7 @@
  * civil liability for the breach of the terms and conditions of this
  * license.
  *
- * THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
+ * THIS SOFTWARE IS PROVIDED IN AN `AS IS' CONDITION. NO WARRANTIES,
  * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
  * TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
  * PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
@@ -24,7 +24,7 @@
 #ifndef _USB_HAL_H_
 #define _USB_HAL_H_
 
-#include "usb_common.h"
+#include "usb-common.h"
 
 #if defined(USB_SUPPORT_HOST) || defined(USB_SUPPORT_OTG)
 
@@ -566,6 +566,6 @@ bool_t USBHALSetEpConfiguration (unsigned char ep_num, uint16_t max_pkt_size, ui
 bool_t USBHALInitialize ( unsigned long flags );
 
 #else   // defined(USB_SUPPORT_HOST) || defined(USB_SUPPORT_OTG)
-    #include <microchip/usb_hal_pic32.h>
+    #include "usb-hal-pic32.h"
 #endif  // defined(USB_SUPPORT_HOST) || defined(USB_SUPPORT_OTG)
 #endif  // _USB_HAL_H_
