@@ -124,7 +124,6 @@
  * Peripheral registers.
  */
 #define PIC32_R(a)		*(volatile unsigned*)(0xBF800000 + (a))
-#define PIC32_R8(a)		*(volatile unsigned*)(0xBF880000 + (a))
 
 /*--------------------------------------
  * UART registers.
@@ -300,202 +299,226 @@
  */
 #if defined(PIC32MX4) || \
     defined(PIC32MX7)
-#define TRISA		PIC32_R8 (0x6000) /* Port A: mask of inputs */
-#define TRISACLR	PIC32_R8 (0x6004)
-#define TRISASET	PIC32_R8 (0x6008)
-#define TRISAINV	PIC32_R8 (0x600C)
-#define PORTA		PIC32_R8 (0x6010) /* Port A: read inputs, write outputs */
-#define PORTACLR	PIC32_R8 (0x6014)
-#define PORTASET	PIC32_R8 (0x6018)
-#define PORTAINV	PIC32_R8 (0x601C)
-#define LATA		PIC32_R8 (0x6020) /* Port A: read/write outputs */
-#define LATACLR		PIC32_R8 (0x6024)
-#define LATASET		PIC32_R8 (0x6028)
-#define LATAINV		PIC32_R8 (0x602C)
-#define ODCA		PIC32_R8 (0x6030) /* Port A: open drain configuration */
-#define ODCACLR		PIC32_R8 (0x6034)
-#define ODCASET		PIC32_R8 (0x6038)
-#define ODCAINV		PIC32_R8 (0x603C)
+#define TRISA		PIC32_R (0x86000) /* Port A: mask of inputs */
+#define TRISACLR	PIC32_R (0x86004)
+#define TRISASET	PIC32_R (0x86008)
+#define TRISAINV	PIC32_R (0x8600C)
+#define PORTA		PIC32_R (0x86010) /* Port A: read inputs, write outputs */
+#define PORTACLR	PIC32_R (0x86014)
+#define PORTASET	PIC32_R (0x86018)
+#define PORTAINV	PIC32_R (0x8601C)
+#define LATA		PIC32_R (0x86020) /* Port A: read/write outputs */
+#define LATACLR		PIC32_R (0x86024)
+#define LATASET		PIC32_R (0x86028)
+#define LATAINV		PIC32_R (0x8602C)
+#define ODCA		PIC32_R (0x86030) /* Port A: open drain configuration */
+#define ODCACLR		PIC32_R (0x86034)
+#define ODCASET		PIC32_R (0x86038)
+#define ODCAINV		PIC32_R (0x8603C)
 
-#define TRISB		PIC32_R8 (0x6040) /* Port B: mask of inputs */
-#define TRISBCLR	PIC32_R8 (0x6044)
-#define TRISBSET	PIC32_R8 (0x6048)
-#define TRISBINV	PIC32_R8 (0x604C)
-#define PORTB		PIC32_R8 (0x6050) /* Port B: read inputs, write outputs */
-#define PORTBCLR	PIC32_R8 (0x6054)
-#define PORTBSET	PIC32_R8 (0x6058)
-#define PORTBINV	PIC32_R8 (0x605C)
-#define LATB		PIC32_R8 (0x6060) /* Port B: read/write outputs */
-#define LATBCLR		PIC32_R8 (0x6064)
-#define LATBSET		PIC32_R8 (0x6068)
-#define LATBINV		PIC32_R8 (0x606C)
-#define ODCB		PIC32_R8 (0x6070) /* Port B: open drain configuration */
-#define ODCBCLR		PIC32_R8 (0x6074)
-#define ODCBSET		PIC32_R8 (0x6078)
-#define ODCBINV		PIC32_R8 (0x607C)
+#define TRISB		PIC32_R (0x86040) /* Port B: mask of inputs */
+#define TRISBCLR	PIC32_R (0x86044)
+#define TRISBSET	PIC32_R (0x86048)
+#define TRISBINV	PIC32_R (0x8604C)
+#define PORTB		PIC32_R (0x86050) /* Port B: read inputs, write outputs */
+#define PORTBCLR	PIC32_R (0x86054)
+#define PORTBSET	PIC32_R (0x86058)
+#define PORTBINV	PIC32_R (0x8605C)
+#define LATB		PIC32_R (0x86060) /* Port B: read/write outputs */
+#define LATBCLR		PIC32_R (0x86064)
+#define LATBSET		PIC32_R (0x86068)
+#define LATBINV		PIC32_R (0x8606C)
+#define ODCB		PIC32_R (0x86070) /* Port B: open drain configuration */
+#define ODCBCLR		PIC32_R (0x86074)
+#define ODCBSET		PIC32_R (0x86078)
+#define ODCBINV		PIC32_R (0x8607C)
 
-#define TRISC		PIC32_R8 (0x6080) /* Port C: mask of inputs */
-#define TRISCCLR	PIC32_R8 (0x6084)
-#define TRISCSET	PIC32_R8 (0x6088)
-#define TRISCINV	PIC32_R8 (0x608C)
-#define PORTC		PIC32_R8 (0x6090) /* Port C: read inputs, write outputs */
-#define PORTCCLR	PIC32_R8 (0x6094)
-#define PORTCSET	PIC32_R8 (0x6098)
-#define PORTCINV	PIC32_R8 (0x609C)
-#define LATC		PIC32_R8 (0x60A0) /* Port C: read/write outputs */
-#define LATCCLR		PIC32_R8 (0x60A4)
-#define LATCSET		PIC32_R8 (0x60A8)
-#define LATCINV		PIC32_R8 (0x60AC)
-#define ODCC		PIC32_R8 (0x60B0) /* Port C: open drain configuration */
-#define ODCCCLR		PIC32_R8 (0x60B4)
-#define ODCCSET		PIC32_R8 (0x60B8)
-#define ODCCINV		PIC32_R8 (0x60BC)
+#define TRISC		PIC32_R (0x86080) /* Port C: mask of inputs */
+#define TRISCCLR	PIC32_R (0x86084)
+#define TRISCSET	PIC32_R (0x86088)
+#define TRISCINV	PIC32_R (0x8608C)
+#define PORTC		PIC32_R (0x86090) /* Port C: read inputs, write outputs */
+#define PORTCCLR	PIC32_R (0x86094)
+#define PORTCSET	PIC32_R (0x86098)
+#define PORTCINV	PIC32_R (0x8609C)
+#define LATC		PIC32_R (0x860A0) /* Port C: read/write outputs */
+#define LATCCLR		PIC32_R (0x860A4)
+#define LATCSET		PIC32_R (0x860A8)
+#define LATCINV		PIC32_R (0x860AC)
+#define ODCC		PIC32_R (0x860B0) /* Port C: open drain configuration */
+#define ODCCCLR		PIC32_R (0x860B4)
+#define ODCCSET		PIC32_R (0x860B8)
+#define ODCCINV		PIC32_R (0x860BC)
 
-#define TRISD		PIC32_R8 (0x60C0) /* Port D: mask of inputs */
-#define TRISDCLR	PIC32_R8 (0x60C4)
-#define TRISDSET	PIC32_R8 (0x60C8)
-#define TRISDINV	PIC32_R8 (0x60CC)
-#define PORTD		PIC32_R8 (0x60D0) /* Port D: read inputs, write outputs */
-#define PORTDCLR	PIC32_R8 (0x60D4)
-#define PORTDSET	PIC32_R8 (0x60D8)
-#define PORTDINV	PIC32_R8 (0x60DC)
-#define LATD		PIC32_R8 (0x60E0) /* Port D: read/write outputs */
-#define LATDCLR		PIC32_R8 (0x60E4)
-#define LATDSET		PIC32_R8 (0x60E8)
-#define LATDINV		PIC32_R8 (0x60EC)
-#define ODCD		PIC32_R8 (0x60F0) /* Port D: open drain configuration */
-#define ODCDCLR		PIC32_R8 (0x60F4)
-#define ODCDSET		PIC32_R8 (0x60F8)
-#define ODCDINV		PIC32_R8 (0x60FC)
+#define TRISD		PIC32_R (0x860C0) /* Port D: mask of inputs */
+#define TRISDCLR	PIC32_R (0x860C4)
+#define TRISDSET	PIC32_R (0x860C8)
+#define TRISDINV	PIC32_R (0x860CC)
+#define PORTD		PIC32_R (0x860D0) /* Port D: read inputs, write outputs */
+#define PORTDCLR	PIC32_R (0x860D4)
+#define PORTDSET	PIC32_R (0x860D8)
+#define PORTDINV	PIC32_R (0x860DC)
+#define LATD		PIC32_R (0x860E0) /* Port D: read/write outputs */
+#define LATDCLR		PIC32_R (0x860E4)
+#define LATDSET		PIC32_R (0x860E8)
+#define LATDINV		PIC32_R (0x860EC)
+#define ODCD		PIC32_R (0x860F0) /* Port D: open drain configuration */
+#define ODCDCLR		PIC32_R (0x860F4)
+#define ODCDSET		PIC32_R (0x860F8)
+#define ODCDINV		PIC32_R (0x860FC)
 
-#define TRISE		PIC32_R8 (0x6100) /* Port E: mask of inputs */
-#define TRISECLR	PIC32_R8 (0x6104)
-#define TRISESET	PIC32_R8 (0x6108)
-#define TRISEINV	PIC32_R8 (0x610C)
-#define PORTE		PIC32_R8 (0x6110) /* Port E: read inputs, write outputs */
-#define PORTECLR	PIC32_R8 (0x6114)
-#define PORTESET	PIC32_R8 (0x6118)
-#define PORTEINV	PIC32_R8 (0x611C)
-#define LATE		PIC32_R8 (0x6120) /* Port E: read/write outputs */
-#define LATECLR		PIC32_R8 (0x6124)
-#define LATESET		PIC32_R8 (0x6128)
-#define LATEINV		PIC32_R8 (0x612C)
-#define ODCE		PIC32_R8 (0x6130) /* Port E: open drain configuration */
-#define ODCECLR		PIC32_R8 (0x6134)
-#define ODCESET		PIC32_R8 (0x6138)
-#define ODCEINV		PIC32_R8 (0x613C)
+#define TRISE		PIC32_R (0x86100) /* Port E: mask of inputs */
+#define TRISECLR	PIC32_R (0x86104)
+#define TRISESET	PIC32_R (0x86108)
+#define TRISEINV	PIC32_R (0x8610C)
+#define PORTE		PIC32_R (0x86110) /* Port E: read inputs, write outputs */
+#define PORTECLR	PIC32_R (0x86114)
+#define PORTESET	PIC32_R (0x86118)
+#define PORTEINV	PIC32_R (0x8611C)
+#define LATE		PIC32_R (0x86120) /* Port E: read/write outputs */
+#define LATECLR		PIC32_R (0x86124)
+#define LATESET		PIC32_R (0x86128)
+#define LATEINV		PIC32_R (0x8612C)
+#define ODCE		PIC32_R (0x86130) /* Port E: open drain configuration */
+#define ODCECLR		PIC32_R (0x86134)
+#define ODCESET		PIC32_R (0x86138)
+#define ODCEINV		PIC32_R (0x8613C)
 
-#define TRISF		PIC32_R8 (0x6140) /* Port F: mask of inputs */
-#define TRISFCLR	PIC32_R8 (0x6144)
-#define TRISFSET	PIC32_R8 (0x6148)
-#define TRISFINV	PIC32_R8 (0x614C)
-#define PORTF		PIC32_R8 (0x6150) /* Port F: read inputs, write outputs */
-#define PORTFCLR	PIC32_R8 (0x6154)
-#define PORTFSET	PIC32_R8 (0x6158)
-#define PORTFINV	PIC32_R8 (0x615C)
-#define LATF		PIC32_R8 (0x6160) /* Port F: read/write outputs */
-#define LATFCLR		PIC32_R8 (0x6164)
-#define LATFSET		PIC32_R8 (0x6168)
-#define LATFINV		PIC32_R8 (0x616C)
-#define ODCF		PIC32_R8 (0x6170) /* Port F: open drain configuration */
-#define ODCFCLR		PIC32_R8 (0x6174)
-#define ODCFSET		PIC32_R8 (0x6178)
-#define ODCFINV		PIC32_R8 (0x617C)
+#define TRISF		PIC32_R (0x86140) /* Port F: mask of inputs */
+#define TRISFCLR	PIC32_R (0x86144)
+#define TRISFSET	PIC32_R (0x86148)
+#define TRISFINV	PIC32_R (0x8614C)
+#define PORTF		PIC32_R (0x86150) /* Port F: read inputs, write outputs */
+#define PORTFCLR	PIC32_R (0x86154)
+#define PORTFSET	PIC32_R (0x86158)
+#define PORTFINV	PIC32_R (0x8615C)
+#define LATF		PIC32_R (0x86160) /* Port F: read/write outputs */
+#define LATFCLR		PIC32_R (0x86164)
+#define LATFSET		PIC32_R (0x86168)
+#define LATFINV		PIC32_R (0x8616C)
+#define ODCF		PIC32_R (0x86170) /* Port F: open drain configuration */
+#define ODCFCLR		PIC32_R (0x86174)
+#define ODCFSET		PIC32_R (0x86178)
+#define ODCFINV		PIC32_R (0x8617C)
 
-#define TRISG		PIC32_R8 (0x6180) /* Port G: mask of inputs */
-#define TRISGCLR	PIC32_R8 (0x6184)
-#define TRISGSET	PIC32_R8 (0x6188)
-#define TRISGINV	PIC32_R8 (0x618C)
-#define PORTG		PIC32_R8 (0x6190) /* Port G: read inputs, write outputs */
-#define PORTGCLR	PIC32_R8 (0x6194)
-#define PORTGSET	PIC32_R8 (0x6198)
-#define PORTGINV	PIC32_R8 (0x619C)
-#define LATG		PIC32_R8 (0x61A0) /* Port G: read/write outputs */
-#define LATGCLR		PIC32_R8 (0x61A4)
-#define LATGSET		PIC32_R8 (0x61A8)
-#define LATGINV		PIC32_R8 (0x61AC)
-#define ODCG		PIC32_R8 (0x61B0) /* Port G: open drain configuration */
-#define ODCGCLR		PIC32_R8 (0x61B4)
-#define ODCGSET		PIC32_R8 (0x61B8)
-#define ODCGINV		PIC32_R8 (0x61BC)
+#define TRISG		PIC32_R (0x86180) /* Port G: mask of inputs */
+#define TRISGCLR	PIC32_R (0x86184)
+#define TRISGSET	PIC32_R (0x86188)
+#define TRISGINV	PIC32_R (0x8618C)
+#define PORTG		PIC32_R (0x86190) /* Port G: read inputs, write outputs */
+#define PORTGCLR	PIC32_R (0x86194)
+#define PORTGSET	PIC32_R (0x86198)
+#define PORTGINV	PIC32_R (0x8619C)
+#define LATG		PIC32_R (0x861A0) /* Port G: read/write outputs */
+#define LATGCLR		PIC32_R (0x861A4)
+#define LATGSET		PIC32_R (0x861A8)
+#define LATGINV		PIC32_R (0x861AC)
+#define ODCG		PIC32_R (0x861B0) /* Port G: open drain configuration */
+#define ODCGCLR		PIC32_R (0x861B4)
+#define ODCGSET		PIC32_R (0x861B8)
+#define ODCGINV		PIC32_R (0x861BC)
 
-#define CNCON		PIC32_R8 (0x61C0) /* Interrupt-on-change control */
-#define CNCONCLR	PIC32_R8 (0x61C4)
-#define CNCONSET	PIC32_R8 (0x61C8)
-#define CNCONINV	PIC32_R8 (0x61CC)
-#define CNEN		PIC32_R8 (0x61D0) /* Input change interrupt enable */
-#define CNENCLR		PIC32_R8 (0x61D4)
-#define CNENSET		PIC32_R8 (0x61D8)
-#define CNENINV		PIC32_R8 (0x61DC)
-#define CNPUE		PIC32_R8 (0x61E0) /* Input pin pull-up enable */
-#define CNPUECLR	PIC32_R8 (0x61E4)
-#define CNPUESET	PIC32_R8 (0x61E8)
-#define CNPUEINV	PIC32_R8 (0x61EC)
+#define CNCON		PIC32_R (0x861C0) /* Interrupt-on-change control */
+#define CNCONCLR	PIC32_R (0x861C4)
+#define CNCONSET	PIC32_R (0x861C8)
+#define CNCONINV	PIC32_R (0x861CC)
+#define CNEN		PIC32_R (0x861D0) /* Input change interrupt enable */
+#define CNENCLR		PIC32_R (0x861D4)
+#define CNENSET		PIC32_R (0x861D8)
+#define CNENINV		PIC32_R (0x861DC)
+#define CNPUE		PIC32_R (0x861E0) /* Input pin pull-up enable */
+#define CNPUECLR	PIC32_R (0x861E4)
+#define CNPUESET	PIC32_R (0x861E8)
+#define CNPUEINV	PIC32_R (0x861EC)
 #endif
 
 #ifdef PIC32MX2
-#define ANSELA		PIC32_R8 (0x6000) /* Port A: analog select */
-#define ANSELACLR	PIC32_R8 (0x6004)
-#define ANSELASET	PIC32_R8 (0x6008)
-#define ANSELAINV	PIC32_R8 (0x600C)
-#define TRISA		PIC32_R8 (0x6010) /* Port A: mask of inputs */
-#define TRISACLR	PIC32_R8 (0x6014)
-#define TRISASET	PIC32_R8 (0x6018)
-#define TRISAINV	PIC32_R8 (0x601C)
-#define PORTA		PIC32_R8 (0x6020) /* Port A: read inputs, write outputs */
-#define PORTACLR	PIC32_R8 (0x6024)
-#define PORTASET	PIC32_R8 (0x6028)
-#define PORTAINV	PIC32_R8 (0x602C)
-#define LATA		PIC32_R8 (0x6030) /* Port A: read/write outputs */
-#define LATACLR		PIC32_R8 (0x6034)
-#define LATASET		PIC32_R8 (0x6038)
-#define LATAINV		PIC32_R8 (0x603C)
-#define ODCA		PIC32_R8 (0x6040) /* Port A: open drain configuration */
-#define ODCACLR		PIC32_R8 (0x6044)
-#define ODCASET		PIC32_R8 (0x6048)
-#define ODCAINV		PIC32_R8 (0x604C)
+#define ANSELA		PIC32_R (0x86000) /* Port A: analog select */
+#define ANSELACLR	PIC32_R (0x86004)
+#define ANSELASET	PIC32_R (0x86008)
+#define ANSELAINV	PIC32_R (0x8600C)
+#define TRISA		PIC32_R (0x86010) /* Port A: mask of inputs */
+#define TRISACLR	PIC32_R (0x86014)
+#define TRISASET	PIC32_R (0x86018)
+#define TRISAINV	PIC32_R (0x8601C)
+#define PORTA		PIC32_R (0x86020) /* Port A: read inputs, write outputs */
+#define PORTACLR	PIC32_R (0x86024)
+#define PORTASET	PIC32_R (0x86028)
+#define PORTAINV	PIC32_R (0x8602C)
+#define LATA		PIC32_R (0x86030) /* Port A: read/write outputs */
+#define LATACLR		PIC32_R (0x86034)
+#define LATASET		PIC32_R (0x86038)
+#define LATAINV		PIC32_R (0x8603C)
+#define ODCA		PIC32_R (0x86040) /* Port A: open drain configuration */
+#define ODCACLR		PIC32_R (0x86044)
+#define ODCASET		PIC32_R (0x86048)
+#define ODCAINV		PIC32_R (0x8604C)
+#define CNPUA		PIC32_R (0x86050) /* Port A: pull up enable */
+#define CNPUACLR	PIC32_R (0x86054)
+#define CNPUASET	PIC32_R (0x86058)
+#define CNPUAINV	PIC32_R (0x8605C)
+#define CNPDA		PIC32_R (0x86060) /* Port A: pull down enable */
+#define CNPDACLR	PIC32_R (0x86064)
+#define CNPDASET	PIC32_R (0x86068)
+#define CNPDAINV	PIC32_R (0x8606C)
 
-#define ANSELB		PIC32_R8 (0x6100) /* Port B: analog select */
-#define ANSELBCLR	PIC32_R8 (0x6104)
-#define ANSELBSET	PIC32_R8 (0x6108)
-#define ANSELBINV	PIC32_R8 (0x610C)
-#define TRISB		PIC32_R8 (0x6110) /* Port B: mask of inputs */
-#define TRISBCLR	PIC32_R8 (0x6114)
-#define TRISBSET	PIC32_R8 (0x6118)
-#define TRISBINV	PIC32_R8 (0x611C)
-#define PORTB		PIC32_R8 (0x6120) /* Port B: read inputs, write outputs */
-#define PORTBCLR	PIC32_R8 (0x6124)
-#define PORTBSET	PIC32_R8 (0x6128)
-#define PORTBINV	PIC32_R8 (0x612C)
-#define LATB		PIC32_R8 (0x6130) /* Port B: read/write outputs */
-#define LATBCLR		PIC32_R8 (0x6134)
-#define LATBSET		PIC32_R8 (0x6138)
-#define LATBINV		PIC32_R8 (0x613C)
-#define ODCB		PIC32_R8 (0x6140) /* Port B: open drain configuration */
-#define ODCBCLR		PIC32_R8 (0x6144)
-#define ODCBSET		PIC32_R8 (0x6148)
-#define ODCBINV		PIC32_R8 (0x614C)
+#define ANSELB		PIC32_R (0x86100) /* Port B: analog select */
+#define ANSELBCLR	PIC32_R (0x86104)
+#define ANSELBSET	PIC32_R (0x86108)
+#define ANSELBINV	PIC32_R (0x8610C)
+#define TRISB		PIC32_R (0x86110) /* Port B: mask of inputs */
+#define TRISBCLR	PIC32_R (0x86114)
+#define TRISBSET	PIC32_R (0x86118)
+#define TRISBINV	PIC32_R (0x8611C)
+#define PORTB		PIC32_R (0x86120) /* Port B: read inputs, write outputs */
+#define PORTBCLR	PIC32_R (0x86124)
+#define PORTBSET	PIC32_R (0x86128)
+#define PORTBINV	PIC32_R (0x8612C)
+#define LATB		PIC32_R (0x86130) /* Port B: read/write outputs */
+#define LATBCLR		PIC32_R (0x86134)
+#define LATBSET		PIC32_R (0x86138)
+#define LATBINV		PIC32_R (0x8613C)
+#define ODCB		PIC32_R (0x86140) /* Port B: open drain configuration */
+#define ODCBCLR		PIC32_R (0x86144)
+#define ODCBSET		PIC32_R (0x86148)
+#define ODCBINV		PIC32_R (0x8614C)
+#define CNPUB		PIC32_R (0x86150) /* Port B: pull up enable */
+#define CNPUBCLR	PIC32_R (0x86154)
+#define CNPUBSET	PIC32_R (0x86158)
+#define CNPUBINV	PIC32_R (0x8615C)
+#define CNPDB		PIC32_R (0x86160) /* Port B: pull down enable */
+#define CNPDBCLR	PIC32_R (0x86164)
+#define CNPDBSET	PIC32_R (0x86168)
+#define CNPDBINV	PIC32_R (0x8616C)
 
-#define ANSELC		PIC32_R8 (0x6200) /* Port C: analog select */
-#define ANSELCCLR	PIC32_R8 (0x6204)
-#define ANSELCSET	PIC32_R8 (0x6208)
-#define ANSELCINV	PIC32_R8 (0x620C)
-#define TRISC		PIC32_R8 (0x6210) /* Port C: mask of inputs */
-#define TRISCCLR	PIC32_R8 (0x6214)
-#define TRISCSET	PIC32_R8 (0x6218)
-#define TRISCINV	PIC32_R8 (0x621C)
-#define PORTC		PIC32_R8 (0x6220) /* Port C: read inputs, write outputs */
-#define PORTCCLR	PIC32_R8 (0x6224)
-#define PORTCSET	PIC32_R8 (0x6228)
-#define PORTCINV	PIC32_R8 (0x622C)
-#define LATC		PIC32_R8 (0x6230) /* Port C: read/write outputs */
-#define LATCCLR		PIC32_R8 (0x6234)
-#define LATCSET		PIC32_R8 (0x6238)
-#define LATCINV		PIC32_R8 (0x623C)
-#define ODCC		PIC32_R8 (0x6240) /* Port CB: open drain configuration */
-#define ODCCCLR		PIC32_R8 (0x6244)
-#define ODCCSET		PIC32_R8 (0x6248)
-#define ODCCINV		PIC32_R8 (0x624C)
+#define ANSELC		PIC32_R (0x86200) /* Port C: analog select */
+#define ANSELCCLR	PIC32_R (0x86204)
+#define ANSELCSET	PIC32_R (0x86208)
+#define ANSELCINV	PIC32_R (0x8620C)
+#define TRISC		PIC32_R (0x86210) /* Port C: mask of inputs */
+#define TRISCCLR	PIC32_R (0x86214)
+#define TRISCSET	PIC32_R (0x86218)
+#define TRISCINV	PIC32_R (0x8621C)
+#define PORTC		PIC32_R (0x86220) /* Port C: read inputs, write outputs */
+#define PORTCCLR	PIC32_R (0x86224)
+#define PORTCSET	PIC32_R (0x86228)
+#define PORTCINV	PIC32_R (0x8622C)
+#define LATC		PIC32_R (0x86230) /* Port C: read/write outputs */
+#define LATCCLR		PIC32_R (0x86234)
+#define LATCSET		PIC32_R (0x86238)
+#define LATCINV		PIC32_R (0x8623C)
+#define ODCC		PIC32_R (0x86240) /* Port CB: open drain configuration */
+#define ODCCCLR		PIC32_R (0x86244)
+#define ODCCSET		PIC32_R (0x86248)
+#define ODCCINV		PIC32_R (0x8624C)
+#define CNPUC		PIC32_R (0x86250) /* Port C: pull up enable */
+#define CNPUCCLR	PIC32_R (0x86254)
+#define CNPUCSET	PIC32_R (0x86258)
+#define CNPUCINV	PIC32_R (0x8625C)
+#define CNPDC		PIC32_R (0x86260) /* Port C: pull down enable */
+#define CNPDCCLR	PIC32_R (0x86264)
+#define CNPDCSET	PIC32_R (0x86268)
+#define CNPDCINV	PIC32_R (0x8626C)
 
 #endif
 
@@ -648,42 +671,27 @@
 /*--------------------------------------
  * USB registers.
  */
-#define U1OTGIR		PIC32_R8 (0x5040) /* OTG interrupt flags */
-#define U1OTGIE		PIC32_R8 (0x5050) /* OTG interrupt enable */
-#define U1OTGSTAT	PIC32_R8 (0x5060) /* Comparator and pin status */
-#define U1OTGCON	PIC32_R8 (0x5070) /* Resistor and pin control */
-#define U1PWRC		PIC32_R8 (0x5080) /* Power control */
-#define U1IR		PIC32_R8 (0x5200) /* Pending interrupt */
-#define U1IE		PIC32_R8 (0x5210) /* Interrupt enable */
-#define U1EIR		PIC32_R8 (0x5220) /* Pending error interrupt */
-#define U1EIE		PIC32_R8 (0x5230) /* Error interrupt enable */
-#define U1STAT		PIC32_R8 (0x5240) /* Status FIFO */
-#define U1CON		PIC32_R8 (0x5250) /* Control */
-#define U1ADDR		PIC32_R8 (0x5260) /* Address */
-#define U1BDTP1		PIC32_R8 (0x5270) /* Buffer descriptor table pointer 1 */
-#define U1FRML		PIC32_R8 (0x5280) /* Frame counter low */
-#define U1FRMH		PIC32_R8 (0x5290) /* Frame counter high */
-#define U1TOK		PIC32_R8 (0x52A0) /* Host control */
-#define U1SOF		PIC32_R8 (0x52B0) /* SOF counter */
-#define U1BDTP2		PIC32_R8 (0x52C0) /* Buffer descriptor table pointer 2 */
-#define U1BDTP3		PIC32_R8 (0x52D0) /* Buffer descriptor table pointer 3 */
-#define U1CNFG1		PIC32_R8 (0x52E0) /* Debug and idle */
-#define U1EP0		PIC32_R8 (0x5300) /* Endpoint control */
-#define U1EP1		PIC32_R8 (0x5310)
-#define U1EP2		PIC32_R8 (0x5320)
-#define U1EP3		PIC32_R8 (0x5330)
-#define U1EP4		PIC32_R8 (0x5340)
-#define U1EP5		PIC32_R8 (0x5350)
-#define U1EP6		PIC32_R8 (0x5360)
-#define U1EP7		PIC32_R8 (0x5370)
-#define U1EP8		PIC32_R8 (0x5380)
-#define U1EP9		PIC32_R8 (0x5390)
-#define U1EP10		PIC32_R8 (0x53A0)
-#define U1EP11		PIC32_R8 (0x53B0)
-#define U1EP12		PIC32_R8 (0x53C0)
-#define U1EP13		PIC32_R8 (0x53D0)
-#define U1EP14		PIC32_R8 (0x53E0)
-#define U1EP15		PIC32_R8 (0x53F0)
+#define U1OTGIR		PIC32_R (0x85040) /* OTG interrupt flags */
+#define U1OTGIE		PIC32_R (0x85050) /* OTG interrupt enable */
+#define U1OTGSTAT	PIC32_R (0x85060) /* Comparator and pin status */
+#define U1OTGCON	PIC32_R (0x85070) /* Resistor and pin control */
+#define U1PWRC		PIC32_R (0x85080) /* Power control */
+#define U1IR		PIC32_R (0x85200) /* Pending interrupt */
+#define U1IE		PIC32_R (0x85210) /* Interrupt enable */
+#define U1EIR		PIC32_R (0x85220) /* Pending error interrupt */
+#define U1EIE		PIC32_R (0x85230) /* Error interrupt enable */
+#define U1STAT		PIC32_R (0x85240) /* Status FIFO */
+#define U1CON		PIC32_R (0x85250) /* Control */
+#define U1ADDR		PIC32_R (0x85260) /* Address */
+#define U1BDTP1		PIC32_R (0x85270) /* Buffer descriptor table pointer 1 */
+#define U1FRML		PIC32_R (0x85280) /* Frame counter low */
+#define U1FRMH		PIC32_R (0x85290) /* Frame counter high */
+#define U1TOK		PIC32_R (0x852A0) /* Host control */
+#define U1SOF		PIC32_R (0x852B0) /* SOF counter */
+#define U1BDTP2		PIC32_R (0x852C0) /* Buffer descriptor table pointer 2 */
+#define U1BDTP3		PIC32_R (0x852D0) /* Buffer descriptor table pointer 3 */
+#define U1CNFG1		PIC32_R (0x852E0) /* Debug and idle */
+#define U1EP(n)         PIC32_R (0x85300 + (n << 4)) /* Endpoint control */
 
 /*
  * USB Control register.
@@ -928,12 +936,12 @@
 /*--------------------------------------
  * DMA controller registers.
  */
-#define DMACON          PIC32_R8 (0x3000)       /* DMA Control */
-#define DMACONCLR	PIC32_R8 (0x3004)
-#define DMACONSET	PIC32_R8 (0x3008)
-#define DMACONINV	PIC32_R8 (0x300C)
-#define DMASTAT         PIC32_R8 (0x3010)       /* DMA Status */
-#define DMAADDR         PIC32_R8 (0x3020)       /* DMA Address */
+#define DMACON          PIC32_R (0x83000)       /* DMA Control */
+#define DMACONCLR	PIC32_R (0x83004)
+#define DMACONSET	PIC32_R (0x83008)
+#define DMACONINV	PIC32_R (0x8300C)
+#define DMASTAT         PIC32_R (0x83010)       /* DMA Status */
+#define DMAADDR         PIC32_R (0x83020)       /* DMA Address */
 // TODO: other DMA registers.
 
 /*--------------------------------------
@@ -941,10 +949,14 @@
  */
 #define OSCCON          PIC32_R (0xF000)
 #define OSCTUN          PIC32_R (0xF010)
+#if defined(PIC32MX2)
+#define CFGCON          PIC32_R (0xF200)        /* Configuration Control */
+#else
 #define DDPCON          PIC32_R (0xF200)        /* Debug Data Port Control */
-#define DDPCONCLR	PIC32_R (0xF204)
-#define DDPCONSET	PIC32_R (0xF208)
-#define DDPCONINV	PIC32_R (0xF20C)
+#define DDPCONCLR       PIC32_R (0xF204)
+#define DDPCONSET       PIC32_R (0xF208)
+#define DDPCONINV       PIC32_R (0xF20C)
+#endif
 #define DEVID           PIC32_R (0xF220)
 #define SYSKEY          PIC32_R (0xF230)
 #define RCON            PIC32_R (0xF600)
@@ -972,38 +984,38 @@
 /*--------------------------------------
  * Prefetch cache controller registers.
  */
-#define CHECON          PIC32_R8 (0x4000)       /* Prefetch cache control */
-#define CHECONCLR	PIC32_R8 (0x4004)
-#define CHECONSET	PIC32_R8 (0x4008)
-#define CHECONINV	PIC32_R8 (0x400C)
+#define CHECON          PIC32_R (0x84000)       /* Prefetch cache control */
+#define CHECONCLR	PIC32_R (0x84004)
+#define CHECONSET	PIC32_R (0x84008)
+#define CHECONINV	PIC32_R (0x8400C)
 // TODO: other prefetech registers
 
 /*--------------------------------------
  * Bus matrix control registers.
  */
-#define BMXCON          PIC32_R8 (0x2000)       /* Memory configuration */
-#define BMXCONCLR	PIC32_R8 (0x2004)
-#define BMXCONSET	PIC32_R8 (0x2008)
-#define BMXCONINV	PIC32_R8 (0x200C)
-#define BMXDKPBA        PIC32_R8 (0x2010)       /* Data RAM kernel program base address */
-#define BMXDKPBACLR	PIC32_R8 (0x2014)
-#define BMXDKPBASET	PIC32_R8 (0x2018)
-#define BMXDKPBAINV	PIC32_R8 (0x201C)
-#define BMXDUDBA        PIC32_R8 (0x2020)       /* Data RAM user data base address */
-#define BMXDUDBACLR	PIC32_R8 (0x2024)
-#define BMXDUDBASET	PIC32_R8 (0x2028)
-#define BMXDUDBAINV	PIC32_R8 (0x202C)
-#define BMXDUPBA        PIC32_R8 (0x2030)       /* Data RAM user program base address */
-#define BMXDUPBACLR	PIC32_R8 (0x2034)
-#define BMXDUPBASET	PIC32_R8 (0x2038)
-#define BMXDUPBAINV	PIC32_R8 (0x203C)
-#define BMXDRMSZ        PIC32_R8 (0x2040)       /* Data RAM size */
-#define BMXPUPBA        PIC32_R8 (0x2050)       /* Program Flash user program base address */
-#define BMXPUPBACLR	PIC32_R8 (0x2054)
-#define BMXPUPBASET	PIC32_R8 (0x2058)
-#define BMXPUPBAINV	PIC32_R8 (0x205C)
-#define BMXPFMSZ        PIC32_R8 (0x2060)       /* Program Flash size */
-#define BMXBOOTSZ       PIC32_R8 (0x2070)       /* Boot Flash size */
+#define BMXCON          PIC32_R (0x82000)       /* Memory configuration */
+#define BMXCONCLR	PIC32_R (0x82004)
+#define BMXCONSET	PIC32_R (0x82008)
+#define BMXCONINV	PIC32_R (0x8200C)
+#define BMXDKPBA        PIC32_R (0x82010)       /* Data RAM kernel program base address */
+#define BMXDKPBACLR	PIC32_R (0x82014)
+#define BMXDKPBASET	PIC32_R (0x82018)
+#define BMXDKPBAINV	PIC32_R (0x8201C)
+#define BMXDUDBA        PIC32_R (0x82020)       /* Data RAM user data base address */
+#define BMXDUDBACLR	PIC32_R (0x82024)
+#define BMXDUDBASET	PIC32_R (0x82028)
+#define BMXDUDBAINV	PIC32_R (0x8202C)
+#define BMXDUPBA        PIC32_R (0x82030)       /* Data RAM user program base address */
+#define BMXDUPBACLR	PIC32_R (0x82034)
+#define BMXDUPBASET	PIC32_R (0x82038)
+#define BMXDUPBAINV	PIC32_R (0x8203C)
+#define BMXDRMSZ        PIC32_R (0x82040)       /* Data RAM size */
+#define BMXPUPBA        PIC32_R (0x82050)       /* Program Flash user program base address */
+#define BMXPUPBACLR	PIC32_R (0x82054)
+#define BMXPUPBASET	PIC32_R (0x82058)
+#define BMXPUPBAINV	PIC32_R (0x8205C)
+#define BMXPFMSZ        PIC32_R (0x82060)       /* Program Flash size */
+#define BMXBOOTSZ       PIC32_R (0x82070)       /* Boot Flash size */
 
 /*--------------------------------------
  * Real time clock and calendar.
@@ -1099,6 +1111,7 @@
 #define DEVCFG0_DEBUG_MASK      0x00000003 /* Debugger enable bits */
 #define DEVCFG0_DEBUG_DISABLED  0x00000000 /* Debugger disabled */
 #define DEVCFG0_DEBUG_ENABLED   0x00000002 /* Debugger enabled */
+#define DEVCFG0_JTAGDIS         0x00000004 /* Disable JTAG port */
 #define DEVCFG0_ICESEL          0x00000008 /* Use PGC1/PGD1 (default PGC2/PGD2) */
 #define DEVCFG0_PWP_MASK        0x000ff000 /* Program flash write protect */
 #define DEVCFG0_BWP             0x01000000 /* Boot flash write protect */
@@ -1123,7 +1136,7 @@
 #define DEVCFG1_POSCMOD_XT      0x00000100 /* XT oscillator */
 #define DEVCFG1_POSCMOD_HS      0x00000200 /* HS oscillator */
 #define DEVCFG1_POSCMOD_DISABLE 0x00000300 /* Disabled */
-#define DEVCFG1_OSCIOFNC_OFF    0x00000400 /* CLKO output active */
+#define DEVCFG1_OSCIOFNC_OFF    0x00000400 /* CLKO output disable */
 #define DEVCFG1_FPBDIV_MASK     0x00003000 /* Peripheral bus clock divisor */
 #define DEVCFG1_FPBDIV_1        0x00000000 /* SYSCLK / 1 */
 #define DEVCFG1_FPBDIV_2        0x00001000 /* SYSCLK / 2 */
@@ -1221,27 +1234,27 @@
 /*--------------------------------------
  * Interrupt controller registers.
  */
-#define INTCON		PIC32_R8 (0x1000)	/* Interrupt Control */
-#define INTCONCLR	PIC32_R8 (0x1004)
-#define INTCONSET	PIC32_R8 (0x1008)
-#define INTCONINV	PIC32_R8 (0x100C)
-#define INTSTAT		PIC32_R8 (0x1010)	/* Interrupt Status */
-#define IPTMR		PIC32_R8 (0x1020)	/* Temporal Proximity Timer */
-#define IPTMRCLR	PIC32_R8 (0x1024)
-#define IPTMRSET	PIC32_R8 (0x1028)
-#define IPTMRINV	PIC32_R8 (0x102C)
-#define IFS(n)		PIC32_R8 (0x1030+((n)<<4)) /* IFS(0..2) - Interrupt Flag Status */
-#define IFSCLR(n)	PIC32_R8 (0x1034+((n)<<4))
-#define IFSSET(n)	PIC32_R8 (0x1038+((n)<<4))
-#define IFSINV(n)	PIC32_R8 (0x103C+((n)<<4))
-#define IEC(n)		PIC32_R8 (0x1060+((n)<<4)) /* IEC(0..2) - Interrupt Enable Control */
-#define IECCLR(n)	PIC32_R8 (0x1064+((n)<<4))
-#define IECSET(n)	PIC32_R8 (0x1068+((n)<<4))
-#define IECINV(n)	PIC32_R8 (0x106C+((n)<<4))
-#define IPC(n)		PIC32_R8 (0x1090+((n)<<4)) /* IPC(0..12) - Interrupt Priority Control */
-#define IPCCLR(n)	PIC32_R8 (0x1094+((n)<<4))
-#define IPCSET(n)	PIC32_R8 (0x1098+((n)<<4))
-#define IPCINV(n)	PIC32_R8 (0x109C+((n)<<4))
+#define INTCON		PIC32_R (0x81000)	/* Interrupt Control */
+#define INTCONCLR	PIC32_R (0x81004)
+#define INTCONSET	PIC32_R (0x81008)
+#define INTCONINV	PIC32_R (0x8100C)
+#define INTSTAT		PIC32_R (0x81010)	/* Interrupt Status */
+#define IPTMR		PIC32_R (0x81020)	/* Temporal Proximity Timer */
+#define IPTMRCLR	PIC32_R (0x81024)
+#define IPTMRSET	PIC32_R (0x81028)
+#define IPTMRINV	PIC32_R (0x8102C)
+#define IFS(n)		PIC32_R (0x81030+((n)<<4)) /* IFS(0..2) - Interrupt Flag Status */
+#define IFSCLR(n)	PIC32_R (0x81034+((n)<<4))
+#define IFSSET(n)	PIC32_R (0x81038+((n)<<4))
+#define IFSINV(n)	PIC32_R (0x8103C+((n)<<4))
+#define IEC(n)		PIC32_R (0x81060+((n)<<4)) /* IEC(0..2) - Interrupt Enable Control */
+#define IECCLR(n)	PIC32_R (0x81064+((n)<<4))
+#define IECSET(n)	PIC32_R (0x81068+((n)<<4))
+#define IECINV(n)	PIC32_R (0x8106C+((n)<<4))
+#define IPC(n)		PIC32_R (0x81090+((n)<<4)) /* IPC(0..12) - Interrupt Priority Control */
+#define IPCCLR(n)	PIC32_R (0x81094+((n)<<4))
+#define IPCSET(n)	PIC32_R (0x81098+((n)<<4))
+#define IPCINV(n)	PIC32_R (0x8109C+((n)<<4))
 
 /*
  * Interrupt Control register.

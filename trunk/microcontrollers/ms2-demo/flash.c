@@ -9,7 +9,8 @@
  * Chip configuration.
  */
 PIC32_DEVCFG (
-    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
+    DEVCFG0_DEBUG_DISABLED |    /* ICE debugger disabled */
+    DEVCFG0_JTAGDIS,            /* Disable JTAG port */
 
     DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
     DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
@@ -23,8 +24,7 @@ PIC32_DEVCFG (
     DEVCFG2_UPLLDIS |           /* Disable USB PLL */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 
-    DEVCFG3_USERID(0xffff) |    /* User-defined ID */
-    DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
+    DEVCFG3_USERID(0xffff));    /* User-defined ID */
 
 /*
  * Boot code at bfc00000.
@@ -68,9 +68,6 @@ int main()
     mtc0 (C0_INTCTL, 1, 1 << 5);        /* Vector spacing 32 bytes */
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
-
-    /* Disable JTAG and Trace ports, to make more pins available. */
-    DDPCONCLR = 3 << 2;
 
     /* Use all ports as digital. */
     ANSELA = 0;
