@@ -73,16 +73,16 @@ PIC32_DEVCFG (
     DEVCFG0_DEBUG_DISABLED |    /* ICE debugger disabled */
     DEVCFG0_JTAGDIS,            /* Disable JTAG port */
 
-    DEVCFG1_FNOSC_FRCPLL |      /* Fast RC oscillator with PLL */
-    DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
+    // External crystal 16 MHz.
+    DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
+    DEVCFG1_POSCMOD_HS |        /* HS oscillator */
+    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disabled */
     DEVCFG1_FPBDIV_4 |          /* Peripheral bus clock = SYSCLK/4 */
-    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
     DEVCFG1_FCKM_DISABLE,       /* Fail-safe clock monitor disable */
 
-    DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
-    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
-    DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
-//  DEVCFG2_UPLLDIS |           /* Disable USB PLL */
+    DEVCFG2_FPLLIDIV_4 |        /* PLL divider = 1/4 */
+    DEVCFG2_FPLLMUL_24 |        /* PLL multiplier = 24x */
+    DEVCFG2_UPLLIDIV_4 |        /* USB PLL divider = 1/4 */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
@@ -186,6 +186,8 @@ int main()
     TRIS_CLR(BL_LED_PORT) = 1 << BL_LED_PIN;
 
     // Initialize USB module SFRs and firmware variables to known states.
+    TRISBSET = 1 << 10;
+    TRISBSET = 1 << 11;
     usb_device_init();
 
     USB_HANDLE reply_handle = 0;
