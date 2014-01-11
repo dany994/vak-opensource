@@ -1,25 +1,25 @@
 /*
- * USB HID bootloader for PIC32 microcontroller.
+ * USB HID demo for PIC32 microcontroller.
  *
- * Based on Microchip sources.
- * Heavily rewritten by Serge Vakulenko, <serge@vak.ru>.
+ * Copyright (C) 2013 Serge Vakulenko, <serge@vak.ru>.
  *
- * The software supplied herewith by Microchip Technology Incorporated
- * (the 'Company') for its PIC(R) Microcontroller is intended and
- * supplied to you, the Company's customer, for use solely and
- * exclusively on Microchip PIC Microcontroller products. The
- * software is owned by the Company and/or its supplier, and is
- * protected under applicable copyright laws. All rights are reserved.
- * Any use in violation of the foregoing restrictions may subject the
- * user to criminal sanctions under applicable laws, as well as to
- * civil liability for the breach of the terms and conditions of this license.
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
  *
- * THIS SOFTWARE IS PROVIDED IN AN 'AS IS' CONDITION. NO WARRANTIES,
- * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
- * TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
- * IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR
- * CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
  */
 #include "usb_device.h"
 #include "usb_function_hid.h"
@@ -31,18 +31,7 @@
 #define	PACKET_SIZE	    64      // HID packet size
 #define REQUEST_SIZE        56      // Number of bytes of a standard request
 
-typedef union __attribute__ ((packed))
-{
-    unsigned char Contents [PACKET_SIZE];
-
-    struct __attribute__ ((packed)) {
-        unsigned char Command;
-        unsigned Address;
-        unsigned char Size;
-        unsigned char PadBytes [PACKET_SIZE - 6 - REQUEST_SIZE];
-        unsigned int Data [REQUEST_SIZE / sizeof(unsigned)];
-    };
-} packet_t;
+typedef unsigned char packet_t [PACKET_SIZE];
 
 static packet_t send;           // 64-byte send buffer (EP1 IN to the PC)
 static packet_t receive_buffer; // 64-byte receive buffer (EP1 OUT from the PC)
@@ -72,19 +61,31 @@ static USB_HANDLE request_handle;
 PIC32_DEVCFG (
     DEVCFG0_DEBUG_DISABLED |    /* ICE debugger disabled */
     DEVCFG0_JTAGDIS,            /* Disable JTAG port */
-
+#if 1
     // External crystal 16 MHz.
     DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
     DEVCFG1_POSCMOD_HS |        /* HS oscillator */
-    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disabled */
     DEVCFG1_FPBDIV_4 |          /* Peripheral bus clock = SYSCLK/4 */
+    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disabled */
     DEVCFG1_FCKM_DISABLE,       /* Fail-safe clock monitor disable */
 
     DEVCFG2_FPLLIDIV_4 |        /* PLL divider = 1/4 */
-    DEVCFG2_FPLLMUL_24 |        /* PLL multiplier = 24x */
+    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
     DEVCFG2_UPLLIDIV_4 |        /* USB PLL divider = 1/4 */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
+#else
+    // External crystal 8 MHz.
+    DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL... */
+    DEVCFG1_POSCMOD_HS |        /* ...in high speed mode */
+    DEVCFG1_FPBDIV_2 |          /* Peripheral bus clock = SYSCLK/2 */
+    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disabled */
+    DEVCFG1_FCKM_DISABLE,       /* Fail-safe clock monitor disable */
 
+    DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
+    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
+    DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
+    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
+#endif
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
 
 /*
@@ -98,25 +99,6 @@ asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
 asm ("          jr      $ra");
 asm ("          .text");
-
-#if 0
-/*
- * Microsecond delay routine for MIPS processor.
- */
-void udelay (unsigned usec)
-{
-    unsigned now = mfc0 (C0_COUNT, 0);
-    unsigned final = now + usec * (CPU_KHZ / 1000);
-
-    for (;;) {
-        now = mfc0 (C0_COUNT, 0);
-
-        /* This comparison is valid only when using a signed type. */
-        if ((int) (now - final) >= 0)
-            break;
-    }
-}
-#endif
 
 /*
  * Clear an array.
@@ -169,7 +151,6 @@ int main()
     asm volatile ("ehb");
 
     /* Disable JTAG port, to use it for i/o. */
-    //DDPCON = 0;
     ANSELA = 0;
     ANSELB = 0;
     LATA = 0;
@@ -227,7 +208,7 @@ int main()
         if (packet_received) {
             if (handle_packet())
                 reply_handle = usb_transfer_one_packet (HID_EP,
-                    IN_TO_HOST, &send.Contents[0], PACKET_SIZE);
+                    IN_TO_HOST, &send[0], PACKET_SIZE);
             packet_received = 0;
             continue;
         }
@@ -270,7 +251,7 @@ void usbcb_init_ep()
 
     // Arm the OUT endpoint for the first packet
     request_handle = usb_rx_one_packet (HID_EP,
-        &receive_buffer.Contents[0], PACKET_SIZE);
+        &receive_buffer[0], PACKET_SIZE);
 }
 
 /*
@@ -397,8 +378,8 @@ static const USB_STRING_INIT(25) string1_descriptor = {
 static const USB_STRING_INIT(18) string2_descriptor = {
     sizeof(string2_descriptor),
     USB_DESCRIPTOR_STRING,              /* Product */
-    { 'U','S','B',' ','H','I','D',' ','B','o',
-      'o','t','l','o','a','d','e','r' },
+    { 'U','S','B',' ','H','I','D',' ','D','e',
+      'm','o' },
 };
 
 /*

@@ -1,5 +1,6 @@
-#P               = /usr/local/pic32-tools/bin/pic32-
-P               = /usr/local/mips-gcc-4.7.2/bin/mips-elf-
+P               = /usr/local/pic32-tools/bin/pic32-
+#P               = /usr/local/mips-gcc-4.7.2/bin/mips-elf-
+#P               = /mips/arch/overflow/codesourcery/mips-sde-elf/lite/release/2013.11-37/Linux/bin/mips-sde-elf-
 CC              = $(P)gcc -EL -mips32r2 -g -nostdlib
 OBJCOPY         = $(P)objcopy
 OBJDUMP         = $(P)objdump
@@ -9,7 +10,7 @@ OBJDUMP         = $(P)objdump
 #GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
 GDB             = /usr/local/mips-gcc-4.7.2/bin/mips-elf-gdb
 CFLAGS          = -O -Wall -Werror -DPIC32MX2
-LDFLAGS         = -T mx2-ram32k.ld -e _start
+LDFLAGS         = -T mx2-ram4k.ld -e _start
 
 PROG            = flash
 OBJS            = usb_boot.o usb_device.o usb_function_hid.o

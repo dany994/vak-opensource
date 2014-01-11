@@ -1,8 +1,8 @@
 /*
  * Linker script for PIC32 MX1/MX2 firmware.
  */
-OUTPUT_FORMAT("elf32-littlemips", "elf32-bigmips",
-	      "elf32-littlemips")
+OUTPUT_FORMAT("elf32-tradlittlemips", "elf32-tradbigmips",
+	      "elf32-tradlittlemips")
 OUTPUT_ARCH(mips)
 ENTRY(_reset_vector_)
 MEMORY
@@ -10,7 +10,7 @@ MEMORY
   boot   (rx)   : ORIGIN = 0x9fc00000,	LENGTH = 3K-16
   devcfg (r)    : ORIGIN = 0x9fc00bf0,	LENGTH = 16
   flash  (rx)   : ORIGIN = 0x9d000000,	LENGTH = 128K
-  ram    (rw!x) : ORIGIN = 0xa0000000,	LENGTH = 32K
+  ram    (rw!x) : ORIGIN = 0xa0000000,	LENGTH = 4K
 }
 
 /* higher address of the user mode stack */
@@ -85,12 +85,9 @@ SECTIONS
   .data		  : AT (ADDR (.text) + SIZEOF (.text))
   {
     __data_start = . ;
-    _gp = .; 	/* We have only 32k RAM on MC-24, so no need for 0x8000 offset. */
-    *(.data .data.* .gnu.linkonce.d.*)
-    /* We want the small data sections together, so single-instruction offsets
-       can access them all, and initialized data all before uninitialized, so
-       we can shorten the on-disk segment size.  */
+    _gp = .;
     *(.sdata .sdata.* .gnu.linkonce.s.*)
+    *(.data .data.* .gnu.linkonce.d.*)
     *(.eh_frame)
     _edata = .;
   } > ram
