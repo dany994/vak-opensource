@@ -1,5 +1,5 @@
 /*
- * USB HID Function Driver.
+ * USB HID Function Driver File
  *
  * This file contains all of functions, macros, definitions, variables,
  * datatypes, etc. that are required for usage with the HID function
@@ -14,8 +14,7 @@
  * protected under applicable copyright laws. All rights are reserved.
  * Any use in violation of the foregoing restrictions may subject the
  * user to criminal sanctions under applicable laws, as well as to
- * civil liability for the breach of the terms and conditions of this
- * license.
+ * civil liability for the breach of the terms and conditions of this license.
  *
  * THIS SOFTWARE IS PROVIDED IN AN `AS IS' CONDITION. NO WARRANTIES,
  * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
@@ -24,25 +23,99 @@
  * IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR
  * CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
  */
-#include <stdint.h>
-#include "usb-config.h"
 #include "usb-device.h"
 #include "usb-function-hid.h"
 
-unsigned idle_rate;
-unsigned active_protocol;  // [0] Boot Protocol [1] Report Protocol
-unsigned hid_rpt_rx_len;
-
-void HIDGetReportHandler (void);
-void HIDSetReportHandler (void);
+unsigned char hid_idle_rate;
+unsigned char hid_active_protocol;  // [0] Boot Protocol [1] Report Protocol
 
 /*
  * Section C: non-EP0 Buffer Space
  */
 volatile unsigned char hid_report_out[HID_INT_OUT_EP_SIZE];
 volatile unsigned char hid_report_in[HID_INT_IN_EP_SIZE];
+volatile unsigned char hid_report_feature [HID_FEATURE_REPORT_BYTES];
 
-volatile unsigned char hid_report_feature[HID_FEATURE_REPORT_BYTES];
+/*
+ * Check to see if the HID supports a specific Output or Feature report.
+ *
+ * Return: 1 if it's a supported Input report
+ *         2 if it's a supported Output report
+ *         3 if it's a supported Feature report
+ *         0 for all other cases
+ */
+static unsigned char report_supported (void)
+{
+    // Find out if an Output or Feature report has arrived on the control pipe.
+    usb_device_tasks();
+
+    switch (usb_setup_pkt.W_Value >> 8) {
+    case 0x01:                  // Input report
+        switch (usb_setup_pkt.W_Value & 0xff) {
+        case 0x00: return 1;    // Report ID 0
+        default:   return 0;    // Other report IDs not supported.
+        }
+    case 0x02:          // Output report
+        switch (usb_setup_pkt.W_Value & 0xff) {
+        case 0x00: return 2;    // Report ID 0
+        default:   return 0;    // Other report IDs not supported.
+        }
+    case 0x03:                  // Feature report
+        switch (usb_setup_pkt.W_Value & 0xff) {
+        case 0x00: return 3;    // Report ID 0
+        default:   return 0;    // Other report IDs not supported.
+        }
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Check to see if an Output or Feature report has arrived
+ * on the control pipe. If yes, extract and use the data.
+ */
+static void report_handler (void)
+{
+    unsigned char count = 0;
+
+    // Find out if an Output or Feature report has arrived on the control pipe.
+    // Get the report type from the Setup packet.
+
+    switch (usb_setup_pkt.W_Value >> 8) {
+    case 0x02:                  // Output report
+        switch (usb_setup_pkt.W_Value & 0xff) {
+        case 0:                 // Report ID 0
+            // This example application copies the Output report data
+            // to hid_report_in.
+            // (Assumes Input and Output reports are the same length.)
+            // A "real" application would do something more useful with the data.
+            // wCount holds the number of bytes read in the Data stage.
+            // This example assumes the report fits in one transaction.
+
+            for (count=0; count <= HID_OUTPUT_REPORT_BYTES - 1; count++) {
+                hid_report_in[count] = hid_report_out[count];
+            }
+            break;
+        }
+        break;
+
+    case 0x03:                  // Feature report
+        // Get the report ID from the Setup packet.
+        switch (usb_setup_pkt.W_Value & 0xff) {
+        case 0:                 // Report ID 0
+            // The Feature report data is in hid_report_feature.
+            // This example application just sends the data back in the next
+            // Get_Report request for a Feature report.
+            // wCount holds the number of bytes read in the Data stage.
+            // This example assumes the report fits in one transaction.
+            // The Feature report uses a single buffer so to send the same data back
+            // in the next IN Feature report, there is nothing to copy.
+            // The data is in hid_report_feature[HID_FEATURE_REPORT_BYTES]
+            break;
+        }
+        break;
+    }
+}
 
 /*
  * This routine handles HID specific request that happen on EP0.  These
@@ -51,20 +124,18 @@ volatile unsigned char hid_report_feature[HID_FEATURE_REPORT_BYTES];
  * USBCBCheckOtherReq() call back function whenever using an HID device.
  *
  * Typical Usage:
- * <code>
- * void USBCBCheckOtherReq(void)
- * {
- *     //Since the stack didn't handle the request I need to check
- *     //  my class drivers to see if it is for them
- *     USBCheckHIDRequest();
- * }
- * </code>
+ *      void USBCBCheckOtherReq(void)
+ *      {
+ *          // Since the stack didn't handle the request I need
+ *          // to check my class drivers to see if it is for them
+ *          hid_check_request();
+ *      }
  */
-void USBCheckHIDRequest (void)
+void hid_check_request (void)
 {
-    if (SetupPkt.Recipient != RCPT_INTF)
+    if (usb_setup_pkt.Recipient != RCPT_INTF)
         return;
-    if (SetupPkt.bIntfID != HID_INTF_ID)
+    if (usb_setup_pkt.bIntfID != HID_INTF_ID)
         return;
 
     /*
@@ -72,184 +143,79 @@ void USBCheckHIDRequest (void)
      * 1. GET_DSC(DSC_HID,DSC_RPT,DSC_PHY);
      * 2. SET_DSC(DSC_HID,DSC_RPT,DSC_PHY);
      */
-    if (SetupPkt.bRequest == GET_DSC) {
-        switch (SetupPkt.bDescriptorType) {
+    if (usb_setup_pkt.bRequest == GET_DSC) {
+        switch (usb_setup_pkt.bDescriptorType) {
         case DSC_HID:
-            if (USBActiveConfiguration == 1)    {
-                USBEP0SendROMPtr ((const unsigned char*)
-                    &configDescriptor1 + 18,
+            if (usb_active_configuration == 1) {
+                usb_ep0_send_rom_ptr ((const unsigned char*)
+                    &usb_config1_descriptor + 18,
                     sizeof(USB_HID_DSC)+3,
                     USB_EP0_INCLUDE_ZERO);
             }
             break;
         case DSC_RPT:
-            if (USBActiveConfiguration == 1)    {
-                USBEP0SendROMPtr ((const unsigned char*)
+            if (usb_active_configuration == 1) {
+                usb_ep0_send_rom_ptr ((const unsigned char*)
                     &hid_rpt01[0],
-                    HID_RPT01_SIZE,             // See target.cfg
+                    HID_RPT01_SIZE,     // See target.cfg
                     USB_EP0_INCLUDE_ZERO);
             }
             break;
         case DSC_PHY:
-            USBEP0Transmit (USB_EP0_NO_DATA);
+            usb_ep0_transmit (USB_EP0_NO_DATA);
             break;
         }
     }
 
-    if (SetupPkt.RequestType != CLASS)
+    if (usb_setup_pkt.RequestType != CLASS)
         return;
 
-    switch (SetupPkt.bRequest) {
+    switch (usb_setup_pkt.bRequest) {
     case GET_REPORT:
-        HIDGetReportHandler();
+        switch (report_supported()) {
+        case 1:                 // Input Report
+            usb_in_pipe[0].pSrc.bRam = (unsigned char*) &hid_report_in[0];
+            usb_in_pipe[0].info.bits.ctrl_trf_mem = _RAM;       // Set memory type
+            usb_in_pipe[0].wCount = HID_INPUT_REPORT_BYTES;     // Set data count
+            usb_in_pipe[0].info.bits.busy = 1;
+            break;
+        case 3:                 // Feature Report
+            usb_in_pipe[0].pSrc.bRam = (unsigned char*) &hid_report_feature[0];
+            usb_in_pipe[0].info.bits.ctrl_trf_mem = _RAM;       // Set memory type
+            usb_in_pipe[0].wCount = HID_FEATURE_REPORT_BYTES;   // Set data count
+            usb_in_pipe[0].info.bits.busy = 1;
+            break;
+        }
         break;
     case SET_REPORT:
-        HIDSetReportHandler();
+        switch (report_supported()) {
+        case 2:                 // Output Report
+            usb_out_pipe[0].wCount = usb_setup_pkt.wLength;
+            usb_out_pipe[0].pFunc = report_handler;
+            usb_out_pipe[0].pDst.bRam = (unsigned char*) &hid_report_out[0];
+            usb_out_pipe[0].info.bits.busy = 1;
+            break;
+        case 3:                 // Feature Report
+            usb_out_pipe[0].wCount = usb_setup_pkt.wLength;
+            usb_out_pipe[0].pFunc = report_handler;
+            usb_out_pipe[0].pDst.bRam = (unsigned char*) &hid_report_feature[0];
+            usb_out_pipe[0].info.bits.busy = 1;
+            break;
+        }
         break;
     case GET_IDLE:
-        USBEP0SendRAMPtr ((unsigned char*)&idle_rate,
-            1, USB_EP0_INCLUDE_ZERO);
+        usb_ep0_send_ram_ptr (&hid_idle_rate, 1, USB_EP0_INCLUDE_ZERO);
         break;
     case SET_IDLE:
-        USBEP0Transmit (USB_EP0_NO_DATA);
-        idle_rate = SetupPkt.W_Value >> 8;
+        usb_ep0_transmit (USB_EP0_NO_DATA);
+        hid_idle_rate = usb_setup_pkt.W_Value >> 8;
         break;
     case GET_PROTOCOL:
-        USBEP0SendRAMPtr ((unsigned char*)&active_protocol,
-            1, USB_EP0_NO_OPTIONS);
-            break;
+        usb_ep0_send_ram_ptr (&hid_active_protocol, 1, USB_EP0_NO_OPTIONS);
+        break;
     case SET_PROTOCOL:
-        USBEP0Transmit (USB_EP0_NO_DATA);
-        active_protocol = SetupPkt.W_Value & 0xff;
+        usb_ep0_transmit (USB_EP0_NO_DATA);
+        hid_active_protocol = usb_setup_pkt.W_Value & 0xff;
         break;
-    }
-}
-
-/*
- * Check to see if the HID supports a specific Output or Feature report.
- *
- * Return: 1 if it's a supported Input report
- *       2 if it's a supported Output report
- *         3 if it's a supported Feature report
- *         0 for all other cases
- */
-static unsigned ReportSupported (void)
-{
-    // Find out if an Output or Feature report has arrived on the control pipe.
-
-    USBDeviceTasks();
-    switch (SetupPkt.W_Value >> 8) {
-    case 0x01:                  // Input report
-        switch (SetupPkt.W_Value & 0xff) {
-        case 0x00:              // Report ID 0
-            return 1;
-        default:
-            return 0;           // Other report IDs not supported.
-        }
-    case 0x02:                  // Output report
-        switch (SetupPkt.W_Value & 0xff) {
-        case 0x00:              // Report ID 0
-            return 2;
-        default:
-            return 0;           // Other report IDs not supported.
-        }
-    case 0x03:                  // Feature report
-        switch (SetupPkt.W_Value & 0xff) {
-        case 0x00:              // Report ID 0
-            return 3;
-        default:
-            return 0;           // Other report IDs not supported.
-        }
-    default:
-        return 0;
-    }
-}
-
-void HIDGetReportHandler (void)
-{
-    if (ReportSupported() == 1) {
-        // Input Report
-        inPipes[0].pSrc.bRam = (unsigned char*) &hid_report_in[0]; // Set Source
-        inPipes[0].info.bits.ctrl_trf_mem = _RAM;       // Set memory type
-        inPipes[0].wCount = HID_INPUT_REPORT_BYTES;     // Set data count
-        inPipes[0].info.bits.busy = 1;
-
-    } else if (ReportSupported() == 3) {
-        // Feature Report
-        inPipes[0].pSrc.bRam = (unsigned char*) &hid_report_feature[0]; // Set Source
-        inPipes[0].info.bits.ctrl_trf_mem = _RAM;       // Set memory type
-        inPipes[0].wCount = HID_FEATURE_REPORT_BYTES;   // Set data count
-        inPipes[0].info.bits.busy = 1;
-    }
-}
-
-/*
- * Check to see if an Output or Feature report has arrived
- * on the control pipe. If yes, extract and use the data.
- */
-static void mySetReportHandler (void)
-{
-    unsigned count = 0;
-
-    // Find out if an Output or Feature report has arrived on the control pipe.
-    // Get the report type from the Setup packet.
-
-    switch (SetupPkt.W_Value >> 8) {
-    case 0x02:                          // Output report
-        switch (SetupPkt.W_Value & 0xff) {
-        case 0:                         // Report ID 0
-            // This example application copies the Output report data
-            // to hid_report_in.
-            // (Assumes Input and Output reports are the same length.)
-            // A "real" application would do something more useful with the data.
-
-            // wCount holds the number of bytes read in the Data stage.
-            // This example assumes the report fits in one transaction.
-
-            for (count=0; count <= HID_OUTPUT_REPORT_BYTES - 1; count++) {
-                hid_report_in[count] = hid_report_out[count] ;
-            }
-            break;
-        }
-        break;
-
-    case 0x03:            // Feature report
-        // Get the report ID from the Setup packet.
-
-        switch (SetupPkt.W_Value & 0xff) {
-        case 0:                         // Report ID 0
-            // The Feature report data is in hid_report_feature.
-            // This example application just sends the data back in the next
-            // Get_Report request for a Feature report.
-
-            // wCount holds the number of bytes read in the Data stage.
-            // This example assumes the report fits in one transaction.
-
-            // The Feature report uses a single buffer so to send the same data back
-            // in the next IN Feature report, there is nothing to copy.
-            // The data is in hid_report_feature[HID_FEATURE_REPORT_BYTES]
-
-            break;
-
-        }
-        break;
-    }
-}
-
-void HIDSetReportHandler (void)
-{
-    if (ReportSupported() == 2) {
-        // Output Report
-        outPipes[0].wCount = SetupPkt.wLength;
-        outPipes[0].pFunc = mySetReportHandler;
-        outPipes[0].pDst.bRam = (unsigned char*) &hid_report_out[0];
-        outPipes[0].info.bits.busy = 1;
-
-    } else if (ReportSupported() == 3) {
-        // Feature Report
-        outPipes[0].wCount = SetupPkt.wLength;
-        outPipes[0].pFunc = mySetReportHandler;
-        outPipes[0].pDst.bRam = (unsigned char*) &hid_report_feature[0];
-        outPipes[0].info.bits.busy = 1;
     }
 }

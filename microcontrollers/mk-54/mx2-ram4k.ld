@@ -85,12 +85,9 @@ SECTIONS
   .data		  : AT (ADDR (.text) + SIZEOF (.text))
   {
     __data_start = . ;
-    _gp = .; 	/* We have only 32k RAM on MC-24, so no need for 0x8000 offset. */
-    *(.data .data.* .gnu.linkonce.d.*)
-    /* We want the small data sections together, so single-instruction offsets
-       can access them all, and initialized data all before uninitialized, so
-       we can shorten the on-disk segment size.  */
+    _gp = .;
     *(.sdata .sdata.* .gnu.linkonce.s.*)
+    *(.data .data.* .gnu.linkonce.d.*)
     *(.eh_frame)
     _edata = .;
   } > ram

@@ -50,14 +50,14 @@ typedef struct __attribute__ ((packed)) _USB_DEVICE_DESCRIPTOR
 {
 	unsigned char bLength;			// Length of this descriptor.
 	unsigned char bDescriptorType;		// DEVICE descriptor type (USB_DESCRIPTOR_DEVICE).
-	uint16_t bcdUSB;			// USB Spec Release Number (BCD).
+	unsigned short bcdUSB;			// USB Spec Release Number (BCD).
 	unsigned char bDeviceClass;		// Class code (assigned by the USB-IF). 0xFF-Vendor specific.
 	unsigned char bDeviceSubClass;		// Subclass code (assigned by the USB-IF).
 	unsigned char bDeviceProtocol;		// Protocol code (assigned by the USB-IF). 0xFF-Vendor specific.
 	unsigned char bMaxPacketSize0;		// Maximum packet size for endpoint 0.
-	uint16_t idVendor;			// Vendor ID (assigned by the USB-IF).
-	uint16_t idProduct;			// Product ID (assigned by the manufacturer).
-	uint16_t bcdDevice;			// Device release number (BCD).
+	unsigned short idVendor;		// Vendor ID (assigned by the USB-IF).
+	unsigned short idProduct;		// Product ID (assigned by the manufacturer).
+	unsigned short bcdDevice;		// Device release number (BCD).
 	unsigned char iManufacturer;		// Index of String Descriptor describing the manufacturer.
 	unsigned char iProduct;			// Index of String Descriptor describing the product.
 	unsigned char iSerialNumber;		// Index of String Descriptor with the device's serial number.
@@ -76,7 +76,7 @@ typedef struct __attribute__ ((packed)) _USB_CONFIGURATION_DESCRIPTOR
 {
 	unsigned char bLength;			// Length of this descriptor.
 	unsigned char bDescriptorType;		// CONFIGURATION descriptor type (USB_DESCRIPTOR_CONFIGURATION).
-	uint16_t wTotalLength;			// Total length of all descriptors for this configuration.
+	unsigned short wTotalLength;		// Total length of all descriptors for this configuration.
 	unsigned char bNumInterfaces;		// Number of interfaces in this configuration.
 	unsigned char bConfigurationValue;	// Value of this configuration (1 based).
 	unsigned char iConfiguration;		// Index of String Descriptor describing the configuration.
@@ -124,7 +124,7 @@ typedef struct __attribute__ ((packed)) _USB_ENDPOINT_DESCRIPTOR
 	unsigned char bDescriptorType;	// ENDPOINT descriptor type (USB_DESCRIPTOR_ENDPOINT).
 	unsigned char bEndpointAddress;	// Endpoint address. Bit 7 indicates direction (0=OUT, 1=IN).
 	unsigned char bmAttributes;	// Endpoint transfer type.
-	uint16_t wMaxPacketSize;        // Maximum packet size.
+	unsigned short wMaxPacketSize;  // Maximum packet size.
 	unsigned char bInterval;	// Polling interval in frames.
 } USB_ENDPOINT_DESCRIPTOR;
 
@@ -203,6 +203,12 @@ typedef struct __attribute__ ((packed)) _USB_STRING_DSC
 
 } USB_STRING_DESCRIPTOR;
 
+#define USB_STRING_INIT(nchars) struct {\
+	unsigned char bLength;          \
+	unsigned char bDescriptorType;	\
+        unsigned short string[nchars];  \
+}
+
 
 // ******************************************************************
 // Section: USB Device Qualifier Descriptor Structure
@@ -219,7 +225,7 @@ typedef struct __attribute__ ((packed)) _USB_DEVICE_QUALIFIER_DESCRIPTOR
 {
 	unsigned char bLength;			// Size of this descriptor
 	unsigned char bType;			// Type, always USB_DESCRIPTOR_DEVICE_QUALIFIER
-	uint16_t bcdUSB;			// USB spec version, in BCD
+	unsigned short bcdUSB;			// USB spec version, in BCD
 	unsigned char bDeviceClass;		// Device class code
 	unsigned char bDeviceSubClass;		// Device sub-class code
 	unsigned char bDeviceProtocol;		// Device protocol
@@ -240,7 +246,7 @@ typedef struct __attribute__ ((packed)) _USB_DEVICE_QUALIFIER_DESCRIPTOR
 // Note: Refer to the USB 2.0 specification for additional details on the
 // usage of the setup packet and standard device requests.
 
-typedef struct __attribute__ ((packed)) SetupPkt
+typedef struct __attribute__ ((packed))
 {
 	union					// offset   description
 	{					// ------   ------------------------
@@ -253,9 +259,9 @@ typedef struct __attribute__ ((packed)) SetupPkt
 	} requestInfo;
 
 	unsigned char bRequest;			//   1      Request type
-	uint16_t wValue;			//   2      Depends on bRequest
-	uint16_t wIndex;			//   4      Depends on bRequest
-	uint16_t wLength;			//   6      Depends on bRequest
+	unsigned short wValue;			//   2      Depends on bRequest
+	unsigned short wIndex;			//   4      Depends on bRequest
+	unsigned short wLength;			//   6      Depends on bRequest
 
 } SETUP_PKT, *PSETUP_PKT;
 
