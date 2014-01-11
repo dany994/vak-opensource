@@ -1099,6 +1099,7 @@
 #define DEVCFG0_DEBUG_MASK      0x00000003 /* Debugger enable bits */
 #define DEVCFG0_DEBUG_DISABLED  0x00000000 /* Debugger disabled */
 #define DEVCFG0_DEBUG_ENABLED   0x00000002 /* Debugger enabled */
+#define DEVCFG0_JTAGDIS         0x00000004 /* Disable JTAG port */
 #define DEVCFG0_ICESEL          0x00000008 /* Use PGC1/PGD1 (default PGC2/PGD2) */
 #define DEVCFG0_PWP_MASK        0x000ff000 /* Program flash write protect */
 #define DEVCFG0_BWP             0x01000000 /* Boot flash write protect */
