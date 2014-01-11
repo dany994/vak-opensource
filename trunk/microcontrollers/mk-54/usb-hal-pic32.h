@@ -34,43 +34,6 @@
 #ifndef USB_HAL_PIC32_H
 #define USB_HAL_PIC32_H
 
-#define USBTransactionCompleteIE	(U1IE & PIC32_U1I_TRN)
-#define USBTransactionCompleteIF	(U1IR & PIC32_U1I_TRN)
-#define USBTransactionCompleteIFReg	(unsigned char*)&U1IR
-#define USBTransactionCompleteIFBitNum	3
-
-#define USBResetIE			(U1IE & PIC32_U1I_URST)
-#define USBResetIF			(U1IR & PIC32_U1I_URST)
-#define USBResetIFReg			(unsigned char*)&U1IR
-#define USBResetIFBitNum		0
-
-#define USBIdleIE			(U1IE & PIC32_U1I_IDLE)
-#define USBIdleIF			(U1IR & PIC32_U1I_IDLE)
-#define USBIdleIFReg			(unsigned char*)&U1IR
-#define USBIdleIFBitNum			4
-
-#define USBActivityIE			(U1OTGIE & PIC32_U1OTGI_ACTV)
-#define USBActivityIF			(U1OTGIR & PIC32_U1OTGI_ACTV)
-#define USBActivityIFReg		(unsigned char*)&U1OTGIR
-#define USBActivityIFBitNum		4
-
-#define USBSOFIE			(U1IE & PIC32_U1I_SOF)
-#define USBSOFIF			(U1IR & PIC32_U1I_SOF)
-#define USBSOFIFReg			(unsigned char*)&U1IR
-#define USBSOFIFBitNum			2
-
-#define USBStallIE			(U1IE & PIC32_U1I_STALL)
-#define USBStallIF			(U1IR & PIC32_U1I_STALL)
-#define USBStallIFReg			(unsigned char*)&U1IR
-#define USBStallIFBitNum		7
-
-#define USBErrorIE			(U1IE & PIC32_U1I_UERR)
-#define USBErrorIF			(U1IR & PIC32_U1I_UERR)
-#define USBErrorIFReg			(unsigned char*)&U1IR
-#define USBErrorIFBitNum		1
-
-//#define USBResumeControl		U1CONbits.RESUME
-
 /* Buffer Descriptor Status Register Initialization Parameters */
 
 //The _BSTALL definition is changed from 0x04 to 0x00 to
@@ -110,7 +73,7 @@ typedef union __attribute__ ((packed)) _BD_STAT
         unsigned            :2;
         unsigned    PID     :4;         //Packet Identifier
     };
-    uint16_t        Val;
+    unsigned short  Val;
 } BD_STAT;
 
 // BDT Entry Layout
@@ -127,11 +90,10 @@ typedef union __attribute__ ((packed))__BDT
         unsigned    res  :16;
         unsigned    count:10;
     };
-    uint32_t	    w[2];
-    uint16_t        v[4];
-    uint64_t        Val;
+    unsigned int    w[2];
+    unsigned short  v[4];
+    unsigned long long Val;
 } BDT_ENTRY;
-
 
 #define USTAT_EP0_PP_MASK   ~0x04
 #define USTAT_EP_MASK       0xFC
@@ -143,49 +105,7 @@ typedef union __attribute__ ((packed))__BDT
 #define USTAT_EP0_IN_EVEN   0x08
 #define USTAT_EP0_IN_ODD    0x0C
 
-typedef union
-{
-    uint16_t UEP[16];
-} _UEP;
-
 #define UEP_STALL 0x0002
-#define USB_VOLATILE
-
-typedef union _POINTER
-{
-    struct
-    {
-        unsigned char bLow;
-        unsigned char bHigh;
-        //byte bUpper;
-    };
-    uint16_t _word;		// bLow & bHigh
-
-    unsigned char* bRam;	// Ram byte pointer: 2 bytes pointer pointing
-				// to 1 byte of data
-    uint16_t* wRam;		// Ram word poitner: 2 bytes poitner pointing
-				// to 2 bytes of data
-    const unsigned char* bRom;	// Size depends on compiler setting
-    const uint16_t* wRom;
-} POINTER;
-
- //* Depricated: v2.2 - will be removed at some point of time ***
-#define _LS         0x00            // Use Low-Speed USB Mode
-#define _FS         0x00            // Use Full-Speed USB Mode
-#define _TRINT      0x00            // Use internal transceiver
-#define _TREXT      0x00            // Use external transceiver
-#define _PUEN       0x00            // Use internal pull-up resistor
-#define _OEMON      0x00            // Use SIE output indicator
-//*
-
-#define USB_PULLUP_ENABLE 0x10
-#define USB_PULLUP_DISABLE 0x00
-
-#define USB_INTERNAL_TRANSCEIVER 0x00
-#define USB_EXTERNAL_TRANSCEIVER 0x01
-
-#define USB_FULL_SPEED 0x00
-//USB_LOW_SPEED not currently supported in PIC24F USB products
 
 //#define USB_PING_PONG__NO_PING_PONG	0x00
 //#define USB_PING_PONG__EP0_OUT_ONLY	0x01
@@ -193,13 +113,37 @@ typedef union _POINTER
 //#define USB_PING_PONG__ALL_BUT_EP0	0x03
 
 /*
+ * Translate virtual address to physical one.
+ * Only for fixed mapping.
+ */
+static inline void *ConvertToPhysicalAddress (volatile void *addr)
+{
+    unsigned virt = (unsigned) addr;
+    unsigned phys;
+
+    if (virt & 0x80000000) {
+        if (virt & 0x40000000) {
+            // kseg2 or kseg3 - no mapping
+            phys = virt;
+        } else {
+            // kseg0 или kseg1, cut bits A[31:29]
+            phys = virt & 0x1fffffff;
+        }
+    } else {
+	// kuseg
+        phys = virt + 0x40000000;
+    }
+    return (void*) phys;
+}
+
+/*
  * This macro is used to disable the USB module
  */
-#define USBModuleDisable() {\
+#define usb_module_disable() {\
 	U1CON = 0;\
 	U1IE = 0;\
 	U1OTGIE = 0;\
 	U1PWR |= PIC32_U1PWR_USBPWR;\
-	USBDeviceState = DETACHED_STATE;\
+	usb_device_state = DETACHED_STATE;\
 }
 #endif
