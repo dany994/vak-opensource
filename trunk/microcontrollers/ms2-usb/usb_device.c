@@ -146,40 +146,6 @@ void usb_device_tasks(void)
 {
     unsigned i;
 
-#ifdef USB_SUPPORT_OTG
-    // SRP Time Out Check
-    if (USBOTGSRPIsReady())
-    {
-        if (USBT1MSECIF && USBT1MSECIE)
-        {
-            if (USBOTGGetSRPTimeOutFlag())
-            {
-                if (USBOTGIsSRPTimeOutExpired())
-                {
-                    USB_OTGEventHandler(0,OTG_EVENT_SRP_FAILED,0,0);
-                }
-            }
-            // Clear Interrupt Flag
-            *USBT1MSECIFReg = 1 << USBT1MSECIFBitNum;
-        }
-    }
-    // If Session Is Started Then
-    else {
-        // If SRP Is Ready
-        if (USBOTGSRPIsReady())
-        {
-            // Clear SRPReady
-            USBOTGClearSRPReady();
-
-            // Clear SRP Timeout Flag
-            USBOTGClearSRPTimeOutFlag();
-
-            // Indicate Session Started
-            UART2PrintString( "\r\n***** USB OTG B Event - Session Started  *****\r\n" );
-        }
-    }
-#endif
-
     // if we are in the detached state
     if (usb_device_state == DETACHED_STATE)
     {
@@ -191,7 +157,7 @@ void usb_device_tasks(void)
 
         // Enable module & attach to bus
         while (! (U1CON & PIC32_U1CON_USBEN)) {
-		U1CON |= PIC32_U1CON_USBEN;
+            U1CON |= PIC32_U1CON_USBEN;
 	}
 
         // moved to the attached state
@@ -200,10 +166,6 @@ void usb_device_tasks(void)
         // Enable/set things like: pull ups, full/low-speed mode,
         // set the ping pong mode, and set internal transceiver
         SetConfigurationOptions();
-
-#ifdef USB_SUPPORT_OTG
-	U1OTGCON = USB_OTG_DPLUS_ENABLE | USB_OTG_ENABLE;
-#endif
     }
 
     if (usb_device_state == ATTACHED_STATE) {
@@ -222,27 +184,11 @@ void usb_device_tasks(void)
 	usb_device_state = POWERED_STATE;
     }
 
-#ifdef USB_SUPPORT_OTG
-    // If ID Pin Changed State
-    if (USBIDIF && USBIDIE)
-    {
-        // Re-detect & Initialize
-        USBOTGInitialize();
-
-        *USBIDIFReg = 1 << USBIDIFBitNum;
-    }
-#endif
-
     /*
      * Task A: Service USB Activity Interrupt
      */
-    if ((U1OTGIR & PIC32_U1OTGI_ACTV) && (U1OTGIE & PIC32_U1OTGI_ACTV))
-    {
-#if defined(USB_SUPPORT_OTG)
-        U1OTGIR = PIC32_U1OTGI_ACTV;
-#else
+    if ((U1OTGIR & PIC32_U1OTGI_ACTV) && (U1OTGIE & PIC32_U1OTGI_ACTV)) {
         usb_wake_from_suspend();
-#endif
     }
 
     /*
@@ -281,27 +227,13 @@ void usb_device_tasks(void)
         usb_buffer[EP0_OUT_EVEN].CNT = USB_EP0_BUFF_SIZE;
         usb_buffer[EP0_OUT_EVEN].STAT.Val &= ~_STAT_MASK;
         usb_buffer[EP0_OUT_EVEN].STAT.Val |= _USIE|_DAT0|_DTSEN|_BSTALL;
-
-#ifdef USB_SUPPORT_OTG
-         // Disable HNP
-         USBOTGDisableHnp();
-
-         // Deactivate HNP
-         USBOTGDeactivateHnp();
-#endif
     }
 
     /*
      * Task C: Service other USB interrupts
      */
-    if ((U1IR & PIC32_U1I_IDLE) && (U1IE & PIC32_U1I_IDLE))
-    {
-#ifdef USB_SUPPORT_OTG
-        // If Suspended, Try to switch to Host
-        USBOTGSelectRole(ROLE_HOST);
-#else
+    if ((U1IR & PIC32_U1I_IDLE) && (U1IE & PIC32_U1I_IDLE)) {
         usb_suspend();
-#endif
         U1IR = PIC32_U1I_IDLE;
     }
 
@@ -801,38 +733,6 @@ void usb_std_feature_req_handler(void)
     BDT_ENTRY *p;
     unsigned int *pUEP;
 
-#ifdef	USB_SUPPORT_OTG
-    if ((usb_setup_pkt.bFeature == OTG_FEATURE_B_HNP_ENABLE)&&
-        (usb_setup_pkt.Recipient == RCPT_DEV))
-    {
-        usb_in_pipe[0].info.bits.busy = 1;
-        if (usb_setup_pkt.bRequest == SET_FEATURE)
-            USBOTGEnableHnp();
-        else
-            USBOTGDisableHnp();
-    }
-
-    if ((usb_setup_pkt.bFeature == OTG_FEATURE_A_HNP_SUPPORT)&&
-        (usb_setup_pkt.Recipient == RCPT_DEV))
-    {
-        usb_in_pipe[0].info.bits.busy = 1;
-        if (usb_setup_pkt.bRequest == SET_FEATURE)
-            USBOTGEnableSupportHnp();
-        else
-            USBOTGDisableSupportHnp();
-    }
-
-
-    if ((usb_setup_pkt.bFeature == OTG_FEATURE_A_ALT_HNP_SUPPORT)&&
-        (usb_setup_pkt.Recipient == RCPT_DEV))
-    {
-        usb_in_pipe[0].info.bits.busy = 1;
-        if (usb_setup_pkt.bRequest == SET_FEATURE)
-            USBOTGEnableAltHnp();
-        else
-            USBOTGDisableAltHnp();
-    }
-#endif
     if ((usb_setup_pkt.bFeature == DEVICE_REMOTE_WAKEUP)&&
        (usb_setup_pkt.Recipient == RCPT_DEV))
     {
@@ -1136,7 +1036,6 @@ void usb_ctrl_ep_service_complete(void)
         }
     }
 }
-
 
 /*
  * This routine should be called from only two places.
