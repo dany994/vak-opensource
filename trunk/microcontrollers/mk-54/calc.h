@@ -146,3 +146,8 @@ extern int calc_keypad(void);
 #define KEY_PREV    0x99    //  <ШГ x=0
 #define KEY_K       0xa9    //  K
 #define KEY_F       0xb9    //  F
+
+//
+// Poll the USB port.
+//
+void calc_poll(void);
