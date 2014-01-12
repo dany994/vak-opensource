@@ -22,7 +22,7 @@ OBJS            = ir2.o ik13.o calc.o
 #LDFLAGS         += -T mx2-ram4k.ld
 
 #
-# DIY board with pic32mx2 processor and USB interface.
+# DIY board with pic32mx2 processor and USB port.
 #
 PROG            = mx2-usb
 CFLAGS          += -DPIC32MX2
