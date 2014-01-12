@@ -66,6 +66,7 @@ int calc_step()
 
         // Do computations.
         for (cycle=0; cycle<REG_NWORDS; cycle++) {
+            calc_poll();
             ik1302.input = fifo2.output;
             plm_step (&ik1302, cycle);
             ik1303.input = ik1302.output;

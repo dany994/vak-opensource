@@ -59,6 +59,8 @@ static packet_t receive_buffer; // 64-byte receive buffer (EP1 OUT from the PC)
 static packet_t receive;        // copy of receive buffer, for processing
 
 static USB_HANDLE request_handle;
+static USB_HANDLE reply_handle;
+static int packet_received;
 
 /*
  * Chip configuration.
@@ -74,7 +76,7 @@ PIC32_DEVCFG (
     DEVCFG1_FCKM_DISABLE,       /* Fail-safe clock monitor disable */
 
     DEVCFG2_FPLLIDIV_3 |        /* PLL divider = 1/3 */
-    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
+    DEVCFG2_FPLLMUL_24 |        /* PLL multiplier = 24x */
     DEVCFG2_UPLLIDIV_3 |        /* USB PLL divider = 1/3 */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 
@@ -298,11 +300,72 @@ int calc_rgd()
  */
 int calc_keypad()
 {
-    usb_device_tasks();
-
     if (! key_pressed)
         return 0;
     return keycode;
+}
+
+/*
+ * A command packet was received from PC.
+ * Process it and return 1 when a reply is ready.
+ */
+static int handle_packet()
+{
+    // TODO
+    return 0;
+}
+
+/*
+ * Copy an array.
+ */
+void memcopy (void *from, void *to, unsigned nbytes)
+{
+    unsigned *src = (unsigned*) from;
+    unsigned *dst = (unsigned*) to;
+    unsigned nwords = nbytes / sizeof(int);
+
+    while (nwords-- > 0)
+        *dst++ = *src++;
+}
+
+/*
+ * Poll the USB port.
+ */
+void calc_poll()
+{
+    // Check bus status and service USB interrupts.
+    usb_device_tasks();
+    if (usb_device_state < CONFIGURED_STATE || usb_is_device_suspended())
+        return;
+
+    // Are we done sending the last response.  We need to be before we
+    // receive the next command because we clear the send buffer
+    // once we receive a command
+    if (reply_handle != 0) {
+        if (usb_handle_busy (reply_handle))
+            return;
+        reply_handle = 0;
+    }
+
+    if (packet_received) {
+        if (handle_packet())
+            reply_handle = usb_transfer_one_packet (HID_EP,
+                IN_TO_HOST, &send[0], PACKET_SIZE);
+        packet_received = 0;
+        return;
+    }
+
+    // Did we receive a command?
+    if (usb_handle_busy (request_handle))
+        return;
+
+    // Make a copy of received data.
+    memcopy (&receive_buffer, &receive, PACKET_SIZE);
+    packet_received = 1;
+
+    // Restart receiver, to be ready for a next packet.
+    request_handle = usb_transfer_one_packet (HID_EP, OUT_FROM_HOST,
+        (unsigned char*) &receive_buffer, PACKET_SIZE);
 }
 
 /*
@@ -378,29 +441,6 @@ void save_prog()
 }
 
 /*
- * Copy an array.
- */
-void memcopy (void *from, void *to, unsigned nbytes)
-{
-    unsigned *src = (unsigned*) from;
-    unsigned *dst = (unsigned*) to;
-    unsigned nwords = nbytes / sizeof(int);
-
-    while (nwords-- > 0)
-        *dst++ = *src++;
-}
-
-/*
- * A command packet was received from PC.
- * Process it and return 1 when a reply is ready.
- */
-static int handle_packet()
-{
-    // TODO
-    return 0;
-}
-
-/*
  * Main program entry point.
  */
 int main()
@@ -434,11 +474,6 @@ int main()
     LATA = 0;
     LATB = 0;
 
-    // Initialize USB module SFRs and firmware variables to known states.
-    TRISBSET = 1 << 10;
-    TRISBSET = 1 << 11;
-    usb_device_init();
-
     /* Input pins: keypad.
      * Enable pull-down resistors. */
     TRISASET = PIN(1);          // keypad B - signal RA1
@@ -471,12 +506,12 @@ int main()
         restore_prog();
     }
 
-    USB_HANDLE reply_handle = 0;
-    int packet_received = 0;
-    for (;;) {
-	// Check bus status and service USB interrupts.
-        usb_device_tasks();
+    // Initialize USB module SFRs and firmware variables to known states.
+    // USB port uses pins B10 and B11.
+    TRISBSET = PIN(10) | PIN(11);
+    usb_device_init();
 
+    for (;;) {
         // Simulate one cycle of the calculator.
         calc_step();
 
@@ -484,38 +519,6 @@ int main()
         if (prog_modified()) {
             save_prog();
         }
-
-        if (usb_device_state < CONFIGURED_STATE || usb_is_device_suspended())
-            continue;
-
-        // Are we done sending the last response.  We need to be before we
-        // receive the next command because we clear the send buffer
-        // once we receive a command
-        if (reply_handle != 0) {
-            if (usb_handle_busy (reply_handle))
-                continue;
-            reply_handle = 0;
-        }
-
-        if (packet_received) {
-            if (handle_packet())
-                reply_handle = usb_transfer_one_packet (HID_EP,
-                    IN_TO_HOST, &send[0], PACKET_SIZE);
-            packet_received = 0;
-            continue;
-        }
-
-        // Did we receive a command?
-        if (usb_handle_busy (request_handle))
-            continue;
-
-        // Make a copy of received data.
-        memcopy (&receive_buffer, &receive, PACKET_SIZE);
-        packet_received = 1;
-
-        // Restart receiver, to be ready for a next packet.
-        request_handle = usb_transfer_one_packet (HID_EP, OUT_FROM_HOST,
-            (unsigned char*) &receive_buffer, PACKET_SIZE);
     }
 }
 
@@ -557,9 +560,9 @@ const USB_DEVICE_DESCRIPTOR usb_device = {
     0x00,                   // Subclass code
     0x00,                   // Protocol code
     USB_EP0_BUFF_SIZE,      // Max packet size for EP0
-    0x04D8,                 // Vendor ID
-    0x003C,                 // Product ID: USB HID Bootloader
-    0x0002,                 // Device release number in BCD format
+    0xca1c,                 // Bogus vendor ID: 'calc'
+    0x0054,                 // Product ID: MK-54
+    0x0101,                 // Device release number in BCD format
     1,                      // Manufacturer string index
     2,                      // Product string index
     0,                      // Device serial number string index
@@ -580,7 +583,7 @@ const unsigned char usb_config1_descriptor[] = {
     1,                      // Index value of this configuration
     0,                      // Configuration string index
     _DEFAULT | _SELF,       // Attributes
-    50,                     // Max power consumption (2X mA)
+    200 / 2,                // Max power consumption (2X mA)
 
     /*
      * Interface descriptor
