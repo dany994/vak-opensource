@@ -359,7 +359,6 @@ static int handle_packet()
         send[0] = receive[0];
         send[1] = 2;
         return 1;
-
     case CMD_READ_STACK:        // Read X, Y, Z, T, X1 values
         memzero (&send, PACKET_SIZE);
         send[0] = receive[0];

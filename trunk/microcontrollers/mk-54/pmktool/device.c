@@ -64,11 +64,12 @@ static void send_recv (device_t *d, unsigned char cmd, unsigned nbytes)
     int reply_len;
 
     d->request[0] = cmd;
-    memset (d->request + nbytes + 1, 0, 64 - nbytes - 1);
+    d->request[1] = nbytes + 2;
+    memset (d->request + nbytes + 2, 0, 64 - nbytes - 2);
 
     if (debug_level > 0) {
         fprintf (stderr, "---Send");
-        for (k=0; k<=nbytes; ++k) {
+        for (k=0; k<nbytes+2; ++k) {
             if (k != 0 && (k & 15) == 0)
                 fprintf (stderr, "\n       ");
             fprintf (stderr, " %02x", d->request[k]);
@@ -92,6 +93,8 @@ static void send_recv (device_t *d, unsigned char cmd, unsigned nbytes)
         fprintf (stderr, "hid device: error %d receiving packet\n", reply_len);
         exit (-1);
     }
+    if (reply_len > d->reply[1])
+        reply_len = d->reply[1];
     if (debug_level > 0) {
         fprintf (stderr, "---Recv");
         for (k=0; k<reply_len; ++k) {

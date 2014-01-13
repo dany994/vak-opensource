@@ -142,7 +142,6 @@ void do_status ()
         }
         printf ("\n");
     }
-    // TODO
 }
 
 void do_program (char *filename)

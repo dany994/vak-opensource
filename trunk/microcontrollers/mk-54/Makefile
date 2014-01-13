@@ -38,12 +38,12 @@ LDFLAGS         += -T mx2-ram4k.ld
 #LDFLAGS         += -T mx7-bootloader.ld
 
 all:            $(PROG).srec
+		$(SIZE) $(PROG).elf
 
 $(PROG).srec:   $(OBJS)
 		$(CC) $(LDFLAGS) $(OBJS) -o $(PROG).elf
 		$(OBJCOPY) -O srec $(PROG).elf $@
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
-		$(SIZE) $(PROG).elf
 
 load:           $(PROG).srec
 		pic32prog $(PROG).srec
