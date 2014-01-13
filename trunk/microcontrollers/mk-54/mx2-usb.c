@@ -23,7 +23,6 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
-#include <stdint.h>
 #include "calc.h"
 #include "pic32mx.h"
 #include "usb-device.h"
@@ -57,6 +56,18 @@
  */
 #define	PACKET_SIZE	    64      // HID packet size
 #define REQUEST_SIZE        56      // Number of bytes of a standard request
+
+/*
+ * HID commands.
+ */
+#define CMD_QUERY_DEVICE    0xc1    // Get generic status
+#define CMD_READ_STACK      0xc2    // Read X, Y, Z, T, X1 values
+#define CMD_READ_REG_LOW    0xc3    // Read registers 0-7
+#define CMD_READ_REG_HIGH   0xc4    // Read registers 8-E
+#define CMD_READ_PROG_LOW   0xc5    // Read program 0-59
+#define CMD_READ_PROG_HIGH  0xc6    // Read program 60-105
+#define CMD_WRITE_PROG_LOW  0xc7    // Write program 0-59
+#define CMD_WRITE_PROG_HIGH 0xc8    // Write program 60-105
 
 typedef unsigned char packet_t [PACKET_SIZE];
 
@@ -312,13 +323,14 @@ int calc_keypad()
 }
 
 /*
- * A command packet was received from PC.
- * Process it and return 1 when a reply is ready.
+ * Clear an array.
  */
-static int handle_packet()
+void memzero (void *data, unsigned nbytes)
 {
-    // TODO
-    return 0;
+    unsigned char *charp = (unsigned char*) data;
+
+    while (nbytes-- > 0)
+        *charp++ = 0;
 }
 
 /*
@@ -326,12 +338,74 @@ static int handle_packet()
  */
 void memcopy (void *from, void *to, unsigned nbytes)
 {
-    unsigned *src = (unsigned*) from;
-    unsigned *dst = (unsigned*) to;
-    unsigned nwords = nbytes / sizeof(int);
+    unsigned char *src = (unsigned char*) from;
+    unsigned char *dst = (unsigned char*) to;
 
-    while (nwords-- > 0)
+    while (nbytes-- > 0)
         *dst++ = *src++;
+}
+
+/*
+ * A command packet was received from PC.
+ * Process it and return 1 when a reply is ready.
+ */
+static int handle_packet()
+{
+    int i;
+
+    switch (receive[0]) {
+    case CMD_QUERY_DEVICE:      // Get generic status
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2;
+        return 1;
+
+    case CMD_READ_STACK:        // Read X, Y, Z, T, X1 values
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2 + 6*5;
+        for (i=0; i<5; i++) {
+            memcopy (&calc_stack[i], &send[2 + i*6], 6);
+        }
+        return 1;
+    case CMD_READ_REG_LOW:      // Read registers 0-7
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2 + 6*8;
+        for (i=0; i<8; i++) {
+            memcopy (&calc_reg[i], &send[2 + i*6], 6);
+        }
+        return 1;
+    case CMD_READ_REG_HIGH:     // Read registers 8-E
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2 + 6*6;
+        for (i=0; i<6; i++) {
+            memcopy (&calc_reg[i+8], &send[2 + i*6], 6);
+        }
+        return 1;
+#if 0
+    case CMD_READ_PROG_LOW:     // Read program 0-59
+    case CMD_READ_PROG_HIGH:    // Read program 60-105
+    case CMD_WRITE_PROG_LOW:    // Write program 0-59
+    case CMD_WRITE_PROG_HIGH:   // Write program 60-105
+        // TODO
+        for (i = 0; i < receive.Size/sizeof(unsigned); i++) {
+            unsigned index = (REQUEST_SIZE - receive.Size) / sizeof(unsigned) + i;
+
+            // Data field is right justified.
+            // Need to put it in the buffer left justified.
+            buf [buf_index++] =
+                receive.Data [(REQUEST_SIZE - receive.Size) / sizeof(unsigned) + i];
+            base_address += sizeof(unsigned);
+            if (buf_index == REQUEST_SIZE / sizeof(unsigned)) {
+                write_flash_block();
+            }
+        }
+        return 0;
+#endif
+    }
+    return 0;
 }
 
 /*

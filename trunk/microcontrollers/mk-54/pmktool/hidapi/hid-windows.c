@@ -3,9 +3,15 @@
  *
  * Copyright (C) 2012 David Pribyl
  *
- * This file is part of PIC32PROG project, which is distributed
- * under the terms of the GNU General Public License (GPL).
- * See the accompanying file "COPYING" for more details.
+ * At the discretion of the user of this library,
+ * this software may be licensed under the terms of the
+ * GNU Public License v3, a BSD-Style license, or the
+ * original HIDAPI license as outlined in the LICENSE.txt,
+ * LICENSE-gpl3.txt, LICENSE-bsd.txt, and LICENSE-orig.txt
+ * files located at the root of the source distribution.
+ * These files may also be found in the public source
+ * code repository located at:
+ *        http://github.com/signal11/hidapi .
  */
 #include <wtypes.h>
 #include <basetyps.h>

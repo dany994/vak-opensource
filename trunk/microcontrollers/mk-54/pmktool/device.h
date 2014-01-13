@@ -3,9 +3,23 @@
  *
  * Copyright (C) 2014 Serge Vakulenko
  *
- * This file is part of PIC32PROG project, which is distributed
- * under the terms of the GNU General Public License (GPL).
- * See the accompanying file "COPYING" for more details.
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
  */
 typedef struct _device_t device_t;
 
@@ -13,6 +27,10 @@ device_t *device_open (int debug_level);
 
 void device_close (device_t *t);
 
-void device_read (device_t *t, unsigned char data[98]);
+void device_read_stack (device_t *t, unsigned char stack[5][6]);
 
-void device_program (device_t *t, unsigned char data[98]);
+void device_read_regs (device_t *t, unsigned char stack[14][6]);
+
+void device_read_program (device_t *t, unsigned char data[98]);
+
+void device_write_program (device_t *t, unsigned char data[98]);
