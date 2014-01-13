@@ -1,5 +1,5 @@
 /*
- * Flash memory programmer for Microchip PIC32 microcontrollers.
+ * USB utility to control the replica of MK-54 programmable calculator.
  *
  * Copyright (C) 2014 Serge Vakulenko
  *
@@ -167,16 +167,8 @@ void do_program (char *filename)
     printf (_("done\n"));
 }
 
-void do_read (char *filename)
+void do_read()
 {
-    FILE *fd;
-
-    fd = fopen (filename, "wb");
-    if (! fd) {
-        perror (filename);
-        exit (1);
-    }
-
     /* Open and detect the device. */
     atexit (quit);
     device = device_open (debug_level);
@@ -188,7 +180,6 @@ void do_read (char *filename)
     fflush (stdout);
     // TODO
     printf (_("done\n"));
-    fclose (fd);
 }
 
 /*
@@ -305,19 +296,18 @@ int main (int argc, char **argv)
         }
 usage:
         printf ("%s.\n\n", copyright);
-        printf ("PIC32prog comes with ABSOLUTELY NO WARRANTY; for details\n");
+        printf ("PMKtool comes with ABSOLUTELY NO WARRANTY; for details\n");
         printf ("use `--warranty' option. This is Open Source software. You are\n");
         printf ("welcome to redistribute it under certain conditions. Use the\n");
         printf ("'--copying' option for details.\n\n");
-        printf ("Probe:\n");
+        printf ("Show stack and registers:\n");
         printf ("       pmktool\n");
-        printf ("\nWrite flash memory:\n");
-        printf ("       pmktool [-v] file.srec\n");
-        printf ("       pmktool [-v] file.hex\n");
-        printf ("\nRead memory:\n");
-        printf ("       pmktool -r file.bin\n");
+        printf ("\nWrite program:\n");
+        printf ("       pmktool file.txt\n");
+        printf ("\nRead program:\n");
+        printf ("       pmktool -r > file.txt\n");
         printf ("\nArgs:\n");
-        printf ("       file.prog           Code file in SREC format\n");
+        printf ("       file.txt            Program file in text format\n");
         printf ("       -r                  Read mode\n");
         printf ("       -D                  Debug mode\n");
         printf ("       -h, --help          Print this help message\n");
@@ -333,14 +323,13 @@ usage:
 
     switch (argc) {
     case 0:
-        do_status ();
+        if (read_mode)
+            do_read();
+        else
+            do_status();
         break;
     case 1:
-        if (read_mode) {
-            do_read (argv[0]);
-        } else {
-            do_program (argv[0]);
-        }
+        do_program (argv[0]);
         break;
     default:
         goto usage;
