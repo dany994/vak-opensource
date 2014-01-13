@@ -150,28 +150,23 @@ void device_read_regs (device_t *d, unsigned char regs[14][6])
 /*
  * Read the calculator's program memory.
  */
-void device_read_program (device_t *d, unsigned char *data)
+void device_read_program (device_t *d, unsigned char data[])
 {
-    // TODO
-#if 0
-    unsigned nbytes, n;
-    unsigned addr = 0;
-
-    for (nbytes=98; ; nbytes-=50) {
-        n = nbytes>50 ? 50 : nbytes;
-        d->request[1] = addr;
-        d->request[2] = n;
-
-        send_recv (d, CMD_GET_DATA, 2);
-
-        memcpy (data, d->reply, n);
-
-        if (nbytes <= 50)
-            break;
-        data += 50;
-        addr += 50;
+    send_recv (d, CMD_READ_PROG_LOW, 0);
+    if (d->reply[0] != CMD_READ_PROG_LOW ||
+        d->reply[1] != 2 + 60) {        /* Reply data size */
+        fprintf (stderr, "hid device: bad reply for READ_PROG_LOW command\n");
+        exit (-1);
     }
-#endif
+    memcpy (&data[0], &d->reply[2], 60);
+
+    send_recv (d, CMD_READ_PROG_HIGH, 0);
+    if (d->reply[0] != CMD_READ_PROG_HIGH ||
+        d->reply[1] != 2 + 98-60) {     /* Reply data size */
+        fprintf (stderr, "hid device: bad reply for READ_PROG_HIGH command\n");
+        exit (-1);
+    }
+    memcpy (&data[60], &d->reply[2], 98-60);
 }
 
 /*

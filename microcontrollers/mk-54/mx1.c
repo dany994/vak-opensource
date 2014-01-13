@@ -1,5 +1,5 @@
 /*
- * Home made board with PIC32MX250 processor.
+ * Home made board with PIC32MX120 processor.
  *
  * Copyright (C) 2013 Serge Vakulenko, <serge@vak.ru>
  *
@@ -25,7 +25,7 @@
 #include "pic32mx.h"
 
 /*
- * Pin assignment for pic32mx250 processor in DIP28 package.
+ * Pin assignment for pic32mx1/2 processor in DIP28 package.
  *
  *                  Bottom view
  *                  ------------
@@ -42,7 +42,7 @@
  *   keypad E - RB9 | 18    11 | RB4 - segment E
  *   keypad D - RB8 | 17    12 | RA4 - segment D
  *   keypad C - RB7 | 16    13 |
- *                  | 15    14 |
+ *                  | 15    14 | RB5 - unused
  *                  ------------
  */
 #define PIN(n)  (1 << (n))
