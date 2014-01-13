@@ -38,6 +38,10 @@ char *progname;
 const char *copyright;
 device_t *device;
 
+static const char symbol[] = "0123456789-LCRE ";
+
+extern char *disasm (unsigned code, int *address_flag);
+
 void quit (void)
 {
     if (device != 0) {
@@ -55,7 +59,6 @@ void interrupted (int signum)
 
 static void format_value (char *buf, unsigned char value[6])
 {
-    static const char symbol[] = "0123456789-LCRE ";
     int nibble[12];
     int i;
 
@@ -169,6 +172,10 @@ void do_program (char *filename)
 
 void do_read()
 {
+    unsigned char code[98];
+    //int address_flag = 0;
+    int i;
+
     /* Open and detect the device. */
     atexit (quit);
     device = device_open (debug_level);
@@ -176,10 +183,19 @@ void do_read()
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
     }
-    printf ("Read program: " );
-    fflush (stdout);
-    // TODO
-    printf (_("done\n"));
+    device_read_program (device, code);
+    printf ("Program:\n");
+    for (i=0; i<98; i++) {
+        char *mnemonics = ""; //disasm (code[i], &address_flag);
+        printf ("   %3d: %s", i, mnemonics);
+
+        // Print opcode.
+        char c1 = symbol[code[i] >> 4];
+        char c2 = symbol[code[i] & 15];
+        printf (" (%c%c)", c1, c2);
+
+        printf ("\n");
+    }
 }
 
 /*

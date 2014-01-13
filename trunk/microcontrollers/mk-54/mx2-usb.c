@@ -1,5 +1,5 @@
 /*
- * Home made board with PIC32MX250 processor and USB port.
+ * Home made board with PIC32MX220 processor and USB port.
  * External crystal 12 MHz used as a clock source.
  * USB driver based on open sources from Microchip library.
  *
@@ -29,7 +29,7 @@
 #include "usb-function-hid.h"
 
 /*
- * Pin assignment for pic32mx250 processor in DIP28 package.
+ * Pin assignment for pic32mx1/2 processor in DIP28 package.
  *
  *                  Bottom view
  *                  ------------
@@ -46,7 +46,7 @@
  *   keypad E - RB9 | 18    11 | RB4 - segment E
  *   keypad D - RB8 | 17    12 | RA4 - segment D
  *   keypad C - RB7 | 16    13 |
- *                  | 15    14 |
+ *                  | 15    14 | RB5 - unused
  *                  ------------
  */
 #define PIN(n)  (1 << (n))
@@ -55,7 +55,6 @@
  * HID packet structure.
  */
 #define	PACKET_SIZE	    64      // HID packet size
-#define REQUEST_SIZE        56      // Number of bytes of a standard request
 
 /*
  * HID commands.
@@ -205,6 +204,9 @@ static inline void data (int on)
 static unsigned rgd;                    // Radians/grads/degrees
 static unsigned keycode;                // Code of pressed button
 static unsigned key_pressed;            // Bitmask of active key
+static unsigned char stack[5][6];       // Stack values X, Y, Z, T, X1
+static unsigned char regs[14][6];       // Memory registers 0..9, A..D
+static unsigned char prog[98];          // Program code
 
 /*
  * Poll keypad: input pins RD4-RD7.
@@ -364,7 +366,7 @@ static int handle_packet()
         send[0] = receive[0];
         send[1] = 2 + 6*5;
         for (i=0; i<5; i++) {
-            memcopy (&calc_stack[i], &send[2 + i*6], 6);
+            memcopy (&stack[i], &send[2 + i*6], 6);
         }
         return 1;
     case CMD_READ_REG_LOW:      // Read registers 0-7
@@ -372,7 +374,7 @@ static int handle_packet()
         send[0] = receive[0];
         send[1] = 2 + 6*8;
         for (i=0; i<8; i++) {
-            memcopy (&calc_reg[i], &send[2 + i*6], 6);
+            memcopy (&regs[i], &send[2 + i*6], 6);
         }
         return 1;
     case CMD_READ_REG_HIGH:     // Read registers 8-E
@@ -380,12 +382,22 @@ static int handle_packet()
         send[0] = receive[0];
         send[1] = 2 + 6*6;
         for (i=0; i<6; i++) {
-            memcopy (&calc_reg[i+8], &send[2 + i*6], 6);
+            memcopy (&regs[i+8], &send[2 + i*6], 6);
         }
         return 1;
+    case CMD_READ_PROG_LOW:     // Read program code 0..59
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2 + 60;
+        memcopy (&prog[0], &send[2], 60);
+        return 1;
+    case CMD_READ_PROG_HIGH:    // Read program code 60..98
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2 + 98-60;
+        memcopy (&prog[60], &send[2], 98-60);
+        return 1;
 #if 0
-    case CMD_READ_PROG_LOW:     // Read program 0-59
-    case CMD_READ_PROG_HIGH:    // Read program 60-105
     case CMD_WRITE_PROG_LOW:    // Write program 0-59
     case CMD_WRITE_PROG_HIGH:   // Write program 60-105
         // TODO
@@ -593,6 +605,9 @@ int main()
     for (;;) {
         // Simulate one cycle of the calculator.
         calc_step();
+        calc_get_stack (stack);
+        calc_get_regs (regs);
+        calc_get_code (prog);
 
         // Check when program has been changed and save it to flash memory.
         if (prog_modified()) {

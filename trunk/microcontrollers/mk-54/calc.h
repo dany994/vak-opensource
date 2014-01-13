@@ -24,16 +24,6 @@
  */
 
 //
-// Data type for numeric values: 12 bcd digits in six bytes.
-//
-typedef struct {
-    unsigned char byte [6];
-} value_t;
-
-value_t calc_stack [5];                 // X, Y, Z, T, X1 values
-value_t calc_reg [14];                  // 14 registers 0..D (15 for MK-61)
-
-//
 // Specialized PLM chips К145ИК130x.
 //
 #define REG_NWORDS  42                  // Number of words in data register
@@ -161,3 +151,20 @@ extern int calc_keypad(void);
 // Poll the USB port.
 //
 void calc_poll(void);
+
+//
+// Read the stack: X, Y, Z, T and X1 values.
+// Each value contains 12 bcd digits stored as six bytes.
+//
+void calc_get_stack (unsigned char stack[5][6]);
+
+//
+// Read the memory registers 0-9, A-D.
+// Each value contains 12 bcd digits stored as six bytes.
+//
+void calc_get_regs (unsigned char reg[14][6]);
+
+//
+// Read the program code.
+//
+void calc_get_code (unsigned char code[98]);

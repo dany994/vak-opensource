@@ -19,7 +19,7 @@ OBJS            = ir2.o ik13.o calc.o
 #PROG            = mx1
 #CFLAGS          += -DPIC32MX2
 #OBJS            += mx1.o
-#LDFLAGS         += -T mx2-ram4k.ld
+#LDFLAGS         += -T mx2-ram8k.ld
 
 #
 # DIY board with pic32mx2 processor and USB port.
@@ -27,7 +27,7 @@ OBJS            = ir2.o ik13.o calc.o
 PROG            = mx2-usb
 CFLAGS          += -DPIC32MX2
 OBJS            += mx2-usb.o usb-device.o usb-function-hid.o
-LDFLAGS         += -T mx2-ram4k.ld
+LDFLAGS         += -T mx2-ram8k.ld
 
 #
 # Olimex T795 board with pic32mx7 processor.
