@@ -43,9 +43,9 @@ void fifo_init (fifo_t *t)
 //
 void fifo_step (fifo_t *t)
 {
-    if (t->cycle >= FIFO_NWORDS)
-        t->cycle = 0;
     t->output = t->data[t->cycle];
     t->data[t->cycle] = t->input;
     t->cycle++;
+    if (t->cycle >= FIFO_NWORDS)
+        t->cycle = 0;
 }

@@ -3,9 +3,23 @@
  *
  * Copyright (C) 2014 Serge Vakulenko
  *
- * This file is part of PIC32PROG project, which is distributed
- * under the terms of the GNU General Public License (GPL).
- * See the accompanying file "COPYING" for more details.
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,31 +38,10 @@ char *progname;
 const char *copyright;
 device_t *device;
 
-#if defined (__CYGWIN32__) || defined (MINGW32)
-/*
- * Delay in milliseconds: Windows.
- */
-#include <windows.h>
-
-void mdelay (unsigned msec)
-{
-    Sleep (msec);
-}
-#else
-/*
- * Delay in milliseconds: Unix.
- */
-void mdelay (unsigned msec)
-{
-    usleep (msec * 1000);
-}
-#endif
-
 void quit (void)
 {
     if (device != 0) {
         device_close (device);
-        free (device);
         device = 0;
     }
 }
@@ -60,8 +53,66 @@ void interrupted (int signum)
     _exit (-1);
 }
 
+static void format_value (char *buf, unsigned char value[6])
+{
+    static const char symbol[] = "0123456789-LCRE ";
+    int nibble[12];
+    int i;
+
+    // Split the value into 12 nibbles.
+    for (i=0; i<6; i++) {
+        nibble[i+i] = value[i] & 15;
+        nibble[i+i+1] = (value[i] >> 4) & 15;
+    }
+
+    int negative = (nibble[3] == 9);
+    int exponent = nibble[1] * 10 + nibble[2];
+    int exp_negative = (nibble[0] == 9);
+    if (exp_negative)
+        exponent = - (100 - exponent);
+
+    // Count unused digits.
+    for (i=0; i<7; i++) {
+        if (nibble[11-i] != 0 || exponent == 7-i)
+            break;
+    }
+    int ndigits = 8 - i;
+
+    // Print mantissa.
+    int comma = 0;
+    *buf++ = negative ? '-' : ' ';
+    for (i=0; i<ndigits; i++) {
+        *buf++ = symbol[nibble[4+i]];
+        if ((i==0 && (exponent<0 || exponent>7)) || i == exponent) {
+            *buf++ = '.';
+            comma = 1;
+        }
+    }
+    if (! comma)
+        *buf++ = '.';
+
+    if (exponent<0 || exponent>7) {
+        // Add exponent
+        for (i=0; i < 8-ndigits; i++)
+            *buf++ = ' ';
+        if (exponent < 0) {
+            *buf++ = '-';
+            exponent = -exponent;
+        } else
+            *buf++ = ' ';
+        *buf++ = '0' + (exponent / 10);
+        *buf++ = '0' + (exponent % 10);
+    }
+    *buf = 0;
+}
+
 void do_status ()
 {
+    static const char *name[5] = { "X1", "X", "Y", "Z", "T" };
+    unsigned char stack[5][6], reg[14][6];
+    char buf[16];
+    int i;
+
     /* Open and detect the device. */
     atexit (quit);
     device = device_open (debug_level);
@@ -69,7 +120,28 @@ void do_status ()
         fprintf (stderr, _("Error detecting device -- check cable!\n"));
         exit (1);
     }
+    device_read_stack (device, stack);
     printf (_("Stack:\n"));
+    for (i=1; i<5; i++) {
+        format_value (buf, stack[i]);
+        printf ("    %-2s = %-16s", name[i], buf);
+        if (i == 1) {
+            format_value (buf, stack[0]);
+            printf ("  %-2s = %s", name[0], buf);
+        }
+        printf ("\n");
+    }
+    device_read_regs (device, reg);
+    printf (_("Registers:\n"));
+    for (i=0; i<8; i++) {
+        format_value (buf, reg[i]);
+        printf ("    R%x = %-16s", i, buf);
+        if (i < 6) {
+            format_value (buf, reg[i+8]);
+            printf ("  R%x = %s", i+8, buf);
+        }
+        printf ("\n");
+    }
     // TODO
 }
 
@@ -123,25 +195,33 @@ void do_read (char *filename)
 /*
  * Print copying part of license
  */
-static void gpl_show_copying (void)
+static void show_copying (void)
 {
     printf ("%s.\n\n", copyright);
-    printf ("This program is free software; you can redistribute it and/or modify\n");
-    printf ("it under the terms of the GNU General Public License as published by\n");
-    printf ("the Free Software Foundation; either version 2 of the License, or\n");
-    printf ("(at your option) any later version.\n");
+    printf ("Permission to use, copy, modify, and distribute this software\n");
+    printf ("and its documentation for any purpose and without fee is hereby\n");
+    printf ("granted, provided that the above copyright notice appear in all\n");
+    printf ("copies and that both that the copyright notice and this\n");
+    printf ("permission notice and warranty disclaimer appear in supporting\n");
+    printf ("documentation, and that the name of the author not be used in\n");
+    printf ("advertising or publicity pertaining to distribution of the\n");
+    printf ("software without specific, written prior permission.\n");
     printf ("\n");
-    printf ("This program is distributed in the hope that it will be useful,\n");
-    printf ("but WITHOUT ANY WARRANTY; without even the implied warranty of\n");
-    printf ("MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n");
-    printf ("GNU General Public License for more details.\n");
+    printf ("The author disclaim all warranties with regard to this\n");
+    printf ("software, including all implied warranties of merchantability\n");
+    printf ("and fitness.  In no event shall the author be liable for any\n");
+    printf ("special, indirect or consequential damages or any damages\n");
+    printf ("whatsoever resulting from loss of use, data or profits, whether\n");
+    printf ("in an action of contract, negligence or other tortious action,\n");
+    printf ("arising out of or in connection with the use or performance of\n");
+    printf ("this software.\n");
     printf ("\n");
 }
 
 /*
  * Print NO WARRANTY part of license
  */
-static void gpl_show_warranty (void)
+static void show_warranty (void)
 {
     printf ("%s.\n\n", copyright);
     printf ("BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY\n");
@@ -196,7 +276,7 @@ int main (int argc, char **argv)
     setvbuf (stderr, (char *)NULL, _IOLBF, 0);
     printf (_("Utility for MK-54 calculator, Version %s\n"), VERSION);
     progname = argv[0];
-    copyright = _("    Copyright: (C) 2014 Serge Vakulenko");
+    copyright = _("Copyright: (C) 2014 Serge Vakulenko");
     signal (SIGINT, interrupted);
 #ifdef __linux__
     signal (SIGHUP, interrupted);
@@ -218,10 +298,10 @@ int main (int argc, char **argv)
             /* Version already printed above. */
             return 0;
         case 'C':
-            gpl_show_copying ();
+            show_copying ();
             return 0;
         case 'W':
-            gpl_show_warranty ();
+            show_warranty ();
             return 0;
         }
 usage:

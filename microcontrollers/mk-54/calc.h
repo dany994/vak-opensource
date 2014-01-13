@@ -24,6 +24,16 @@
  */
 
 //
+// Data type for numeric values: 12 bcd digits in six bytes.
+//
+typedef struct {
+    unsigned char byte [6];
+} value_t;
+
+value_t calc_stack [5];                 // X, Y, Z, T, X1 values
+value_t calc_reg [14];                  // 14 registers 0..D (15 for MK-61)
+
+//
 // Specialized PLM chips К145ИК130x.
 //
 #define REG_NWORDS  42                  // Number of words in data register

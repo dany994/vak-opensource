@@ -3,9 +3,23 @@
  *
  * Copyright (C) 2014 Serge Vakulenko
  *
- * This file is part of PIC32PROG project, which is distributed
- * under the terms of the GNU General Public License (GPL).
- * See the accompanying file "COPYING" for more details.
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,10 +31,14 @@
 /*
  * MK-54 commands.
  */
-#define CMD_QUERY_DEVICE        0xc1
-#define CMD_PROGRAM_DEVICE      0xc2
-#define CMD_PROGRAM_COMPLETE    0xc3
-#define CMD_GET_DATA            0xc4
+#define CMD_QUERY_DEVICE    0xc1    // Get generic status
+#define CMD_READ_STACK      0xc2    // Read X, Y, Z, T, X1 values
+#define CMD_READ_REG_LOW    0xc3    // Read registers 0-7
+#define CMD_READ_REG_HIGH   0xc4    // Read registers 8-E
+#define CMD_READ_PROG_LOW   0xc5    // Read program 0-59
+#define CMD_READ_PROG_HIGH  0xc6    // Read program 60-105
+#define CMD_WRITE_PROG_LOW  0xc7    // Write program 0-59
+#define CMD_WRITE_PROG_HIGH 0xc8    // Write program 60-105
 
 struct _device_t {
     hid_device *hiddev;                 // handle for hidapi
@@ -59,7 +77,7 @@ static void send_recv (device_t *d, unsigned char cmd, unsigned nbytes)
     }
     hid_write (d->hiddev, d->request, 64);
 
-    if (cmd != CMD_QUERY_DEVICE && cmd != CMD_GET_DATA) {
+    if (cmd == CMD_WRITE_PROG_LOW || cmd == CMD_WRITE_PROG_HIGH) {
         /* No reply expected. */
         return;
     }
@@ -91,10 +109,48 @@ void device_close (device_t *d)
 }
 
 /*
+ * Read the calculator's stack: X, Y, Z, T and X1 value.
+ */
+void device_read_stack (device_t *d, unsigned char stack[5][6])
+{
+    send_recv (d, CMD_READ_STACK, 0);
+    if (d->reply[0] != CMD_READ_STACK ||
+        d->reply[1] != 2 + 5*6) {       /* Reply data size */
+        fprintf (stderr, "hid device: bad reply for READ_STACK command\n");
+        exit (-1);
+    }
+    memcpy (stack, &d->reply[2], 5*6);
+}
+
+/*
+ * Read the calculator's registers 0-14.
+ */
+void device_read_regs (device_t *d, unsigned char regs[14][6])
+{
+    send_recv (d, CMD_READ_REG_LOW, 0);
+    if (d->reply[0] != CMD_READ_REG_LOW ||
+        d->reply[1] != 2 + 8*6) {       /* Reply data size */
+        fprintf (stderr, "hid device: bad reply for READ_REG_LOW command\n");
+        exit (-1);
+    }
+    memcpy (&regs[0], &d->reply[2], 8*6);
+
+    send_recv (d, CMD_READ_REG_HIGH, 0);
+    if (d->reply[0] != CMD_READ_REG_HIGH ||
+        d->reply[1] != 2 + 6*6) {       /* Reply data size */
+        fprintf (stderr, "hid device: bad reply for READ_REG_HIGH command\n");
+        exit (-1);
+    }
+    memcpy (&regs[8], &d->reply[2], 6*6);
+}
+
+/*
  * Read the calculator's program memory.
  */
-void device_read (device_t *d, unsigned char *data)
+void device_read_program (device_t *d, unsigned char *data)
 {
+    // TODO
+#if 0
     unsigned nbytes, n;
     unsigned addr = 0;
 
@@ -112,13 +168,16 @@ void device_read (device_t *d, unsigned char *data)
         data += 50;
         addr += 50;
     }
+#endif
 }
 
 /*
  * Write the calculator's program memory.
  */
-void device_program (device_t *d, unsigned char *data)
+void device_write_program (device_t *d, unsigned char *data)
 {
+    // TODO
+#if 0
     unsigned nbytes, n;
     unsigned addr = 0;
 
@@ -138,6 +197,7 @@ void device_program (device_t *d, unsigned char *data)
         addr += 50;
     }
     send_recv (d, CMD_PROGRAM_COMPLETE, 0);
+#endif
 }
 
 /*
@@ -166,9 +226,7 @@ device_t *device_open (int debug)
     /* Read version of device. */
     send_recv (d, CMD_QUERY_DEVICE, 0);
     if (d->reply[0] != CMD_QUERY_DEVICE ||
-        d->reply[1] != 56 ||                /* HID packet data size */
-        d->reply[2] != 3 ||                 /* PIC32 device family */
-        d->reply[3] != 1)                   /* program memory type */
+        d->reply[1] != 2)                   /* Reply data size */
             return 0;
 
     return d;

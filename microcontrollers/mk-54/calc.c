@@ -23,7 +23,7 @@
  * this software.
  */
 #include "calc.h"
-//#include <stdio.h>
+#include <stdio.h>
 
 //
 // MK-54 calculator consists of two PLM chips ИК1301 and ИК1303,
@@ -44,6 +44,88 @@ void calc_init()
     plm_init (&ik1303, ik1303_ucmd_rom, ik1303_cmd_rom, ik1303_prog_rom);
     fifo_init (&fifo1);
     fifo_init (&fifo2);
+}
+
+//
+// Extract stack and register values from the serial shift registers.
+//
+static value_t fetch_value (unsigned chip, unsigned address)
+{
+    unsigned char *data = 0;
+    value_t result = { {0} };
+    int i;
+
+    switch (chip) {
+    case 1: data = fifo1.data + address; break;
+    case 2: data = fifo2.data + address; break;
+    case 3: data = ik1302.M + address;   break;
+    case 4: data = ik1303.M + address;   break;
+    //case 5: data = ik1306.M + address;   break;
+    }
+    if (data) {
+        for (i=0; i<6; i++, data-=6)
+            result.byte[i] = data[0] | data[-3] << 4;
+    }
+    return result;
+}
+
+//
+// Extract stack and register values from the serial shift registers.
+//
+static void fetch_data (int phase)
+{
+    typedef struct {
+        unsigned char chip;
+        unsigned char address;
+    } location_t;
+
+    static const location_t memory_map[15] = {
+        {1, 41}, {1, 83}, {1, 125}, {1, 167}, {1, 209}, {1, 251},
+        {2, 41}, {2, 83}, {2, 125}, {2, 167}, {2, 209}, {2, 251},
+        {3, 41}, {4, 41}, {5, 41},
+    };
+    static const location_t stack_map[15] = {
+        {1, 34}, {1, 76}, {1, 118}, {1, 160}, {1, 202}, {1, 244},
+        {2, 34}, {2, 76}, {2, 118}, {2, 160}, {2, 202}, {2, 244},
+        {3, 34}, {4, 34}, {5, 34},
+    };
+#if 1
+    // For MK-54.
+    static const unsigned char remap_memory[3][14] = {
+        { 1, 2, 3, 4, 5, 13, 12, 6,  7,  8,  9,  10, 11, 0 },
+        { 3, 4, 5, 0, 1, 13, 12, 8,  9,  10, 11, 6,  7,  2 },
+        { 5, 0, 1, 2, 3, 13, 12, 10, 11, 6,  7,  8,  9,  4 },
+    };
+    static const unsigned char remap_stack[3][5] = {
+        { 8,  9,  10, 11, 0 },
+        { 10, 11, 6,  7,  2 },
+        { 6,  7,  8,  9,  4 },
+    };
+#else
+    // For MK-61
+    static const unsigned char remap_memory[3][15] = {
+        { 1,  2,  3,  4,  5,  14, 13, 12, 6, 7, 8,  9,  10, 11, 0 },
+        { 10, 11, 6,  7,  2,  3,  4,  5,  0, 1, 14, 13, 12, 8,  9 },
+        { 14, 13, 12, 10, 11, 6,  7,  8,  9, 4, 5,  0,  1,  2,  3 },
+    };
+    static const unsigned char remap_stack[3][5] = {
+        { 8,  9,  10, 11, 0 },
+        { 14, 13, 12, 8,  9 },
+        { 5,  0,  1,  2,  3 },
+    };
+#endif
+    location_t loc;
+    int i;
+
+    for (i=0; i<14; i++) {            // 15 for MK-61
+        loc = memory_map[remap_memory[phase][i]];
+        calc_reg[i] = fetch_value (loc.chip, loc.address - 8);
+    }
+
+    for (i=0; i<5; i++) {
+        loc = stack_map[remap_stack[phase][i]];
+        calc_stack[i] = fetch_value (loc.chip, loc.address);
+    }
 }
 
 //
@@ -129,5 +211,7 @@ int calc_step()
             }
         }
     }
+    fetch_data (fifo1.cycle / (2*REG_NWORDS));
+
     return (ik1302.dot == 11);
 }
