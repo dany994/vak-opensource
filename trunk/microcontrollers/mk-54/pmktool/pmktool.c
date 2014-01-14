@@ -40,7 +40,7 @@ device_t *device;
 
 static const char symbol[] = "0123456789-LCRE ";
 
-extern char *disasm (unsigned code, int *address_flag);
+extern char *decompile (unsigned code, int *address_flag);
 
 void quit (void)
 {
@@ -173,8 +173,7 @@ void do_program (char *filename)
 void do_read()
 {
     unsigned char code[98];
-    //int address_flag = 0;
-    int i;
+    int i, last, address_flag;
 
     /* Open and detect the device. */
     atexit (quit);
@@ -184,16 +183,24 @@ void do_read()
         exit (1);
     }
     device_read_program (device, code);
-    printf ("Program:\n");
-    for (i=0; i<98; i++) {
-        char *mnemonics = ""; //disasm (code[i], &address_flag);
-        printf ("   %3d: %s", i, mnemonics);
 
+    /* Find the last instruction. */
+    last = 98;
+    while (--last > 0)
+        if (code[last] != 0)
+            break;
+
+    printf ("Program:\n");
+    address_flag = 0;
+    for (i=0; i<=last; i++) {
+        char *mnemonics = decompile (code[i], &address_flag);
+        printf ("   %3d: %s", i, mnemonics);
+#if 0
         // Print opcode.
         char c1 = symbol[code[i] >> 4];
         char c2 = symbol[code[i] & 15];
         printf (" (%c%c)", c1, c2);
-
+#endif
         printf ("\n");
     }
 }
