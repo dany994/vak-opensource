@@ -17,7 +17,7 @@ ifeq ($(UNAME),Darwin)
     HIDSRC      = hidapi/hid-mac.c
 endif
 
-PROG_OBJS       = pmktool.o device.o hid.o
+PROG_OBJS       = pmktool.o device.o hid.o opcodes.o
 
 all:            pmktool
 
