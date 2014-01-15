@@ -57,6 +57,15 @@ void interrupted (int signum)
     _exit (-1);
 }
 
+/*
+ * Parse the program source.
+ */
+int parse_prog (char *filename, unsigned char code[])
+{
+    // TODO
+    return 0;
+}
+
 static void format_value (char *buf, unsigned char value[6])
 {
     int nibble[12];
@@ -149,13 +158,15 @@ void do_status ()
 
 void do_program (char *filename)
 {
-#if 0
-    // TODO
-    if (! read_prog (filename)) {
+    unsigned char code[98];
+    int last;
+
+    /* Parse the program source. */
+    if (! parse_prog (filename, code)) {
         fprintf (stderr, _("%s: bad file format\n"), filename);
         exit (1);
     }
-#endif
+
     /* Open and detect the device. */
     atexit (quit);
     device = device_open (debug_level);
@@ -164,10 +175,14 @@ void do_program (char *filename)
         exit (1);
     }
 
-    printf (_("Write program: "));
-    fflush (stdout);
-    // TODO
-    printf (_("done\n"));
+    /* Find the last instruction. */
+    last = 98;
+    while (--last > 0)
+        if (code[last] != 0)
+            break;
+
+    printf (_("Write program: %d instructions\n"), last);
+    device_write_program (device, code);
 }
 
 void do_read()
