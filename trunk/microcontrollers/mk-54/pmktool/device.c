@@ -65,7 +65,8 @@ static void send_recv (device_t *d, unsigned char cmd, unsigned nbytes)
 
     d->request[0] = cmd;
     d->request[1] = nbytes + 2;
-    memset (d->request + nbytes + 2, 0, 64 - nbytes - 2);
+    if (nbytes < 64-2)
+        memset (d->request + nbytes + 2, 0, 64 - nbytes - 2);
 
     if (debug_level > 0) {
         fprintf (stderr, "---Send");
@@ -174,28 +175,22 @@ void device_read_program (device_t *d, unsigned char data[])
  */
 void device_write_program (device_t *d, unsigned char *data)
 {
-    // TODO
-#if 0
-    unsigned nbytes, n;
-    unsigned addr = 0;
-
-    for (nbytes=98; nbytes>0; nbytes-=50) {
-        n = nbytes>50 ? 50 : nbytes;
-
-        //fprintf (stderr, "hid device: program %d bytes at %08x: %08x-%08x-...-%08x\n",
-        //    nbytes, addr, data[0], data[1], data[nbytes-1]);
-
-        d->request[1] = addr;
-        d->request[2] = n;
-        memcpy (d->request + 3, data, n);
-
-        send_recv (d, CMD_PROGRAM_DEVICE, n + 2);
-
-        data += 50;
-        addr += 50;
+    memcpy (&d->request[2], &data[60], 98-60);
+    send_recv (d, CMD_WRITE_PROG_HIGH, 0);
+    if (d->reply[0] != CMD_WRITE_PROG_HIGH ||
+        d->reply[1] != 2 + 98-60) {     /* Reply data size */
+        fprintf (stderr, "hid device: bad reply for WRITE_PROG_HIGH command\n");
+        exit (-1);
     }
-    send_recv (d, CMD_PROGRAM_COMPLETE, 0);
-#endif
+
+    /* First chunk sent last, to finalize the update. */
+    memcpy (&d->request[2], &data[0], 60);
+    send_recv (d, CMD_WRITE_PROG_LOW, 0);
+    if (d->reply[0] != CMD_WRITE_PROG_LOW ||
+        d->reply[1] != 2 + 60) {        /* Reply data size */
+        fprintf (stderr, "hid device: bad reply for WRITE_PROG_LOW command\n");
+        exit (-1);
+    }
 }
 
 /*
