@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <unistd.h>
 #include <ctype.h>
 
 /*
@@ -67,6 +66,16 @@ struct optable {
 
 const struct optable optable [] = {
     /* Norm   F     K   Name        Flags */
+    { 0x00,    0,    0, "0",        },
+    { 0x01,    0, 0x55, "1",        },          // ??
+    { 0x02,    0, 0x56, "2",        },          // ??
+    { 0x03,    0,    0, "3",        },
+    { 0x04,    0,    0, "4",        },
+    { 0x05,    0,    0, "5",        },
+    { 0x06,    0,    0, "6",        },
+    { 0x07,    0,    0, "7",        },
+    { 0x08,    0,    0, "8",        },
+    { 0x09,    0,    0, "9",        },
     { 0x0a,    0,    0, ",",        },
     { 0x0b,    0,    0, "/-/",      },
     { 0x0c,    0,    0, "ВП",       },
@@ -119,8 +128,6 @@ const struct optable optable [] = {
     { 0x52,    0,    0, "B/O",      },
     { 0x53,    0, 0xa0, "ПП",       FADDR },    // FREG for K
     {    0,    0, 0x54, "HOП",      },
-    {    0,    0, 0x55, "1",        },
-    {    0,    0, 0x56, "2",        },
     {    0, 0x57, 0x70, "x#0",      FADDR },    // FREG for K
     {    0, 0x58,    0, "L2",       FADDR },
     {    0, 0x59, 0x90, "x~0",      FADDR },    // F x≥0, FREG for K
@@ -151,12 +158,8 @@ char space [STSIZE*8];                  /* Area for symbol names */
 int lastfree;                           /* Free space offset */
 char name [256];
 int intval;
-int extref;
 int blexflag, backlex;
 short hashtab [HASHSZ], hashctab [HCMDSZ];
-
-/* Forward declarations. */
-unsigned getreg (void);
 
 /*
  * Fatal error message.
@@ -194,7 +197,7 @@ unsigned hash_rot13 (s)
     return hash;
 }
 
-void hashinit ()
+void hashinit()
 {
     int i, h;
     const struct optable *p;
@@ -213,9 +216,7 @@ void hashinit ()
 }
 
 /*
- * Get a number.
- * 1234 - decimal
- * 01234 - octal
+ * Get decimal number.
  */
 void getnum (c)
     int c;
@@ -226,7 +227,6 @@ void getnum (c)
         *cp++ = c - '0';
     ungetc (c, stdin);
     intval = 0;
-    /* Decimal. */
     for (c=1; ; c*=10) {
         if (--cp < name)
             return;
@@ -234,6 +234,9 @@ void getnum (c)
     }
 }
 
+/*
+ * Read a name and store it into name[] array.
+ */
 void getname (c)
     int c;
 {
@@ -245,7 +248,6 @@ void getname (c)
             int c2 = getchar();
             if (! (c & 0x20)) {
                 // Convert cyrillics and symbol π
-//printf ("Convert %02x-%02x\n", c, c2);
                 switch (c<<8 | c2) {
                 case 0xd092: c = 'B'; break;    // В
                 case 0xd09a: c = 'K'; break;    // К
@@ -264,11 +266,10 @@ void getname (c)
             } else {
                 int c3 = getchar();
                 // Convert symbols ⟳, ≥, –
-//printf ("Convert %02x-%02x-%02x\n", c, c2, c3);
                 switch (c<<16 | c2<<8 | c3) {
                 case 0xe29fb3: c = 'O'; break;  // ⟳ -> O
                 case 0xe289a5: c = '~'; break;  // ≥ -> ~
-                case 0xe28093: c = '-'; break;  // – -> ~
+                case 0xe28093: c = '-'; break;  // – -> -
                 case 0xefbbbf: continue;        // Skip zero width space
                 default:
                     *cp++ = c;
@@ -277,7 +278,6 @@ void getname (c)
                 }
             }
         }
-//printf ("-> %02x\n", c);
         *cp++ = c;
         *cp = 0;
 
@@ -294,7 +294,7 @@ void getname (c)
     ungetc (c, stdin);
 }
 
-int lookcmd ()
+int lookcmd()
 {
     int i, h;
 
@@ -367,7 +367,7 @@ skiptoeol:  while ((c = getchar()) != '\n')
         case '\n':
             /* New line. */
             ++line;
-            c = getchar ();
+            c = getchar();
             if (c == ';')
                 goto skiptoeol;
             ungetc (c, stdin);
@@ -451,10 +451,11 @@ unsigned getreg()
     }
 }
 
-void pass1 ()
+void pass1()
 {
-    int clex, i;
+    int clex, i, opcode, type;
     int f_seen = 0, k_seen = 0, need_address = 0;
+    const struct optable *op;
 
     for (;;) {
         clex = getlex();
@@ -524,17 +525,17 @@ void pass1 ()
                     /* Enter decimal digit. */
                     if (intval > 9)
                         uerror ("unknown opcode '%d'", intval);
-                    code[count++] = intval;
+                    goto op;
                 }
             }
             continue;
         case LCMD:
             /* Machine instruction. */
-            if (need_address)
+op:         if (need_address)
                 uerror ("jump address required");
-            const struct optable *op = &optable[intval];
-            int opcode = op->opcode;
-            int type = op->type;
+            op = &optable[intval];
+            opcode = op->opcode;
+            type = op->type;
 
             /* Verify F and K prefixes. */
             if (f_seen) {
@@ -571,7 +572,7 @@ void pass1 ()
     }
 }
 
-void pass2 ()
+void pass2()
 {
     int i;
 
@@ -586,13 +587,6 @@ void pass2 ()
             code[i] = label[code[i]].value;
         }
     }
-}
-
-void usage ()
-{
-    fprintf (stderr, "Usage:\n");
-    fprintf (stderr, "  asmk [infile]\n");
-    exit (1);
 }
 
 int main (argc, argv)
@@ -611,7 +605,7 @@ int main (argc, argv)
                 switch (*cp) {
                 default:
                     fprintf (stderr, "Unknown option: %s\n", cp);
-                    usage();
+                    goto usage;
                 }
             }
             break;
@@ -622,8 +616,11 @@ int main (argc, argv)
             break;
         }
     }
-    if (! infile && isatty(0))
-        usage();
+    if (! infile) {
+usage:  fprintf (stderr, "Usage:\n");
+        fprintf (stderr, "    asmk [infile]\n");
+        exit (1);
+    }
 
     /*
      * Setup input-output.
@@ -632,9 +629,9 @@ int main (argc, argv)
         uerror ("cannot open %s", infile);
 
     line = 1;
-    hashinit ();                        /* Initialize hash tables */
-    pass1 ();                           /* First pass */
-    pass2 ();                           /* Second pass */
+    hashinit();                         /* Initialize hash tables */
+    pass1();                            /* First pass */
+    pass2();                            /* Second pass */
 
     //TODO: print result
     return 0;
