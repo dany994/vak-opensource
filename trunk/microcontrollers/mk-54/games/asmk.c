@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <ctype.h>
 
 /*
  * Types of lexemes.
@@ -33,9 +34,11 @@
 enum {
     LEOF = 1,           /* end of file */
     LEOL,               /* end of line */
-    LNAME,              /* identifier */
-    LKEY,               /* machine register */
     LNUM,               /* integer number */
+    LNAME,              /* label identifier */
+    LFUNC,              /* F key */
+    LKKEY,              /* K key */
+    LCMD,               /* instruction */
 };
 
 /*
@@ -61,17 +64,17 @@ struct optable {
 #define FADDR   0x0008                  /* Jump address follows */
 
 const struct optable optable [] = {
-    { 0x0a, ","         },
-    { 0x0b, "/-/"       },
-    { 0x0c, "ВП"        },
-    { 0x0d, "Сx"        },
-    { 0x0e, "В^"        },
+    { 0x0a, ",",        },
+    { 0x0b, "/-/",      },
+    { 0x0c, "ВП",       },
+    { 0x0d, "Сx",       },
+    { 0x0e, "В^",       },
     { 0x0f, "Вx",       FPREF },
-    { 0x10, "+"         },
-    { 0x11, "-"         },
-    { 0x12, "x"         },
-    { 0x13, "/"         },
-    { 0x14, "<->"       },
+    { 0x10, "+",        },
+    { 0x11, "-",        },
+    { 0x12, "x",        },
+    { 0x13, "/",        },
+    { 0x14, "<->",      },
     { 0x15, "10^x",     FPREF },
     { 0x16, "e^x",      FPREF },
     { 0x17, "lg",       FPREF },
@@ -133,46 +136,29 @@ const struct optable optable [] = {
     { 0 },
 };
 
-/*
- * Character classes.
- */
-#define ISHEX(c)        (ctype[(c)&0377] & 1)
-#define ISOCTAL(c)      (ctype[(c)&0377] & 2)
-#define ISDIGIT(c)      (ctype[(c)&0377] & 4)
-#define ISLETTER(c)     (ctype[(c)&0377] & 8)
-
-const char ctype [256] = {
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,8,0,0,0,0,0,0,0,0,0,8,0,7,7,7,7,7,7,7,7,5,5,0,0,0,0,0,0,
-    8,9,9,9,9,9,9,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,0,0,0,0,8,
-    0,9,9,9,9,9,9,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
-    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,0,
-};
-
 struct {
+    char *name;
+    unsigned len;
     unsigned value;
     unsigned undef;
-} stab [STSIZE];
+} label [STSIZE];
 
 unsigned count;
 unsigned char code[105];
 unsigned char relinfo[105];
 char *infile;
 int line;                               /* Source line number */
-int stabfree;
+int labelfree;
 char space [STSIZE*8];                  /* Area for symbol names */
 int lastfree;                           /* Free space offset */
 char name [256];
-unsigned intval;
+int intval;
 int extref;
-int blexflag, backlex, blextype;
+int blexflag, backlex;
 short hashtab [HASHSZ], hashctab [HCMDSZ];
 
 /* Forward declarations. */
-unsigned getaddr (void);
+unsigned getreg (void);
 
 /*
  * Fatal error message.
@@ -237,9 +223,8 @@ void getnum (c)
     int c;
 {
     char *cp;
-    int leadingzero;
 
-    for (cp=name; ISDIGIT(c); c=getchar())
+    for (cp=name; c>='0' && c<='9'; c=getchar())
         *cp++ = c - '0';
     ungetc (c, stdin);
     intval = 0;
@@ -256,7 +241,7 @@ void getname (c)
 {
     char *cp;
 
-    for (cp=name; ISLETTER (c) || ISDIGIT (c); c=getchar())
+    for (cp=name; !isspace(c); c=getchar())
         *cp++ = c;
     *cp = 0;
     ungetc (c, stdin);
@@ -287,457 +272,248 @@ char *alloc (len)
     return (space + r);
 }
 
-int lookname ()
+int looklabel()
 {
     int i, h;
 
     /* Search for symbol name. */
     h = hash_rot13 (name) & (HASHSZ-1);
     while ((i = hashtab[h]) != -1) {
-        if (! strcmp (stab[i].n_name, name))
+        if (! strcmp (label[i].name, name))
             return (i);
         if (--h < 0)
             h += HASHSZ;
     }
 
     /* Add a new symbol to table. */
-    i = stabfree++;
+    i = labelfree++;
     if (i >= STSIZE)
         uerror ("symbol table overflow");
-    stab[i].n_len = strlen (name);
-    stab[i].n_name = alloc (1 + stab[i].n_len);
-    strcpy (stab[i].n_name, name);
-    stab[i].value = 0;
-    stab[i].undef = 1;
+    label[i].len = strlen (name);
+    label[i].name = alloc (1 + label[i].len);
+    strcpy (label[i].name, name);
+    label[i].value = 0;
+    label[i].undef = 1;
     hashtab[h] = i;
     return (i);
 }
 
 /*
- * Read a lexical element, return it's type and store a value into *val.
+ * Read a lexical element.
  * Return the type code.
  */
-int getlex (pval)
-    int *pval;
+int getlex()
 {
     int c;
 
     if (blexflag) {
         blexflag = 0;
-        *pval = blextype;
         return (backlex);
     }
     for (;;) {
         switch (c = getchar()) {
-        case '#':
+        case ';':
+            /* Comment to end of line. */
 skiptoeol:  while ((c = getchar()) != '\n')
                 if (c == EOF)
                     return (LEOF);
         case '\n':
+            /* New line. */
             ++line;
             c = getchar ();
-            if (c == '#')
+            if (c == ';')
                 goto skiptoeol;
             ungetc (c, stdin);
-        case ';':
-            *pval = line;
             return (LEOL);
         case ' ':
         case '\t':
+            /* Spaces ignored. */
             continue;
         case EOF:
+            /* End of file. */
             return (LEOF);
-        case '\\':
-            c = getchar ();
-            if (c=='<')
-                return (LLSHIFT);
-            if (c=='>')
-                return (LRSHIFT);
-            ungetc (c, stdin);
-            return ('\\');
-        case '\'':      case '%':
-        case '^':       case '&':       case '|':       case '~':
-        case '+':       case '-':       case '*':       case '/':
-        case '"':       case ',':       case '[':       case ']':
-        case '(':       case ')':       case '{':       case '}':
-        case '<':       case '>':       case '=':       case ':':
+        case ':':
+            /* Syntax deimiters. */
             return (c);
-        case '0':
-            ungetc (c, stdin);
-            c = '0';
-        case '1':       case '2':       case '3':
+        case '0':       case '1':       case '2':       case '3':
         case '4':       case '5':       case '6':       case '7':
         case '8':       case '9':
+            /* Decimal constant. */
             getnum (c);
             return (LNUM);
         default:
-            if (! ISLETTER (c))
-                uerror ("bad character: \\%o", c & 0377);
+            if (isspace (c))
+                continue;
             getname (c);
-            if (name[0] == '.') {
-                if (name[1] == 0)
-                    return ('.');
-            }
+            intval = lookcmd();
+            if (intval >= 0)
+                return (LCMD);
             return (LNAME);
         }
     }
 }
 
-void ungetlex (val, type)
+void ungetlex (val)
 {
     blexflag = 1;
     backlex = val;
-    blextype = type;
 }
 
 /*
- * Get a jump address.
+ * Get register number 0..9, a..d.
  * Return the value.
- * A copy of value is saved in intval.
  */
-unsigned getaddr()
+unsigned getreg()
 {
-    int clex;
-    int cval, s2;
+    int clex, i;
+    static const struct {
+        char *name;
+        int value;
+    } tab[] = {
+        { "a", 10 }, { "A", 10 }, { "а", 10 }, { "А", 10 },
+        { "b", 11 }, { "B", 11 }, { "б", 11 }, { "Б", 11 },
+        { "c", 12 }, { "C", 12 }, { "с", 12 }, { "С", 12 },
+        { "d", 13 }, { "D", 13 }, { "д", 13 }, { "Д", 13 },
+        { "e", 14 }, { "E", 14 }, { "е", 14 }, { "Е", 14 },
+        { 0 },
+    };
 
     /* look a first lexeme */
-    clex = getlex (&cval);
+    clex = getlex();
     switch (clex) {
     default:
         uerror ("operand missing");
     case LNUM:
+        if (intval > 9)
+            uerror ("bad register number '%u'", intval);
         return intval;
     case LNAME:
-        cval = lookname();
-        if (stab[cval].undef) {
-            extref = cval;
-            intval = 0;
-        } else
-            intval = stab[cval].value;
-        return intval;
+        for (i=0; tab[i].name; i++)
+            if (strcmp (name, tab[i].name) == 0) {
+                intval = tab[i].value;
+                return intval;
+            }
+        uerror ("bad register number '%s'", name);
+        return 0;
     }
 }
 
 /*
  * Build and emit a machine instruction code.
  */
-void makecmd (opcode, type)
+int makecmd (opcode, type, f_flag, k_flag)
     unsigned opcode;
 {
-    int clex;
-    unsigned offset;
-    int cval, clobber_reg, negate_literal;
+    /* Verify F and K prefixes. */
+    if ((type & FPREF) && ! f_flag)
+        uerror ("F prefix missing");
+    if (! (type & FPREF) && f_flag)
+        uerror ("excessive F prefix");
+    if ((type & FPREK) && ! f_flag)
+        uerror ("K prefix missing");
+    if (! (type & FPREK) && f_flag)
+        uerror ("excessive K prefix");
 
-    offset = 0;
-    negate_literal = 0;
-
-    /*
-     * GCC can generate "j" instead of "jr".
-     * Need to detect it early.
-     */
-    if (type == (FAOFF28 | FDSLOT)) {
-        clex = getlex (&cval);
-        ungetlex (clex, cval);
-        if (clex == LREG) {
-            if (opcode == 0x08000000) { /* j - replace by jr */
-                opcode = 0x00000008;
-                type = FRS1 | FDSLOT;
-            }
-            if (opcode == 0x0c000000) { /* jal - replace by jalr */
-                opcode = 0x00000009;
-                type = FRD1 | FRS2 | FDSLOT;
-            }
-        }
+    /* Register number follows */
+    if (type & FREG) {
+        int reg = getreg();
+        opcode |= reg;
     }
-
-    /*
-     * First register.
-     */
-    cval = 0;
-    clobber_reg = 0;
-    if (type & FRD1) {
-        clex = getlex (&cval);
-        if (clex != LREG)
-            uerror ("bad rd register");
-        opcode |= cval << 11;           /* rd, ... */
-    }
-    if (type & FRT1) {
-        clex = getlex (&cval);
-        if (clex != LREG)
-            uerror ("bad rt register");
-        opcode |= cval << 16;           /* rt, ... */
-    }
-    if (type & FRS1) {
-frs1:   clex = getlex (&cval);
-        if (clex != LREG)
-            uerror ("bad rs register");
-        if (cval == 0 && (opcode == 0x0000001a ||   /* div */
-                          opcode == 0x0000001b)) {  /* divu */
-            /* Div instruction with three args.
-             * Treat it as a 2-arg variant. */
-            if (getlex (&cval) != ',')
-                uerror ("comma expected");
-            goto frs1;
-        }
-        opcode |= cval << 21;           /* rs, ... */
-    }
-    if (type & FRTD) {
-        opcode |= cval << 16;           /* rt equals rd */
-    }
-    if ((type & FMOD) && (type & (FRD1 | FRT1 | FRS1)))
-        clobber_reg = cval;
-
-    /*
-     * Second register.
-     */
-    if (type & FRD2) {
-        if (getlex (&cval) != ',')
-            uerror ("comma expected");
-        clex = getlex (&cval);
-        if (clex != LREG)
-            uerror ("bad rd register");
-        opcode |= cval << 11;           /* .., rd, ... */
-    }
-    if (type & FRT2) {
-        if (getlex (&cval) != ',')
-            uerror ("comma expected");
-        clex = getlex (&cval);
-        if (clex != LREG) {
-            if ((type & FRD1) && (type & FSA)) {
-                /* Second register operand omitted.
-                 * Need to restore the missing operand. */
-                ungetlex (clex, cval);
-                cval = (opcode >> 11) & 31; /* get 1-st register */
-                opcode |= cval << 16;       /* use 1-st reg as 2-nd */
-                goto fsa;
-            }
-            uerror ("bad rt register");
-        }
-        opcode |= cval << 16;           /* .., rt, ... */
-    }
-    if (type & FRS2) {
-        clex = getlex (&cval);
-        if (clex != ',') {
-            if ((opcode & 0xfc00003f) != 0x00000009)
-                uerror ("comma expected");
-            /* Jalr with one argument.
-             * Treat as if the first argument is $31. */
-            ungetlex (clex, cval);
-            cval = (opcode >> 11) & 31; /* get 1-st register */
-            opcode |= cval << 21;       /* use 1-st reg as 2-nd */
-            opcode |= 31 << 11;         /* set 1-st reg to 31 */
-            clobber_reg = 31;
-            goto done3;
-        }
-        clex = getlex (&cval);
-        if (clex != LREG) {
-            if ((type & FRT1) && (type & FOFF16)) {
-                /* Second register operand omitted.
-                 * Need to restore the missing operand. */
-                ungetlex (clex, cval);
-                cval = (opcode >> 16) & 31; /* get 1-st register */
-                opcode |= cval << 21;       /* use 1-st reg as 2-nd */
-                goto foff16;
-            }
-            uerror ("bad rs register");
-        }
-        opcode |= cval << 21;           /* .., rs, ... */
-    }
-
-    /*
-     * Third register.
-     */
-    if (type & FRT3) {
-        clex = getlex (&cval);
-        if (clex != ',') {
-            /* Three-operand instruction used with two operands.
-             * Need to restore the missing operand. */
-            ungetlex (clex, cval);
-            cval = (opcode >> 21) & 31;
-            opcode &= ~(31 << 21);                  /* clear 2-nd register */
-            opcode |= ((opcode >> 11) & 31) << 21;  /* use 1-st reg as 2-nd */
-            opcode |= cval << 16;                   /* add 3-rd register */
-            goto done3;
-        }
-        clex = getlex (&cval);
-        if (clex != LREG) {
-            if ((type & FRD1) && (type & FRS2)) {
-                /* Three-operand instruction used with literal operand.
-                 * Convert it to immediate type. */
-                unsigned newop;
-                switch (opcode & 0xfc0007ff) {
-                case 0x00000020: newop = 0x20000000; break; // add -> addi
-                case 0x00000021: newop = 0x24000000; break; // addu -> addiu
-                case 0x00000024: newop = 0x30000000; break; // and -> andi
-                case 0x00000025: newop = 0x34000000; break; // or -> ori
-                case 0x0000002a: newop = 0x28000000; break; // slt -> slti
-                case 0x0000002b: newop = 0x2c000000; break; // sltu -> sltiu
-                case 0x00000022: newop = 0x20000000;        // sub -> addi, negate
-                                 negate_literal = 1; break;
-                case 0x00000023: newop = 0x24000000;        // subu -> addiu, negate
-                                 negate_literal = 1; break;
-                case 0x00000026: newop = 0x38000000; break; // xor -> xori
-                default:
-                    uerror ("bad rt register");
-                    return;
-                }
-                ungetlex (clex, cval);
-                cval = (opcode >> 11) & 31;         /* get 1-st register */
-                newop |= cval << 16;                /* set 1-st register */
-                newop |= opcode & (31 << 21);       /* set 2-nd register */
-                opcode = newop;
-                type = FRT1 | FRS2 | FOFF16 | FMOD;
-                goto foff16;
-            }
-            uerror ("bad rt register");
-        }
-        opcode |= cval << 16;           /* .., .., rt */
-    }
-    if (type & FRS3) {
-        clex = getlex (&cval);
-        if (clex != ',') {
-            /* Three-operand instruction used with two operands.
-             * Need to restore the missing operand. */
-            ungetlex (clex, cval);
-            cval = (opcode >> 16) & 31;
-            opcode &= ~(31 << 16);                  /* clear 2-nd register */
-            opcode |= ((opcode >> 11) & 31) << 16;  /* use 1-st reg as 2-nd */
-            opcode |= cval << 21;                   /* add 3-rd register */
-            goto done3;
-        }
-        clex = getlex (&cval);
-        if (clex != LREG)
-            uerror ("bad rs register");
-        opcode |= cval << 21;           /* .., .., rs */
-    }
-done3:
-
-    /*
-     * Immediate argument.
-     */
-    if (type & FSEL) {
-        /* optional COP0 register select */
-        clex = getlex (&cval);
-
-    } else if (type & (FCODE | FCODE16 | FSA)) {
-        /* Non-relocatable offset */
-        if (type & FSA) {
-            if (getlex (&cval) != ',')
-                uerror ("comma expected");
-            clex = getlex (&cval);
-            if (clex == LREG && type == (FRD1 | FRT2 | FSA | FMOD)) {
-                /* Literal-operand shift instruction used with register operand.
-                 * Convert it to 3-register type. */
-                unsigned newop;
-                switch (opcode & 0xffe0003f) {
-                case 0x00200002: newop = 0x00000046; break; // ror -> rorv
-                case 0x00000000: newop = 0x00000004; break; // sll -> sllv
-                case 0x00000003: newop = 0x00000007; break; // sra -> srav
-                case 0x00000002: newop = 0x00000006; break; // srl -> srlv
-                default:
-                    uerror ("bad shift amount");
-                    return;
-                }
-                newop |= opcode & (0x3ff << 11);    /* set 1-st and 2-nd regs */
-                newop |= cval << 21;                /* set 3-rd register */
-                opcode = newop;
-                type = FRD1 | FRT2 | FRS3 | FMOD;
-                goto done3;
-            }
-            ungetlex (clex, cval);
-        }
-fsa:    offset = getaddr();
-        switch (type & (FCODE | FCODE16 | FSA)) {
-        case FCODE:                     /* immediate shifted <<6 */
-            opcode |= offset << 6;
-            break;
-        case FCODE16:                   /* immediate shifted <<16 */
-            opcode |= offset << 16;
-            break;
-        case FSA:                       /* shift amount */
-            opcode |= (offset & 0x1f) << 6;
-            break;
-        }
-    }
-
-    /*
-     * Last argument.
-     */
-    if (type & FRSB) {
-        if (getlex (&cval) != '(')
-            uerror ("left par expected");
-        clex = getlex (&cval);
-        if (clex != LREG)
-            uerror ("bad rs register");
-        if (getlex (&cval) != ')')
-            uerror ("right par expected");
-        opcode |= cval << 21;           /* ... (rs) */
-    }
-    if (type & FSIZE) {
-        if (getlex (&cval) != ',')
-            uerror ("comma expected");
-        offset = getaddr();
-        opcode |= ((offset - 1) & 0x1f) << 11; /* bit field size */
-    }
-    if (type & FMSB) {
-        if (getlex (&cval) != ',')
-            uerror ("comma expected");
-        offset += getaddr();
-        if (offset > 32)
-            offset = 32;
-        opcode |= ((offset - 1) & 0x1f) << 11; /* msb */
-    }
-done:
 
     /* Output resulting values. */
-    //TODO
-    count++;
+    code[count++] = opcode;
+
+    /* Whether jump address follows. */
+    return (type & FADDR) != 0;
 }
 
 void pass1 ()
 {
-    int clex;
-    int cval, tval, nbytes;
-    unsigned addr;
+    int clex, i;
+    int f_seen = 0, k_seen = 0, need_address = 0;
 
     for (;;) {
-        clex = getlex (&cval);
+        clex = getlex();
         switch (clex) {
         case LEOF:
+            if (need_address)
+                uerror ("jump address required");
             return;
         case LEOL:
             continue;
+        case LFUNC:
+            if (need_address)
+                uerror ("jump address required");
+            if (f_seen)
+                uerror ("duplicate F key");
+            f_seen = 1;
+            k_seen = 0;
+            continue;
+        case LKKEY:
+            if (need_address)
+                uerror ("jump address required");
+            if (k_seen)
+                uerror ("duplicate K key");
+            k_seen = 1;
+            f_seen = 0;
+            continue;
         case LNAME:
-            cval = lookcmd();
-            clex = getlex (&tval);
+            /* Named label. */
+            if (f_seen)
+                uerror ("unexpected F key before label");
+            if (k_seen)
+                uerror ("unexpected K key before label");
+            i = looklabel();
+            clex = getlex();
             if (clex == ':') {
-                /* Label. */
-                cval = lookname();
-                stab[cval].value = count;
-                stab[cval].undef = 0;
+                /* Label defined. */
+                i = looklabel();
+                label[i].value = count;
+                label[i].undef = 0;
                 continue;
             }
-            /* Machine instruction. */
-            if (cval < 0)
-                uerror ("bad instruction");
-            ungetlex (clex, tval);
-            makecmd (optable[cval].opcode, optable[cval].type);
+            /* Label referenced. */
+            ungetlex (clex);
+            if (! need_address)
+                uerror ("unused jump address");
+            relinfo[count] = 1;
+            makecmd (i, 0, 0, 0);
             break;
         case LNUM:
-            /* Local label. */
-            //TODO
-            clex = getlex (&tval);
-            if (clex != ':')
-                uerror ("bad digital label");
+            /* Numeric label or address. */
+            if (f_seen)
+                uerror ("unexpected F key before label");
+            if (k_seen)
+                uerror ("unexpected K key before label");
+            clex = getlex();
+            if (clex == ':') {
+                /* Digital label. */
+                if (intval != count)
+                    uerror ("incorrect label value %d, expected %d", intval, count);
+            } else {
+                ungetlex (clex);
+                if (need_address) {
+                    /* Jump address. */
+                    i = (intval / 10) << 4 | (intval % 10);
+                    makecmd (i, 0, 0, 0);
+                } else {
+                    /* Enter decimal digit. */
+                    if (intval > 9)
+                        uerror ("unknown opcode '%d'", intval);
+                    makecmd (intval, 0, 0, 0);
+                }
+            }
             continue;
+        case LCMD:
+            /* Machine instruction. */
+            if (need_address)
+                uerror ("jump address required");
+            i = intval;
+            need_address = makecmd (optable[i].opcode,
+                optable[i].type, f_seen, k_seen);
+            break;
         default:
             uerror ("bad syntax");
-        }
-        clex = getlex (&cval);
-        if (clex != LEOL) {
-            if (clex == LEOF)
-                return;
-            uerror ("bad instruction arguments");
         }
     }
 }
@@ -746,15 +522,15 @@ void pass2 ()
 {
     int i;
 
-    for (i=0; i<stabfree; i++) {
+    for (i=0; i<labelfree; i++) {
         /* Undefined label is fatal. */
-        if (stab[i].undef)
-            uerror ("name undefined", stab[i].n_name);
+        if (label[i].undef)
+            uerror ("label '%s' undefined", label[i].name);
     }
     for (i=0; i<count; i++) {
         if (relinfo[i]) {
             /* Use value of the label. */
-            code[i] = stab[code[i]].value;
+            code[i] = label[code[i]].value;
         }
     }
 }
