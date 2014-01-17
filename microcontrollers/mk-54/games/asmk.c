@@ -54,6 +54,8 @@ enum {
  */
 struct optable {
     unsigned opcode;                    /* instruction code */
+    unsigned f_opcode;                  /* code with F prefix */
+    unsigned k_opcode;                  /* code with K prefix */
     const char *name;                   /* instruction name */
     unsigned type;                      /* flags */
 };
@@ -64,75 +66,71 @@ struct optable {
 #define FADDR   0x0008                  /* Jump address follows */
 
 const struct optable optable [] = {
-    { 0x0a, ",",        },
-    { 0x0b, "/-/",      },
-    { 0x0c, "ВП",       },
-    { 0x0d, "Сx",       },
-    { 0x0e, "В^",       },
-    { 0x0f, "Вx",       FPREF },
-    { 0x10, "+",        },
-    { 0x11, "-",        },
-    { 0x12, "x",        },
-    { 0x13, "/",        },
-    { 0x14, "<->",      },
-    { 0x15, "10^x",     FPREF },
-    { 0x16, "e^x",      FPREF },
-    { 0x17, "lg",       FPREF },
-    { 0x18, "ln",       FPREF },
-    { 0x19, "arcsin",   FPREF },
-    { 0x1a, "arccos",   FPREF },
-    { 0x1b, "arctg",    FPREF },
-    { 0x1c, "sin",      FPREF },
-    { 0x1d, "cos",      FPREF },
-    { 0x1e, "tg",       FPREF },
-    { 0x20, "пи",       FPREF },
-    { 0x21, "корень",   FPREF },
-    { 0x22, "x^2",      FPREF },
-    { 0x23, "1/x",      FPREF },
-    { 0x24, "x^y",      FPREF },
-    { 0x25, "⟳",        FPREF },
-    { 0x26, "МГ",       FPREK },
-    { 0x27, "-",        FPREK },
-    { 0x28, "x",        FPREK },
-    { 0x29, "/",        FPREK },
-    { 0x2a, "МЧ",       FPREK },
-    { 0x30, "ЧМ",       FPREK },
-    { 0x31, "|x|",      FPREK },
-    { 0x32, "ЗН",       FPREK },
-    { 0x33, "ГМ",       FPREK },
-    { 0x34, "[x]",      FPREK },
-    { 0x35, "{x}",      FPREK },
-    { 0x36, "max",      FPREK },
-    { 0x37, "/\\",      FPREK },
-    { 0x38, "\\/",      FPREK },
-    { 0x39, "(+)",      FPREK },
-    { 0x3a, "ИНВ",      FPREK },
-    { 0x3b, "СЧ",       FPREK },
-    { 0x40, "xП",       FREG },
-    { 0x50, "С/П",      },
-    { 0x51, "БП",       FADDR },
-    { 0x52, "В/О",      },
-    { 0x53, "ПП",       FADDR },
-    { 0x54, "НОП",      FPREK },
-    { 0x55, "1",        FPREK },
-    { 0x56, "2",        FPREK },
-    { 0x57, "x#0",      FPREF | FADDR },
-    { 0x58, "L2",       FPREF | FADDR },
-    { 0x59, "x≥0",      FPREF | FADDR },
-    { 0x5a, "L3",       FPREF | FADDR },
-    { 0x5b, "L1",       FPREF | FADDR },
-    { 0x5c, "x<0",      FPREF | FADDR },
-    { 0x5d, "L0",       FPREF | FADDR },
-    { 0x5e, "x=0",      FPREF | FADDR },
-    { 0x60, "Пx",       FREG },
-    { 0x70, "x#0",      FPREK | FREG },
-    { 0x80, "БП",       FPREK | FREG },
-    { 0x90, "x>=0",     FPREK | FREG },
-    { 0xa0, "ПП",       FPREK | FREG },
-    { 0xb0, "xП",       FPREK | FREG },
-    { 0xc0, "x<0",      FPREK | FREG },
-    { 0xd0, "Пx",       FPREK | FREG },
-    { 0xe0, "x=0",      FPREK | FREG },
+    /* Norm   F     K   Name        Flags */
+    { 0x0a,    0,    0, ",",        },
+    { 0x0b,    0,    0, "/-/",      },
+    { 0x0c,    0,    0, "ВП",       },
+    { 0x0d,    0,    0, "Cx",       },
+    { 0x0e,    0,    0, "B^",       },
+    {    0, 0x0f,    0, "Bx",       },
+    { 0x10,    0,    0, "+",        },
+    { 0x11,    0, 0x27, "-",        },
+    { 0x12,    0, 0x28, "x",        },
+    { 0x12,    0, 0x28, "*",        },
+    { 0x13,    0, 0x29, "/",        },
+    { 0x14,    0,    0, "<->",      },
+    {    0, 0x15,    0, "10^x",     },
+    {    0, 0x16,    0, "e^x",      },
+    {    0, 0x17,    0, "lg",       },
+    {    0, 0x18,    0, "ln",       },
+    {    0, 0x19,    0, "arcsin",   },
+    {    0, 0x1a,    0, "arccos",   },
+    {    0, 0x1b,    0, "arctg",    },
+    {    0, 0x1c,    0, "sin",      },
+    {    0, 0x1d,    0, "cos",      },
+    {    0, 0x1e,    0, "tg",       },
+    {    0, 0x20,    0, "пи",       },
+    {    0, 0x20,    0, "pi",       },
+    {    0, 0x20,    0, "@",        },            // F π
+    {    0, 0x21,    0, "корень",   },
+    {    0, 0x21,    0, "sqrt",     },
+    {    0, 0x22,    0, "x^2",      },
+    {    0, 0x23,    0, "1/x",      },
+    {    0, 0x24,    0, "x^y",      },
+    {    0, 0x25,    0, "O",        },            // F ⟳
+    {    0, 0x25,    0, "o",        },
+    {    0,    0, 0x26, "MГ",       },
+    {    0,    0, 0x2a, "MЧ",       },
+    {    0,    0, 0x30, "ЧM",       },
+    {    0,    0, 0x31, "|x|",      },
+    {    0,    0, 0x32, "ЗH",       },
+    {    0,    0, 0x33, "ГM",       },
+    {    0,    0, 0x34, "[x]",      },
+    {    0,    0, 0x35, "{x}",      },
+    {    0,    0, 0x36, "max",      },
+    {    0,    0, 0x37, "/\\",      },
+    {    0,    0, 0x38, "\\/",      },
+    {    0,    0, 0x39, "(+)",      },
+    {    0,    0, 0x3a, "ИHB",      },
+    {    0,    0, 0x3b, "CЧ",       },
+    { 0x40,    0, 0xb0, "xП",       FREG },
+    { 0x50,    0,    0, "C/П",      },
+    { 0x51,    0, 0x80, "БП",       FADDR },    // FREG for K
+    { 0x52,    0,    0, "B/O",      },
+    { 0x53,    0, 0xa0, "ПП",       FADDR },    // FREG for K
+    {    0,    0, 0x54, "HOП",      },
+    {    0,    0, 0x55, "1",        },
+    {    0,    0, 0x56, "2",        },
+    {    0, 0x57, 0x70, "x#0",      FADDR },    // FREG for K
+    {    0, 0x58,    0, "L2",       FADDR },
+    {    0, 0x59, 0x90, "x~0",      FADDR },    // F x≥0, FREG for K
+    {    0, 0x59, 0x90, "x>=0",     FADDR },    // FREG for K
+    {    0, 0x5a,    0, "L3",       FADDR },
+    {    0, 0x5b,    0, "L1",       FADDR },
+    {    0, 0x5c, 0xc0, "x<0",      FADDR },    // FREG for K
+    {    0, 0x5d,    0, "L0",       FADDR },
+    {    0, 0x5e, 0xe0, "x=0",      FADDR },    // FREG for K
+    { 0x60,    0, 0xd0, "Пx",       FREG },
     { 0 },
 };
 
@@ -241,9 +239,58 @@ void getname (c)
 {
     char *cp;
 
-    for (cp=name; !isspace(c); c=getchar())
+    for (cp=name; c>=0 && !isspace(c); c=getchar()) {
+        if (c & 0x80) {
+            // Parse utf8 encoding.
+            int c2 = getchar();
+            if (! (c & 0x20)) {
+                // Convert cyrillics and symbol π
+//printf ("Convert %02x-%02x\n", c, c2);
+                switch (c<<8 | c2) {
+                case 0xd092: c = 'B'; break;    // В
+                case 0xd09a: c = 'K'; break;    // К
+                case 0xd09c: c = 'M'; break;    // М
+                case 0xd09d: c = 'H'; break;    // Н
+                case 0xd09e: c = 'O'; break;    // О
+                case 0xd0a1: c = 'C'; break;    // С
+                case 0xd0be: c = 'o'; break;    // о
+                case 0xd183: c = 'y'; break;    // у
+                case 0xd185: c = 'x'; break;    // х
+                case 0xcf80: c = '@'; break;    // π -> @
+                default:
+                    *cp++ = c;
+                    c = c2;
+                }
+            } else {
+                int c3 = getchar();
+                // Convert symbols ⟳, ≥, –
+//printf ("Convert %02x-%02x-%02x\n", c, c2, c3);
+                switch (c<<16 | c2<<8 | c3) {
+                case 0xe29fb3: c = 'O'; break;  // ⟳ -> O
+                case 0xe289a5: c = '~'; break;  // ≥ -> ~
+                case 0xe28093: c = '-'; break;  // – -> ~
+                case 0xefbbbf: continue;        // Skip zero width space
+                default:
+                    *cp++ = c;
+                    *cp++ = c2;
+                    c = c3;
+                }
+            }
+        }
+//printf ("-> %02x\n", c);
         *cp++ = c;
-    *cp = 0;
+        *cp = 0;
+
+        /* Detect prefixes. */
+        static const char *prefixes[] = {
+            "F", "K", "БП", "ПП", "xП", "Пx",
+            "x#0", "x~0", "x>=0", "x<0", "x=0", 0
+        };
+        const char **pp;
+        for (pp=prefixes; *pp; pp++)
+            if (strcmp (*pp, name) == 0)
+                return;
+    }
     ungetc (c, stdin);
 }
 
@@ -345,6 +392,12 @@ skiptoeol:  while ((c = getchar()) != '\n')
             if (isspace (c))
                 continue;
             getname (c);
+            if (name[1] == 0) {
+                if (name[0] == 'F')
+                    return (LFUNC);
+                if (name[0] == 'K')
+                    return (LKKEY);
+            }
             intval = lookcmd();
             if (intval >= 0)
                 return (LCMD);
@@ -398,35 +451,6 @@ unsigned getreg()
     }
 }
 
-/*
- * Build and emit a machine instruction code.
- */
-int makecmd (opcode, type, f_flag, k_flag)
-    unsigned opcode;
-{
-    /* Verify F and K prefixes. */
-    if ((type & FPREF) && ! f_flag)
-        uerror ("F prefix missing");
-    if (! (type & FPREF) && f_flag)
-        uerror ("excessive F prefix");
-    if ((type & FPREK) && ! f_flag)
-        uerror ("K prefix missing");
-    if (! (type & FPREK) && f_flag)
-        uerror ("excessive K prefix");
-
-    /* Register number follows */
-    if (type & FREG) {
-        int reg = getreg();
-        opcode |= reg;
-    }
-
-    /* Output resulting values. */
-    code[count++] = opcode;
-
-    /* Whether jump address follows. */
-    return (type & FADDR) != 0;
-}
-
 void pass1 ()
 {
     int clex, i;
@@ -475,9 +499,9 @@ void pass1 ()
             /* Label referenced. */
             ungetlex (clex);
             if (! need_address)
-                uerror ("unused jump address");
+                uerror ("unknown instruction '%s'", name);
             relinfo[count] = 1;
-            makecmd (i, 0, 0, 0);
+            code[count++] = i;
             break;
         case LNUM:
             /* Numeric label or address. */
@@ -494,13 +518,13 @@ void pass1 ()
                 ungetlex (clex);
                 if (need_address) {
                     /* Jump address. */
-                    i = (intval / 10) << 4 | (intval % 10);
-                    makecmd (i, 0, 0, 0);
+                    code[count++] = (intval / 10) << 4 | (intval % 10);
+                    need_address = 0;
                 } else {
                     /* Enter decimal digit. */
                     if (intval > 9)
                         uerror ("unknown opcode '%d'", intval);
-                    makecmd (intval, 0, 0, 0);
+                    code[count++] = intval;
                 }
             }
             continue;
@@ -508,9 +532,38 @@ void pass1 ()
             /* Machine instruction. */
             if (need_address)
                 uerror ("jump address required");
-            i = intval;
-            need_address = makecmd (optable[i].opcode,
-                optable[i].type, f_seen, k_seen);
+            const struct optable *op = &optable[intval];
+            int opcode = op->opcode;
+            int type = op->type;
+
+            /* Verify F and K prefixes. */
+            if (f_seen) {
+                opcode = op->f_opcode;
+                if (! opcode)
+                    uerror ("incorrect F prefix for '%s'", op->name);
+                f_seen = 0;
+            } else if (k_seen) {
+                opcode = op->k_opcode;
+                if (! opcode)
+                    uerror ("incorrect K prefix for '%s'", op->name);
+                /* With K prefix, address-type ops change to register type. */
+                if (type == FADDR)
+                    type = FREG;
+                k_seen = 0;
+            } else if (! opcode) {
+                uerror ("F or K prefix missing for '%s'", op->name);
+            }
+
+            /* Register number follows. */
+            if (type & FREG) {
+                opcode |= getreg();
+            }
+
+            /* Output resulting value. */
+            code[count++] = opcode;
+
+            /* Whether jump address follows. */
+            need_address = (type & FADDR);
             break;
         default:
             uerror ("bad syntax");
