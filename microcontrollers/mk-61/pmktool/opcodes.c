@@ -39,7 +39,7 @@ static opcode_t opcodes[] = {
     { 0x10, 0, "+"        },
     { 0x11, 0, "-"        },
     { 0x12, 0, "x"        },
-    { 0x13, 0, ":"        },
+    { 0x13, 0, "/"        },
     { 0x14, 0, "<->"      },
     { 0x15, 0, "F 10^x"   },
     { 0x16, 0, "F e^x"    },
@@ -56,11 +56,11 @@ static opcode_t opcodes[] = {
     { 0x22, 0, "F x^2"    },
     { 0x23, 0, "F 1/x"    },
     { 0x24, 0, "F x^y"    },
-    { 0x25, 0, "F ->"     },
+    { 0x25, 0, "F o"      },
     { 0x26, 0, "K МГ"     },
     { 0x27, 0, "K -"      },
     { 0x28, 0, "K x"      },
-    { 0x29, 0, "K :"      },
+    { 0x29, 0, "K /"      },
     { 0x2A, 0, "K МЧ"     },
     { 0x30, 0, "K ЧМ"     },
     { 0x31, 0, "K |x|"    },
@@ -104,7 +104,7 @@ static opcode_t opcodes[] = {
 
 static const char hex_char[16] = "0123456789ABCDEF";
 static const char *hex_string[16] = {"0","1","2","3","4","5","6","7",
-                                     "8","9","A","B","C","D","E","F"};
+                                     "8","9","a","b","c","d","e","f"};
 
 //
 // Disassemble the opcode.
