@@ -210,7 +210,8 @@ static unsigned char stack[5][6];       // Stack values X, Y, Z, T, X1
 static unsigned char regs[DATA_NREGS][6]; // Memory registers 0..9, A..D
 static unsigned char prog[CODE_NBYTES]; // Program code
 static unsigned char new_prog[CODE_NBYTES]; // New program code
-static int prog_update_flag;            // Flag to write new program code
+static int new_prog_flag;               // New program received
+static int flash_save_flag;             // Need to save to flash memory
 
 /*
  * Poll keypad: input pins RD4-RD7.
@@ -406,7 +407,7 @@ static int handle_packet()
         memzero (&send, PACKET_SIZE);
         send[0] = receive[0];
         send[1] = 2;
-        prog_update_flag = 1;
+        new_prog_flag = 1;
         return 1;
     case CMD_WRITE_PROG_HIGH:   // Write program 60-105
         memcopy (&receive[2], &new_prog[60], CODE_NBYTES - 60);
@@ -532,7 +533,6 @@ void restore_prog()
     void *flash = (void*) FLASH_BASE;
 
     memcopy (flash, new_prog, CODE_NBYTES);
-    prog_update_flag = 1;
 }
 
 /*
@@ -619,11 +619,13 @@ int main()
     rgd = MODE_DEGREES;
     keycode = 0;
     key_pressed = 0;
-    prog_update_flag = 0;
+    new_prog_flag = 0;
+    flash_save_flag = 0;
 
     // Restore a program from flash memory.
     if (prog_available()) {
         restore_prog();
+        new_prog_flag = 1;
     }
 
     // Initialize USB module SFRs and firmware variables to known states.
@@ -641,18 +643,25 @@ int main()
         if (running)
             continue;
 
-        if (prog_update_flag) {
+        if (new_prog_flag) {
             // Got new program code - send ot to calculator engine.
             calc_write_code (new_prog);
-            prog_update_flag = 0;
+            new_prog_flag = 0;
         } else {
             // Fetch program code.
             calc_get_code (prog);
 
-            // Check when program has been changed and save it to flash memory.
+            // Check when program has been changed and save it
+            // to flash memory.
+            // Need some delay here to avoid glitches.
             if (prog_modified()) {
-                save_prog();
-            }
+                flash_save_flag++;
+                if (flash_save_flag > 5) {
+                    save_prog();
+                    flash_save_flag = 0;
+                }
+            } else
+                flash_save_flag = 0;
         }
     }
 }
