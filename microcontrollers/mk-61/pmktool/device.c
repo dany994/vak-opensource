@@ -82,11 +82,6 @@ static void send_recv (device_t *d, unsigned char cmd, unsigned nbytes)
     }
     hid_write (d->hiddev, d->request, 64);
 
-    if (cmd == CMD_WRITE_PROG_LOW || cmd == CMD_WRITE_PROG_HIGH) {
-        /* No reply expected. */
-        return;
-    }
-
     memset (d->reply, 0, sizeof(d->reply));
     reply_len = hid_read_timeout (d->hiddev, d->reply, 64, 4000);
     if (reply_len == 0) {
@@ -132,7 +127,7 @@ void device_read_stack (device_t *d, unsigned char stack[5][6])
 {
     send_recv (d, CMD_READ_STACK, 0);
     if (d->reply[0] != CMD_READ_STACK ||
-        d->reply[1] != 2 + 5*6) {       /* Reply data size */
+        d->reply[1] != 2 + 5*6) {               /* Reply data size */
         fprintf (stderr, "hid device: bad reply for READ_STACK command\n");
         exit (-1);
     }
@@ -146,7 +141,7 @@ void device_read_regs (device_t *d, unsigned char regs[][6])
 {
     send_recv (d, CMD_READ_REG_LOW, 0);
     if (d->reply[0] != CMD_READ_REG_LOW ||
-        d->reply[1] != 2 + 8*6) {       /* Reply data size */
+        d->reply[1] != 2 + 8*6) {               /* Reply data size */
         fprintf (stderr, "hid device: bad reply for READ_REG_LOW command\n");
         exit (-1);
     }
@@ -168,7 +163,7 @@ void device_read_program (device_t *d, unsigned char data[])
 {
     send_recv (d, CMD_READ_PROG_LOW, 0);
     if (d->reply[0] != CMD_READ_PROG_LOW ||
-        d->reply[1] != 2 + 60) {        /* Reply data size */
+        d->reply[1] != 2 + 60) {                /* Reply data size */
         fprintf (stderr, "hid device: bad reply for READ_PROG_LOW command\n");
         exit (-1);
     }
@@ -189,18 +184,18 @@ void device_read_program (device_t *d, unsigned char data[])
 void device_write_program (device_t *d, unsigned char *data)
 {
     memcpy (&d->request[2], &data[60], code_nbytes - 60);
-    send_recv (d, CMD_WRITE_PROG_HIGH, 0);
+    send_recv (d, CMD_WRITE_PROG_HIGH, code_nbytes - 60);
     if (d->reply[0] != CMD_WRITE_PROG_HIGH ||
-        d->reply[1] != 2 + code_nbytes - 60) {  /* Reply data size */
+        d->reply[1] != 2) {                     /* Reply data size */
         fprintf (stderr, "hid device: bad reply for WRITE_PROG_HIGH command\n");
         exit (-1);
     }
 
     /* First chunk sent last, to finalize the update. */
     memcpy (&d->request[2], &data[0], 60);
-    send_recv (d, CMD_WRITE_PROG_LOW, 0);
+    send_recv (d, CMD_WRITE_PROG_LOW, 60);
     if (d->reply[0] != CMD_WRITE_PROG_LOW ||
-        d->reply[1] != 2 + 60) {        /* Reply data size */
+        d->reply[1] != 2) {                     /* Reply data size */
         fprintf (stderr, "hid device: bad reply for WRITE_PROG_LOW command\n");
         exit (-1);
     }
