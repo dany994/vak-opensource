@@ -42,6 +42,8 @@ static const char symbol[] = "0123456789-LCRE ";
 
 extern char *decompile (unsigned code, int *address_flag);
 
+extern int parse_prog (char *filename, unsigned char code[]);
+
 void quit (void)
 {
     if (device != 0) {
@@ -55,15 +57,6 @@ void interrupted (int signum)
     fprintf (stderr, _("\nInterrupted.\n"));
     quit();
     _exit (-1);
-}
-
-/*
- * Parse the program source.
- */
-int parse_prog (char *filename, unsigned char code[], int nbytes)
-{
-    // TODO
-    return 0;
 }
 
 static void format_value (char *buf, unsigned char value[6])
@@ -156,17 +149,31 @@ void do_status ()
     }
 }
 
+void do_parse (char *filename)
+{
+    unsigned char code[105];
+    int nbytes, i, address_flag;
+
+    /* Parse the program source. */
+    nbytes = parse_prog (filename, code);
+
+    /* Print the program. */
+    printf ("\nProgram: %d bytes\n", nbytes);
+    address_flag = 0;
+    for (i=0; i<nbytes; i++) {
+        char *mnemonics = decompile (code[i], &address_flag);
+        printf ("   %3d: %s", i, mnemonics);
+        printf ("\n");
+    }
+}
+
 void do_program (char *filename)
 {
     unsigned char code[105];
     int nbytes, last;
 
     /* Parse the program source. */
-    nbytes = device_code_nbytes();
-    if (! parse_prog (filename, code, nbytes)) {
-        fprintf (stderr, _("%s: bad file format\n"), filename);
-        exit (1);
-    }
+    nbytes = parse_prog (filename, code);
 
     /* Open and detect the device. */
     atexit (quit);
@@ -183,6 +190,10 @@ void do_program (char *filename)
             break;
 
     printf (_("Write program: %d instructions\n"), last);
+    if (nbytes > device_code_nbytes()) {
+        fprintf (stderr, _("Program too large for this device!\n"));
+        exit (1);
+    }
     device_write_program (device, code);
 }
 
@@ -277,7 +288,7 @@ static void show_warranty (void)
 
 int main (int argc, char **argv)
 {
-    int ch, read_mode = 0;
+    int ch, read_mode = 0, parse_mode = 0;
     static const struct option long_options[] = {
         { "help",        0, 0, 'h' },
         { "warranty",    0, 0, 'W' },
@@ -312,7 +323,7 @@ int main (int argc, char **argv)
 #endif
     signal (SIGTERM, interrupted);
 
-    while ((ch = getopt_long (argc, argv, "vDhrCVW",
+    while ((ch = getopt_long (argc, argv, "vDhrpCVW",
       long_options, 0)) != -1) {
         switch (ch) {
         case 'D':
@@ -320,6 +331,9 @@ int main (int argc, char **argv)
             continue;
         case 'r':
             ++read_mode;
+            continue;
+        case 'p':
+            ++parse_mode;
             continue;
         case 'h':
             break;
@@ -342,12 +356,13 @@ usage:
         printf ("Show stack and registers:\n");
         printf ("       pmktool\n");
         printf ("\nWrite program:\n");
-        printf ("       pmktool file.txt\n");
+        printf ("       pmktool [-p] file.txt\n");
         printf ("\nRead program:\n");
         printf ("       pmktool -r > file.txt\n");
         printf ("\nArgs:\n");
         printf ("       file.txt            Program file in text format\n");
         printf ("       -r                  Read mode\n");
+        printf ("       -p                  Parse only, don't write to device\n");
         printf ("       -D                  Debug mode\n");
         printf ("       -h, --help          Print this help message\n");
         printf ("       -V, --version       Print version\n");
@@ -368,7 +383,10 @@ usage:
             do_status();
         break;
     case 1:
-        do_program (argv[0]);
+        if (parse_mode)
+            do_parse (argv[0]);
+        else
+            do_program (argv[0]);
         break;
     default:
         goto usage;

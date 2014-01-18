@@ -31,14 +31,14 @@
 /*
  * Control commands.
  */
-#define CMD_QUERY_DEVICE    0xc1    // Get generic status
-#define CMD_READ_STACK      0xc2    // Read X, Y, Z, T, X1 values
-#define CMD_READ_REG_LOW    0xc3    // Read registers 0-7
-#define CMD_READ_REG_HIGH   0xc4    // Read registers 8-E
-#define CMD_READ_PROG_LOW   0xc5    // Read program 0-59
-#define CMD_READ_PROG_HIGH  0xc6    // Read program 60-105
-#define CMD_WRITE_PROG_LOW  0xc7    // Write program 0-59
-#define CMD_WRITE_PROG_HIGH 0xc8    // Write program 60-105
+#define CMD_QUERY_DEVICE        0xc1    // Get generic status
+#define CMD_READ_STACK          0xc2    // Read X, Y, Z, T, X1 values
+#define CMD_READ_REG_LOW        0xc3    // Read registers 0-7
+#define CMD_READ_REG_HIGH       0xc4    // Read registers 8-E
+#define CMD_READ_PROG_LOW       0xc5    // Read program 0-59
+#define CMD_READ_PROG_HIGH      0xc6    // Read program 60-105
+#define CMD_WRITE_PROG_LOW      0xc7    // Write program 0-59
+#define CMD_WRITE_PROG_HIGH     0xc8    // Write program 60-105
 
 struct _device_t {
     hid_device *hiddev;                 // handle for hidapi

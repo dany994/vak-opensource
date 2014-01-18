@@ -12,7 +12,7 @@ HIDSRC          = hidapi/hid-windows.c
 
 
 
-PROG_OBJS       = pmktool.o device.o hid.o
+PROG_OBJS       = pmktool.o device.o hid.o parse.o
 
 all:		pmktool.exe
 
