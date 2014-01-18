@@ -176,3 +176,8 @@ void calc_get_regs (unsigned char reg[][6]);
 // Read the program code.
 //
 void calc_get_code (unsigned char code[]);
+
+//
+// Update the program code.
+//
+void calc_write_code (unsigned char code[]);

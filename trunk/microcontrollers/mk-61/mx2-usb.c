@@ -207,6 +207,8 @@ static unsigned key_pressed;            // Bitmask of active key
 static unsigned char stack[5][6];       // Stack values X, Y, Z, T, X1
 static unsigned char regs[DATA_NREGS][6]; // Memory registers 0..9, A..D
 static unsigned char prog[CODE_NBYTES]; // Program code
+static unsigned char new_prog[CODE_NBYTES]; // New program code
+static int prog_update_flag;            // Flag to write new program code
 
 /*
  * Poll keypad: input pins RD4-RD7.
@@ -397,24 +399,19 @@ static int handle_packet()
         send[1] = 2 + CODE_NBYTES - 60;
         memcopy (&prog[60], &send[2], CODE_NBYTES - 60);
         return 1;
-#if 0
     case CMD_WRITE_PROG_LOW:    // Write program 0-59
+        memcopy (&receive[2], &new_prog[0], 60);
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2;
+        prog_update_flag = 1;
+        return 1;
     case CMD_WRITE_PROG_HIGH:   // Write program 60-105
-        // TODO
-        for (i = 0; i < receive.Size/sizeof(unsigned); i++) {
-            unsigned index = (REQUEST_SIZE - receive.Size) / sizeof(unsigned) + i;
-
-            // Data field is right justified.
-            // Need to put it in the buffer left justified.
-            buf [buf_index++] =
-                receive.Data [(REQUEST_SIZE - receive.Size) / sizeof(unsigned) + i];
-            base_address += sizeof(unsigned);
-            if (buf_index == REQUEST_SIZE / sizeof(unsigned)) {
-                write_flash_block();
-            }
-        }
-        return 0;
-#endif
+        memcopy (&receive[2], &new_prog[60], CODE_NBYTES - 60);
+        memzero (&send, PACKET_SIZE);
+        send[0] = receive[0];
+        send[1] = 2;
+        return 1;
     }
     return 0;
 }
@@ -591,6 +588,7 @@ int main()
     rgd = MODE_DEGREES;
     keycode = 0;
     key_pressed = 0;
+    prog_update_flag = 0;
 
     // Restore a program from flash memory.
     if (prog_available()) {
@@ -607,7 +605,12 @@ int main()
         calc_step();
         calc_get_stack (stack);
         calc_get_regs (regs);
-        calc_get_code (prog);
+        if (prog_update_flag) {
+            calc_write_code (new_prog);
+            prog_update_flag = 0;
+        } else {
+            calc_get_code (prog);
+        }
 
         // Check when program has been changed and save it to flash memory.
         if (prog_modified()) {

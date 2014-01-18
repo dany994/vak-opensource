@@ -270,10 +270,11 @@ void calc_get_code (unsigned char code[])
 {
     int i;
     int phase = fifo1.cycle / (2*REG_NWORDS);
+    const unsigned char *remap = remap_memory[phase];
 
     for (i=0; i<CODE_NBYTES; i++) {
         // Compute the location of the instruction in chip memory.
-        location_t loc = memory_map[remap_memory[phase][i / 7]];
+        location_t loc = memory_map[remap[i / 7]];
         int rem = i % 7;
         if (rem != 0)
             loc.address += rem*6 - 42;
@@ -283,5 +284,30 @@ void calc_get_code (unsigned char code[])
         if (! data)                     // Cannot happen
             continue;
         code[i] = data[loc.address] << 4 | data[loc.address - 3];
+    }
+}
+
+//
+// Write program code to the serial shift registers.
+//
+void calc_write_code (unsigned char code[])
+{
+    int i;
+    int phase = fifo1.cycle / (2*REG_NWORDS);
+    const unsigned char *remap = remap_memory[phase];
+
+    for (i=0; i<CODE_NBYTES; i++) {
+        // Compute the location of the instruction in chip memory.
+        location_t loc = memory_map[remap[i / 7]];
+        int rem = i % 7;
+        if (rem != 0)
+            loc.address += rem*6 - 42;
+
+        // Fetch the opcode.
+        unsigned char *data = chip_base(loc.chip);
+        if (! data)                     // Cannot happen
+            continue;
+        data[loc.address] = code[i] >> 4;
+        data[loc.address - 3] = code[i] & 0x0f;
     }
 }
