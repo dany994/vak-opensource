@@ -265,11 +265,12 @@ static void getname (c)
                 }
             } else {
                 int c3 = getchar();
-                // Convert symbols ⟳, ≥, –
+                // Convert symbols ⟳, ≥, –, ≠
                 switch (c<<16 | c2<<8 | c3) {
-                case 0xe29fb3: c = 'O'; break;  // ⟳ -> O
-                case 0xe289a5: c = '~'; break;  // ≥ -> ~
                 case 0xe28093: c = '-'; break;  // – -> -
+                case 0xe289a0: c = '#'; break;  // ≠ -> #
+                case 0xe289a5: c = '~'; break;  // ≥ -> ~
+                case 0xe29fb3: c = 'O'; break;  // ⟳ -> O
                 case 0xefbbbf: continue;        // Skip zero width space
                 default:
                     *cp++ = c;
@@ -551,7 +552,7 @@ op:         if (need_address)
                 if (type == FADDR)
                     type = FREG;
                 k_seen = 0;
-            } else if (! opcode) {
+            } else if (! opcode && intval != 0) {
                 uerror ("F or K prefix missing for '%s'", op->name);
             }
 
