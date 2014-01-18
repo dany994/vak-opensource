@@ -51,6 +51,8 @@
  */
 #define PIN(n)  (1 << (n))
 
+#define FLASH_BASE          (0x9d000000 + 32*1024 - 1024)
+
 /*
  * HID packet structure.
  */
@@ -499,7 +501,12 @@ void calc_poll()
  */
 int prog_available()
 {
-    // TODO
+    const unsigned char *ptr = (const unsigned char*) FLASH_BASE;
+    int i;
+
+    for (i=0; i<CODE_NBYTES; i++)
+        if (*ptr++ != 0xff)
+            return 1;
     return 0;
 }
 
@@ -508,7 +515,12 @@ int prog_available()
  */
 int prog_modified()
 {
-    // TODO
+    const unsigned char *ptr = (const unsigned char*) FLASH_BASE;
+    int i;
+
+    for (i=0; i<CODE_NBYTES; i++)
+        if (*ptr++ != prog[i])
+            return 1;
     return 0;
 }
 
@@ -517,7 +529,10 @@ int prog_modified()
  */
 void restore_prog()
 {
-    // TODO
+    void *flash = (void*) FLASH_BASE;
+
+    memcopy (flash, new_prog, CODE_NBYTES);
+    prog_update_flag = 1;
 }
 
 /*
@@ -525,7 +540,23 @@ void restore_prog()
  */
 void save_prog()
 {
-    // TODO
+    int i;
+#if 1
+    // Set segments to visualize the operation.
+    TRISBCLR = PIN(0) | PIN(1) | PIN(3) | PIN(4) |
+               PIN(13) | PIN(14) | PIN(15);
+    TRISACLR = PIN(4);
+#endif
+    /* Erase flash page. */
+    nvm_operation (PIC32_NVMCON_PAGE_ERASE, FLASH_BASE, 0);
+
+    for (i=0; i<CODE_NBYTES; i+=4) {
+        /* Write word to flash memory. */
+        unsigned word = prog[i] | prog[i+1] << 8 |
+                        prog[i+2] << 16 | prog[i+3] << 24;
+        nvm_operation (PIC32_NVMCON_WORD_PGM, FLASH_BASE + i, word);
+    }
+    clear_segments();
 }
 
 /*
@@ -602,19 +633,26 @@ int main()
 
     for (;;) {
         // Simulate one cycle of the calculator.
-        calc_step();
+        int running = calc_step();
+
+        // Fetch data stack and registers.
         calc_get_stack (stack);
         calc_get_regs (regs);
+        if (running)
+            continue;
+
         if (prog_update_flag) {
+            // Got new program code - send ot to calculator engine.
             calc_write_code (new_prog);
             prog_update_flag = 0;
         } else {
+            // Fetch program code.
             calc_get_code (prog);
-        }
 
-        // Check when program has been changed and save it to flash memory.
-        if (prog_modified()) {
-            save_prog();
+            // Check when program has been changed and save it to flash memory.
+            if (prog_modified()) {
+                save_prog();
+            }
         }
     }
 }
