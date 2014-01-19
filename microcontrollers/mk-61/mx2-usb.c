@@ -93,9 +93,15 @@ PIC32_DEVCFG (
     DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disabled */
     DEVCFG1_FCKM_DISABLE,       /* Fail-safe clock monitor disable */
 
+#ifdef CRYSTAL_12MHZ
     DEVCFG2_FPLLIDIV_3 |        /* PLL divider = 1/3 */
-    DEVCFG2_FPLLMUL_24 |        /* PLL multiplier = 24x */
     DEVCFG2_UPLLIDIV_3 |        /* USB PLL divider = 1/3 */
+#else
+    /* Crystal 8 MHz. */
+    DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
+    DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
+#endif
+    DEVCFG2_FPLLMUL_24 |        /* PLL multiplier = 24x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
