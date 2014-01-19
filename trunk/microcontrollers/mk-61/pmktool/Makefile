@@ -44,4 +44,7 @@ install:	pmktool #pmktool-ru.mo
 		install -c -s pmktool /usr/local/bin/pmktool
 #		install -c -m 444 pmktool-ru.mo /usr/local/share/locale/ru/LC_MESSAGES/pmktool.mo
 ###
+device.o: device.c device.h hidapi/hidapi.h
+opcodes.o: opcodes.c
+parse.o: parse.c
 pmktool.o: pmktool.c device.h localize.h

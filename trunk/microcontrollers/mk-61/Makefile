@@ -19,6 +19,11 @@ OBJS            = ir2.o ik13.o calc.o
 #CFLAGS          += -DMK_54
 
 #
+# Use crystal 12 MHz.
+#
+CFLAGS          += -DCRYSTAL_12MHZ
+
+#
 # DIY board with pic32mx1 processor.
 #
 #PROG            = mx1
@@ -42,21 +47,23 @@ LDFLAGS         += -T mx2-ram8k.ld
 #OBJS            += mx7-olimex.o
 #LDFLAGS         += -T mx7-bootloader.ld
 
-all:            $(PROG).srec
+all:            $(PROG).hex
+		@$(MAKE) -C pmktool $@
 		$(SIZE) $(PROG).elf
 
-$(PROG).srec:   $(OBJS)
+$(PROG).hex:   $(OBJS)
 		$(CC) $(LDFLAGS) $(OBJS) -o $(PROG).elf
-		$(OBJCOPY) -O srec $(PROG).elf $@
+		$(OBJCOPY) -O ihex $(PROG).elf $@
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
 
-load:           $(PROG).srec
-		pic32prog $(PROG).srec
+load:           $(PROG).hex
+		pic32prog $(PROG).hex
 
 clean:
-		rm -f *.o *.lst *~ *.elf *.srec *.dis test $(PROG)
+		rm -f *.o *.lst *~ *.elf $(PROG).hex *.dis test $(PROG)
+		@$(MAKE) -C pmktool $@
 
-debug:          $(PROG).srec
+debug:          $(PROG).hex
 		$(GDB) $(PROG).elf
 
 ###
