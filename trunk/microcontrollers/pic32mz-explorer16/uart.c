@@ -174,8 +174,6 @@ int main()
     printreg ("Status  ", mfc0(12, 0));
     printreg ("IntCtl  ", mfc0(12, 1));
     printreg ("SRSCtl  ", mfc0(12, 2));
-    printreg ("SRSMap  ", mfc0(12, 3));
-    printreg ("SRSMap2 ", mfc0(12, 5));
     printreg ("Cause   ", mfc0(13, 0));
     printreg ("PRId    ", mfc0(15, 0));
     printreg ("EBase   ", mfc0(15, 1));
@@ -187,7 +185,13 @@ int main()
     printreg ("Config4 ", mfc0(16, 4));
     printreg ("Config5 ", mfc0(16, 5));
     printreg ("Config7 ", mfc0(16, 7));
+    printreg ("WatchHi ", mfc0(19, 0));
+    printreg ("WatchHi1", mfc0(19, 1));
+    printreg ("WatchHi2", mfc0(19, 2));
+    printreg ("WatchHi3", mfc0(19, 3));
     printreg ("Debug   ", mfc0(23, 0));
+    printreg ("PerfCtl0", mfc0(25, 0));
+    printreg ("PerfCtl1", mfc0(25, 2));
 
     while (1) {
         /* Invert pins PA7-PA0. */
