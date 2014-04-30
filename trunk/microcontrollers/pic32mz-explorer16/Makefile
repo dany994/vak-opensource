@@ -12,7 +12,8 @@ CFLAGS          = -O -Wall -Werror -DPIC32MZ
 LDFLAGS         = -T pic32mz.ld -e _start
 
 #PROG            = lcd
-PROG            = blink
+#PROG            = blink
+PROG            = uart
 
 all:            $(PROG).srec
 
@@ -23,7 +24,7 @@ $(PROG).srec:   $(PROG).c
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
 
 load:           $(PROG).srec
-		pic32prog -p $(PROG).srec
+		pic32prog $(PROG).srec
 
 clean:
 		rm -f *.o *.lst *~ *.elf *.srec *.dis
