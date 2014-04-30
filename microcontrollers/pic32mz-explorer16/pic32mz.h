@@ -820,99 +820,98 @@
 #define PIC32_PMSTAT_IBOV	0x4000 /* Input buffer overflow */
 #define PIC32_PMSTAT_IBF	0x8000 /* Input buffer full */
 
-#if 0 // TODO
 /*--------------------------------------
  * UART registers.
  */
-#define U1MODE		PIC32_R (0x6000) /* Mode */
-#define U1MODECLR	PIC32_R (0x6004)
-#define U1MODESET	PIC32_R (0x6008)
-#define U1MODEINV	PIC32_R (0x600C)
-#define U1STA		PIC32_R (0x6010) /* Status and control */
-#define U1STACLR	PIC32_R (0x6014)
-#define U1STASET	PIC32_R (0x6018)
-#define U1STAINV	PIC32_R (0x601C)
-#define U1TXREG		PIC32_R (0x6020) /* Transmit */
-#define U1RXREG		PIC32_R (0x6030) /* Receive */
-#define U1BRG		PIC32_R (0x6040) /* Baud rate */
-#define U1BRGCLR	PIC32_R (0x6044)
-#define U1BRGSET	PIC32_R (0x6048)
-#define U1BRGINV	PIC32_R (0x604C)
+#define U1MODE		PIC32_R (0x22000) /* Mode */
+#define U1MODECLR	PIC32_R (0x22004)
+#define U1MODESET	PIC32_R (0x22008)
+#define U1MODEINV	PIC32_R (0x2200C)
+#define U1STA		PIC32_R (0x22010) /* Status and control */
+#define U1STACLR	PIC32_R (0x22014)
+#define U1STASET	PIC32_R (0x22018)
+#define U1STAINV	PIC32_R (0x2201C)
+#define U1TXREG		PIC32_R (0x22020) /* Transmit */
+#define U1RXREG		PIC32_R (0x22030) /* Receive */
+#define U1BRG		PIC32_R (0x22040) /* Baud rate */
+#define U1BRGCLR	PIC32_R (0x22044)
+#define U1BRGSET	PIC32_R (0x22048)
+#define U1BRGINV	PIC32_R (0x2204C)
 
-#define U4MODE		PIC32_R (0x6200) /* Mode */
-#define U4MODECLR	PIC32_R (0x6204)
-#define U4MODESET	PIC32_R (0x6208)
-#define U4MODEINV	PIC32_R (0x620C)
-#define U4STA		PIC32_R (0x6210) /* Status and control */
-#define U4STACLR	PIC32_R (0x6214)
-#define U4STASET	PIC32_R (0x6218)
-#define U4STAINV	PIC32_R (0x621C)
-#define U4TXREG		PIC32_R (0x6220) /* Transmit */
-#define U4RXREG		PIC32_R (0x6230) /* Receive */
-#define U4BRG		PIC32_R (0x6240) /* Baud rate */
-#define U4BRGCLR	PIC32_R (0x6244)
-#define U4BRGSET	PIC32_R (0x6248)
-#define U4BRGINV	PIC32_R (0x624C)
+#define U2MODE		PIC32_R (0x22200) /* Mode */
+#define U2MODECLR	PIC32_R (0x22204)
+#define U2MODESET	PIC32_R (0x22208)
+#define U2MODEINV	PIC32_R (0x2220C)
+#define U2STA		PIC32_R (0x22210) /* Status and control */
+#define U2STACLR	PIC32_R (0x22214)
+#define U2STASET	PIC32_R (0x22218)
+#define U2STAINV	PIC32_R (0x2221C)
+#define U2TXREG		PIC32_R (0x22220) /* Transmit */
+#define U2RXREG		PIC32_R (0x22230) /* Receive */
+#define U2BRG		PIC32_R (0x22240) /* Baud rate */
+#define U2BRGCLR	PIC32_R (0x22244)
+#define U2BRGSET	PIC32_R (0x22248)
+#define U2BRGINV	PIC32_R (0x2224C)
 
-#define U3MODE		PIC32_R (0x6400) /* Mode */
-#define U3MODECLR	PIC32_R (0x6404)
-#define U3MODESET	PIC32_R (0x6408)
-#define U3MODEINV	PIC32_R (0x640C)
-#define U3STA		PIC32_R (0x6410) /* Status and control */
-#define U3STACLR	PIC32_R (0x6414)
-#define U3STASET	PIC32_R (0x6418)
-#define U3STAINV	PIC32_R (0x641C)
-#define U3TXREG		PIC32_R (0x6420) /* Transmit */
-#define U3RXREG		PIC32_R (0x6430) /* Receive */
-#define U3BRG		PIC32_R (0x6440) /* Baud rate */
-#define U3BRGCLR	PIC32_R (0x6444)
-#define U3BRGSET	PIC32_R (0x6448)
-#define U3BRGINV	PIC32_R (0x644C)
+#define U3MODE		PIC32_R (0x22400) /* Mode */
+#define U3MODECLR	PIC32_R (0x22404)
+#define U3MODESET	PIC32_R (0x22408)
+#define U3MODEINV	PIC32_R (0x2240C)
+#define U3STA		PIC32_R (0x22410) /* Status and control */
+#define U3STACLR	PIC32_R (0x22414)
+#define U3STASET	PIC32_R (0x22418)
+#define U3STAINV	PIC32_R (0x2241C)
+#define U3TXREG		PIC32_R (0x22420) /* Transmit */
+#define U3RXREG		PIC32_R (0x22430) /* Receive */
+#define U3BRG		PIC32_R (0x22440) /* Baud rate */
+#define U3BRGCLR	PIC32_R (0x22444)
+#define U3BRGSET	PIC32_R (0x22448)
+#define U3BRGINV	PIC32_R (0x2244C)
 
-#define U6MODE		PIC32_R (0x6600) /* Mode */
-#define U6MODECLR	PIC32_R (0x6604)
-#define U6MODESET	PIC32_R (0x6608)
-#define U6MODEINV	PIC32_R (0x660C)
-#define U6STA		PIC32_R (0x6610) /* Status and control */
-#define U6STACLR	PIC32_R (0x6614)
-#define U6STASET	PIC32_R (0x6618)
-#define U6STAINV	PIC32_R (0x661C)
-#define U6TXREG		PIC32_R (0x6620) /* Transmit */
-#define U6RXREG		PIC32_R (0x6630) /* Receive */
-#define U6BRG		PIC32_R (0x6640) /* Baud rate */
-#define U6BRGCLR	PIC32_R (0x6644)
-#define U6BRGSET	PIC32_R (0x6648)
-#define U6BRGINV	PIC32_R (0x664C)
+#define U4MODE		PIC32_R (0x22600) /* Mode */
+#define U4MODECLR	PIC32_R (0x22604)
+#define U4MODESET	PIC32_R (0x22608)
+#define U4MODEINV	PIC32_R (0x2260C)
+#define U4STA		PIC32_R (0x22610) /* Status and control */
+#define U4STACLR	PIC32_R (0x22614)
+#define U4STASET	PIC32_R (0x22618)
+#define U4STAINV	PIC32_R (0x2261C)
+#define U4TXREG		PIC32_R (0x22620) /* Transmit */
+#define U4RXREG		PIC32_R (0x22630) /* Receive */
+#define U4BRG		PIC32_R (0x22640) /* Baud rate */
+#define U4BRGCLR	PIC32_R (0x22644)
+#define U4BRGSET	PIC32_R (0x22648)
+#define U4BRGINV	PIC32_R (0x2264C)
 
-#define U2MODE		PIC32_R (0x6800) /* Mode */
-#define U2MODECLR	PIC32_R (0x6804)
-#define U2MODESET	PIC32_R (0x6808)
-#define U2MODEINV	PIC32_R (0x680C)
-#define U2STA		PIC32_R (0x6810) /* Status and control */
-#define U2STACLR	PIC32_R (0x6814)
-#define U2STASET	PIC32_R (0x6818)
-#define U2STAINV	PIC32_R (0x681C)
-#define U2TXREG		PIC32_R (0x6820) /* Transmit */
-#define U2RXREG		PIC32_R (0x6830) /* Receive */
-#define U2BRG		PIC32_R (0x6840) /* Baud rate */
-#define U2BRGCLR	PIC32_R (0x6844)
-#define U2BRGSET	PIC32_R (0x6848)
-#define U2BRGINV	PIC32_R (0x684C)
+#define U5MODE		PIC32_R (0x22800) /* Mode */
+#define U5MODECLR	PIC32_R (0x22804)
+#define U5MODESET	PIC32_R (0x22808)
+#define U5MODEINV	PIC32_R (0x2280C)
+#define U5STA		PIC32_R (0x22810) /* Status and control */
+#define U5STACLR	PIC32_R (0x22814)
+#define U5STASET	PIC32_R (0x22818)
+#define U5STAINV	PIC32_R (0x2281C)
+#define U5TXREG		PIC32_R (0x22820) /* Transmit */
+#define U5RXREG		PIC32_R (0x22830) /* Receive */
+#define U5BRG		PIC32_R (0x22840) /* Baud rate */
+#define U5BRGCLR	PIC32_R (0x22844)
+#define U5BRGSET	PIC32_R (0x22848)
+#define U5BRGINV	PIC32_R (0x2284C)
 
-#define U5MODE		PIC32_R (0x6A00) /* Mode */
-#define U5MODECLR	PIC32_R (0x6A04)
-#define U5MODESET	PIC32_R (0x6A08)
-#define U5MODEINV	PIC32_R (0x6A0C)
-#define U5STA		PIC32_R (0x6A10) /* Status and control */
-#define U5STACLR	PIC32_R (0x6A14)
-#define U5STASET	PIC32_R (0x6A18)
-#define U5STAINV	PIC32_R (0x6A1C)
-#define U5TXREG		PIC32_R (0x6A20) /* Transmit */
-#define U5RXREG		PIC32_R (0x6A30) /* Receive */
-#define U5BRG		PIC32_R (0x6A40) /* Baud rate */
-#define U5BRGCLR	PIC32_R (0x6A44)
-#define U5BRGSET	PIC32_R (0x6A48)
-#define U5BRGINV	PIC32_R (0x6A4C)
+#define U6MODE		PIC32_R (0x22A00) /* Mode */
+#define U6MODECLR	PIC32_R (0x22A04)
+#define U6MODESET	PIC32_R (0x22A08)
+#define U6MODEINV	PIC32_R (0x22A0C)
+#define U6STA		PIC32_R (0x22A10) /* Status and control */
+#define U6STACLR	PIC32_R (0x22A14)
+#define U6STASET	PIC32_R (0x22A18)
+#define U6STAINV	PIC32_R (0x22A1C)
+#define U6TXREG		PIC32_R (0x22A20) /* Transmit */
+#define U6RXREG		PIC32_R (0x22A30) /* Receive */
+#define U6BRG		PIC32_R (0x22A40) /* Baud rate */
+#define U6BRGCLR	PIC32_R (0x22A44)
+#define U6BRGSET	PIC32_R (0x22A48)
+#define U6BRGINV	PIC32_R (0x22A4C)
 
 /*
  * UART Mode register.
@@ -964,6 +963,123 @@
 #define PIC32_USTA_ADDR		0x00FF0000 /* Automatic Address Mask */
 #define PIC32_USTA_ADM_EN	0x01000000 /* Automatic Address Detect */
 
+/*
+ * Compute the 16-bit baud rate divisor, given
+ * the bus frequency and baud rate.
+ * Round to the nearest integer.
+ */
+#define PIC32_BRG_BAUD(fr,bd)	((((fr)/8 + (bd)) / (bd) / 2) - 1)
+
+/*--------------------------------------
+ * Peripheral port select registers.
+ */
+#define INT1R           PIC32_R (0x1404)
+#define INT2R           PIC32_R (0x1408)
+#define INT3R           PIC32_R (0x140C)
+#define INT4R           PIC32_R (0x1410)
+#define T2CKR           PIC32_R (0x1418)
+#define T3CKR           PIC32_R (0x141C)
+#define T4CKR           PIC32_R (0x1420)
+#define T5CKR           PIC32_R (0x1424)
+#define T6CKR           PIC32_R (0x1428)
+#define T7CKR           PIC32_R (0x142C)
+#define T8CKR           PIC32_R (0x1430)
+#define T9CKR           PIC32_R (0x1434)
+#define IC1R            PIC32_R (0x1438)
+#define IC2R            PIC32_R (0x143C)
+#define IC3R            PIC32_R (0x1440)
+#define IC4R            PIC32_R (0x1444)
+#define IC5R            PIC32_R (0x1448)
+#define IC6R            PIC32_R (0x144C)
+#define IC7R            PIC32_R (0x1450)
+#define IC8R            PIC32_R (0x1454)
+#define IC9R            PIC32_R (0x1458)
+#define OCFAR           PIC32_R (0x1460)
+#define U1RXR           PIC32_R (0x1468)
+#define U1CTSR          PIC32_R (0x146C)
+#define U2RXR           PIC32_R (0x1470)
+#define U2CTSR          PIC32_R (0x1474)
+#define U3RXR           PIC32_R (0x1478)
+#define U3CTSR          PIC32_R (0x147C)
+#define U4RXR           PIC32_R (0x1480)
+#define U4CTSR          PIC32_R (0x1484)
+#define U5RXR           PIC32_R (0x1488)
+#define U5CTSR          PIC32_R (0x148C)
+#define U6RXR           PIC32_R (0x1490)
+#define U6CTSR          PIC32_R (0x1494)
+#define SDI1R           PIC32_R (0x149C)
+#define SS1R            PIC32_R (0x14A0)
+#define SDI2R           PIC32_R (0x14A8)
+#define SS2R            PIC32_R (0x14AC)
+#define SDI3R           PIC32_R (0x14B4)
+#define SS3R            PIC32_R (0x14B8)
+#define SDI4R           PIC32_R (0x14C0)
+#define SS4R            PIC32_R (0x14C4)
+#define SDI5R           PIC32_R (0x14CC)
+#define SS5R            PIC32_R (0x14D0)
+#define SDI6R           PIC32_R (0x14D8)
+#define SS6R            PIC32_R (0x14DC)
+#define C1RXR           PIC32_R (0x14E0)
+#define C2RXR           PIC32_R (0x14E4)
+#define REFCLK1R        PIC32_R (0x14E8)
+#define REFCLK3R        PIC32_R (0x14F0)
+#define REFCLK4R        PIC32_R (0x14F4)
+
+#define RPA14R          PIC32_R (0x1538)
+#define RPA15R          PIC32_R (0x153C)
+#define RPB0R           PIC32_R (0x1540)
+#define RPB1R           PIC32_R (0x1544)
+#define RPB2R           PIC32_R (0x1548)
+#define RPB3R           PIC32_R (0x154C)
+#define RPB5R           PIC32_R (0x1554)
+#define RPB6R           PIC32_R (0x1558)
+#define RPB7R           PIC32_R (0x155C)
+#define RPB8R           PIC32_R (0x1560)
+#define RPB9R           PIC32_R (0x1564)
+#define RPB10R          PIC32_R (0x1568)
+#define RPB14R          PIC32_R (0x1578)
+#define RPB15R          PIC32_R (0x157C)
+#define RPC1R           PIC32_R (0x1584)
+#define RPC2R           PIC32_R (0x1588)
+#define RPC3R           PIC32_R (0x158C)
+#define RPC4R           PIC32_R (0x1590)
+#define RPC13R          PIC32_R (0x15B4)
+#define RPC14R          PIC32_R (0x15B8)
+#define RPD0R           PIC32_R (0x15C0)
+#define RPD1R           PIC32_R (0x15C4)
+#define RPD2R           PIC32_R (0x15C8)
+#define RPD3R           PIC32_R (0x15CC)
+#define RPD4R           PIC32_R (0x15D0)
+#define RPD5R           PIC32_R (0x15D4)
+#define RPD6R           PIC32_R (0x15D8)
+#define RPD7R           PIC32_R (0x15DC)
+#define RPD9R           PIC32_R (0x15E4)
+#define RPD10R          PIC32_R (0x15E8)
+#define RPD11R          PIC32_R (0x15EC)
+#define RPD12R          PIC32_R (0x15F0)
+#define RPD14R          PIC32_R (0x15F8)
+#define RPD15R          PIC32_R (0x15FC)
+#define RPE3R           PIC32_R (0x160C)
+#define RPE5R           PIC32_R (0x1614)
+#define RPE8R           PIC32_R (0x1620)
+#define RPE9R           PIC32_R (0x1624)
+#define RPF0R           PIC32_R (0x1640)
+#define RPF1R           PIC32_R (0x1644)
+#define RPF2R           PIC32_R (0x1648)
+#define RPF3R           PIC32_R (0x164C)
+#define RPF4R           PIC32_R (0x1650)
+#define RPF5R           PIC32_R (0x1654)
+#define RPF8R           PIC32_R (0x1660)
+#define RPF12R          PIC32_R (0x1670)
+#define RPF13R          PIC32_R (0x1674)
+#define RPG0R           PIC32_R (0x1680)
+#define RPG1R           PIC32_R (0x1684)
+#define RPG6R           PIC32_R (0x1698)
+#define RPG7R           PIC32_R (0x169C)
+#define RPG8R           PIC32_R (0x16A0)
+#define RPG9R           PIC32_R (0x16A4)
+
+#if 0 // TODO
 /*
  * Compute the 16-bit baud rate divisor, given
  * the bus frequency and baud rate.
