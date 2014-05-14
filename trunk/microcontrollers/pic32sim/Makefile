@@ -16,7 +16,7 @@ OPT             = -O2 -g
 
 OBJ		= $(addprefix obj/, $(SRC:.c=.o))
 
-CFLAGS          = -m32 -g -Wall -Werror $(OPT) \
+CFLAGS          = -m32 -g -Wall -Werror $(OPT) -DPIC32MX7 \
                   -I$(IMPERAS_HOME)/ImpPublic/include/common \
                   -I$(IMPERAS_HOME)/ImpPublic/include/host \
                   -I$(IMPERAS_HOME)/ImpProprietary/include/host
