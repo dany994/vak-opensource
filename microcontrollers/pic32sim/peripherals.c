@@ -23,8 +23,16 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
 #include "globals.h"
-#include "pic32mx.h"
+
+#ifdef PIC32MX7
+#   include "pic32mx.h"
+#endif
+#ifdef PIC32MZ
+#   include "pic32mz.h"
+#endif
 
 #define STORAGE(name) case name: *namep = #name;
 #define READONLY(name) case name: *namep = #name; goto readonly
@@ -48,8 +56,9 @@
 
 #define VALUE(name) (name & 0x80000 ? iomem2 : iomem) [(name & 0xffff) >> 2]
 
-static unsigned *iomem;         // image of I/O area
-static unsigned *iomem2;        // image of second I/O area
+static uint32_t *iomem;         // image of I/O area
+static uint32_t *iomem2;        // image of second I/O area
+static uint32_t *bootmem;       // image of boot memory
 
 static unsigned syskey_unlock;	// syskey state
 
@@ -82,6 +91,8 @@ void vtty_put_char (int devnum, char ch)
         return;
 
     // TODO
+    if (write (1, &ch, 1) < 0)
+        /*ignore*/;
 }
 
 void update_irq_flag()
@@ -143,7 +154,7 @@ void clear_irq (int irq)
     /* Clear interrupt flag status */
     ifs [irq >> 5] &= ~(1 << (irq & 31));
 
-    _update_irq_flag();
+    update_irq_flag();
 #endif
 }
 
@@ -1089,9 +1100,17 @@ void io_reset()
     VALUE (U6BRG)   = 0;
 }
 
-void io_init (void *datap, void *data2p)
+void io_init (void *datap, void *data2p, void *bootp)
 {
     iomem = datap;
     iomem2 = data2p;
+    bootmem = bootp;
+
+    // Preset DEVCFG data, from Max32 bootloader.
+    BOOTMEM(DEVCFG3) = 0xffff0722;
+    BOOTMEM(DEVCFG2) = 0xd979f8f9;
+    BOOTMEM(DEVCFG1) = 0x5bfd6aff;
+    BOOTMEM(DEVCFG0) = 0xffffff7f;
+
     io_reset();
 }

@@ -44,6 +44,15 @@ void store_byte (char *progmem, char *bootmem, unsigned address, unsigned char b
     }
 }
 
+unsigned virt_to_phys (unsigned address)
+{
+    if (address >= 0xa0000000 && address <= 0xbfffffff)
+        return address - 0xa0000000;
+    if (address >= 0x80000000 && address <= 0x9fffffff)
+        return address - 0x80000000;
+    return address;
+}
+
 /*
  * Read the S record file.
  */
@@ -123,6 +132,7 @@ int load_srec (void *progmem, void *bootmem, const char *filename)
             data += 2;
             bytes -= 2;
 
+            address = virt_to_phys (address);
             if (! IN_PROGRAM_MEM(address) && ! IN_BOOT_MEM(address)) {
 #define PROGRAM_MEM_START   0x1d000000
 #define PROGRAM_MEM_SIZE    (512*1024)          // 512 kbytes
@@ -241,6 +251,7 @@ int load_hex (void *progmem, void *bootmem, const char *filename)
         }
 
         /* Data record found. */
+        address = virt_to_phys (address);
         if (! IN_PROGRAM_MEM(address) && ! IN_BOOT_MEM(address)) {
             printf("%s: incorrect address %08X, must be %08X-%08X or %08X-%08X\n",
                 filename, address, PROGRAM_MEM_START,

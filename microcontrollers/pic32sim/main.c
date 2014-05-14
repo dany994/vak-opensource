@@ -28,7 +28,6 @@
 #include <getopt.h>
 
 #include "icm/icmCpuManager.h"
-#include "pic32mx.h"
 #include "globals.h"
 
 char *progname;                         // base name of current program
@@ -44,10 +43,11 @@ static void usage()
 {
     icmPrintf("PIC32 simulator\n");
     icmPrintf("Usage:\n");
-    icmPrintf("        %s [-vt] application.elf [cpu-type]\n", progname);
+    icmPrintf("        %s [-vtm] application.elf [cpu-type]\n", progname);
     icmPrintf("Options:\n");
     icmPrintf("        -v      verbose mode\n");
     icmPrintf("        -t      trace instructions and registers\n");
+    icmPrintf("        -m      enable magic opcodes\n");
     icmPrintf("CPU types:\n");
     icmPrintf("        M4K, M14K, M14KcFMM, M14KcTLB, microAptivC, microAptivP, microAptivCF\n");
     exit(-1);
@@ -166,9 +166,10 @@ int main(int argc, char ** argv)
     Uns32 icm_attrs   = 0;
     Uns32 sim_attrs   = ICM_STOP_ON_CTRLC;
     Uns32 model_flags = 0;
+    Uns32 magic_opcodes = 0;
 
     for (;;) {
-        switch (getopt (argc, argv, "vtd:")) {
+        switch (getopt (argc, argv, "vtm")) {
         case EOF:
             break;
         case 'v':
@@ -176,6 +177,9 @@ int main(int argc, char ** argv)
             continue;
         case 't':
             trace++;
+            continue;
+        case 'm':
+            magic_opcodes++;
             continue;
         default:
             usage ();
@@ -185,19 +189,13 @@ int main(int argc, char ** argv)
     argc -= optind;
     argv += optind;
 
-    const char *app_file, *cpu_type = "M4K";
-    if (argc == 2) {
-        cpu_type = argv[1];
-    } else if (argc != 1) {
+    const char *app_file;
+    if (argc != 1) {
         if (argc > 0)
             icmPrintf("%s: Wrong number of args (%d)\n", progname, argc);
         usage ();
     }
     app_file = argv[0];
-
-    if (cpu_type != 0)
-        icmPrintf("Processor Variant: %s\n", cpu_type);
-    icmPrintf("Trace mode: %s\n", trace ? "On" : "Off");
 
     //
     // Initialize CpuManager
@@ -209,16 +207,44 @@ int main(int argc, char ** argv)
     // Setup the configuration attributes for the MIPS model
     //
     icmAttrListP user_attrs = icmNewAttrList();
+    char *cpu_type;
+
+#ifdef PIC32MX7
+    cpu_type = "M4K";
+    icmAddUns64Attr(user_attrs, "pridRevision", 0x65);  // Product revision
+    icmAddUns64Attr(user_attrs, "srsctlHSS",    1);     // Number of shadow register sets
+    icmAddUns64Attr(user_attrs, "MIPS16eASE",   1);     // Support mips16e
+    icmAddUns64Attr(user_attrs, "configSB",     1);     // Simple bus transfers only
+#endif
+#ifdef PIC32MZ
+    cpu_type = "M14KEc";
+    icmAddUns64Attr(user_attrs, "pridRevision", 0x28);  // Product revision
+    icmAddUns64Attr(user_attrs, "srsctlHSS",    7);     // Number of shadow register sets
+    icmAddStringAttr(user_attrs,"cacheenable", "full"); // Enable cache
+    icmAddUns64Attr(user_attrs, "config1IS",    2);     // Icache: 256 sets per way
+    icmAddUns64Attr(user_attrs, "config1IL",    3);     // Icache: line size 16 bytes
+    icmAddUns64Attr(user_attrs, "config1IA",    3);     // Icache: 4-way associativity
+    icmAddUns64Attr(user_attrs, "config1DS",    0);     // Dcache: 64 sets per way
+    icmAddUns64Attr(user_attrs, "config1DL",    3);     // Dcache: line size 16 bytes
+    icmAddUns64Attr(user_attrs, "config1DA",    3);     // Dcache: 4-way associativity
+    icmAddUns64Attr(user_attrs, "config1PC",    1);     // Enable performance counters
+    icmAddUns64Attr(user_attrs, "config1WR",    1);     // Enable watch registers
+    icmAddUns64Attr(user_attrs, "config3ULRI",  1);     // UserLocal register implemented
+    icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Realistic initialization of cache
+#endif
+
+    // Processor configuration
+    icmAddStringAttr(user_attrs,"variant", cpu_type);
 
     // PIC32 is always little endian
     icmAddStringAttr(user_attrs, "endian", "Little");
 
-    // Select the processor configuration
-    if (cpu_type != 0)
-        icmAddStringAttr(user_attrs, "variant", cpu_type);
-
-    // Enable vectored interrupts
+    // Enable external interrupt controller (EIC) and vectored interrupts mode
     icmAddStringAttr(user_attrs, "vectoredinterrupt", "enable");
+    icmAddStringAttr(user_attrs, "externalinterrupt", "enable");
+
+    // Interrupt pin for Timer interrupt
+    icmAddUns64Attr(user_attrs, "intctlIPTI", 0);
 
     if (trace >= 2) {
         // Enable MIPS-format trace
@@ -229,9 +255,16 @@ int main(int argc, char ** argv)
         // Trace Count/Compare, TLB and FPU
         model_flags |= 0x0c000020;
     }
+    if (magic_opcodes) {
+        // Enable magic Pass/Fail opcodes
+        icmAddStringAttr(user_attrs, "IMPERAS_MIPS_AVP_OPCODES", "enable");
+    }
 
     // Select processor model from library
     const char *model_file = icmGetVlnvString(NULL, "mips.ovpworld.org", "processor", "mips32", "1.0", "model");
+
+    icmPrintf("Processor Variant: %s\n", cpu_type);
+    icmPrintf("Trace mode: %s\n", trace ? "On" : "Off");
 
     //
     // create a processor
@@ -239,7 +272,7 @@ int main(int argc, char ** argv)
     icmProcessorP processor = icmNewProcessor(
         cpu_type,                     // processor name
         "mips",                       // processor type
-        1,                            // processor cpuId
+        0,                            // processor cpuId
         model_flags,                  // processor model flags
         32,                           // physical address bits
         model_file,                   // model file
@@ -264,12 +297,6 @@ int main(int argc, char ** argv)
     icmMapNativeMemory (bus, ICM_PRIV_RX, BOOT_MEM_START,
         BOOT_MEM_START + BOOT_MEM_SIZE - 1, bootmem);
 
-    // Preset DEVCFG data, from Max32 bootloader.
-    BOOTMEM(DEVCFG3) = 0xffff0722;
-    BOOTMEM(DEVCFG2) = 0xd979f8f9;
-    BOOTMEM(DEVCFG1) = 0x5bfd6aff;
-    BOOTMEM(DEVCFG0) = 0xffffff7f;
-
     // I/O memory.
     icmMapExternalMemory(bus, "IO", ICM_PRIV_RW, IO_MEM_START,
         IO_MEM_START + IO_MEM_SIZE - 1, mem_read, mem_write, iomem);
@@ -285,6 +312,7 @@ int main(int argc, char ** argv)
         icmPrintf("\n***** Configuration of memory bus *****\n");
         icmPrintBusConnections(bus);
     }
+    io_init (iomem, iomem2, bootmem);
 
     //
     // Load Program
@@ -293,7 +321,6 @@ int main(int argc, char ** argv)
         icmPrintf("Failed for '%s'", app_file);
         return -1;
     }
-    io_init (iomem, iomem2);
 
     //
     // Do a simulation run
