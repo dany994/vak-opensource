@@ -37,7 +37,8 @@ static uint32_t bootmem [BOOT_MEM_SIZE/4];
 static char iomem [0x10000];            // backing storage for I/O area
 static char iomem2 [0x10000];           // backing storage for second I/O area
 
-int trace;                              // global trace flag
+int trace_instructions;                 // print cpu instructions and registers
+int trace_registers;                    // trace special function registers
 
 static void usage()
 {
@@ -46,7 +47,8 @@ static void usage()
     icmPrintf("        %s [-vtm] application.elf [cpu-type]\n", progname);
     icmPrintf("Options:\n");
     icmPrintf("        -v      verbose mode\n");
-    icmPrintf("        -t      trace instructions and registers\n");
+    icmPrintf("        -i      trace CPU instructions and registers\n");
+    icmPrintf("        -r      trace special function registers\n");
     icmPrintf("        -m      enable magic opcodes\n");
     icmPrintf("CPU types:\n");
     icmPrintf("        M4K, M14K, M14KcFMM, M14KcTLB, microAptivC, microAptivP, microAptivCF\n");
@@ -89,7 +91,7 @@ static void mem_read (icmProcessorP processor, Addr address, Uns32 bytes,
             // Unaligned read.
             data >>= offset * 8;
         }
-        if (trace) {
+        if (trace_registers) {
             icmPrintf("--- I/O Read  %02x from %s\n", data, name);
         }
         *(Uns8*) value = data;
@@ -100,14 +102,14 @@ static void mem_read (icmProcessorP processor, Addr address, Uns32 bytes,
             // Unaligned read.
             data >>= 16;
         }
-        if (trace) {
+        if (trace_registers) {
             icmPrintf("--- I/O Read  %04x from %s\n", data, name);
         }
         *(Uns16*) value = data;
         break;
     case 4:
         data = io_read32 (address, (Uns32*) (user_data + offset), &name);
-        if (trace) {
+        if (trace_registers) {
             icmPrintf("--- I/O Read  %08x from %s\n", data, name);
         }
         *(Uns32*) value = data;
@@ -136,7 +138,7 @@ static void mem_write (icmProcessorP processor, Addr address, Uns32 bytes,
     data = *(Uns32*) value;
     io_write32 (address, (Uns32*) (user_data + (address & 0xfffc)),
         data, &name);
-    if (trace && name != 0) {
+    if (trace_registers && name != 0) {
         icmPrintf("--- I/O Write %08x to %s \n", data, name);
     }
 }
@@ -169,14 +171,17 @@ int main(int argc, char ** argv)
     Uns32 magic_opcodes = 0;
 
     for (;;) {
-        switch (getopt (argc, argv, "vtm")) {
+        switch (getopt (argc, argv, "virm")) {
         case EOF:
             break;
         case 'v':
             sim_attrs |= ICM_VERBOSE;
             continue;
-        case 't':
-            trace++;
+        case 'i':
+            trace_instructions++;
+            continue;
+        case 'r':
+            trace_registers++;
             continue;
         case 'm':
             magic_opcodes++;
@@ -246,7 +251,7 @@ int main(int argc, char ** argv)
     // Interrupt pin for Timer interrupt
     icmAddUns64Attr(user_attrs, "intctlIPTI", 0);
 
-    if (trace >= 2) {
+    if (trace_instructions) {
         // Enable MIPS-format trace
         icmAddStringAttr(user_attrs, "MIPS_TRACE", "enable");
         icm_attrs |= ICM_ATTR_TRACE |
@@ -264,7 +269,8 @@ int main(int argc, char ** argv)
     const char *model_file = icmGetVlnvString(NULL, "mips.ovpworld.org", "processor", "mips32", "1.0", "model");
 
     icmPrintf("Processor Variant: %s\n", cpu_type);
-    icmPrintf("Trace mode: %s\n", trace ? "On" : "Off");
+    icmPrintf("Trace instructions: %s\n", trace_instructions ? "On" : "Off");
+    icmPrintf("Trace SFRs: %s\n", trace_registers ? "On" : "Off");
 
     //
     // create a processor
@@ -312,7 +318,9 @@ int main(int argc, char ** argv)
         icmPrintf("\n***** Configuration of memory bus *****\n");
         icmPrintBusConnections(bus);
     }
-    io_init (iomem, iomem2, bootmem);
+
+    // SD card at port SPI4
+    io_init (iomem, iomem2, bootmem, 4);
 
     //
     // Load Program
