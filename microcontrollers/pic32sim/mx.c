@@ -27,12 +27,8 @@
 #include <unistd.h>
 #include "globals.h"
 
-#ifdef PIC32MX7
-#   include "pic32mx.h"
-#endif
-#ifdef PIC32MZ
-#   include "pic32mz.h"
-#endif
+#define PIC32MX7
+#include "pic32mx.h"
 
 #define STORAGE(name) case name: *namep = #name;
 #define READONLY(name) case name: *namep = #name; goto readonly
