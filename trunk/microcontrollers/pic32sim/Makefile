@@ -14,11 +14,11 @@ OPT             = -O2 -g
 #OPT		= -O0 -g
 
 OBJ_MX7		= obj/loadhex.o \
-                  obj/peripherals-mx7.o \
+                  obj/mx.o \
                   obj/main-mx7.o
 
 OBJ_MZ		= obj/loadhex.o \
-                  obj/peripherals-mz.o \
+                  obj/mz.o \
                   obj/main-mz.o
 
 CFLAGS          = -m32 -g -Wall -Werror $(OPT) \
@@ -44,14 +44,6 @@ obj/main-mz.o:  main.c
 		@mkdir -p $(@D)
 		$(CC) -c -o $@ $^ $(CFLAGS) -DPIC32MZ
 
-obj/peripherals-mx7.o: peripherals.c
-		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS) -DPIC32MX7
-
-obj/peripherals-mz.o:  peripherals.c
-		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS) -DPIC32MZ
-
 obj/%.o:        %.c
 		@mkdir -p $(@D)
 		$(CC) -c -o $@ $^ $(CFLAGS)
@@ -63,6 +55,3 @@ obj/%.o:        %.c??
 clean:
 		rm -rf *.exe *.log *.so *.o obj $(EXECUTABLE) *~
 ###
-loadhex.o: loadhex.c
-peripherals.o: peripherals.c globals.h pic32mx.h
-platform.o: platform.c pic32mx.h globals.h
