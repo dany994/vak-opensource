@@ -1348,6 +1348,30 @@ void io_reset()
     VALUE(U6TXREG) = 0;
     VALUE(U6RXREG) = 0;
     VALUE(U6BRG)   = 0;
+
+    /*
+     * SPI.
+     */
+    VALUE(SPI1CON)  = 0;
+    VALUE(SPI1STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
+    spi_wfifo[0]    = 0;
+    spi_rfifo[0]    = 0;
+    VALUE(SPI1BRG)  = 0;
+    VALUE(SPI2CON)  = 0;
+    VALUE(SPI2STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
+    spi_wfifo[1]    = 0;
+    spi_rfifo[1]    = 0;
+    VALUE(SPI2BRG)  = 0;
+    VALUE(SPI3CON)  = 0;
+    VALUE(SPI3STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
+    spi_wfifo[2]    = 0;
+    spi_rfifo[2]    = 0;
+    VALUE(SPI3BRG)  = 0;
+    VALUE(SPI4CON)  = 0;
+    VALUE(SPI4STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
+    spi_wfifo[3]    = 0;
+    spi_rfifo[3]    = 0;
+    VALUE(SPI4BRG)  = 0;
 }
 
 void io_init (void *datap, void *data2p, void *bootp, int sd_port)
