@@ -58,7 +58,12 @@ static uint32_t *bootmem;       // image of boot memory
 
 static unsigned syskey_unlock;	// syskey state
 
-static unsigned uart_irq[6] = { // UART interrupt numbers
+#define NUM_UART        6               // number of UART ports
+#define UART_IRQ_ERR    0               // error irq offset
+#define UART_IRQ_RX     1               // receiver irq offset
+#define UART_IRQ_TX     2               // transmitter irq offset
+
+static unsigned uart_irq[NUM_UART] = {  // UART interrupt numbers
     PIC32_IRQ_U1E,
     PIC32_IRQ_U2E,
     PIC32_IRQ_U3E,
@@ -66,8 +71,28 @@ static unsigned uart_irq[6] = { // UART interrupt numbers
     PIC32_IRQ_U5E,
     PIC32_IRQ_U6E,
 };
+static int uart_oactive[NUM_UART];      // UART output active
 
-static int uart_oactive[6];     // UART output active
+#define NUM_SPI         4               // number of SPI ports
+#define SPI_IRQ_FAULT   0               // error irq offset
+#define SPI_IRQ_TX      1               // transmitter irq offset
+#define SPI_IRQ_RX      2               // receiver irq offset
+
+static unsigned spi_irq[NUM_SPI] = {    // SPI interrupt numbers
+    PIC32_IRQ_SPI1E,
+    PIC32_IRQ_SPI2E,
+    PIC32_IRQ_SPI3E,
+    PIC32_IRQ_SPI4E,
+};
+static unsigned spi_buf[NUM_SPI][4];    // SPI transmit and receive buffer
+static unsigned spi_rfifo[NUM_SPI];     // SPI read fifo counter
+static unsigned spi_wfifo[NUM_SPI];     // SPI write fifo counter
+static unsigned spi_con[NUM_SPI] =      // SPIxCON address
+    { SPI1CON, SPI2CON, SPI3CON, SPI4CON };
+static unsigned spi_stat[NUM_SPI] =     // SPIxSTAT address
+    { SPI1STAT, SPI2STAT, SPI3STAT, SPI4STAT };
+
+static unsigned sdcard_port;    // SPI port number of SD card
 
 int vtty_get_char (int devnum)
 {
@@ -165,6 +190,55 @@ static void soft_reset()
     reset_all();
     sdcard_reset();
 #endif
+}
+
+unsigned sdcard_io (unsigned data)
+{
+    //TODO
+    return 0;
+}
+
+static void spi_writebuf (int port, unsigned val)
+{
+    /* Perform SD card i/o on configured SPI port. */
+    if (port == sdcard_port) {
+        unsigned result = 0;
+
+        if (VALUE(spi_con[port]) & PIC32_SPICON_MODE32) {
+            /* 32-bit data width */
+            result  = (unsigned char) sdcard_io (val >> 24) << 24;
+            result |= (unsigned char) sdcard_io (val >> 16) << 16;
+            result |= (unsigned char) sdcard_io (val >> 8) << 8;
+            result |= (unsigned char) sdcard_io (val);
+
+        } else if (VALUE(spi_con[port]) & PIC32_SPICON_MODE16) {
+            /* 16-bit data width */
+            result = (unsigned char) sdcard_io (val >> 8) << 8;
+            result |= (unsigned char) sdcard_io (val);
+
+        } else {
+            /* 8-bit data width */
+            result = (unsigned char) sdcard_io (val);
+        }
+        spi_buf[port][spi_wfifo[port]] = result;
+    } else {
+        /* No device */
+        spi_buf[port][spi_wfifo[port]] = ~0;
+    }
+    if (VALUE(spi_stat[port]) & PIC32_SPISTAT_SPIRBF) {
+        VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIROV;
+        //set_irq (spi_irq[port] + SPI_IRQ_FAULT);
+    } else if (VALUE(spi_con[port]) & PIC32_SPICON_ENHBUF) {
+        spi_wfifo[port]++;
+        spi_wfifo[port] &= 3;
+        if (spi_wfifo[port] == spi_rfifo[port]) {
+            VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIRBF;
+            //set_irq (spi_irq[port] + SPI_IRQ_RX);
+        }
+    } else {
+        VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIRBF;
+        //set_irq (spi_irq[port] + SPI_IRQ_RX);
+    }
 }
 
 /*
@@ -321,18 +395,18 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * UART 1.
      */
-    STORAGE (U1RXREG);          // Receive data
+    STORAGE (U1RXREG);                          // Receive data
         *bufp = vtty_get_char (0);              // read a byte from input queue
         VALUE(U1STA) &= ~PIC32_USTA_URXDA;
         if (vtty_is_char_avail (0)) {           // one more byte available
             VALUE(U1STA) |= PIC32_USTA_URXDA;
         } else {
-            clear_irq (uart_irq[0] + 1);        // deactivate RX interrupt
+            clear_irq (uart_irq[0] + UART_IRQ_RX);
         }
         break;
-    STORAGE (U1BRG); break;     // Baud rate
-    STORAGE (U1MODE); break;    // Mode
-    STORAGE (U1STA);            // Status and control
+    STORAGE (U1BRG); break;                     // Baud rate
+    STORAGE (U1MODE); break;                    // Mode
+    STORAGE (U1STA);                            // Status and control
         VALUE(U1STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
                         PIC32_USTA_TRMT;        // Transmit shift register is empty
         if (vtty_is_char_avail (0))
@@ -356,18 +430,18 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * UART 2.
      */
-    STORAGE (U2RXREG);          // Receive data
+    STORAGE (U2RXREG);                          // Receive data
         *bufp = vtty_get_char (1);              // read a byte from input queue
         VALUE(U2STA) &= ~PIC32_USTA_URXDA;
         if (vtty_is_char_avail (1)) {           // one more byte available
             VALUE(U2STA) |= PIC32_USTA_URXDA;
         } else {
-            clear_irq (uart_irq[1] + 1);        // deactivate RX interrupt
+            clear_irq (uart_irq[1] + UART_IRQ_RX);
         }
         break;
-    STORAGE (U2BRG); break;     // Baud rate
-    STORAGE (U2MODE); break;    // Mode
-    STORAGE (U2STA);            // Status and control
+    STORAGE (U2BRG); break;                     // Baud rate
+    STORAGE (U2MODE); break;                    // Mode
+    STORAGE (U2STA);                            // Status and control
         VALUE(U2STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
                         PIC32_USTA_TRMT;        // Transmit shift register is empty
         if (vtty_is_char_avail (1))
@@ -391,18 +465,18 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * UART 3.
      */
-    STORAGE (U3RXREG);          // Receive data
+    STORAGE (U3RXREG);                          // Receive data
         *bufp = vtty_get_char (2);              // read a byte from input queue
         VALUE(U3STA) &= ~PIC32_USTA_URXDA;
         if (vtty_is_char_avail (2)) {           // one more byte available
             VALUE(U3STA) |= PIC32_USTA_URXDA;
         } else {
-            clear_irq (uart_irq[2] + 1);        // deactivate RX interrupt
+            clear_irq (uart_irq[2] + UART_IRQ_RX);
         }
         break;
-    STORAGE (U3BRG); break;     // Baud rate
-    STORAGE (U3MODE); break;    // Mode
-    STORAGE (U3STA);            // Status and control
+    STORAGE (U3BRG); break;                     // Baud rate
+    STORAGE (U3MODE); break;                    // Mode
+    STORAGE (U3STA);                            // Status and control
         VALUE(U3STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
                         PIC32_USTA_TRMT;        // Transmit shift register is empty
         if (vtty_is_char_avail (2))
@@ -426,18 +500,18 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * UART 4.
      */
-    STORAGE (U4RXREG);          // Receive data
+    STORAGE (U4RXREG);                          // Receive data
         *bufp = vtty_get_char (3);              // read a byte from input queue
         VALUE(U4STA) &= ~PIC32_USTA_URXDA;
         if (vtty_is_char_avail (3)) {           // one more byte available
             VALUE(U4STA) |= PIC32_USTA_URXDA;
         } else {
-            clear_irq (uart_irq[3] + 1);        // deactivate RX interrupt
+            clear_irq (uart_irq[3] + UART_IRQ_RX);
         }
         break;
-    STORAGE (U4BRG); break;     // Baud rate
-    STORAGE (U4MODE); break;    // Mode
-    STORAGE (U4STA);            // Status and control
+    STORAGE (U4BRG); break;                     // Baud rate
+    STORAGE (U4MODE); break;                    // Mode
+    STORAGE (U4STA);                            // Status and control
         VALUE(U4STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
                         PIC32_USTA_TRMT;        // Transmit shift register is empty
         if (vtty_is_char_avail (3))
@@ -461,18 +535,18 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * UART 5.
      */
-    STORAGE (U5RXREG);          // Receive data
+    STORAGE (U5RXREG);                          // Receive data
         *bufp = vtty_get_char (4);              // read a byte from input queue
         VALUE(U5STA) &= ~PIC32_USTA_URXDA;
         if (vtty_is_char_avail (4)) {           // one more byte available
             VALUE(U5STA) |= PIC32_USTA_URXDA;
         } else {
-            clear_irq (uart_irq[4] + 1);        // deactivate RX interrupt
+            clear_irq (uart_irq[4] + UART_IRQ_RX);
         }
         break;
-    STORAGE (U5BRG); break;     // Baud rate
-    STORAGE (U5MODE); break;    // Mode
-    STORAGE (U5STA);            // Status and control
+    STORAGE (U5BRG); break;                     // Baud rate
+    STORAGE (U5MODE); break;                    // Mode
+    STORAGE (U5STA);                            // Status and control
         VALUE(U5STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
                         PIC32_USTA_TRMT;        // Transmit shift register is empty
         if (vtty_is_char_avail (4))
@@ -496,18 +570,18 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * UART 6.
      */
-    STORAGE (U6RXREG);          // Receive data
+    STORAGE (U6RXREG);                          // Receive data
         *bufp = vtty_get_char (5);              // read a byte from input queue
         VALUE(U6STA) &= ~PIC32_USTA_URXDA;
         if (vtty_is_char_avail (5)) {           // one more byte available
             VALUE(U6STA) |= PIC32_USTA_URXDA;
         } else {
-            clear_irq (uart_irq[5] + 1);        // deactivate RX interrupt
+            clear_irq (uart_irq[5] + UART_IRQ_RX);
         }
         break;
-    STORAGE (U6BRG); break;     // Baud rate
-    STORAGE (U6MODE); break;    // Mode
-    STORAGE (U6STA);            // Status and control
+    STORAGE (U6BRG); break;                     // Baud rate
+    STORAGE (U6MODE); break;                    // Mode
+    STORAGE (U6STA);                            // Status and control
         VALUE(U6STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
                         PIC32_USTA_TRMT;        // Transmit shift register is empty
         if (vtty_is_char_avail (5))
@@ -527,6 +601,114 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (U6BRGCLR);  *bufp = 0; break;
     STORAGE (U6BRGSET);  *bufp = 0; break;
     STORAGE (U6BRGINV);  *bufp = 0; break;
+
+    /*-------------------------------------------------------------------------
+     * SPI 1.
+     */
+    STORAGE (SPI1CON); break;                   // Control
+    STORAGE (SPI1CONCLR); *bufp = 0; break;
+    STORAGE (SPI1CONSET); *bufp = 0; break;
+    STORAGE (SPI1CONINV); *bufp = 0; break;
+    STORAGE (SPI1STAT); break;                  // Status
+    STORAGE (SPI1STATCLR); *bufp = 0; break;
+    STORAGE (SPI1STATSET); *bufp = 0; break;
+    STORAGE (SPI1STATINV); *bufp = 0; break;
+    STORAGE (SPI1BUF);                          // Buffer
+        *bufp = spi_buf[0][spi_rfifo[0]];
+        if (VALUE(SPI1CON) & PIC32_SPICON_ENHBUF) {
+            spi_rfifo[0]++;
+            spi_rfifo[0] &= 3;
+        }
+        if (VALUE(SPI1STAT) & PIC32_SPISTAT_SPIRBF) {
+            VALUE(SPI1STAT) &= ~PIC32_SPISTAT_SPIRBF;
+            //clear_irq (spi_irq[0] + 2);   // deactivate receive interrupt
+        }
+        break;
+    STORAGE (SPI1BRG); break;                   // Baud rate
+    STORAGE (SPI1BRGCLR); *bufp = 0; break;
+    STORAGE (SPI1BRGSET); *bufp = 0; break;
+    STORAGE (SPI1BRGINV); *bufp = 0; break;
+
+    /*-------------------------------------------------------------------------
+     * SPI 2.
+     */
+    STORAGE (SPI2CON); break;                   // Control
+    STORAGE (SPI2CONCLR); *bufp = 0; break;
+    STORAGE (SPI2CONSET); *bufp = 0; break;
+    STORAGE (SPI2CONINV); *bufp = 0; break;
+    STORAGE (SPI2STAT); break;                  // Status
+    STORAGE (SPI2STATCLR); *bufp = 0; break;
+    STORAGE (SPI2STATSET); *bufp = 0; break;
+    STORAGE (SPI2STATINV); *bufp = 0; break;
+    STORAGE (SPI2BUF);                          // Buffer
+        *bufp = spi_buf[1][spi_rfifo[1]];
+        if (VALUE(SPI2CON) & PIC32_SPICON_ENHBUF) {
+            spi_rfifo[1]++;
+            spi_rfifo[1] &= 3;
+        }
+        if (VALUE(SPI2STAT) & PIC32_SPISTAT_SPIRBF) {
+            VALUE(SPI2STAT) &= ~PIC32_SPISTAT_SPIRBF;
+            //clear_irq (spi_irq[1] + 2);   // deactivate receive interrupt
+        }
+        break;
+    STORAGE (SPI2BRG); break;                   // Baud rate
+    STORAGE (SPI2BRGCLR); *bufp = 0; break;
+    STORAGE (SPI2BRGSET); *bufp = 0; break;
+    STORAGE (SPI2BRGINV); *bufp = 0; break;
+
+    /*-------------------------------------------------------------------------
+     * SPI 3.
+     */
+    STORAGE (SPI3CON); break;                   // Control
+    STORAGE (SPI3CONCLR); *bufp = 0; break;
+    STORAGE (SPI3CONSET); *bufp = 0; break;
+    STORAGE (SPI3CONINV); *bufp = 0; break;
+    STORAGE (SPI3STAT); break;                  // Status
+    STORAGE (SPI3STATCLR); *bufp = 0; break;
+    STORAGE (SPI3STATSET); *bufp = 0; break;
+    STORAGE (SPI3STATINV); *bufp = 0; break;
+    STORAGE (SPI3BUF);                          // SPIx Buffer
+        *bufp = spi_buf[2][spi_rfifo[2]];
+        if (VALUE(SPI3CON) & PIC32_SPICON_ENHBUF) {
+            spi_rfifo[2]++;
+            spi_rfifo[2] &= 3;
+        }
+        if (VALUE(SPI3STAT) & PIC32_SPISTAT_SPIRBF) {
+            VALUE(SPI3STAT) &= ~PIC32_SPISTAT_SPIRBF;
+            //clear_irq (spi_irq[2] + 2);   // deactivate receive interrupt
+        }
+        break;
+    STORAGE (SPI3BRG); break;                   // Baud rate
+    STORAGE (SPI3BRGCLR); *bufp = 0; break;
+    STORAGE (SPI3BRGSET); *bufp = 0; break;
+    STORAGE (SPI3BRGINV); *bufp = 0; break;
+
+    /*-------------------------------------------------------------------------
+     * SPI 4.
+     */
+    STORAGE (SPI4CON); break;                   // Control
+    STORAGE (SPI4CONCLR); *bufp = 0; break;
+    STORAGE (SPI4CONSET); *bufp = 0; break;
+    STORAGE (SPI4CONINV); *bufp = 0; break;
+    STORAGE (SPI4STAT); break;                  // Status
+    STORAGE (SPI4STATCLR); *bufp = 0; break;
+    STORAGE (SPI4STATSET); *bufp = 0; break;
+    STORAGE (SPI4STATINV); *bufp = 0; break;
+    STORAGE (SPI4BUF);                          // Buffer
+        *bufp = spi_buf[3][spi_rfifo[3]];
+        if (VALUE(SPI4CON) & PIC32_SPICON_ENHBUF) {
+            spi_rfifo[3]++;
+            spi_rfifo[3] &= 3;
+        }
+        if (VALUE(SPI4STAT) & PIC32_SPISTAT_SPIRBF) {
+            VALUE(SPI4STAT) &= ~PIC32_SPISTAT_SPIRBF;
+            //clear_irq (spi_irq[3] + 2);   // deactivate receive interrupt
+        }
+        break;
+    STORAGE (SPI4BRG); break;                   // Baud rate
+    STORAGE (SPI4BRGCLR); *bufp = 0; break;
+    STORAGE (SPI4BRGSET); *bufp = 0; break;
+    STORAGE (SPI4BRGINV); *bufp = 0; break;
 
     default:
         fprintf (stderr, "--- Read %08x: peripheral register not supported\n",
@@ -751,224 +933,296 @@ irq:    update_irq_flag();
     /*-------------------------------------------------------------------------
      * UART 1.
      */
-    STORAGE (U1TXREG);              // Transmit
+    STORAGE (U1TXREG);                              // Transmit
         vtty_put_char (0, data);
-        if ((VALUE (U1MODE) & PIC32_UMODE_ON) &&
-            (VALUE (U1STA) & PIC32_USTA_UTXEN) && ! uart_oactive[0]) {
+        if ((VALUE(U1MODE) & PIC32_UMODE_ON) &&
+            (VALUE(U1STA) & PIC32_USTA_UTXEN) && ! uart_oactive[0]) {
             uart_oactive[0] = 1;
-            set_irq (uart_irq[0] + 2);          // activate transmit interrupt
+            set_irq (uart_irq[0] + UART_IRQ_TX);
         }
         break;
-    WRITEOP (U1MODE);               // Mode
-        if (! (VALUE (U1MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[0] + 1);        // deactivate receive interrupt
-            clear_irq (uart_irq[0] + 2);        // deactivate transmit interrupt
-            VALUE (U1STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+    WRITEOP (U1MODE);                               // Mode
+        if (! (VALUE(U1MODE) & PIC32_UMODE_ON)) {
+            clear_irq (uart_irq[0] + UART_IRQ_RX);
+            clear_irq (uart_irq[0] + UART_IRQ_TX);
+            VALUE(U1STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                                PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE (U1STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+            VALUE(U1STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
         }
         return;
-    WRITEOPR (U1STA,                // Status and control
+    WRITEOPR (U1STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE (U1STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[0] + 1);        // deactivate receive interrupt
-            VALUE (U1STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+        if (! (VALUE(U1STA) & PIC32_USTA_URXEN)) {
+            clear_irq (uart_irq[0] + UART_IRQ_RX);
+            VALUE(U1STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                 PIC32_USTA_PERR);
         }
-        if (! (VALUE (U1STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[0] + 2);        // deactivate transmit interrupt
-            VALUE (U1STA) &= ~PIC32_USTA_UTXBF;
-            VALUE (U1STA) |= PIC32_USTA_TRMT;
+        if (! (VALUE(U1STA) & PIC32_USTA_UTXEN)) {
+            clear_irq (uart_irq[0] + UART_IRQ_TX);
+            VALUE(U1STA) &= ~PIC32_USTA_UTXBF;
+            VALUE(U1STA) |= PIC32_USTA_TRMT;
         }
         return;
-    WRITEOP (U1BRG); return;        // Baud rate
-    READONLY (U1RXREG);             // Receive
+    WRITEOP (U1BRG); return;                        // Baud rate
+    READONLY (U1RXREG);                             // Receive
 
     /*-------------------------------------------------------------------------
      * UART 2.
      */
-    STORAGE (U2TXREG);              // Transmit
+    STORAGE (U2TXREG);                              // Transmit
         vtty_put_char (1, data);
-        if ((VALUE (U2MODE) & PIC32_UMODE_ON) &&
-            (VALUE (U2STA) & PIC32_USTA_UTXEN) && ! uart_oactive[1]) {
+        if ((VALUE(U2MODE) & PIC32_UMODE_ON) &&
+            (VALUE(U2STA) & PIC32_USTA_UTXEN) && ! uart_oactive[1]) {
             uart_oactive[1] = 1;
-            set_irq (uart_irq[1] + 2);          // activate transmit interrupt
+            set_irq (uart_irq[1] + UART_IRQ_TX);
         }
         break;
-    WRITEOP (U2MODE);               // Mode
-        if (! (VALUE (U2MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[1] + 1);        // deactivate receive interrupt
-            clear_irq (uart_irq[1] + 2);        // deactivate transmit interrupt
-            VALUE (U2STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+    WRITEOP (U2MODE);                               // Mode
+        if (! (VALUE(U2MODE) & PIC32_UMODE_ON)) {
+            clear_irq (uart_irq[1] + UART_IRQ_RX);
+            clear_irq (uart_irq[1] + UART_IRQ_TX);
+            VALUE(U2STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                                PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE (U2STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+            VALUE(U2STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
         }
         return;
-    WRITEOPR (U2STA,                // Status and control
+    WRITEOPR (U2STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE (U2STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[1] + 1);        // deactivate receive interrupt
-            VALUE (U2STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+        if (! (VALUE(U2STA) & PIC32_USTA_URXEN)) {
+            clear_irq (uart_irq[1] + UART_IRQ_RX);
+            VALUE(U2STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                 PIC32_USTA_PERR);
         }
-        if (! (VALUE (U2STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[1] + 2);        // deactivate transmit interrupt
-            VALUE (U2STA) &= ~PIC32_USTA_UTXBF;
-            VALUE (U2STA) |= PIC32_USTA_TRMT;
+        if (! (VALUE(U2STA) & PIC32_USTA_UTXEN)) {
+            clear_irq (uart_irq[1] + UART_IRQ_TX);
+            VALUE(U2STA) &= ~PIC32_USTA_UTXBF;
+            VALUE(U2STA) |= PIC32_USTA_TRMT;
         }
         return;
-    WRITEOP (U2BRG); return;        // Baud rate
-    READONLY (U2RXREG);             // Receive
+    WRITEOP (U2BRG); return;                        // Baud rate
+    READONLY (U2RXREG);                             // Receive
 
     /*-------------------------------------------------------------------------
      * UART 3.
      */
-    STORAGE (U3TXREG);              // Transmit
+    STORAGE (U3TXREG);                              // Transmit
         vtty_put_char (2, data);
-        if ((VALUE (U3MODE) & PIC32_UMODE_ON) &&
-            (VALUE (U3STA) & PIC32_USTA_UTXEN) && ! uart_oactive[2]) {
+        if ((VALUE(U3MODE) & PIC32_UMODE_ON) &&
+            (VALUE(U3STA) & PIC32_USTA_UTXEN) && ! uart_oactive[2]) {
             uart_oactive[2] = 1;
-            set_irq (uart_irq[2] + 2);          // activate transmit interrupt
+            set_irq (uart_irq[2] + UART_IRQ_TX);
         }
         break;
-    WRITEOP (U3MODE);               // Mode
-        if (! (VALUE (U3MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[2] + 1);        // deactivate receive interrupt
-            clear_irq (uart_irq[2] + 2);        // deactivate transmit interrupt
-            VALUE (U3STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+    WRITEOP (U3MODE);                               // Mode
+        if (! (VALUE(U3MODE) & PIC32_UMODE_ON)) {
+            clear_irq (uart_irq[2] + UART_IRQ_RX);
+            clear_irq (uart_irq[2] + UART_IRQ_TX);
+            VALUE(U3STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                                PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE (U3STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+            VALUE(U3STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
         }
         return;
-    WRITEOPR (U3STA,                // Status and control
+    WRITEOPR (U3STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE (U3STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[2] + 1);        // deactivate receive interrupt
-            VALUE (U3STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+        if (! (VALUE(U3STA) & PIC32_USTA_URXEN)) {
+            clear_irq (uart_irq[2] + UART_IRQ_RX);
+            VALUE(U3STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                 PIC32_USTA_PERR);
         }
-        if (! (VALUE (U3STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[2] + 2);        // deactivate transmit interrupt
-            VALUE (U3STA) &= ~PIC32_USTA_UTXBF;
-            VALUE (U3STA) |= PIC32_USTA_TRMT;
+        if (! (VALUE(U3STA) & PIC32_USTA_UTXEN)) {
+            clear_irq (uart_irq[2] + UART_IRQ_TX);
+            VALUE(U3STA) &= ~PIC32_USTA_UTXBF;
+            VALUE(U3STA) |= PIC32_USTA_TRMT;
         }
         return;
-    WRITEOP (U3BRG); return;        // Baud rate
-    READONLY (U3RXREG);             // Receive
+    WRITEOP (U3BRG); return;                        // Baud rate
+    READONLY (U3RXREG);                             // Receive
 
     /*-------------------------------------------------------------------------
      * UART 4.
      */
-    STORAGE (U4TXREG);              // Transmit
+    STORAGE (U4TXREG);                              // Transmit
         vtty_put_char (3, data);
-        if ((VALUE (U4MODE) & PIC32_UMODE_ON) &&
-            (VALUE (U4STA) & PIC32_USTA_UTXEN) && ! uart_oactive[3]) {
+        if ((VALUE(U4MODE) & PIC32_UMODE_ON) &&
+            (VALUE(U4STA) & PIC32_USTA_UTXEN) && ! uart_oactive[3]) {
             uart_oactive[3] = 1;
-            set_irq (uart_irq[3] + 2);          // activate transmit interrupt
+            set_irq (uart_irq[3] + UART_IRQ_TX);
         }
         break;
-    WRITEOP (U4MODE);               // Mode
-        if (! (VALUE (U4MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[3] + 1);        // deactivate receive interrupt
-            clear_irq (uart_irq[3] + 2);        // deactivate transmit interrupt
-            VALUE (U4STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+    WRITEOP (U4MODE);                               // Mode
+        if (! (VALUE(U4MODE) & PIC32_UMODE_ON)) {
+            clear_irq (uart_irq[3] + UART_IRQ_RX);
+            clear_irq (uart_irq[3] + UART_IRQ_TX);
+            VALUE(U4STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                                PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE (U4STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+            VALUE(U4STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
         }
         return;
-    WRITEOPR (U4STA,                // Status and control
+    WRITEOPR (U4STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE (U4STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[3] + 1);        // deactivate receive interrupt
-            VALUE (U4STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+        if (! (VALUE(U4STA) & PIC32_USTA_URXEN)) {
+            clear_irq (uart_irq[3] + UART_IRQ_RX);
+            VALUE(U4STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                 PIC32_USTA_PERR);
         }
-        if (! (VALUE (U4STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[3] + 2);        // deactivate transmit interrupt
-            VALUE (U4STA) &= ~PIC32_USTA_UTXBF;
-            VALUE (U4STA) |= PIC32_USTA_TRMT;
+        if (! (VALUE(U4STA) & PIC32_USTA_UTXEN)) {
+            clear_irq (uart_irq[3] + UART_IRQ_TX);
+            VALUE(U4STA) &= ~PIC32_USTA_UTXBF;
+            VALUE(U4STA) |= PIC32_USTA_TRMT;
         }
         return;
-    WRITEOP (U4BRG); return;        // Baud rate
-    READONLY (U4RXREG);             // Receive
+    WRITEOP (U4BRG); return;                        // Baud rate
+    READONLY (U4RXREG);                             // Receive
 
     /*-------------------------------------------------------------------------
      * UART 5.
      */
-    STORAGE (U5TXREG);              // Transmit
+    STORAGE (U5TXREG);                              // Transmit
         vtty_put_char (4, data);
-        if ((VALUE (U5MODE) & PIC32_UMODE_ON) &&
-            (VALUE (U5STA) & PIC32_USTA_UTXEN) && ! uart_oactive[4]) {
+        if ((VALUE(U5MODE) & PIC32_UMODE_ON) &&
+            (VALUE(U5STA) & PIC32_USTA_UTXEN) && ! uart_oactive[4]) {
             uart_oactive[4] = 1;
-            set_irq (uart_irq[4] + 2);          // activate transmit interrupt
+            set_irq (uart_irq[4] + UART_IRQ_TX);
         }
         break;
-    WRITEOP (U5MODE);               // Mode
-        if (! (VALUE (U5MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[4] + 1);        // deactivate receive interrupt
-            clear_irq (uart_irq[4] + 2);        // deactivate transmit interrupt
-            VALUE (U5STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+    WRITEOP (U5MODE);                               // Mode
+        if (! (VALUE(U5MODE) & PIC32_UMODE_ON)) {
+            clear_irq (uart_irq[4] + UART_IRQ_RX);
+            clear_irq (uart_irq[4] + UART_IRQ_TX);
+            VALUE(U5STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                                PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE (U5STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+            VALUE(U5STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
         }
         return;
-    WRITEOPR (U5STA,                // Status and control
+    WRITEOPR (U5STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE (U5STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[4] + 1);        // deactivate receive interrupt
-            VALUE (U5STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+        if (! (VALUE(U5STA) & PIC32_USTA_URXEN)) {
+            clear_irq (uart_irq[4] + UART_IRQ_RX);
+            VALUE(U5STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                 PIC32_USTA_PERR);
         }
-        if (! (VALUE (U5STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[4] + 2);        // deactivate transmit interrupt
-            VALUE (U5STA) &= ~PIC32_USTA_UTXBF;
-            VALUE (U5STA) |= PIC32_USTA_TRMT;
+        if (! (VALUE(U5STA) & PIC32_USTA_UTXEN)) {
+            clear_irq (uart_irq[4] + UART_IRQ_TX);
+            VALUE(U5STA) &= ~PIC32_USTA_UTXBF;
+            VALUE(U5STA) |= PIC32_USTA_TRMT;
         }
         return;
-    WRITEOP (U5BRG); return;        // Baud rate
-    READONLY (U5RXREG);             // Receive
+    WRITEOP (U5BRG); return;                        // Baud rate
+    READONLY (U5RXREG);                             // Receive
 
     /*-------------------------------------------------------------------------
      * UART 6.
      */
-    STORAGE (U6TXREG);              // Transmit
+    STORAGE (U6TXREG);                              // Transmit
         vtty_put_char (5, data);
-        if ((VALUE (U6MODE) & PIC32_UMODE_ON) &&
-            (VALUE (U6STA) & PIC32_USTA_UTXEN) && ! uart_oactive[5]) {
+        if ((VALUE(U6MODE) & PIC32_UMODE_ON) &&
+            (VALUE(U6STA) & PIC32_USTA_UTXEN) && ! uart_oactive[5]) {
             uart_oactive[5] = 1;
-            set_irq (uart_irq[5] + 2);          // activate transmit interrupt
+            set_irq (uart_irq[5] + UART_IRQ_TX);
         }
         break;
-    WRITEOP (U6MODE);               // Mode
-        if (! (VALUE (U6MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[5] + 1);        // deactivate receive interrupt
-            clear_irq (uart_irq[5] + 2);        // deactivate transmit interrupt
-            VALUE (U6STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+    WRITEOP (U6MODE);                               // Mode
+        if (! (VALUE(U6MODE) & PIC32_UMODE_ON)) {
+            clear_irq (uart_irq[5] + UART_IRQ_RX);
+            clear_irq (uart_irq[5] + UART_IRQ_TX);
+            VALUE(U6STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                                PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE (U6STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+            VALUE(U6STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
         }
         return;
-    WRITEOPR (U6STA,                // Status and control
+    WRITEOPR (U6STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE (U6STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[5] + 1);        // deactivate receive interrupt
-            VALUE (U6STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+        if (! (VALUE(U6STA) & PIC32_USTA_URXEN)) {
+            clear_irq (uart_irq[5] + UART_IRQ_RX);
+            VALUE(U6STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
                 PIC32_USTA_PERR);
         }
-        if (! (VALUE (U6STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[5] + 2);        // deactivate transmit interrupt
-            VALUE (U6STA) &= ~PIC32_USTA_UTXBF;
-            VALUE (U6STA) |= PIC32_USTA_TRMT;
+        if (! (VALUE(U6STA) & PIC32_USTA_UTXEN)) {
+            clear_irq (uart_irq[5] + UART_IRQ_TX);
+            VALUE(U6STA) &= ~PIC32_USTA_UTXBF;
+            VALUE(U6STA) |= PIC32_USTA_TRMT;
         }
         return;
-    WRITEOP (U6BRG); return;        // Baud rate
-    READONLY (U6RXREG);             // Receive
+    WRITEOP (U6BRG); return;                        // Baud rate
+    READONLY (U6RXREG);                             // Receive
+
+    /*-------------------------------------------------------------------------
+     * SPI.
+     */
+    WRITEOP (SPI1CON);                              // Control
+        if (! (VALUE(SPI1CON) & PIC32_SPICON_ON)) {
+            clear_irq (spi_irq[0] + SPI_IRQ_FAULT);
+            clear_irq (spi_irq[0] + SPI_IRQ_RX);
+            clear_irq (spi_irq[0] + SPI_IRQ_TX);
+            VALUE(SPI1STAT) = PIC32_SPISTAT_SPITBE;
+        } else if (! (VALUE(SPI1CON) & PIC32_SPICON_ENHBUF)) {
+            spi_rfifo[0] = 0;
+            spi_wfifo[0] = 0;
+        }
+        return;
+    WRITEOPR (SPI1STAT, ~PIC32_SPISTAT_SPIROV);     // Status
+        return;                                     // Only ROV bit is writable
+    STORAGE (SPI1BUF);                              // Buffer
+        spi_writebuf (0, data);
+        return;
+    WRITEOP (SPI1BRG); return;                      // Baud rate
+    WRITEOP (SPI2CON);                              // Control
+        if (! (VALUE(SPI2CON) & PIC32_SPICON_ON)) {
+            clear_irq (spi_irq[1] + SPI_IRQ_FAULT);
+            clear_irq (spi_irq[1] + SPI_IRQ_RX);
+            clear_irq (spi_irq[1] + SPI_IRQ_TX);
+            VALUE(SPI2STAT) = PIC32_SPISTAT_SPITBE;
+        } else if (! (VALUE(SPI2CON) & PIC32_SPICON_ENHBUF)) {
+            spi_rfifo[1] = 0;
+            spi_wfifo[1] = 0;
+        }
+        return;
+    WRITEOPR (SPI2STAT, ~PIC32_SPISTAT_SPIROV);     // Status
+        return;                                     // Only ROV bit is writable
+    STORAGE (SPI2BUF);                              // Buffer
+        spi_writebuf (1, data);
+        return;
+    WRITEOP (SPI2BRG); return;                      // Baud rate
+    WRITEOP (SPI3CON);                              // Control
+        if (! (VALUE(SPI3CON) & PIC32_SPICON_ON)) {
+            clear_irq (spi_irq[2] + SPI_IRQ_FAULT);
+            clear_irq (spi_irq[2] + SPI_IRQ_RX);
+            clear_irq (spi_irq[2] + SPI_IRQ_TX);
+            VALUE(SPI3STAT) = PIC32_SPISTAT_SPITBE;
+        } else if (! (VALUE(SPI3CON) & PIC32_SPICON_ENHBUF)) {
+            spi_rfifo[2] = 0;
+            spi_wfifo[2] = 0;
+        }
+        return;
+    WRITEOPR (SPI3STAT, ~PIC32_SPISTAT_SPIROV);     // Status
+        return;                                     // Only ROV bit is writable
+    STORAGE (SPI3BUF);                              // Buffer
+        spi_writebuf (2, data);
+        return;
+    WRITEOP (SPI3BRG); return;                      // Baud rate
+    WRITEOP (SPI4CON);                              // Control
+        if (! (VALUE(SPI4CON) & PIC32_SPICON_ON)) {
+            clear_irq (spi_irq[3] + SPI_IRQ_FAULT);
+            clear_irq (spi_irq[3] + SPI_IRQ_RX);
+            clear_irq (spi_irq[3] + SPI_IRQ_TX);
+            VALUE(SPI4STAT) = PIC32_SPISTAT_SPITBE;
+        } else if (! (VALUE(SPI4CON) & PIC32_SPICON_ENHBUF)) {
+            spi_rfifo[3] = 0;
+            spi_wfifo[3] = 0;
+        }
+        return;
+    WRITEOPR (SPI4STAT, ~PIC32_SPISTAT_SPIROV);     // Status
+        return;                                     // Only ROV bit is writable
+    STORAGE (SPI4BUF);                              // Buffer
+        spi_writebuf (3, data);
+        return;
+    WRITEOP (SPI4BRG); return;      // Baud rate
 
     default:
         fprintf (stderr, "--- Write %08x to %08x: peripheral register not supported\n",
@@ -988,119 +1242,121 @@ void io_reset()
     /*
      * Bus matrix control registers.
      */
-    VALUE (BMXCON)    = 0x001f0041;     // Bus Matrix Control
-    VALUE (BMXDKPBA)  = 0;              // Data RAM kernel program base address
-    VALUE (BMXDUDBA)  = 0;              // Data RAM user data base address
-    VALUE (BMXDUPBA)  = 0;              // Data RAM user program base address
-    VALUE (BMXPUPBA)  = 0;              // Program Flash user program base address
-    VALUE (BMXDRMSZ)  = 128 * 1024;     // Data RAM memory size
-    VALUE (BMXPFMSZ)  = 512 * 1024;     // Program Flash memory size
-    VALUE (BMXBOOTSZ) = 12 * 1024;      // Boot Flash size
+    VALUE(BMXCON)    = 0x001f0041;      // Bus Matrix Control
+    VALUE(BMXDKPBA)  = 0;               // Data RAM kernel program base address
+    VALUE(BMXDUDBA)  = 0;               // Data RAM user data base address
+    VALUE(BMXDUPBA)  = 0;               // Data RAM user program base address
+    VALUE(BMXPUPBA)  = 0;               // Program Flash user program base address
+    VALUE(BMXDRMSZ)  = 128 * 1024;      // Data RAM memory size
+    VALUE(BMXPFMSZ)  = 512 * 1024;      // Program Flash memory size
+    VALUE(BMXBOOTSZ) = 12 * 1024;       // Boot Flash size
 
     /*
      * Prefetch controller.
      */
-    VALUE (CHECON) = 0x00000007;
+    VALUE(CHECON) = 0x00000007;
 
     /*
      * System controller.
      */
-    VALUE (OSCCON) = 0x01453320;	// from ubw32 board
-    VALUE (OSCTUN) = 0;
-    VALUE (DDPCON) = 0;
-    VALUE (DEVID)  = 0x04307053;	// 795F512L
-    VALUE (SYSKEY) = 0;
-    VALUE (RCON)   = 0;
-    VALUE (RSWRST) = 0;
+    VALUE(OSCCON) = 0x01453320;         // from ubw32 board
+    VALUE(OSCTUN) = 0;
+    VALUE(DDPCON) = 0;
+    VALUE(DEVID)  = 0x04307053;         // 795F512L
+    VALUE(SYSKEY) = 0;
+    VALUE(RCON)   = 0;
+    VALUE(RSWRST) = 0;
     syskey_unlock  = 0;
 
     /*
      * Analog to digital converter.
      */
-    VALUE (AD1CON1) = 0;		// Control register 1
-    VALUE (AD1CON2) = 0;		// Control register 2
-    VALUE (AD1CON3) = 0;		// Control register 3
-    VALUE (AD1CHS)  = 0;		// Channel select
-    VALUE (AD1CSSL) = 0;		// Input scan selection
-    VALUE (AD1PCFG) = 0;		// Port configuration
+    VALUE(AD1CON1) = 0;                 // Control register 1
+    VALUE(AD1CON2) = 0;                 // Control register 2
+    VALUE(AD1CON3) = 0;                 // Control register 3
+    VALUE(AD1CHS)  = 0;                 // Channel select
+    VALUE(AD1CSSL) = 0;                 // Input scan selection
+    VALUE(AD1PCFG) = 0;                 // Port configuration
 
     /*
      * General purpose IO signals.
      * All pins are inputs, high, open drains and pullups disabled.
      * No interrupts on change.
      */
-    VALUE (TRISA) = 0xFFFF;		// Port A: mask of inputs
-    VALUE (PORTA) = 0xFFFF;		// Port A: read inputs, write outputs
-    VALUE (LATA)  = 0xFFFF;		// Port A: read/write outputs
-    VALUE (ODCA)  = 0;			// Port A: open drain configuration
-    VALUE (TRISB) = 0xFFFF;		// Port B: mask of inputs
-    VALUE (PORTB) = 0xFFFF;		// Port B: read inputs, write outputs
-    VALUE (LATB)  = 0xFFFF;		// Port B: read/write outputs
-    VALUE (ODCB)  = 0;			// Port B: open drain configuration
-    VALUE (TRISC) = 0xFFFF;		// Port C: mask of inputs
-    VALUE (PORTC) = 0xFFFF;		// Port C: read inputs, write outputs
-    VALUE (LATC)  = 0xFFFF;		// Port C: read/write outputs
-    VALUE (ODCC)  = 0;			// Port C: open drain configuration
-    VALUE (TRISD) = 0xFFFF;		// Port D: mask of inputs
-    VALUE (PORTD) = 0xFFFF;		// Port D: read inputs, write outputs
-    VALUE (LATD)  = 0xFFFF;		// Port D: read/write outputs
-    VALUE (ODCD)  = 0;			// Port D: open drain configuration
-    VALUE (TRISE) = 0xFFFF;		// Port E: mask of inputs
-    VALUE (PORTE) = 0xFFFF;		// Port D: read inputs, write outputs
-    VALUE (LATE)  = 0xFFFF;		// Port E: read/write outputs
-    VALUE (ODCE)  = 0;			// Port E: open drain configuration
-    VALUE (TRISF) = 0xFFFF;		// Port F: mask of inputs
-    VALUE (PORTF) = 0xFFFF;		// Port F: read inputs, write outputs
-    VALUE (LATF)  = 0xFFFF;		// Port F: read/write outputs
-    VALUE (ODCF)  = 0;			// Port F: open drain configuration
-    VALUE (TRISG) = 0xFFFF;		// Port G: mask of inputs
-    VALUE (PORTG) = 0xFFFF;		// Port G: read inputs, write outputs
-    VALUE (LATG)  = 0xFFFF;		// Port G: read/write outputs
-    VALUE (ODCG)  = 0;			// Port G: open drain configuration
-    VALUE (CNCON) = 0;			// Interrupt-on-change control
-    VALUE (CNEN)  = 0;			// Input change interrupt enable
-    VALUE (CNPUE) = 0;			// Input pin pull-up enable
+    VALUE(TRISA) = 0xFFFF;		// Port A: mask of inputs
+    VALUE(PORTA) = 0xFFFF;		// Port A: read inputs, write outputs
+    VALUE(LATA)  = 0xFFFF;		// Port A: read/write outputs
+    VALUE(ODCA)  = 0;			// Port A: open drain configuration
+    VALUE(TRISB) = 0xFFFF;		// Port B: mask of inputs
+    VALUE(PORTB) = 0xFFFF;		// Port B: read inputs, write outputs
+    VALUE(LATB)  = 0xFFFF;		// Port B: read/write outputs
+    VALUE(ODCB)  = 0;			// Port B: open drain configuration
+    VALUE(TRISC) = 0xFFFF;		// Port C: mask of inputs
+    VALUE(PORTC) = 0xFFFF;		// Port C: read inputs, write outputs
+    VALUE(LATC)  = 0xFFFF;		// Port C: read/write outputs
+    VALUE(ODCC)  = 0;			// Port C: open drain configuration
+    VALUE(TRISD) = 0xFFFF;		// Port D: mask of inputs
+    VALUE(PORTD) = 0xFFFF;		// Port D: read inputs, write outputs
+    VALUE(LATD)  = 0xFFFF;		// Port D: read/write outputs
+    VALUE(ODCD)  = 0;			// Port D: open drain configuration
+    VALUE(TRISE) = 0xFFFF;		// Port E: mask of inputs
+    VALUE(PORTE) = 0xFFFF;		// Port D: read inputs, write outputs
+    VALUE(LATE)  = 0xFFFF;		// Port E: read/write outputs
+    VALUE(ODCE)  = 0;			// Port E: open drain configuration
+    VALUE(TRISF) = 0xFFFF;		// Port F: mask of inputs
+    VALUE(PORTF) = 0xFFFF;		// Port F: read inputs, write outputs
+    VALUE(LATF)  = 0xFFFF;		// Port F: read/write outputs
+    VALUE(ODCF)  = 0;			// Port F: open drain configuration
+    VALUE(TRISG) = 0xFFFF;		// Port G: mask of inputs
+    VALUE(PORTG) = 0xFFFF;		// Port G: read inputs, write outputs
+    VALUE(LATG)  = 0xFFFF;		// Port G: read/write outputs
+    VALUE(ODCG)  = 0;			// Port G: open drain configuration
+    VALUE(CNCON) = 0;			// Interrupt-on-change control
+    VALUE(CNEN)  = 0;			// Input change interrupt enable
+    VALUE(CNPUE) = 0;			// Input pin pull-up enable
 
     /*
      * UARTs 1-6.
      */
-    VALUE (U1MODE)  = 0;
-    VALUE (U1STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE (U1TXREG) = 0;
-    VALUE (U1RXREG) = 0;
-    VALUE (U1BRG)   = 0;
-    VALUE (U2MODE)  = 0;
-    VALUE (U2STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE (U2TXREG) = 0;
-    VALUE (U2RXREG) = 0;
-    VALUE (U2BRG)   = 0;
-    VALUE (U3MODE)  = 0;
-    VALUE (U3STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE (U3TXREG) = 0;
-    VALUE (U3RXREG) = 0;
-    VALUE (U3BRG)   = 0;
-    VALUE (U4MODE)  = 0;
-    VALUE (U4STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE (U4TXREG) = 0;
-    VALUE (U4RXREG) = 0;
-    VALUE (U4BRG)   = 0;
-    VALUE (U5MODE)  = 0;
-    VALUE (U5STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE (U5TXREG) = 0;
-    VALUE (U5RXREG) = 0;
-    VALUE (U5BRG)   = 0;
-    VALUE (U6MODE)  = 0;
-    VALUE (U6STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE (U6TXREG) = 0;
-    VALUE (U6RXREG) = 0;
-    VALUE (U6BRG)   = 0;
+    VALUE(U1MODE)  = 0;
+    VALUE(U1STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+    VALUE(U1TXREG) = 0;
+    VALUE(U1RXREG) = 0;
+    VALUE(U1BRG)   = 0;
+    VALUE(U2MODE)  = 0;
+    VALUE(U2STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+    VALUE(U2TXREG) = 0;
+    VALUE(U2RXREG) = 0;
+    VALUE(U2BRG)   = 0;
+    VALUE(U3MODE)  = 0;
+    VALUE(U3STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+    VALUE(U3TXREG) = 0;
+    VALUE(U3RXREG) = 0;
+    VALUE(U3BRG)   = 0;
+    VALUE(U4MODE)  = 0;
+    VALUE(U4STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+    VALUE(U4TXREG) = 0;
+    VALUE(U4RXREG) = 0;
+    VALUE(U4BRG)   = 0;
+    VALUE(U5MODE)  = 0;
+    VALUE(U5STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+    VALUE(U5TXREG) = 0;
+    VALUE(U5RXREG) = 0;
+    VALUE(U5BRG)   = 0;
+    VALUE(U6MODE)  = 0;
+    VALUE(U6STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+    VALUE(U6TXREG) = 0;
+    VALUE(U6RXREG) = 0;
+    VALUE(U6BRG)   = 0;
 }
 
-void io_init (void *datap, void *data2p, void *bootp)
+void io_init (void *datap, void *data2p, void *bootp, int sd_port)
 {
     iomem = datap;
     iomem2 = data2p;
     bootmem = bootp;
+
+    sdcard_port = sd_port;
 
     // Preset DEVCFG data, from Max32 bootloader.
     BOOTMEM(DEVCFG3) = 0xffff0722;
