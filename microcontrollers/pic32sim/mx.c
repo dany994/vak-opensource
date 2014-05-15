@@ -58,6 +58,9 @@ static uint32_t *bootmem;       // image of boot memory
 
 static unsigned syskey_unlock;	// syskey state
 
+/*-------------------------------------------------------------------------
+ * UART
+ */
 #define NUM_UART        6               // number of UART ports
 #define UART_IRQ_ERR    0               // error irq offset
 #define UART_IRQ_RX     1               // receiver irq offset
@@ -72,7 +75,14 @@ static unsigned uart_irq[NUM_UART] = {  // UART interrupt numbers
     PIC32_IRQ_U6E,
 };
 static int uart_oactive[NUM_UART];      // UART output active
+static unsigned uart_sta[NUM_UART] =    // UxSTA address
+    { U1STA, U2STA, U3STA, U4STA, U5STA, U6STA };
+static unsigned uart_mode[NUM_UART] =    // UxMODE address
+    { U1MODE, U2MODE, U3MODE, U4MODE, U5MODE, U6MODE };
 
+/*-------------------------------------------------------------------------
+ * SPI
+ */
 #define NUM_SPI         4               // number of SPI ports
 #define SPI_IRQ_FAULT   0               // error irq offset
 #define SPI_IRQ_TX      1               // transmitter irq offset
@@ -161,6 +171,7 @@ void update_irq_flag()
 
 void set_irq (int irq)
 {
+    //TODO
 #if 0
     /* Set interrupt flag status */
     ifs [irq >> 5] |= 1 << (irq & 31);
@@ -171,6 +182,7 @@ void set_irq (int irq)
 
 void clear_irq (int irq)
 {
+    //TODO
 #if 0
     /* Clear interrupt flag status */
     ifs [irq >> 5] &= ~(1 << (irq & 31));
@@ -190,6 +202,72 @@ static void soft_reset()
     reset_all();
     sdcard_reset();
 #endif
+}
+
+static unsigned uart_get_char (int port)
+{
+    unsigned value;
+
+    // Read a byte from input queue
+    value = vtty_get_char (port);
+    VALUE(uart_sta[port]) &= ~PIC32_USTA_URXDA;
+
+    if (vtty_is_char_avail (port)) {
+        // One more byte available
+        VALUE(uart_sta[port]) |= PIC32_USTA_URXDA;
+    } else {
+        clear_irq (uart_irq[port] + UART_IRQ_RX);
+    }
+    return value;
+}
+
+static void uart_poll_status (int port)
+{
+    // Keep receiver idle, transmit shift register always empty
+    VALUE(uart_sta[port]) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+
+    if (vtty_is_char_avail (port)) {
+        // Receive data available
+        VALUE(uart_sta[port]) |= PIC32_USTA_URXDA;
+    }
+    //printf ("<%x>", VALUE(uart_sta[port])); fflush (stdout);
+}
+
+static void uart_put_char (int port, unsigned data)
+{
+    vtty_put_char (port, data);
+    if ((VALUE(uart_mode[port]) & PIC32_UMODE_ON) &&
+        (VALUE(uart_sta[port]) & PIC32_USTA_UTXEN) &&
+        ! uart_oactive[port])
+    {
+        uart_oactive[port] = 1;
+        set_irq (uart_irq[port] + UART_IRQ_TX);
+    }
+}
+
+static void uart_update_mode (int port)
+{
+    if (! (VALUE(uart_mode[port]) & PIC32_UMODE_ON)) {
+        clear_irq (uart_irq[port] + UART_IRQ_RX);
+        clear_irq (uart_irq[port] + UART_IRQ_TX);
+        VALUE(uart_sta[port]) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+                                   PIC32_USTA_PERR | PIC32_USTA_UTXBF);
+        VALUE(uart_sta[port]) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
+    }
+}
+
+static void uart_update_status (int port)
+{
+    if (! (VALUE(uart_sta[port]) & PIC32_USTA_URXEN)) {
+        clear_irq (uart_irq[port] + UART_IRQ_RX);
+        VALUE(uart_sta[port]) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
+                                   PIC32_USTA_PERR);
+    }
+    if (! (VALUE(uart_sta[port]) & PIC32_USTA_UTXEN)) {
+        clear_irq (uart_irq[port] + UART_IRQ_TX);
+        VALUE(uart_sta[port]) &= ~PIC32_USTA_UTXBF;
+        VALUE(uart_sta[port]) |= PIC32_USTA_TRMT;
+    }
 }
 
 unsigned sdcard_io (unsigned data)
@@ -396,25 +474,12 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
      * UART 1.
      */
     STORAGE (U1RXREG);                          // Receive data
-        *bufp = vtty_get_char (0);              // read a byte from input queue
-        VALUE(U1STA) &= ~PIC32_USTA_URXDA;
-        if (vtty_is_char_avail (0)) {           // one more byte available
-            VALUE(U1STA) |= PIC32_USTA_URXDA;
-        } else {
-            clear_irq (uart_irq[0] + UART_IRQ_RX);
-        }
+        *bufp = uart_get_char(0);
         break;
     STORAGE (U1BRG); break;                     // Baud rate
     STORAGE (U1MODE); break;                    // Mode
     STORAGE (U1STA);                            // Status and control
-        VALUE(U1STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
-                        PIC32_USTA_TRMT;        // Transmit shift register is empty
-        if (vtty_is_char_avail (0))
-            VALUE(U1STA) |= PIC32_USTA_URXDA;   // Receive data available
-#if 0
-        printf ("<%x>", VALUE(U1STA));
-        fflush (stdout);
-#endif
+        uart_poll_status(0);
         break;
     STORAGE (U1TXREG);   *bufp = 0; break;      // Transmit
     STORAGE (U1MODECLR); *bufp = 0; break;
@@ -431,25 +496,12 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
      * UART 2.
      */
     STORAGE (U2RXREG);                          // Receive data
-        *bufp = vtty_get_char (1);              // read a byte from input queue
-        VALUE(U2STA) &= ~PIC32_USTA_URXDA;
-        if (vtty_is_char_avail (1)) {           // one more byte available
-            VALUE(U2STA) |= PIC32_USTA_URXDA;
-        } else {
-            clear_irq (uart_irq[1] + UART_IRQ_RX);
-        }
+        *bufp = uart_get_char(1);
         break;
     STORAGE (U2BRG); break;                     // Baud rate
     STORAGE (U2MODE); break;                    // Mode
     STORAGE (U2STA);                            // Status and control
-        VALUE(U2STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
-                        PIC32_USTA_TRMT;        // Transmit shift register is empty
-        if (vtty_is_char_avail (1))
-            VALUE(U2STA) |= PIC32_USTA_URXDA;   // Receive data available
-#if 0
-        printf ("<%x>", VALUE(U2STA));
-        fflush (stdout);
-#endif
+        uart_poll_status(1);
         break;
     STORAGE (U2TXREG);   *bufp = 0; break;      // Transmit
     STORAGE (U2MODECLR); *bufp = 0; break;
@@ -466,25 +518,12 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
      * UART 3.
      */
     STORAGE (U3RXREG);                          // Receive data
-        *bufp = vtty_get_char (2);              // read a byte from input queue
-        VALUE(U3STA) &= ~PIC32_USTA_URXDA;
-        if (vtty_is_char_avail (2)) {           // one more byte available
-            VALUE(U3STA) |= PIC32_USTA_URXDA;
-        } else {
-            clear_irq (uart_irq[2] + UART_IRQ_RX);
-        }
+        *bufp = uart_get_char(2);
         break;
     STORAGE (U3BRG); break;                     // Baud rate
     STORAGE (U3MODE); break;                    // Mode
     STORAGE (U3STA);                            // Status and control
-        VALUE(U3STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
-                        PIC32_USTA_TRMT;        // Transmit shift register is empty
-        if (vtty_is_char_avail (2))
-            VALUE(U3STA) |= PIC32_USTA_URXDA;   // Receive data available
-#if 0
-        printf ("<%x>", VALUE(U3STA));
-        fflush (stdout);
-#endif
+        uart_poll_status(2);
         break;
     STORAGE (U3TXREG);   *bufp = 0; break;      // Transmit
     STORAGE (U3MODECLR); *bufp = 0; break;
@@ -501,25 +540,12 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
      * UART 4.
      */
     STORAGE (U4RXREG);                          // Receive data
-        *bufp = vtty_get_char (3);              // read a byte from input queue
-        VALUE(U4STA) &= ~PIC32_USTA_URXDA;
-        if (vtty_is_char_avail (3)) {           // one more byte available
-            VALUE(U4STA) |= PIC32_USTA_URXDA;
-        } else {
-            clear_irq (uart_irq[3] + UART_IRQ_RX);
-        }
+        *bufp = uart_get_char(3);
         break;
     STORAGE (U4BRG); break;                     // Baud rate
     STORAGE (U4MODE); break;                    // Mode
     STORAGE (U4STA);                            // Status and control
-        VALUE(U4STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
-                        PIC32_USTA_TRMT;        // Transmit shift register is empty
-        if (vtty_is_char_avail (3))
-            VALUE(U4STA) |= PIC32_USTA_URXDA;   // Receive data available
-#if 0
-        printf ("<%x>", VALUE(U4STA));
-        fflush (stdout);
-#endif
+        uart_poll_status(3);
         break;
     STORAGE (U4TXREG);   *bufp = 0; break;      // Transmit
     STORAGE (U4MODECLR); *bufp = 0; break;
@@ -536,25 +562,12 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
      * UART 5.
      */
     STORAGE (U5RXREG);                          // Receive data
-        *bufp = vtty_get_char (4);              // read a byte from input queue
-        VALUE(U5STA) &= ~PIC32_USTA_URXDA;
-        if (vtty_is_char_avail (4)) {           // one more byte available
-            VALUE(U5STA) |= PIC32_USTA_URXDA;
-        } else {
-            clear_irq (uart_irq[4] + UART_IRQ_RX);
-        }
+        *bufp = uart_get_char(4);
         break;
     STORAGE (U5BRG); break;                     // Baud rate
     STORAGE (U5MODE); break;                    // Mode
     STORAGE (U5STA);                            // Status and control
-        VALUE(U5STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
-                        PIC32_USTA_TRMT;        // Transmit shift register is empty
-        if (vtty_is_char_avail (4))
-            VALUE(U5STA) |= PIC32_USTA_URXDA;   // Receive data available
-#if 0
-        printf ("<%x>", VALUE(U5STA));
-        fflush (stdout);
-#endif
+        uart_poll_status(4);
         break;
     STORAGE (U5TXREG);   *bufp = 0; break;      // Transmit
     STORAGE (U5MODECLR); *bufp = 0; break;
@@ -571,25 +584,12 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
      * UART 6.
      */
     STORAGE (U6RXREG);                          // Receive data
-        *bufp = vtty_get_char (5);              // read a byte from input queue
-        VALUE(U6STA) &= ~PIC32_USTA_URXDA;
-        if (vtty_is_char_avail (5)) {           // one more byte available
-            VALUE(U6STA) |= PIC32_USTA_URXDA;
-        } else {
-            clear_irq (uart_irq[5] + UART_IRQ_RX);
-        }
+        *bufp = uart_get_char(5);
         break;
     STORAGE (U6BRG); break;                     // Baud rate
     STORAGE (U6MODE); break;                    // Mode
     STORAGE (U6STA);                            // Status and control
-        VALUE(U6STA) |= PIC32_USTA_RIDLE |      // Receiver is idle
-                        PIC32_USTA_TRMT;        // Transmit shift register is empty
-        if (vtty_is_char_avail (5))
-            VALUE(U6STA) |= PIC32_USTA_URXDA;   // Receive data available
-#if 0
-        printf ("<%x>", VALUE(U6STA));
-        fflush (stdout);
-#endif
+        uart_poll_status(5);
         break;
     STORAGE (U6TXREG);   *bufp = 0; break;      // Transmit
     STORAGE (U6MODECLR); *bufp = 0; break;
@@ -934,35 +934,15 @@ irq:    update_irq_flag();
      * UART 1.
      */
     STORAGE (U1TXREG);                              // Transmit
-        vtty_put_char (0, data);
-        if ((VALUE(U1MODE) & PIC32_UMODE_ON) &&
-            (VALUE(U1STA) & PIC32_USTA_UTXEN) && ! uart_oactive[0]) {
-            uart_oactive[0] = 1;
-            set_irq (uart_irq[0] + UART_IRQ_TX);
-        }
+        uart_put_char (0, data);
         break;
     WRITEOP (U1MODE);                               // Mode
-        if (! (VALUE(U1MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[0] + UART_IRQ_RX);
-            clear_irq (uart_irq[0] + UART_IRQ_TX);
-            VALUE(U1STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                               PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE(U1STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-        }
+        uart_update_mode (0);
         return;
     WRITEOPR (U1STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE(U1STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[0] + UART_IRQ_RX);
-            VALUE(U1STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                PIC32_USTA_PERR);
-        }
-        if (! (VALUE(U1STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[0] + UART_IRQ_TX);
-            VALUE(U1STA) &= ~PIC32_USTA_UTXBF;
-            VALUE(U1STA) |= PIC32_USTA_TRMT;
-        }
+        uart_update_status (0);
         return;
     WRITEOP (U1BRG); return;                        // Baud rate
     READONLY (U1RXREG);                             // Receive
@@ -971,35 +951,15 @@ irq:    update_irq_flag();
      * UART 2.
      */
     STORAGE (U2TXREG);                              // Transmit
-        vtty_put_char (1, data);
-        if ((VALUE(U2MODE) & PIC32_UMODE_ON) &&
-            (VALUE(U2STA) & PIC32_USTA_UTXEN) && ! uart_oactive[1]) {
-            uart_oactive[1] = 1;
-            set_irq (uart_irq[1] + UART_IRQ_TX);
-        }
+        uart_put_char (1, data);
         break;
     WRITEOP (U2MODE);                               // Mode
-        if (! (VALUE(U2MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[1] + UART_IRQ_RX);
-            clear_irq (uart_irq[1] + UART_IRQ_TX);
-            VALUE(U2STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                               PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE(U2STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-        }
+        uart_update_mode (1);
         return;
     WRITEOPR (U2STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE(U2STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[1] + UART_IRQ_RX);
-            VALUE(U2STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                PIC32_USTA_PERR);
-        }
-        if (! (VALUE(U2STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[1] + UART_IRQ_TX);
-            VALUE(U2STA) &= ~PIC32_USTA_UTXBF;
-            VALUE(U2STA) |= PIC32_USTA_TRMT;
-        }
+        uart_update_status (1);
         return;
     WRITEOP (U2BRG); return;                        // Baud rate
     READONLY (U2RXREG);                             // Receive
@@ -1008,35 +968,15 @@ irq:    update_irq_flag();
      * UART 3.
      */
     STORAGE (U3TXREG);                              // Transmit
-        vtty_put_char (2, data);
-        if ((VALUE(U3MODE) & PIC32_UMODE_ON) &&
-            (VALUE(U3STA) & PIC32_USTA_UTXEN) && ! uart_oactive[2]) {
-            uart_oactive[2] = 1;
-            set_irq (uart_irq[2] + UART_IRQ_TX);
-        }
+        uart_put_char (2, data);
         break;
     WRITEOP (U3MODE);                               // Mode
-        if (! (VALUE(U3MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[2] + UART_IRQ_RX);
-            clear_irq (uart_irq[2] + UART_IRQ_TX);
-            VALUE(U3STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                               PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE(U3STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-        }
+        uart_update_mode (2);
         return;
     WRITEOPR (U3STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE(U3STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[2] + UART_IRQ_RX);
-            VALUE(U3STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                PIC32_USTA_PERR);
-        }
-        if (! (VALUE(U3STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[2] + UART_IRQ_TX);
-            VALUE(U3STA) &= ~PIC32_USTA_UTXBF;
-            VALUE(U3STA) |= PIC32_USTA_TRMT;
-        }
+        uart_update_status (2);
         return;
     WRITEOP (U3BRG); return;                        // Baud rate
     READONLY (U3RXREG);                             // Receive
@@ -1045,35 +985,15 @@ irq:    update_irq_flag();
      * UART 4.
      */
     STORAGE (U4TXREG);                              // Transmit
-        vtty_put_char (3, data);
-        if ((VALUE(U4MODE) & PIC32_UMODE_ON) &&
-            (VALUE(U4STA) & PIC32_USTA_UTXEN) && ! uart_oactive[3]) {
-            uart_oactive[3] = 1;
-            set_irq (uart_irq[3] + UART_IRQ_TX);
-        }
+        uart_put_char (3, data);
         break;
     WRITEOP (U4MODE);                               // Mode
-        if (! (VALUE(U4MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[3] + UART_IRQ_RX);
-            clear_irq (uart_irq[3] + UART_IRQ_TX);
-            VALUE(U4STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                               PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE(U4STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-        }
+        uart_update_mode (3);
         return;
     WRITEOPR (U4STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE(U4STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[3] + UART_IRQ_RX);
-            VALUE(U4STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                PIC32_USTA_PERR);
-        }
-        if (! (VALUE(U4STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[3] + UART_IRQ_TX);
-            VALUE(U4STA) &= ~PIC32_USTA_UTXBF;
-            VALUE(U4STA) |= PIC32_USTA_TRMT;
-        }
+        uart_update_status (3);
         return;
     WRITEOP (U4BRG); return;                        // Baud rate
     READONLY (U4RXREG);                             // Receive
@@ -1082,35 +1002,15 @@ irq:    update_irq_flag();
      * UART 5.
      */
     STORAGE (U5TXREG);                              // Transmit
-        vtty_put_char (4, data);
-        if ((VALUE(U5MODE) & PIC32_UMODE_ON) &&
-            (VALUE(U5STA) & PIC32_USTA_UTXEN) && ! uart_oactive[4]) {
-            uart_oactive[4] = 1;
-            set_irq (uart_irq[4] + UART_IRQ_TX);
-        }
+        uart_put_char (4, data);
         break;
     WRITEOP (U5MODE);                               // Mode
-        if (! (VALUE(U5MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[4] + UART_IRQ_RX);
-            clear_irq (uart_irq[4] + UART_IRQ_TX);
-            VALUE(U5STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                               PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE(U5STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-        }
+        uart_update_mode (4);
         return;
     WRITEOPR (U5STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE(U5STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[4] + UART_IRQ_RX);
-            VALUE(U5STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                PIC32_USTA_PERR);
-        }
-        if (! (VALUE(U5STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[4] + UART_IRQ_TX);
-            VALUE(U5STA) &= ~PIC32_USTA_UTXBF;
-            VALUE(U5STA) |= PIC32_USTA_TRMT;
-        }
+        uart_update_status (4);
         return;
     WRITEOP (U5BRG); return;                        // Baud rate
     READONLY (U5RXREG);                             // Receive
@@ -1119,35 +1019,15 @@ irq:    update_irq_flag();
      * UART 6.
      */
     STORAGE (U6TXREG);                              // Transmit
-        vtty_put_char (5, data);
-        if ((VALUE(U6MODE) & PIC32_UMODE_ON) &&
-            (VALUE(U6STA) & PIC32_USTA_UTXEN) && ! uart_oactive[5]) {
-            uart_oactive[5] = 1;
-            set_irq (uart_irq[5] + UART_IRQ_TX);
-        }
+        uart_put_char (5, data);
         break;
     WRITEOP (U6MODE);                               // Mode
-        if (! (VALUE(U6MODE) & PIC32_UMODE_ON)) {
-            clear_irq (uart_irq[5] + UART_IRQ_RX);
-            clear_irq (uart_irq[5] + UART_IRQ_TX);
-            VALUE(U6STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                               PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-            VALUE(U6STA) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-        }
+        uart_update_mode (5);
         return;
     WRITEOPR (U6STA,                                // Status and control
         PIC32_USTA_URXDA | PIC32_USTA_FERR | PIC32_USTA_PERR |
         PIC32_USTA_RIDLE | PIC32_USTA_TRMT | PIC32_USTA_UTXBF);
-        if (! (VALUE(U6STA) & PIC32_USTA_URXEN)) {
-            clear_irq (uart_irq[5] + UART_IRQ_RX);
-            VALUE(U6STA) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                PIC32_USTA_PERR);
-        }
-        if (! (VALUE(U6STA) & PIC32_USTA_UTXEN)) {
-            clear_irq (uart_irq[5] + UART_IRQ_TX);
-            VALUE(U6STA) &= ~PIC32_USTA_UTXBF;
-            VALUE(U6STA) |= PIC32_USTA_TRMT;
-        }
+        uart_update_status (5);
         return;
     WRITEOP (U6BRG); return;                        // Baud rate
     READONLY (U6RXREG);                             // Receive
