@@ -15,11 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <assert.h>
 #include <termios.h>
 #include <arpa/inet.h>
 #include <arpa/telnet.h>

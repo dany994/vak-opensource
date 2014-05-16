@@ -10,12 +10,15 @@ endif
 # Compile to executable using the HOST compiler.
 #
 EXECUTABLE	= pic32mx7 #pic32mz
-OPT             = -O2 -g
+OPT             = -O2 -g -DEXPLORER16
 #OPT		= -O0 -g
+OPT_MX7         = -DPIC32MX7
+OPT_MZ          = -DPIC32MZ
 
 OBJ_MX7		= obj/loadhex.o \
                   obj/mx.o \
                   obj/main-mx7.o \
+                  obj/sdcard.o \
                   obj/vtty.o
 
 OBJ_MZ		= obj/loadhex.o \
@@ -41,11 +44,11 @@ pic32mz:        $(OBJ_MZ)
 
 obj/main-mx7.o: main.c
 		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS) -DPIC32MX7
+		$(CC) -c -o $@ $^ $(CFLAGS) $(OPT_MX7)
 
 obj/main-mz.o:  main.c
 		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS) -DPIC32MZ
+		$(CC) -c -o $@ $^ $(CFLAGS) $(OPT_MZ)
 
 obj/%.o:        %.c
 		@mkdir -p $(@D)
@@ -58,3 +61,8 @@ obj/%.o:        %.c??
 clean:
 		rm -rf *.exe *.log *.so *.o obj $(EXECUTABLE) *~
 ###
+loadhex.o: loadhex.c globals.h
+main.o: mx.c globals.h vtty.h
+mx.o: mx.c globals.h vtty.h pic32mx.h
+sdcard.o: sdcard.c globals.h
+vtty.o: vtty.c globals.h vtty.h

@@ -46,9 +46,20 @@ extern int trace;               // global trace flag
 
 int load_file(void *progmem, void *bootmem, const char *filename);
 
-void io_init (void *datap, void *data2p, void *bootp, int sd_port);
+void io_init (void *datap, void *data2p, void *bootp);
 void io_reset (void);
 unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep);
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep);
 
 void eic_level_vector (int ripl, int vector);
+
+extern unsigned sdcard_spi_port;    // SPI port number of SD card
+extern unsigned sdcard_gpio_port0;  // GPIO port number of CS0 signal
+extern unsigned sdcard_gpio_port1;  // GPIO port number of CS1 signal
+extern unsigned sdcard_gpio_cs0;    // GPIO pin mask of CS0 signal
+extern unsigned sdcard_gpio_cs1;    // GPIO pin mask of CS1 signal
+
+void sdcard_init (int unit, const char *name, const char *filename, int cs_port, int cs_pin);
+void sdcard_reset (void);
+void sdcard_select (int unit, int on);
+unsigned sdcard_io (unsigned data);
