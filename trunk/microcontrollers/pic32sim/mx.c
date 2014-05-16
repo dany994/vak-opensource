@@ -105,69 +105,174 @@ static unsigned spi_stat[NUM_SPI] =     // SPIxSTAT address
 
 static unsigned sdcard_port;    // SPI port number of SD card
 
+/*
+ * PIC32MX7 specific table:
+ * translate IRQ number to interrupt vector.
+ */
+static const int irq_to_vector[] = {
+    PIC32_VECT_CT,      /* 0  - Core Timer Interrupt */
+    PIC32_VECT_CS0,     /* 1  - Core Software Interrupt 0 */
+    PIC32_VECT_CS1,     /* 2  - Core Software Interrupt 1 */
+    PIC32_VECT_INT0,    /* 3  - External Interrupt 0 */
+    PIC32_VECT_T1,      /* 4  - Timer1 */
+    PIC32_VECT_IC1,     /* 5  - Input Capture 1 */
+    PIC32_VECT_OC1,     /* 6  - Output Compare 1 */
+    PIC32_VECT_INT1,    /* 7  - External Interrupt 1 */
+    PIC32_VECT_T2,      /* 8  - Timer2 */
+    PIC32_VECT_IC2,     /* 9  - Input Capture 2 */
+    PIC32_VECT_OC2,     /* 10 - Output Compare 2 */
+    PIC32_VECT_INT2,    /* 11 - External Interrupt 2 */
+    PIC32_VECT_T3,      /* 12 - Timer3 */
+    PIC32_VECT_IC3,     /* 13 - Input Capture 3 */
+    PIC32_VECT_OC3,     /* 14 - Output Compare 3 */
+    PIC32_VECT_INT3,    /* 15 - External Interrupt 3 */
+    PIC32_VECT_T4,      /* 16 - Timer4 */
+    PIC32_VECT_IC4,     /* 17 - Input Capture 4 */
+    PIC32_VECT_OC4,     /* 18 - Output Compare 4 */
+    PIC32_VECT_INT4,    /* 19 - External Interrupt 4 */
+    PIC32_VECT_T5,      /* 20 - Timer5 */
+    PIC32_VECT_IC5,     /* 21 - Input Capture 5 */
+    PIC32_VECT_OC5,     /* 22 - Output Compare 5 */
+    PIC32_VECT_SPI1,    /* 23 - SPI1 Fault */
+    PIC32_VECT_SPI1,    /* 24 - SPI1 Transfer Done */
+    PIC32_VECT_SPI1,    /* 25 - SPI1 Receive Done */
+
+    PIC32_VECT_U1     | /* 26 - UART1 Error */
+    PIC32_VECT_SPI3   | /* 26 - SPI3 Fault */
+    PIC32_VECT_I2C3,    /* 26 - I2C3 Bus Collision Event */
+
+    PIC32_VECT_U1     | /* 27 - UART1 Receiver */
+    PIC32_VECT_SPI3   | /* 27 - SPI3 Transfer Done */
+    PIC32_VECT_I2C3,    /* 27 - I2C3 Slave Event */
+
+    PIC32_VECT_U1     | /* 28 - UART1 Transmitter */
+    PIC32_VECT_SPI3   | /* 28 - SPI3 Receive Done */
+    PIC32_VECT_I2C3,    /* 28 - I2C3 Master Event */
+
+    PIC32_VECT_I2C1,    /* 29 - I2C1 Bus Collision Event */
+    PIC32_VECT_I2C1,    /* 30 - I2C1 Slave Event */
+    PIC32_VECT_I2C1,    /* 31 - I2C1 Master Event */
+    PIC32_VECT_CN,      /* 32 - Input Change Interrupt */
+    PIC32_VECT_AD1,     /* 33 - ADC1 Convert Done */
+    PIC32_VECT_PMP,     /* 34 - Parallel Master Port */
+    PIC32_VECT_CMP1,    /* 35 - Comparator Interrupt */
+    PIC32_VECT_CMP2,    /* 36 - Comparator Interrupt */
+
+    PIC32_VECT_U3     | /* 37 - UART3 Error */
+    PIC32_VECT_SPI2   | /* 37 - SPI2 Fault */
+    PIC32_VECT_I2C4,    /* 37 - I2C4 Bus Collision Event */
+
+    PIC32_VECT_U3     | /* 38 - UART3 Receiver */
+    PIC32_VECT_SPI2   | /* 38 - SPI2 Transfer Done */
+    PIC32_VECT_I2C4,    /* 38 - I2C4 Slave Event */
+
+    PIC32_VECT_U3     | /* 39 - UART3 Transmitter */
+    PIC32_VECT_SPI2   | /* 39 - SPI2 Receive Done */
+    PIC32_VECT_I2C4,    /* 39 - I2C4 Master Event */
+
+    PIC32_VECT_U2     | /* 40 - UART2 Error */
+    PIC32_VECT_SPI4   | /* 40 - SPI4 Fault */
+    PIC32_VECT_I2C5,    /* 40 - I2C5 Bus Collision Event */
+
+    PIC32_VECT_U2     | /* 41 - UART2 Receiver */
+    PIC32_VECT_SPI4   | /* 41 - SPI4 Transfer Done */
+    PIC32_VECT_I2C5,    /* 41 - I2C5 Slave Event */
+
+    PIC32_VECT_U2     | /* 42 - UART2 Transmitter */
+    PIC32_VECT_SPI4   | /* 42 - SPI4 Receive Done */
+    PIC32_VECT_I2C5,    /* 42 - I2C5 Master Event */
+
+    PIC32_VECT_I2C2,    /* 43 - I2C2 Bus Collision Event */
+    PIC32_VECT_I2C2,    /* 44 - I2C2 Slave Event */
+    PIC32_VECT_I2C2,    /* 45 - I2C2 Master Event */
+    PIC32_VECT_FSCM,    /* 46 - Fail-Safe Clock Monitor */
+    PIC32_VECT_RTCC,    /* 47 - Real-Time Clock and Calendar */
+    PIC32_VECT_DMA0,    /* 48 - DMA Channel 0 */
+    PIC32_VECT_DMA1,    /* 49 - DMA Channel 1 */
+    PIC32_VECT_DMA2,    /* 50 - DMA Channel 2 */
+    PIC32_VECT_DMA3,    /* 51 - DMA Channel 3 */
+    PIC32_VECT_DMA4,    /* 52 - DMA Channel 4 */
+    PIC32_VECT_DMA5,    /* 53 - DMA Channel 5 */
+    PIC32_VECT_DMA6,    /* 54 - DMA Channel 6 */
+    PIC32_VECT_DMA7,    /* 55 - DMA Channel 7 */
+    PIC32_VECT_FCE,     /* 56 - Flash Control Event */
+    PIC32_VECT_USB,     /* 57 - USB */
+    PIC32_VECT_CAN1,    /* 58 - Control Area Network 1 */
+    PIC32_VECT_CAN2,    /* 59 - Control Area Network 2 */
+    PIC32_VECT_ETH,     /* 60 - Ethernet Interrupt */
+    PIC32_VECT_IC1,     /* 61 - Input Capture 1 Error */
+    PIC32_VECT_IC2,     /* 62 - Input Capture 2 Error */
+    PIC32_VECT_IC3,     /* 63 - Input Capture 3 Error */
+    PIC32_VECT_IC4,     /* 64 - Input Capture 4 Error */
+    PIC32_VECT_IC5,     /* 65 - Input Capture 5 Error */
+    PIC32_VECT_PMP,     /* 66 - Parallel Master Port Error */
+    PIC32_VECT_U4,      /* 67 - UART4 Error */
+    PIC32_VECT_U4,      /* 68 - UART4 Receiver */
+    PIC32_VECT_U4,      /* 69 - UART4 Transmitter */
+    PIC32_VECT_U6,      /* 70 - UART6 Error */
+    PIC32_VECT_U6,      /* 71 - UART6 Receiver */
+    PIC32_VECT_U6,      /* 72 - UART6 Transmitter */
+    PIC32_VECT_U5,      /* 73 - UART5 Error */
+    PIC32_VECT_U5,      /* 74 - UART5 Receiver */
+    PIC32_VECT_U5,      /* 75 - UART5 Transmitter */
+};
+
 void update_irq_flag()
 {
-    //TODO
-#if 0
-    int vector, level, irq, n, v;
-
     /* Assume no interrupts pending. */
-    cpu->irq_cause = 0;
-    cpu->irq_pending = 0;
-    pic32->intstat = 0;
+    int cause_ripl = 0;
+    int vector = 0;
+    VALUE(INTSTAT) = 0;
 
-    if ((pic32->ifs[0] & pic32->iec[0]) ||
-        (pic32->ifs[1] & pic32->iec[1]) ||
-        (pic32->ifs[2] & pic32->iec[2]))
+    if ((VALUE(IFS0) & VALUE(IEC0)) ||
+        (VALUE(IFS1) & VALUE(IEC1)) ||
+        (VALUE(IFS2) & VALUE(IEC2)))
     {
         /* Find the most prioritive pending interrupt,
          * it's vector and level. */
-        vector = 0;
-        level = 0;
+        int irq;
         for (irq=0; irq<sizeof(irq_to_vector)/sizeof(int); irq++) {
-            n = irq >> 5;
-            if ((pic32->ifs[n] & pic32->iec[n]) >> (irq & 31) & 1) {
+            int n = irq >> 5;
+
+            if ((VALUE(IFS(n)) & VALUE(IEC(n))) >> (irq & 31) & 1) {
                 /* Interrupt is pending. */
-                v = irq_to_vector [irq];
+                int v = irq_to_vector [irq];
                 if (v < 0)
                     continue;
-                if (pic32->ivprio[v] > level) {
+
+                int level = VALUE(IPC(v >> 2));
+                level >>= 2 + (v & 3) * 8;
+                level &= 7;
+                if (level > cause_ripl) {
                     vector = v;
-                    level = pic32->ivprio[v];
+                    cause_ripl = level;
                 }
             }
         }
-        pic32->intstat = vector | (level << 8);
-
-        cpu->irq_cause = level << 10;
-/*printf ("-- vector = %d, level = %d\n", vector, level);*/
+        VALUE(INTSTAT) = vector | (cause_ripl << 8);
+//printf ("-- vector = %d, level = %d\n", vector, level);
     }
-/*else printf ("-- no irq pending\n");*/
+//else printf ("-- no irq pending\n");
 
-    mips_update_irq_flag();
-#endif
+    eic_level_vector (cause_ripl, vector);
 }
 
+/*
+ * Set interrupt flag status
+ */
 void set_irq (int irq)
 {
-    //TODO
-#if 0
-    /* Set interrupt flag status */
-    ifs [irq >> 5] |= 1 << (irq & 31);
-
+    VALUE(IFS(irq >> 5)) |= 1 << (irq & 31);
     update_irq_flag();
-#endif
 }
 
+/*
+ * Clear interrupt flag status
+ */
 void clear_irq (int irq)
 {
-    //TODO
-#if 0
-    /* Clear interrupt flag status */
-    ifs [irq >> 5] &= ~(1 << (irq & 31));
-
+    VALUE(IFS(irq >> 5)) &= ~(1 << (irq & 31));
     update_irq_flag();
-#endif
 }
 
 static void soft_reset()
