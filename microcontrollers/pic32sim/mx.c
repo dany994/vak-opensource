@@ -277,15 +277,10 @@ void clear_irq (int irq)
 
 static void soft_reset()
 {
-    //TODO
-#if 0
-    mips_reset();
-    cpu->pc = pic32->start_address;
+
 
     /* reset all devices */
-    reset_all();
-    sdcard_reset();
-#endif
+    io_reset();
 }
 
 static unsigned uart_get_char (int port)
@@ -868,8 +863,13 @@ irq:    update_irq_flag();
 	break;
     STORAGE (RCON); break;	// Reset Control
     STORAGE (RSWRST);		// Software Reset
-	if (syskey_unlock == 2 && (VALUE(RSWRST) & 1))
-	    soft_reset();
+	if (syskey_unlock == 2 && (VALUE(RSWRST) & 1)) {
+            /* Reset CPU. */
+            soft_reset();
+
+            /* Reset all devices */
+            io_reset();
+        }
 	break;
 
     /*-------------------------------------------------------------------------

@@ -41,6 +41,7 @@ static char iomem2 [0x10000];           // backing storage for second I/O area
 int trace_instructions;                 // print cpu instructions and registers
 int trace_registers;                    // trace special function registers
 
+icmProcessorP processor;                // top level processor object
 icmNetP eic_ripl;                       // EIC request priority level
 icmNetP eic_vector;                     // EIC vector number
 
@@ -81,7 +82,7 @@ static void print_user_attribute (const char *owner, const char *name,
 //
 // Callback for reading peripheral registers.
 //
-static void mem_read (icmProcessorP processor, Addr address, Uns32 bytes,
+static void mem_read (icmProcessorP proc, Addr address, Uns32 bytes,
     void *value, void *user_data, Addr VA, Bool isFetch)
 {
     Uns32 offset = address & 0xffff;
@@ -121,14 +122,14 @@ static void mem_read (icmProcessorP processor, Addr address, Uns32 bytes,
     default:
         icmPrintf("--- I/O Read  %08x: incorrect size %u bytes\n",
             (Uns32) address, bytes);
-        icmExit(processor);
+        icmExit(proc);
     }
 }
 
 //
 // Callback for writing peripheral registers.
 //
-static void mem_write (icmProcessorP processor, Addr address, Uns32 bytes,
+static void mem_write (icmProcessorP proc, Addr address, Uns32 bytes,
     const void *value, void *user_data, Addr VA)
 {
     Uns32 data;
@@ -137,7 +138,7 @@ static void mem_write (icmProcessorP processor, Addr address, Uns32 bytes,
     if (bytes != 4) {
         icmPrintf("--- I/O Write %08x: incorrect size %u bytes\n",
             (Uns32) address, bytes);
-        icmExit(processor);
+        icmExit(proc);
     }
     data = *(Uns32*) value;
     io_write32 (address, (Uns32*) (user_data + (address & 0xfffc)),
@@ -279,7 +280,7 @@ int main(int argc, char ** argv)
     //
     // create a processor
     //
-    icmProcessorP processor = icmNewProcessor(
+    processor = icmNewProcessor(
         cpu_type,                     // processor name
         "mips",                       // processor type
         0,                            // processor cpuId
@@ -377,4 +378,15 @@ void eic_level_vector (int ripl, int vector)
 
     icmWriteNet (eic_vector, vector);
     icmWriteNet (eic_ripl, ripl);
+}
+
+void soft_reset()
+{
+    Uns32 address = 0xfffffff0;
+    Uns32 value;
+
+    value = 4;
+    if (! icmWriteProcessorMemory (processor, address, &value, 4)) {
+        printf ("--- Cannot write %#x to %#x\n", value, address);
+    }
 }
