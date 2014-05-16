@@ -103,7 +103,7 @@ static unsigned spi_con[NUM_SPI] =      // SPIxCON address
 static unsigned spi_stat[NUM_SPI] =     // SPIxSTAT address
     { SPI1STAT, SPI2STAT, SPI3STAT, SPI4STAT };
 
-static unsigned sdcard_port;    // SPI port number of SD card
+unsigned sdcard_spi_port;               // SPI port number of SD card
 
 /*
  * PIC32MX7 specific table:
@@ -349,16 +349,10 @@ static void uart_update_status (int port)
     }
 }
 
-unsigned sdcard_io (unsigned data)
-{
-    //TODO
-    return 0;
-}
-
 static void spi_writebuf (int port, unsigned val)
 {
     /* Perform SD card i/o on configured SPI port. */
-    if (port == sdcard_port) {
+    if (port == sdcard_spi_port) {
         unsigned result = 0;
 
         if (VALUE(spi_con[port]) & PIC32_SPICON_MODE32) {
@@ -395,6 +389,24 @@ static void spi_writebuf (int port, unsigned val)
     } else {
         VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIRBF;
         //set_irq (spi_irq[port] + SPI_IRQ_RX);
+    }
+}
+
+static void gpio_write (int gpio_port, unsigned lat_value)
+{
+    /* Control SD card 0 */
+    if (gpio_port == sdcard_gpio_port0) {
+        int select = (lat_value & sdcard_gpio_cs0) != 0;
+
+        if (sdcard_gpio_cs0)
+            sdcard_select (0, select);
+    }
+    /* Control SD card 1 */
+    if (gpio_port == sdcard_gpio_port1) {
+        int select = (lat_value & sdcard_gpio_cs1) != 0;
+
+        if (sdcard_gpio_cs1)
+            sdcard_select (1, select);
     }
 }
 
@@ -528,13 +540,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (LATD); break;      // Port D: read outputs
     STORAGE (ODCD); break;      // Port D: open drain configuration
     STORAGE (TRISE); break;     // Port E: mask of inputs
-    STORAGE (PORTE);		// Port E: read inputs
-#ifdef UBW32
-	/* Swap disk: DATA */
-	d->port_e &= ~MASKE_DATA;
-	d->port_e |= swap_io (0, 0xff);
-#endif
-	break;
+    STORAGE (PORTE); break;	// Port E: read inputs
     STORAGE (LATE); break;      // Port E: read outputs
     STORAGE (ODCE); break;      // Port E: open drain configuration
     STORAGE (TRISF); break;     // Port F: mask of inputs
@@ -903,111 +909,44 @@ irq:    update_irq_flag();
      */
     WRITEOP (TRISA); return;	    // Port A: mask of inputs
     WRITEOPX(PORTA, LATA);          // Port A: write outputs
-    WRITEOP (LATA);		    // Port A: write outputs
-#ifdef UBW32
-	/* Control SD card 0 */
-	if (VALUE(LATA) & MASKA_CS0)
-	    sdcard_select (0, 0);
-	else
-	    sdcard_select (0, 1);
-
-	/* Control SD card 1 */
-	if (VALUE(LATA) & MASKA_CS1)
-	    sdcard_select (1, 0);
-	else
-	    sdcard_select (1, 1);
-#endif
+    WRITEOP (LATA);                 // Port A: write outputs
+        gpio_write (0, VALUE(LATA));
 	return;
     WRITEOP (ODCA); return;	    // Port A: open drain configuration
     WRITEOP (TRISB); return;	    // Port B: mask of inputs
     WRITEOPX(PORTB, LATB);          // Port B: write outputs
     WRITEOP (LATB);		    // Port B: write outputs
-#ifdef EXPLORER16
-	/* Control SD card 0 */
-	if (d->lat_b & MASKB_CS0)
-	    sdcard_select (0, 0);
-	else
-	    sdcard_select (0, 1);
-
-	/* Control SD card 1 */
-	if (d->lat_b & MASKB_CS1)
-	    sdcard_select (1, 0);
-	else
-	    sdcard_select (1, 1);
-#endif
+        gpio_write (1, VALUE(LATB));
 	return;
     WRITEOP (ODCB); return;	    // Port B: open drain configuration
     WRITEOP (TRISC); return;	    // Port C: mask of inputs
     WRITEOPX(PORTC, LATC);          // Port C: write outputs
-    WRITEOP (LATC);		    // Port C: write outputs
-#ifdef UBW32
-	if (d->lat_c & MASKC_LDADDR)  /* Swap disk: LDADDR */
-	    swap_ldaddr (0);
-	else
-	    swap_ldaddr (1);
-#endif
+    WRITEOP (LATC);                 // Port C: write outputs
+        gpio_write (2, VALUE(LATC));
 	return;
     WRITEOP (ODCC); return;	    // Port C: open drain configuration
     WRITEOP (TRISD); return;	    // Port D: mask of inputs
     WRITEOPX(PORTD, LATD);          // Port D: write outputs
     WRITEOP (LATD);		    // Port D: write outputs
-#ifdef MAX32
-	/* Control SD card 0 */
-	if (d->lat_d & MASKD_CS0)
-	    sdcard_select (0, 0);
-	else
-	    sdcard_select (0, 1);
-
-	/* Control SD card 1 */
-	if (d->lat_d & MASKD_CS1)
-	    sdcard_select (1, 0);
-	else
-	    sdcard_select (1, 1);
-#endif
+        gpio_write (3, VALUE(LATD));
 	return;
     WRITEOP (ODCD); return;	    // Port D: open drain configuration
     WRITEOP (TRISE); return;	    // Port E: mask of inputs
     WRITEOPX(PORTE, LATE);          // Port E: write outputs
     WRITEOP (LATE);		    // Port E: write outputs
-#ifdef MAXIMITE
-	/* Control SD card 0 */
-	if (d->lat_e & MASKE_CS0)
-	    sdcard_select (0, 0);
-	else
-	    sdcard_select (0, 1);
-#if 0
-	/* Control SD card 1 */
-	if (d->lat_e & MASKE_CS1)
-	    sdcard_select (1, 0);
-	else
-	    sdcard_select (1, 1);
-#endif
-#endif
-#ifdef UBW32
-	if (d->lat_e & MASKE_RD)        /* Swap disk: RD */
-	    swap_rd (0);
-	else
-	    swap_rd (1);
-
-	if (d->lat_e & MASKE_WR)        /* Swap disk: WR */
-	    swap_wr (0);
-	else
-	    swap_wr (1);
-
-	/* Swap disk: DATA */
-	swap_io (d->lat_e >> SHIFTE_DATA,
-	    d->tris_e >> SHIFTE_DATA);
-#endif
+        gpio_write (4, VALUE(LATE));
 	return;
     WRITEOP (ODCE); return;	    // Port E: open drain configuration
     WRITEOP (TRISF); return;	    // Port F: mask of inputs
     WRITEOPX(PORTF, LATF);          // Port F: write outputs
     WRITEOP (LATF);		    // Port F: write outputs
+        gpio_write (5, VALUE(LATF));
 	return;
     WRITEOP (ODCF); return;	    // Port F: open drain configuration
     WRITEOP (TRISG); return;	    // Port G: mask of inputs
     WRITEOPX(PORTG, LATG);          // Port G: write outputs
     WRITEOP (LATG);		    // Port G: write outputs
+        gpio_write (6, VALUE(LATG));
 	return;
     WRITEOP (ODCG); return;	    // Port G: open drain configuration
     WRITEOP (CNCON); return;	    // Interrupt-on-change control
@@ -1338,13 +1277,11 @@ void io_reset()
     VALUE(SPI4BRG)  = 0;
 }
 
-void io_init (void *datap, void *data2p, void *bootp, int sd_port)
+void io_init (void *datap, void *data2p, void *bootp)
 {
     iomem = datap;
     iomem2 = data2p;
     bootmem = bootp;
-
-    sdcard_port = sd_port;
 
     // Preset DEVCFG data, from Max32 bootloader.
     BOOTMEM(DEVCFG3) = 0xffff0722;

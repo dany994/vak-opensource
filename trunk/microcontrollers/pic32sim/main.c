@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <getopt.h>
+#include <signal.h>
 
 #include "icm/icmCpuManager.h"
 #include "globals.h"
@@ -49,14 +50,12 @@ static void usage()
 {
     icmPrintf("PIC32 simulator\n");
     icmPrintf("Usage:\n");
-    icmPrintf("        %s [-vtm] application.elf [cpu-type]\n", progname);
+    icmPrintf("        %s [-vtm] application.hex [sd0.img [sd1.img]]\n", progname);
     icmPrintf("Options:\n");
     icmPrintf("        -v      verbose mode\n");
     icmPrintf("        -i      trace CPU instructions and registers\n");
     icmPrintf("        -r      trace special function registers\n");
     icmPrintf("        -m      enable magic opcodes\n");
-    icmPrintf("CPU types:\n");
-    icmPrintf("        M4K, M14K, M14KcFMM, M14KcTLB, microAptivC, microAptivP, microAptivCF\n");
     exit(-1);
 }
 
@@ -154,10 +153,16 @@ void quit()
     icmTerminate();
 }
 
+void killed(int sig)
+{
+    icmPrintf("\n***** Killed *****\n");
+    exit(1);
+}
+
 //
 // Main simulation routine
 //
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
     // Extract a base name of a program.
     progname = strrchr (*argv, '/');
@@ -199,19 +204,23 @@ int main(int argc, char ** argv)
     argc -= optind;
     argv += optind;
 
-    const char *app_file;
-    if (argc != 1) {
+    if (argc < 1 || argc > 3) {
         if (argc > 0)
             icmPrintf("%s: Wrong number of args (%d)\n", progname, argc);
         usage ();
     }
-    app_file = argv[0];
+    const char *app_file = argv[0];
+    const char *sd0_file = argc >= 2 ? argv[1] : 0;
+    const char *sd1_file = argc >= 3 ? argv[2] : 0;
 
     //
     // Initialize CpuManager
     //
     icmInit(sim_attrs, NULL, 0);
     atexit(quit);
+
+    // Use ^\ to kill the simulation.
+    signal(SIGQUIT, killed);
 
     //
     // Setup the configuration attributes for the MIPS model
@@ -227,7 +236,7 @@ int main(int argc, char ** argv)
     icmAddUns64Attr(user_attrs, "configSB",     1);     // Simple bus transfers only
 #endif
 #ifdef PIC32MZ
-    cpu_type = "M14KEc";
+    cpu_type = "microAptivP";
     icmAddUns64Attr(user_attrs, "pridRevision", 0x28);  // Product revision
     icmAddUns64Attr(user_attrs, "srsctlHSS",    7);     // Number of shadow register sets
     icmAddStringAttr(user_attrs,"cacheenable", "full"); // Enable cache
@@ -329,11 +338,31 @@ int main(int argc, char ** argv)
         icmPrintf("\n***** Configuration of memory bus *****\n");
         icmPrintBusConnections(bus);
     }
+    io_init (iomem, iomem2, bootmem);
 
-    // SD card at port SPI4
-    io_init (iomem, iomem2, bootmem, 4);
+    //
+    // Initialize SD card.
+    //
+    int cs0_port, cs0_pin, cs1_port, cs1_pin;
+#if defined EXPLORER16
+    sdcard_spi_port = 1;                        // SD card at SPI1,
+    cs0_port = 1; cs0_pin = 1;                  // select0 at B1,
+    cs1_port = 1; cs1_pin = 2;                  // select1 at B2
+#elif defined MAX32
+    sdcard_spi_port = 3;                        // SD card at SPI4,
+    cs0_port = 3; cs0_pin = 3;                  // select0 at D3,
+    cs1_port = 3; cs1_pin = 4;                  // select1 at D4
+#elif defined MAXIMITE
+    sdcard_spi_port = 3;                        // SD card at SPI4,
+    cs0_port = 4; cs0_pin = 0;                  // select0 at E0,
+    cs1_port = -1; cs1_pin = -1;                // select1 not available
+#endif
+    sdcard_init (0, "sd0", sd0_file, cs0_port, cs0_pin);
+    sdcard_init (1, "sd1", sd1_file, cs1_port, cs1_pin);
 
+    //
     // Create virtual console on UART2
+    //
     vtty_create (1, "uart2", VTTY_TYPE_TERM, 0);
     vtty_init();
 
