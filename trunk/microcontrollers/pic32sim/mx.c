@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include "globals.h"
+#include "vtty.h"
 
 #define PIC32MX7
 #include "pic32mx.h"
@@ -103,28 +104,6 @@ static unsigned spi_stat[NUM_SPI] =     // SPIxSTAT address
     { SPI1STAT, SPI2STAT, SPI3STAT, SPI4STAT };
 
 static unsigned sdcard_port;    // SPI port number of SD card
-
-int vtty_get_char (int devnum)
-{
-    //TODO
-    return 0;
-}
-
-int vtty_is_char_avail (int devnum)
-{
-    //TODO
-    return 0;
-}
-
-void vtty_put_char (int devnum, char ch)
-{
-    if (ch == '\r')             // Skip ^M
-        return;
-
-    // TODO
-    if (write (1, &ch, 1) < 0)
-        /*ignore*/;
-}
 
 void update_irq_flag()
 {
