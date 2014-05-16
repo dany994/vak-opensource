@@ -29,6 +29,7 @@
 
 #include "icm/icmCpuManager.h"
 #include "globals.h"
+#include "vtty.h"
 
 char *progname;                         // base name of current program
 
@@ -321,6 +322,10 @@ int main(int argc, char ** argv)
 
     // SD card at port SPI4
     io_init (iomem, iomem2, bootmem, 4);
+
+    // Create virtual console on UART2
+    vtty_create (1, "uart2", VTTY_TYPE_TERM, 0);
+    vtty_init();
 
     //
     // Load Program

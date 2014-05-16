@@ -15,18 +15,21 @@ OPT             = -O2 -g
 
 OBJ_MX7		= obj/loadhex.o \
                   obj/mx.o \
-                  obj/main-mx7.o
+                  obj/main-mx7.o \
+                  obj/vtty.o
 
 OBJ_MZ		= obj/loadhex.o \
                   obj/mz.o \
-                  obj/main-mz.o
+                  obj/main-mz.o \
+                  obj/vtty.o
 
 CFLAGS          = -m32 -g -Wall -Werror $(OPT) \
                   -I$(IMPERAS_HOME)/ImpPublic/include/common \
                   -I$(IMPERAS_HOME)/ImpPublic/include/host \
                   -I$(IMPERAS_HOME)/ImpProprietary/include/host
 
-LDFLAGS         = -L$(IMPERAS_HOME)/bin/$(IMPERAS_ARCH) -lRuntimeLoader
+LDFLAGS         = -L$(IMPERAS_HOME)/bin/$(IMPERAS_ARCH) -lRuntimeLoader \
+                  -lpthread
 
 all:		$(EXECUTABLE)
 
