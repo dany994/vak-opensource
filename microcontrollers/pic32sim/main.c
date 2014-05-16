@@ -41,6 +41,9 @@ static char iomem2 [0x10000];           // backing storage for second I/O area
 int trace_instructions;                 // print cpu instructions and registers
 int trace_registers;                    // trace special function registers
 
+icmNetP eic_ripl;                       // EIC request priority level
+icmNetP eic_vector;                     // EIC vector number
+
 static void usage()
 {
     icmPrintf("PIC32 simulator\n");
@@ -292,6 +295,12 @@ int main(int argc, char ** argv)
     icmBusP bus = icmNewBus("bus", 32);
     icmConnectProcessorBusses(processor, bus, bus);
 
+    // Interrupt controller.
+    eic_ripl = icmNewNet ("EIC_RIPL");
+    icmConnectProcessorNet (processor, eic_ripl, "EIC_RIPL", ICM_INPUT);
+    eic_vector = icmNewNet ("EIC_VectorNum");
+    icmConnectProcessorNet (processor, eic_vector, "EIC_VectorNum", ICM_INPUT);
+
     // Data memory.
     icmMemoryP datamem = icmNewMemory("SRAM", ICM_PRIV_RWX, DATA_MEM_SIZE - 1);
     icmConnectMemoryToBus(bus, "slave1", datamem, DATA_MEM_START);
@@ -356,4 +365,16 @@ int main(int argc, char ** argv)
     // quit() implicitly called on return
     //
     return 0;
+}
+
+//
+// EIC Interrupt
+//
+void eic_level_vector (int ripl, int vector)
+{
+    if (trace_registers)
+        printf ("--- EIC interrupt RIPL = %#x, vector = %#x\n", ripl, vector);
+
+    icmWriteNet (eic_vector, vector);
+    icmWriteNet (eic_ripl, ripl);
 }

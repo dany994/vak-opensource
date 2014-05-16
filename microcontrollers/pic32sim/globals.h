@@ -49,3 +49,5 @@ int load_file(void *progmem, void *bootmem, const char *filename);
 void io_init (void *datap, void *data2p, void *bootp, int sd_port);
 unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep);
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep);
+
+void eic_level_vector (int ripl, int vector);
