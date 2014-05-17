@@ -317,7 +317,7 @@ static void uart_put_char (int port, unsigned data)
         ! uart_oactive[port])
     {
         uart_oactive[port] = 1;
-        set_irq (uart_irq[port] + UART_IRQ_TX);
+        //set_irq (uart_irq[port] + UART_IRQ_TX);
     }
 }
 
@@ -1283,4 +1283,31 @@ void io_init (void *datap, void *data2p, void *bootp)
 
     io_reset();
     sdcard_reset();
+}
+
+void io_poll()
+{
+    int port;
+
+    for (port=0; port<NUM_UART; port++) {
+	if (! (VALUE(uart_mode[port]) & PIC32_UMODE_ON)) {
+    	    uart_oactive[port] = 0;
+	    continue;
+	}
+
+	/* UART enabled. */
+	if ((VALUE(uart_sta[port]) & PIC32_USTA_URXEN) && vtty_is_char_avail (port)) {
+	    /* Receive data available. */
+	    VALUE(uart_sta[port]) |= PIC32_USTA_URXDA;
+
+	    /* Activate receive interrupt. */
+	    set_irq (uart_irq[port] + UART_IRQ_RX);
+	    continue;
+	}
+	if ((VALUE(uart_sta[port]) & PIC32_USTA_UTXEN) && uart_oactive[port]) {
+	    /* Activate transmit interrupt. */
+	    set_irq (uart_irq[port] + UART_IRQ_TX);
+	}
+    	uart_oactive[port] = 0;
+    }
 }
