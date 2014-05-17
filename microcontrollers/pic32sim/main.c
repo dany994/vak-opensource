@@ -274,7 +274,6 @@ int main(int argc, char **argv)
     icmAddStringAttr(user_attrs, "vectoredinterrupt", "enable");
     icmAddStringAttr(user_attrs, "externalinterrupt", "enable");
     icmAddUns64Attr(user_attrs, "EIC_OPTION", 2);
-    //icmAddUns64Attr(user_attrs, "config7WII", 1);
 
     // Interrupt pin for Timer interrupt
     icmAddUns64Attr(user_attrs, "intctlIPTI", 0);
@@ -411,6 +410,10 @@ int main(int argc, char **argv)
     do {
         // simulate fixed number of instructions
         stop_reason = icmSimulate(processor, 100);
+	if (stop_reason == ICM_SR_HALT) {
+	    /* Suspended on WAIT instructon. */
+	    stop_reason = ICM_SR_SCHED;
+	}
 
 	// poll uarts
 	io_poll();
