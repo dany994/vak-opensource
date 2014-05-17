@@ -30,7 +30,6 @@
 
 #include "icm/icmCpuManager.h"
 #include "globals.h"
-#include "vtty.h"
 
 char *progname;                         // base name of current program
 
@@ -40,7 +39,7 @@ static char iomem [0x10000];            // backing storage for I/O area
 static char iomem2 [0x10000];           // backing storage for second I/O area
 
 int trace_instructions;                 // print cpu instructions and registers
-int trace_registers;                    // trace special function registers
+int trace_peripherals;                  // trace special function registers
 
 icmProcessorP processor;                // top level processor object
 icmNetP eic_ripl;                       // EIC request priority level
@@ -95,7 +94,7 @@ static void mem_read (icmProcessorP proc, Addr address, Uns32 bytes,
             // Unaligned read.
             data >>= offset * 8;
         }
-        if (trace_registers) {
+        if (trace_peripherals) {
             icmPrintf("--- I/O Read  %02x from %s\n", data, name);
         }
         *(Uns8*) value = data;
@@ -106,14 +105,14 @@ static void mem_read (icmProcessorP proc, Addr address, Uns32 bytes,
             // Unaligned read.
             data >>= 16;
         }
-        if (trace_registers) {
+        if (trace_peripherals) {
             icmPrintf("--- I/O Read  %04x from %s\n", data, name);
         }
         *(Uns16*) value = data;
         break;
     case 4:
         data = io_read32 (address, (Uns32*) (user_data + offset), &name);
-        if (trace_registers) {
+        if (trace_peripherals) {
             icmPrintf("--- I/O Read  %08x from %s\n", data, name);
         }
         *(Uns32*) value = data;
@@ -142,7 +141,7 @@ static void mem_write (icmProcessorP proc, Addr address, Uns32 bytes,
     data = *(Uns32*) value;
     io_write32 (address, (Uns32*) (user_data + (address & 0xfffc)),
         data, &name);
-    if (trace_registers && name != 0) {
+    if (trace_peripherals && name != 0) {
         icmPrintf("--- I/O Write %08x to %s \n", data, name);
     }
 }
@@ -191,7 +190,7 @@ int main(int argc, char **argv)
             trace_instructions++;
             continue;
         case 'r':
-            trace_registers++;
+            trace_peripherals++;
             continue;
         case 'm':
             magic_opcodes++;
@@ -284,7 +283,7 @@ int main(int argc, char **argv)
 
     icmPrintf("Processor Variant: %s\n", cpu_type);
     icmPrintf("Trace instructions: %s\n", trace_instructions ? "On" : "Off");
-    icmPrintf("Trace SFRs: %s\n", trace_registers ? "On" : "Off");
+    icmPrintf("Trace SFRs: %s\n", trace_peripherals ? "On" : "Off");
 
     //
     // create a processor
@@ -338,14 +337,13 @@ int main(int argc, char **argv)
         icmPrintf("\n***** Configuration of memory bus *****\n");
         icmPrintBusConnections(bus);
     }
-    io_init (iomem, iomem2, bootmem);
 
     //
     // Initialize SD card.
     //
     int cs0_port, cs0_pin, cs1_port, cs1_pin;
 #if defined EXPLORER16
-    sdcard_spi_port = 1;                        // SD card at SPI1,
+    sdcard_spi_port = 0;                        // SD card at SPI1,
     cs0_port = 1; cs0_pin = 1;                  // select0 at B1,
     cs1_port = 1; cs1_pin = 2;                  // select1 at B2
 #elif defined MAX32
@@ -363,8 +361,13 @@ int main(int argc, char **argv)
     //
     // Create virtual console on UART2
     //
-    vtty_create (1, "uart2", VTTY_TYPE_TERM, 0);
+    vtty_create (1, "uart2", 0);
     vtty_init();
+
+    //
+    // Generic reset of all peripherals.
+    //
+    io_init (iomem, iomem2, bootmem);
 
     //
     // Load Program
@@ -402,7 +405,7 @@ int main(int argc, char **argv)
 //
 void eic_level_vector (int ripl, int vector)
 {
-    if (trace_registers)
+    if (trace_peripherals)
         printf ("--- EIC interrupt RIPL = %#x, vector = %#x\n", ripl, vector);
 
     icmWriteNet (eic_vector, vector);
