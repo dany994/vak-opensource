@@ -152,7 +152,7 @@ static void mem_write (icmProcessorP proc, Addr address, Uns32 bytes,
 //
 void timer_irq (void *arg, Uns32 value)
 {
-    icmPrintf("--- timer interrupt: %u\n", value);
+    //icmPrintf("--- timer interrupt: %u\n", value);
     if (value)
         set_irq (0);
     else
@@ -273,6 +273,7 @@ int main(int argc, char **argv)
     // Enable external interrupt controller (EIC) and vectored interrupts mode
     icmAddStringAttr(user_attrs, "vectoredinterrupt", "enable");
     icmAddStringAttr(user_attrs, "externalinterrupt", "enable");
+    icmAddUns64Attr(user_attrs, "EIC_OPTION", 2);
 
     // Interrupt pin for Timer interrupt
     icmAddUns64Attr(user_attrs, "intctlIPTI", 0);
@@ -423,7 +424,7 @@ int main(int argc, char **argv)
 //
 void eic_level_vector (int ripl, int vector)
 {
-    if (trace_peripherals)
+    if (trace_peripherals || trace_instructions)
         printf ("--- EIC interrupt RIPL = %#x, vector = %#x\n", ripl, vector);
 
     icmWriteNet (eic_vector, vector);
