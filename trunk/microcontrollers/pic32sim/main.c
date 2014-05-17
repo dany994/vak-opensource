@@ -274,6 +274,7 @@ int main(int argc, char **argv)
     icmAddStringAttr(user_attrs, "vectoredinterrupt", "enable");
     icmAddStringAttr(user_attrs, "externalinterrupt", "enable");
     icmAddUns64Attr(user_attrs, "EIC_OPTION", 2);
+    //icmAddUns64Attr(user_attrs, "config7WII", 1);
 
     // Interrupt pin for Timer interrupt
     icmAddUns64Attr(user_attrs, "intctlIPTI", 0);
@@ -401,15 +402,18 @@ int main(int argc, char **argv)
     //
     icmSetPC(processor, 0xbfc00000);
     icmPrintf("\n***** Start '%s' *****\n", cpu_type);
-#if 1
+#if 0
     // Simulate the platform until done
     icmSimulatePlatform();
 #else
     // Run the processor one instruction at a time until finished
     icmStopReason stop_reason;
     do {
-        // simulate one instruction
-        stop_reason = icmSimulate(processor, 1);
+        // simulate fixed number of instructions
+        stop_reason = icmSimulate(processor, 100);
+
+	// poll uarts
+	io_poll();
     } while (stop_reason == ICM_SR_SCHED);
 #endif
 
@@ -425,9 +429,9 @@ int main(int argc, char **argv)
 void eic_level_vector (int ripl, int vector)
 {
     if (trace_peripherals || trace_instructions)
-        printf ("--- EIC interrupt RIPL = %#x, vector = %#x\n", ripl, vector);
+        printf ("--- RIPL = %u\n", ripl);
 
-    icmWriteNet (eic_vector, vector);
+    icmWriteNet (eic_vector, 0);
     icmWriteNet (eic_ripl, ripl);
 }
 
