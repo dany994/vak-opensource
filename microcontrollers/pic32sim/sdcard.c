@@ -1,11 +1,25 @@
 /*
  * SD/MMC card emulation.
  *
- * Copyright (C) 2011 Serge Vakulenko <serge@vak.ru>
+ * Copyright (C) 2011-2014 Serge Vakulenko <serge@vak.ru>
  *
- * This file is part of the virtualmips distribution.
- * See LICENSE file for terms of the license.
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
  *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
  */
 #define _GNU_SOURCE
 #include <stdlib.h>
@@ -19,7 +33,7 @@
 
 #include "globals.h"
 
-#define TRACE       printf
+//#define TRACE       printf
 #ifndef TRACE
 #define TRACE(...)  /*empty*/
 #endif
@@ -122,6 +136,10 @@ void sdcard_init (int unit, const char *name, const char *filename, int cs_port,
 
     memset (d, 0, sizeof (*d));
     d->name = name;
+    if (! filename) {
+        /* No SD card installed. */
+        return;
+    }
     if (unit == 0) {
         sdcard_gpio_port0 = cs_port;
         sdcard_gpio_cs0 = (cs_pin >= 0) ? (1 << cs_pin) : 0;
@@ -130,10 +148,6 @@ void sdcard_init (int unit, const char *name, const char *filename, int cs_port,
         sdcard_gpio_cs1 = (cs_pin >= 0) ? (1 << cs_pin) : 0;
     }
 
-    if (! filename) {
-        /* No SD card installed. */
-        return;
-    }
     d->fd = open (filename, O_RDWR);
     if (d->fd < 0) {
         /* Fatal: no image available. */
@@ -169,7 +183,7 @@ unsigned sdcard_io (unsigned data)
     unsigned reply;
 
     if (! d || ! d->fd) {
-        TRACE ("sdcard: unselected i/o\n");
+        //TRACE ("sdcard: unselected i/o\n");
         return 0xFF;
     }
     data = (unsigned char) data;
@@ -375,6 +389,8 @@ unsigned sdcard_io (unsigned data)
             break;
         }
     }
-    TRACE ("sdcard%d: send %02x, reply %02x\n", d->unit, data, reply);
+    if (trace_peripherals) {
+        TRACE ("sdcard%d: send %02x, reply %02x\n", d->unit, data, reply);
+    }
     return reply;
 }

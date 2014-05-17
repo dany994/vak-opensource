@@ -26,7 +26,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include "globals.h"
-#include "vtty.h"
 
 #define PIC32MX7
 #include "pic32mx.h"
@@ -37,7 +36,7 @@
                       case name+4: *namep = #name"CLR"; goto op_##name;\
                       case name+8: *namep = #name"SET"; goto op_##name;\
                       case name+12: *namep = #name"INV"; op_##name: \
-                      *bufp = write_op (*bufp, data, address)
+                      VALUE(name) = write_op (VALUE(name), data, address)
 #define WRITEOPX(name,label) \
 		      case name: *namep = #name; goto op_##label;\
                       case name+4: *namep = #name"CLR"; goto op_##label;\
@@ -48,8 +47,8 @@
                       case name+4: *namep = #name"CLR"; goto op_##name;\
                       case name+8: *namep = #name"SET"; goto op_##name;\
                       case name+12: *namep = #name"INV"; op_##name: \
-                      *bufp &= romask; \
-                      *bufp |= write_op (*bufp, data, address) & ~(romask)
+                      VALUE(name) &= romask; \
+                      VALUE(name) |= write_op (VALUE(name), data, address) & ~(romask)
 
 #define VALUE(name) (name & 0x80000 ? iomem2 : iomem) [(name & 0xffff) >> 2]
 
@@ -395,18 +394,12 @@ static void spi_writebuf (int port, unsigned val)
 static void gpio_write (int gpio_port, unsigned lat_value)
 {
     /* Control SD card 0 */
-    if (gpio_port == sdcard_gpio_port0) {
-        int select = (lat_value & sdcard_gpio_cs0) != 0;
-
-        if (sdcard_gpio_cs0)
-            sdcard_select (0, select);
+    if (gpio_port == sdcard_gpio_port0 && sdcard_gpio_cs0) {
+        sdcard_select (0, ! (lat_value & sdcard_gpio_cs0));
     }
     /* Control SD card 1 */
-    if (gpio_port == sdcard_gpio_port1) {
-        int select = (lat_value & sdcard_gpio_cs1) != 0;
-
-        if (sdcard_gpio_cs1)
-            sdcard_select (1, select);
+    if (gpio_port == sdcard_gpio_port1 && sdcard_gpio_cs1) {
+        sdcard_select (1, ! (lat_value & sdcard_gpio_cs1));
     }
 }
 
@@ -1290,4 +1283,5 @@ void io_init (void *datap, void *data2p, void *bootp)
     BOOTMEM(DEVCFG0) = 0xffffff7f;
 
     io_reset();
+    sdcard_reset();
 }

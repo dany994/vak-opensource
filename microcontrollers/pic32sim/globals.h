@@ -42,7 +42,7 @@
 
 
 extern char *progname;          // base name of current program
-extern int trace;               // global trace flag
+extern int trace_peripherals;   // trace special function registers
 
 int load_file(void *progmem, void *bootmem, const char *filename);
 
@@ -63,3 +63,11 @@ void sdcard_init (int unit, const char *name, const char *filename, int cs_port,
 void sdcard_reset (void);
 void sdcard_select (int unit, int on);
 unsigned sdcard_io (unsigned data);
+
+void vtty_create (unsigned port, char *name, int tcp_port);
+void vtty_delete (unsigned port);
+int vtty_get_char (unsigned port);
+void vtty_put_char (unsigned port, char ch);
+int vtty_is_char_avail (unsigned port);
+int vtty_is_full (unsigned port);
+void vtty_init (void);

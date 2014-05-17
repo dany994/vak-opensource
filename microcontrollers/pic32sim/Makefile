@@ -44,25 +44,25 @@ pic32mz:        $(OBJ_MZ)
 
 obj/main-mx7.o: main.c
 		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS) $(OPT_MX7)
+		$(CC) -c -o $@ $< $(CFLAGS) $(OPT_MX7)
 
 obj/main-mz.o:  main.c
 		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS) $(OPT_MZ)
+		$(CC) -c -o $@ $< $(CFLAGS) $(OPT_MZ)
 
 obj/%.o:        %.c
 		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS)
+		$(CC) -c -o $@ $< $(CFLAGS)
 
 obj/%.o:        %.c??
 		@mkdir -p $(@D)
-		$(CC) -c -o $@ $^ $(CFLAGS)
+		$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:
 		rm -rf *.exe *.log *.so *.o obj $(EXECUTABLE) *~
 ###
 loadhex.o: loadhex.c globals.h
-main.o: mx.c globals.h vtty.h
-mx.o: mx.c globals.h vtty.h pic32mx.h
+main.o: main.c globals.h
+mx.o: mx.c globals.h pic32mx.h
 sdcard.o: sdcard.c globals.h
-vtty.o: vtty.c globals.h vtty.h
+vtty.o: vtty.c globals.h

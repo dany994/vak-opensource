@@ -8,8 +8,23 @@
  * TCP console added by Mtve.
  * Serial console by Peter Ross (suxen_drol@hotmail.com)
  *
- * This file is part of the pic32sim distribution.
- * See LICENSE file for terms of the license.
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,11 +32,14 @@
 #include <unistd.h>
 #include <errno.h>
 #include <termios.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 #include <arpa/telnet.h>
 
 #include "globals.h"
-#include "vtty.h"
+
+/* Number of ports instantiated */
+#define VTTY_NPORTS 6
 
 /*
  * 4 Kb should be enough for a keyboard buffer
@@ -59,7 +77,7 @@ enum {
 typedef struct virtual_tty vtty_t;
 struct virtual_tty {
     char *name;
-    int type, state;
+    int state;
     int tcp_port;
     int terminal_support;
     int input_state;
@@ -243,7 +261,7 @@ static int vtty_tcp_conn_accept (vtty_t * vtty)
 /*
  * Create a virtual tty
  */
-void vtty_create (unsigned port, char *name, int type, int tcp_port)
+void vtty_create (unsigned port, char *name, int tcp_port)
 {
     vtty_t *vtty = porttab + port;
 
@@ -255,30 +273,21 @@ void vtty_create (unsigned port, char *name, int type, int tcp_port)
 
     memset (vtty, 0, sizeof (*vtty));
     vtty->name = name;
-    vtty->type = type;
     vtty->fd = -1;
     vtty->fstream = NULL;
     vtty->accept_fd = -1;
     pthread_mutex_init (&vtty->lock, NULL);
     vtty->input_state = VTTY_INPUT_TEXT;
 
-    switch (vtty->type) {
-    case VTTY_TYPE_TERM:
+    if (tcp_port == 0) {
         vtty_term_init ();
         vtty->fd = STDIN_FILENO;
         vtty->select_fd = &vtty->fd;
         vtty->fstream = stdout;
-        break;
-
-    case VTTY_TYPE_TCP:
+    } else {
         vtty->terminal_support = 1;
         vtty->tcp_port = tcp_port;
         vtty_tcp_conn_wait (vtty);
-        break;
-
-    default:
-        fprintf (stderr, "tty_create: bad vtty type %d\n", vtty->type);
-        exit(1);
     }
 }
 
@@ -289,12 +298,12 @@ void vtty_delete (unsigned port)
 {
     vtty_t *vtty = porttab + port;
 
-    if (port < VTTY_NPORTS && vtty->type != VTTY_TYPE_NONE) {
+    if (port < VTTY_NPORTS && (vtty->fstream || vtty->tcp_port)) {
 
         if (vtty->fstream && vtty->fstream != stdout) {
             fclose (vtty->fstream);
-            vtty->fstream = 0;
         }
+        vtty->fstream = 0;
 
         /* We don't close FD 0 since it is stdin */
         if (vtty->fd > 0) {
@@ -309,7 +318,7 @@ void vtty_delete (unsigned port)
             close (vtty->accept_fd);
             vtty->accept_fd = -1;
         }
-        vtty->type = VTTY_TYPE_NONE;
+        vtty->tcp_port = 0;
     }
 }
 
@@ -389,15 +398,9 @@ static int vtty_tcp_read (vtty_t * vtty)
  */
 static int vtty_read (vtty_t * vtty)
 {
-    switch (vtty->type) {
-    case VTTY_TYPE_TERM:
-        return (vtty_term_read (vtty));
-    case VTTY_TYPE_TCP:
+    if (vtty->tcp_port)
         return (vtty_tcp_read (vtty));
-    default:
-        fprintf (stderr, "vtty_read: bad vtty type %d\n", vtty->type);
-        return (-1);
-    }
+    return (vtty_term_read (vtty));
 }
 
 /*
@@ -611,24 +614,15 @@ void vtty_put_char (unsigned port, char ch)
 
     if (port >= VTTY_NPORTS)
         return;
-    switch (vtty->type) {
-    case VTTY_TYPE_TERM:
-        fwrite (&ch, 1, 1, vtty->fstream);
-        break;
-
-    case VTTY_TYPE_TCP:
+    if (vtty->tcp_port) {
         if (vtty->state == VTTY_STATE_TCP_RUNNING &&
             fwrite (&ch, 1, 1, vtty->fstream) != 1)
         {
             fprintf (stderr, "%s: put char %#x failed (%s)\n",
                 vtty->name, (unsigned char) ch, strerror (errno));
         }
-        break;
-
-    default:
-        fprintf (stderr, "vtty_put_char(port = %u, ch = %#x): port not initialized\n",
-            port, (unsigned char) ch);
-        break;
+    } else {
+        fwrite (&ch, 1, 1, vtty->fstream);
     }
 }
 
