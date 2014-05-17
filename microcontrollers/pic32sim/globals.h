@@ -21,21 +21,22 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
-#define PROGRAM_MEM_START   0x1d000000
-#define PROGRAM_MEM_SIZE    (512*1024)          // 512 kbytes
-#define BOOT_MEM_START      0x1fc00000
-#define BOOT_MEM_SIZE       (12*1024)           // 12 kbytes
+#define PROGRAM_FLASH_START 0x1d000000
+#define PROGRAM_FLASH_SIZE  (512*1024)          // 512 kbytes
+#define BOOT_FLASH_START    0x1fc00000
+#define BOOT_FLASH_SIZE     (12*1024)           // 12 kbytes
 #define DATA_MEM_START      0x00000000
+#define USER_MEM_START      0xbf000000
 #define DATA_MEM_SIZE       (128*1024)          // 128 kbytes
 #define IO_MEM_START        0x1f800000
 #define IO_MEM_SIZE         (64*1024)           // 64 kbytes
 #define IO2_MEM_START       0x1f880000
 #define IO2_MEM_SIZE        (64*1024)           // 64 kbytes
 
-#define IN_PROGRAM_MEM(addr) (addr >= PROGRAM_MEM_START && \
-                             addr < PROGRAM_MEM_START+PROGRAM_MEM_SIZE)
-#define IN_BOOT_MEM(addr)   (addr >= BOOT_MEM_START && \
-                             addr < BOOT_MEM_START+BOOT_MEM_SIZE)
+#define IN_PROGRAM_MEM(addr) (addr >= PROGRAM_FLASH_START && \
+                             addr < PROGRAM_FLASH_START+PROGRAM_FLASH_SIZE)
+#define IN_BOOT_MEM(addr)   (addr >= BOOT_FLASH_START && \
+                             addr < BOOT_FLASH_START+BOOT_FLASH_SIZE)
 
 #define PROGMEM(addr) progmem [(addr & 0xfffff) >> 2]
 #define BOOTMEM(addr) bootmem [(addr & 0xffff) >> 2]

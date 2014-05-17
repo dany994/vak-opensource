@@ -33,8 +33,9 @@
 
 char *progname;                         // base name of current program
 
-static uint32_t progmem [PROGRAM_MEM_SIZE/4];
-static uint32_t bootmem [BOOT_MEM_SIZE/4];
+static uint32_t progmem [PROGRAM_FLASH_SIZE/4];
+static uint32_t bootmem [BOOT_FLASH_SIZE/4];
+static char datamem [DATA_MEM_SIZE];    // storage for RAM area
 static char iomem [0x10000];            // backing storage for I/O area
 static char iomem2 [0x10000];           // backing storage for second I/O area
 
@@ -311,16 +312,20 @@ int main(int argc, char **argv)
     icmConnectProcessorNet (processor, eic_vector, "EIC_VectorNum", ICM_INPUT);
 
     // Data memory.
-    icmMemoryP datamem = icmNewMemory("SRAM", ICM_PRIV_RWX, DATA_MEM_SIZE - 1);
-    icmConnectMemoryToBus(bus, "slave1", datamem, DATA_MEM_START);
+    icmMapNativeMemory (bus, ICM_PRIV_RWX, DATA_MEM_START,
+        DATA_MEM_START + DATA_MEM_SIZE - 1, datamem);
+
+    // User space 96 kbytes.
+    icmMapNativeMemory (bus, ICM_PRIV_RWX, USER_MEM_START + 0x8000,
+        USER_MEM_START + DATA_MEM_SIZE - 1, datamem + 0x8000);
 
     // Program memory.
-    icmMapNativeMemory (bus, ICM_PRIV_RX, PROGRAM_MEM_START,
-        PROGRAM_MEM_START + PROGRAM_MEM_SIZE - 1, progmem);
+    icmMapNativeMemory (bus, ICM_PRIV_RX, PROGRAM_FLASH_START,
+        PROGRAM_FLASH_START + PROGRAM_FLASH_SIZE - 1, progmem);
 
     // Boot memory.
-    icmMapNativeMemory (bus, ICM_PRIV_RX, BOOT_MEM_START,
-        BOOT_MEM_START + BOOT_MEM_SIZE - 1, bootmem);
+    icmMapNativeMemory (bus, ICM_PRIV_RX, BOOT_FLASH_START,
+        BOOT_FLASH_START + BOOT_FLASH_SIZE - 1, bootmem);
 
     // I/O memory.
     icmMapExternalMemory(bus, "IO", ICM_PRIV_RW, IO_MEM_START,

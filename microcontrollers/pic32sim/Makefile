@@ -61,8 +61,8 @@ obj/%.o:        %.c??
 clean:
 		rm -rf *.exe *.log *.so *.o obj $(EXECUTABLE) *~
 ###
-loadhex.o: loadhex.c globals.h
-main.o: main.c globals.h
-mx.o: mx.c globals.h pic32mx.h
-sdcard.o: sdcard.c globals.h
-vtty.o: vtty.c globals.h
+obj/loadhex.o: loadhex.c globals.h
+obj/main.o: main.c globals.h
+obj/mx.o: mx.c globals.h pic32mx.h
+obj/sdcard.o: sdcard.c globals.h
+obj/vtty.o: vtty.c globals.h
