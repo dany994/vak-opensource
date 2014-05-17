@@ -52,6 +52,8 @@ void io_reset (void);
 unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep);
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep);
 
+void set_irq (int irq);
+void clear_irq (int irq);
 void eic_level_vector (int ripl, int vector);
 
 extern unsigned sdcard_spi_port;    // SPI port number of SD card

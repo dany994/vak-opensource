@@ -147,6 +147,18 @@ static void mem_write (icmProcessorP proc, Addr address, Uns32 bytes,
     }
 }
 
+//
+// Callback for timer interrupt.
+//
+void timer_irq (void *arg, Uns32 value)
+{
+    icmPrintf("--- timer interrupt: %u\n", value);
+    if (value)
+        set_irq (0);
+    else
+        clear_irq (0);
+}
+
 void quit()
 {
     icmPrintf("***** Stop *****\n");
@@ -280,11 +292,8 @@ int main(int argc, char **argv)
     }
 
     // Select processor model from library
-    const char *model_file = icmGetVlnvString(NULL, "mips.ovpworld.org", "processor", "mips32", "1.0", "model");
-
-    icmPrintf("Processor Variant: %s\n", cpu_type);
-    icmPrintf("Trace instructions: %s\n", trace_instructions ? "On" : "Off");
-    icmPrintf("Trace SFRs: %s\n", trace_peripherals ? "On" : "Off");
+    const char *model_file = icmGetVlnvString(NULL,
+        "mips.ovpworld.org", "processor", "mips32", "1.0", "model");
 
     //
     // create a processor
@@ -300,8 +309,7 @@ int main(int argc, char **argv)
         icm_attrs,                    // processor attributes
         user_attrs,                   // user attribute list
         0,                            // semihosting file name
-        0                             // semihosting attribute symbol
-    );
+        0);                           // semihosting attribute symbol
     icmBusP bus = icmNewBus("bus", 32);
     icmConnectProcessorBusses(processor, bus, bus);
 
@@ -310,6 +318,11 @@ int main(int argc, char **argv)
     icmConnectProcessorNet (processor, eic_ripl, "EIC_RIPL", ICM_INPUT);
     eic_vector = icmNewNet ("EIC_VectorNum");
     icmConnectProcessorNet (processor, eic_vector, "EIC_VectorNum", ICM_INPUT);
+
+    // Callback for timer interrupt,
+    icmNetP ti_output = icmNewNet ("causeTI");
+    icmConnectProcessorNet (processor, ti_output, "causeTI", ICM_OUTPUT);
+    icmAddNetCallback (ti_output, timer_irq, NULL);
 
     // Data memory.
     icmMapNativeMemory (bus, ICM_PRIV_RWX, DATA_MEM_START,
