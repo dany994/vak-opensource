@@ -233,7 +233,7 @@ void update_irq_flag()
         for (irq=0; irq<sizeof(irq_to_vector)/sizeof(int); irq++) {
             int n = irq >> 5;
 
-            if ((VALUE(IFS(n)) & VALUE(IEC(n))) >> (irq & 31) & 1) {
+            if (((VALUE(IFS(n)) & VALUE(IEC(n))) >> (irq & 31)) & 1) {
                 /* Interrupt is pending. */
                 int v = irq_to_vector [irq];
                 if (v < 0)
@@ -261,6 +261,9 @@ void update_irq_flag()
  */
 void set_irq (int irq)
 {
+    if (VALUE(IFS(irq >> 5)) & (1 << (irq & 31)))
+        return;
+//printf ("-- %s() irq = %d\n", __func__, irq);
     VALUE(IFS(irq >> 5)) |= 1 << (irq & 31);
     update_irq_flag();
 }
@@ -270,16 +273,11 @@ void set_irq (int irq)
  */
 void clear_irq (int irq)
 {
+    if (! (VALUE(IFS(irq >> 5)) & (1 << (irq & 31))))
+        return;
+//printf ("-- %s() irq = %d\n", __func__, irq);
     VALUE(IFS(irq >> 5)) &= ~(1 << (irq & 31));
     update_irq_flag();
-}
-
-static void soft_reset()
-{
-
-
-    /* reset all devices */
-    io_reset();
 }
 
 static unsigned uart_get_char (int port)
@@ -868,6 +866,7 @@ irq:    update_irq_flag();
 
             /* Reset all devices */
             io_reset();
+            sdcard_reset();
         }
 	break;
 
