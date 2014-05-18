@@ -26,6 +26,7 @@ OBJ		+= obj/loadhex.o \
                    obj/main.o \
                    obj/sdcard.o \
                    obj/spi.o \
+                   obj/uart.o \
                    obj/vtty.o
 
 CFLAGS          = -m32 -g -Wall -Werror $(OPT) \

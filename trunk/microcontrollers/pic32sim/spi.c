@@ -1,12 +1,7 @@
 /*
  * SPI ports.
- * Copyright (c) 2005,2006 Christophe Fillot (cf@utc.fr)
- * Copyright (C) yajin 2008 <yajinzhou@gmail.com>
- * Copyright (C) 2014 Serge Vakulenko <serge@vak.ru>
  *
- * "Interactive" part idea by Mtve.
- * TCP console added by Mtve.
- * Serial console by Peter Ross (suxen_drol@hotmail.com)
+ * Copyright (C) 2014 Serge Vakulenko <serge@vak.ru>
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -26,7 +21,6 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
-#include <stdlib.h>
 #include "globals.h"
 #include "pic32mx.h"
 
@@ -51,35 +45,35 @@ static unsigned spi_stat[NUM_SPI] =     // SPIxSTAT address
 
 unsigned sdcard_spi_port;               // SPI port number of SD card
 
-unsigned spi_readbuf (int port)
+unsigned spi_readbuf (int unit)
 {
-    unsigned result = spi_buf[port][spi_rfifo[port]];
+    unsigned result = spi_buf[unit][spi_rfifo[unit]];
     
-    if (VALUE(spi_con[port]) & PIC32_SPICON_ENHBUF) {
-	spi_rfifo[port]++;
-	spi_rfifo[port] &= 3;
+    if (VALUE(spi_con[unit]) & PIC32_SPICON_ENHBUF) {
+	spi_rfifo[unit]++;
+	spi_rfifo[unit] &= 3;
     }
-    if (VALUE(spi_stat[port]) & PIC32_SPISTAT_SPIRBF) {
-	VALUE(spi_stat[port]) &= ~PIC32_SPISTAT_SPIRBF;
-	//clear_irq (spi_irq[port] + SPI_IRQ_RX);  
+    if (VALUE(spi_stat[unit]) & PIC32_SPISTAT_SPIRBF) {
+	VALUE(spi_stat[unit]) &= ~PIC32_SPISTAT_SPIRBF;
+	//irq_clear (spi_irq[unit] + SPI_IRQ_RX);  
     }
     return result;
 }
 
-void spi_writebuf (int port, unsigned val)
+void spi_writebuf (int unit, unsigned val)
 {
     /* Perform SD card i/o on configured SPI port. */
-    if (port == sdcard_spi_port) {
+    if (unit == sdcard_spi_port) {
         unsigned result = 0;
 
-        if (VALUE(spi_con[port]) & PIC32_SPICON_MODE32) {
+        if (VALUE(spi_con[unit]) & PIC32_SPICON_MODE32) {
             /* 32-bit data width */
             result  = (unsigned char) sdcard_io (val >> 24) << 24;
             result |= (unsigned char) sdcard_io (val >> 16) << 16;
             result |= (unsigned char) sdcard_io (val >> 8) << 8;
             result |= (unsigned char) sdcard_io (val);
 
-        } else if (VALUE(spi_con[port]) & PIC32_SPICON_MODE16) {
+        } else if (VALUE(spi_con[unit]) & PIC32_SPICON_MODE16) {
             /* 16-bit data width */
             result = (unsigned char) sdcard_io (val >> 8) << 8;
             result |= (unsigned char) sdcard_io (val);
@@ -88,37 +82,37 @@ void spi_writebuf (int port, unsigned val)
             /* 8-bit data width */
             result = (unsigned char) sdcard_io (val);
         }
-        spi_buf[port][spi_wfifo[port]] = result;
+        spi_buf[unit][spi_wfifo[unit]] = result;
     } else {
         /* No device */
-        spi_buf[port][spi_wfifo[port]] = ~0;
+        spi_buf[unit][spi_wfifo[unit]] = ~0;
     }
-    if (VALUE(spi_stat[port]) & PIC32_SPISTAT_SPIRBF) {
-        VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIROV;
-        //set_irq (spi_irq[port] + SPI_IRQ_FAULT);
-    } else if (VALUE(spi_con[port]) & PIC32_SPICON_ENHBUF) {
-        spi_wfifo[port]++;
-        spi_wfifo[port] &= 3;
-        if (spi_wfifo[port] == spi_rfifo[port]) {
-            VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIRBF;
-            //set_irq (spi_irq[port] + SPI_IRQ_RX);
+    if (VALUE(spi_stat[unit]) & PIC32_SPISTAT_SPIRBF) {
+        VALUE(spi_stat[unit]) |= PIC32_SPISTAT_SPIROV;
+        //irq_raise (spi_irq[unit] + SPI_IRQ_FAULT);
+    } else if (VALUE(spi_con[unit]) & PIC32_SPICON_ENHBUF) {
+        spi_wfifo[unit]++;
+        spi_wfifo[unit] &= 3;
+        if (spi_wfifo[unit] == spi_rfifo[unit]) {
+            VALUE(spi_stat[unit]) |= PIC32_SPISTAT_SPIRBF;
+            //irq_raise (spi_irq[unit] + SPI_IRQ_RX);
         }
     } else {
-        VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIRBF;
-        //set_irq (spi_irq[port] + SPI_IRQ_RX);
+        VALUE(spi_stat[unit]) |= PIC32_SPISTAT_SPIRBF;
+        //irq_raise (spi_irq[unit] + SPI_IRQ_RX);
     }
 }
 
-void spi_control (int port)
+void spi_control (int unit)
 {
-    if (! (VALUE(spi_con[port]) & PIC32_SPICON_ON)) {
-	clear_irq (spi_irq[port] + SPI_IRQ_FAULT);
-	clear_irq (spi_irq[port] + SPI_IRQ_RX);
-	clear_irq (spi_irq[port] + SPI_IRQ_TX);
-	VALUE(spi_stat[port]) = PIC32_SPISTAT_SPITBE;
-    } else if (! (VALUE(spi_con[port]) & PIC32_SPICON_ENHBUF)) {
-	spi_rfifo[port] = 0;
-	spi_wfifo[port] = 0;
+    if (! (VALUE(spi_con[unit]) & PIC32_SPICON_ON)) {
+	irq_clear (spi_irq[unit] + SPI_IRQ_FAULT);
+	irq_clear (spi_irq[unit] + SPI_IRQ_RX);
+	irq_clear (spi_irq[unit] + SPI_IRQ_TX);
+	VALUE(spi_stat[unit]) = PIC32_SPISTAT_SPITBE;
+    } else if (! (VALUE(spi_con[unit]) & PIC32_SPICON_ENHBUF)) {
+	spi_rfifo[unit] = 0;
+	spi_wfifo[unit] = 0;
     }
 }
 
@@ -145,4 +139,3 @@ void spi_reset()
     spi_rfifo[3]    = 0;
     VALUE(SPI4BRG)  = 0;
 }
-

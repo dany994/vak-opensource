@@ -21,8 +21,6 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
-#define _GNU_SOURCE
-#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <sys/types.h>
@@ -30,7 +28,6 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-
 #include "globals.h"
 
 //#define TRACE       printf
