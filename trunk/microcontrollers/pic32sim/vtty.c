@@ -627,54 +627,67 @@ void vtty_put_char (unsigned port, char ch)
 }
 
 /*
+ * Wait for input and return a bitmask of file descriptors.
+ */
+int vtty_wait (fd_set *rfdp)
+{
+    vtty_t *vtty;
+    struct timeval tv;
+    int fd, fd_max, res, port;
+
+    /* Build the FD set */
+    FD_ZERO (rfdp);
+    fd_max = -1;
+    for (port=0; port<VTTY_NPORTS; port++) {
+	vtty = porttab + port;
+	if (! vtty->select_fd)
+	    continue;
+
+	fd = *vtty->select_fd;
+	if (fd < 0)
+	    continue;
+
+	if (fd > fd_max)
+	    fd_max = fd;
+	FD_SET (fd, rfdp);
+    }
+    if (fd_max < 0) {
+	/* No vttys created yet. */
+	usleep (200000);
+	return 0;
+    }
+
+    /* Wait for incoming data */
+    tv.tv_sec = 0;
+    tv.tv_usec = 10000; /* 10 ms */
+    res = select (fd_max + 1, rfdp, NULL, NULL, &tv);
+
+    if (res == -1) {
+	if (errno != EINTR) {
+	    perror ("vtty_thread: select");
+	    for (port=0; port<VTTY_NPORTS; port++) {
+		vtty = porttab + port;
+		if (vtty->name)
+		    fprintf (stderr, "   %s: FD %d\n", vtty->name, vtty->fd);
+	    }
+	}
+	return 0;;
+    }
+    return 1;
+}
+
+/*
  * VTTY thread
  */
 static void *vtty_thread_main (void *arg)
 {
     vtty_t *vtty;
-    struct timeval tv;
-    int fd, fd_max, res, port;
+    int fd, port;
     fd_set rfds;
 
     for (;;) {
-        /* Build the FD set */
-        FD_ZERO (&rfds);
-        fd_max = -1;
-        for (port=0; port<VTTY_NPORTS; port++) {
-            vtty = porttab + port;
-            if (! vtty->select_fd)
-                continue;
-
-            fd = *vtty->select_fd;
-            if (fd < 0)
-                continue;
-
-            if (fd > fd_max)
-                fd_max = fd;
-            FD_SET (fd, &rfds);
-        }
-        if (fd_max < 0) {
-            /* No vttys created yet. */
-            usleep (200000);
-            continue;
-        }
-
-        /* Wait for incoming data */
-        tv.tv_sec = 0;
-        tv.tv_usec = 50 * 1000; /* 50 ms */
-        res = select (fd_max + 1, &rfds, NULL, NULL, &tv);
-
-        if (res == -1) {
-            if (errno != EINTR) {
-                perror ("vtty_thread: select");
-                for (port=0; port<VTTY_NPORTS; port++) {
-                    vtty = porttab + port;
-                    if (vtty->name)
-                        fprintf (stderr, "   %s: FD %d\n", vtty->name, vtty->fd);
-                }
-            }
-            continue;
-        }
+	if (! vtty_wait (&rfds))
+	    continue;
 
         /* Examine active FDs and call user handlers */
         for (port=0; port<VTTY_NPORTS; port++) {
