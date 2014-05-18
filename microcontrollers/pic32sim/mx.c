@@ -23,11 +23,8 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <unistd.h>
 #include "globals.h"
-
-#define PIC32MX7
 #include "pic32mx.h"
 
 #define STORAGE(name) case name: *namep = #name;
@@ -50,10 +47,6 @@
                       VALUE(name) &= romask; \
                       VALUE(name) |= write_op (VALUE(name), data, address) & ~(romask)
 
-#define VALUE(name) (name & 0x80000 ? iomem2 : iomem) [(name & 0xffff) >> 2]
-
-static uint32_t *iomem;         // image of I/O area
-static uint32_t *iomem2;        // image of second I/O area
 static uint32_t *bootmem;       // image of boot memory
 
 static unsigned syskey_unlock;	// syskey state
@@ -79,30 +72,6 @@ static unsigned uart_sta[NUM_UART] =    // UxSTA address
     { U1STA, U2STA, U3STA, U4STA, U5STA, U6STA };
 static unsigned uart_mode[NUM_UART] =    // UxMODE address
     { U1MODE, U2MODE, U3MODE, U4MODE, U5MODE, U6MODE };
-
-/*-------------------------------------------------------------------------
- * SPI
- */
-#define NUM_SPI         4               // number of SPI ports
-#define SPI_IRQ_FAULT   0               // error irq offset
-#define SPI_IRQ_TX      1               // transmitter irq offset
-#define SPI_IRQ_RX      2               // receiver irq offset
-
-static unsigned spi_irq[NUM_SPI] = {    // SPI interrupt numbers
-    PIC32_IRQ_SPI1E,
-    PIC32_IRQ_SPI2E,
-    PIC32_IRQ_SPI3E,
-    PIC32_IRQ_SPI4E,
-};
-static unsigned spi_buf[NUM_SPI][4];    // SPI transmit and receive buffer
-static unsigned spi_rfifo[NUM_SPI];     // SPI read fifo counter
-static unsigned spi_wfifo[NUM_SPI];     // SPI write fifo counter
-static unsigned spi_con[NUM_SPI] =      // SPIxCON address
-    { SPI1CON, SPI2CON, SPI3CON, SPI4CON };
-static unsigned spi_stat[NUM_SPI] =     // SPIxSTAT address
-    { SPI1STAT, SPI2STAT, SPI3STAT, SPI4STAT };
-
-unsigned sdcard_spi_port;               // SPI port number of SD card
 
 /*
  * PIC32MX7 specific table:
@@ -343,49 +312,6 @@ static void uart_update_status (int port)
         clear_irq (uart_irq[port] + UART_IRQ_TX);
         VALUE(uart_sta[port]) &= ~PIC32_USTA_UTXBF;
         VALUE(uart_sta[port]) |= PIC32_USTA_TRMT;
-    }
-}
-
-static void spi_writebuf (int port, unsigned val)
-{
-    /* Perform SD card i/o on configured SPI port. */
-    if (port == sdcard_spi_port) {
-        unsigned result = 0;
-
-        if (VALUE(spi_con[port]) & PIC32_SPICON_MODE32) {
-            /* 32-bit data width */
-            result  = (unsigned char) sdcard_io (val >> 24) << 24;
-            result |= (unsigned char) sdcard_io (val >> 16) << 16;
-            result |= (unsigned char) sdcard_io (val >> 8) << 8;
-            result |= (unsigned char) sdcard_io (val);
-
-        } else if (VALUE(spi_con[port]) & PIC32_SPICON_MODE16) {
-            /* 16-bit data width */
-            result = (unsigned char) sdcard_io (val >> 8) << 8;
-            result |= (unsigned char) sdcard_io (val);
-
-        } else {
-            /* 8-bit data width */
-            result = (unsigned char) sdcard_io (val);
-        }
-        spi_buf[port][spi_wfifo[port]] = result;
-    } else {
-        /* No device */
-        spi_buf[port][spi_wfifo[port]] = ~0;
-    }
-    if (VALUE(spi_stat[port]) & PIC32_SPISTAT_SPIRBF) {
-        VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIROV;
-        //set_irq (spi_irq[port] + SPI_IRQ_FAULT);
-    } else if (VALUE(spi_con[port]) & PIC32_SPICON_ENHBUF) {
-        spi_wfifo[port]++;
-        spi_wfifo[port] &= 3;
-        if (spi_wfifo[port] == spi_rfifo[port]) {
-            VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIRBF;
-            //set_irq (spi_irq[port] + SPI_IRQ_RX);
-        }
-    } else {
-        VALUE(spi_stat[port]) |= PIC32_SPISTAT_SPIRBF;
-        //set_irq (spi_irq[port] + SPI_IRQ_RX);
     }
 }
 
@@ -690,15 +616,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI1STATSET); *bufp = 0; break;
     STORAGE (SPI1STATINV); *bufp = 0; break;
     STORAGE (SPI1BUF);                          // Buffer
-        *bufp = spi_buf[0][spi_rfifo[0]];
-        if (VALUE(SPI1CON) & PIC32_SPICON_ENHBUF) {
-            spi_rfifo[0]++;
-            spi_rfifo[0] &= 3;
-        }
-        if (VALUE(SPI1STAT) & PIC32_SPISTAT_SPIRBF) {
-            VALUE(SPI1STAT) &= ~PIC32_SPISTAT_SPIRBF;
-            //clear_irq (spi_irq[0] + 2);   // deactivate receive interrupt
-        }
+        *bufp = spi_readbuf (0);
         break;
     STORAGE (SPI1BRG); break;                   // Baud rate
     STORAGE (SPI1BRGCLR); *bufp = 0; break;
@@ -717,15 +635,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI2STATSET); *bufp = 0; break;
     STORAGE (SPI2STATINV); *bufp = 0; break;
     STORAGE (SPI2BUF);                          // Buffer
-        *bufp = spi_buf[1][spi_rfifo[1]];
-        if (VALUE(SPI2CON) & PIC32_SPICON_ENHBUF) {
-            spi_rfifo[1]++;
-            spi_rfifo[1] &= 3;
-        }
-        if (VALUE(SPI2STAT) & PIC32_SPISTAT_SPIRBF) {
-            VALUE(SPI2STAT) &= ~PIC32_SPISTAT_SPIRBF;
-            //clear_irq (spi_irq[1] + 2);   // deactivate receive interrupt
-        }
+        *bufp = spi_readbuf (1);
         break;
     STORAGE (SPI2BRG); break;                   // Baud rate
     STORAGE (SPI2BRGCLR); *bufp = 0; break;
@@ -744,15 +654,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI3STATSET); *bufp = 0; break;
     STORAGE (SPI3STATINV); *bufp = 0; break;
     STORAGE (SPI3BUF);                          // SPIx Buffer
-        *bufp = spi_buf[2][spi_rfifo[2]];
-        if (VALUE(SPI3CON) & PIC32_SPICON_ENHBUF) {
-            spi_rfifo[2]++;
-            spi_rfifo[2] &= 3;
-        }
-        if (VALUE(SPI3STAT) & PIC32_SPISTAT_SPIRBF) {
-            VALUE(SPI3STAT) &= ~PIC32_SPISTAT_SPIRBF;
-            //clear_irq (spi_irq[2] + 2);   // deactivate receive interrupt
-        }
+        *bufp = spi_readbuf (2);
         break;
     STORAGE (SPI3BRG); break;                   // Baud rate
     STORAGE (SPI3BRGCLR); *bufp = 0; break;
@@ -771,15 +673,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI4STATSET); *bufp = 0; break;
     STORAGE (SPI4STATINV); *bufp = 0; break;
     STORAGE (SPI4BUF);                          // Buffer
-        *bufp = spi_buf[3][spi_rfifo[3]];
-        if (VALUE(SPI4CON) & PIC32_SPICON_ENHBUF) {
-            spi_rfifo[3]++;
-            spi_rfifo[3] &= 3;
-        }
-        if (VALUE(SPI4STAT) & PIC32_SPISTAT_SPIRBF) {
-            VALUE(SPI4STAT) &= ~PIC32_SPISTAT_SPIRBF;
-            //clear_irq (spi_irq[3] + 2);   // deactivate receive interrupt
-        }
+        *bufp = spi_readbuf (3);
         break;
     STORAGE (SPI4BRG); break;                   // Baud rate
     STORAGE (SPI4BRGCLR); *bufp = 0; break;
@@ -1051,15 +945,7 @@ irq:    update_irq_flag();
      * SPI.
      */
     WRITEOP (SPI1CON);                              // Control
-        if (! (VALUE(SPI1CON) & PIC32_SPICON_ON)) {
-            clear_irq (spi_irq[0] + SPI_IRQ_FAULT);
-            clear_irq (spi_irq[0] + SPI_IRQ_RX);
-            clear_irq (spi_irq[0] + SPI_IRQ_TX);
-            VALUE(SPI1STAT) = PIC32_SPISTAT_SPITBE;
-        } else if (! (VALUE(SPI1CON) & PIC32_SPICON_ENHBUF)) {
-            spi_rfifo[0] = 0;
-            spi_wfifo[0] = 0;
-        }
+	spi_control (0);
         return;
     WRITEOPR (SPI1STAT, ~PIC32_SPISTAT_SPIROV);     // Status
         return;                                     // Only ROV bit is writable
@@ -1068,15 +954,7 @@ irq:    update_irq_flag();
         return;
     WRITEOP (SPI1BRG); return;                      // Baud rate
     WRITEOP (SPI2CON);                              // Control
-        if (! (VALUE(SPI2CON) & PIC32_SPICON_ON)) {
-            clear_irq (spi_irq[1] + SPI_IRQ_FAULT);
-            clear_irq (spi_irq[1] + SPI_IRQ_RX);
-            clear_irq (spi_irq[1] + SPI_IRQ_TX);
-            VALUE(SPI2STAT) = PIC32_SPISTAT_SPITBE;
-        } else if (! (VALUE(SPI2CON) & PIC32_SPICON_ENHBUF)) {
-            spi_rfifo[1] = 0;
-            spi_wfifo[1] = 0;
-        }
+	spi_control (1);
         return;
     WRITEOPR (SPI2STAT, ~PIC32_SPISTAT_SPIROV);     // Status
         return;                                     // Only ROV bit is writable
@@ -1085,15 +963,7 @@ irq:    update_irq_flag();
         return;
     WRITEOP (SPI2BRG); return;                      // Baud rate
     WRITEOP (SPI3CON);                              // Control
-        if (! (VALUE(SPI3CON) & PIC32_SPICON_ON)) {
-            clear_irq (spi_irq[2] + SPI_IRQ_FAULT);
-            clear_irq (spi_irq[2] + SPI_IRQ_RX);
-            clear_irq (spi_irq[2] + SPI_IRQ_TX);
-            VALUE(SPI3STAT) = PIC32_SPISTAT_SPITBE;
-        } else if (! (VALUE(SPI3CON) & PIC32_SPICON_ENHBUF)) {
-            spi_rfifo[2] = 0;
-            spi_wfifo[2] = 0;
-        }
+	spi_control (2);
         return;
     WRITEOPR (SPI3STAT, ~PIC32_SPISTAT_SPIROV);     // Status
         return;                                     // Only ROV bit is writable
@@ -1102,15 +972,7 @@ irq:    update_irq_flag();
         return;
     WRITEOP (SPI3BRG); return;                      // Baud rate
     WRITEOP (SPI4CON);                              // Control
-        if (! (VALUE(SPI4CON) & PIC32_SPICON_ON)) {
-            clear_irq (spi_irq[3] + SPI_IRQ_FAULT);
-            clear_irq (spi_irq[3] + SPI_IRQ_RX);
-            clear_irq (spi_irq[3] + SPI_IRQ_TX);
-            VALUE(SPI4STAT) = PIC32_SPISTAT_SPITBE;
-        } else if (! (VALUE(SPI4CON) & PIC32_SPICON_ENHBUF)) {
-            spi_rfifo[3] = 0;
-            spi_wfifo[3] = 0;
-        }
+	spi_control (3);
         return;
     WRITEOPR (SPI4STAT, ~PIC32_SPISTAT_SPIROV);     // Status
         return;                                     // Only ROV bit is writable
@@ -1244,35 +1106,11 @@ void io_reset()
     VALUE(U6RXREG) = 0;
     VALUE(U6BRG)   = 0;
 
-    /*
-     * SPI.
-     */
-    VALUE(SPI1CON)  = 0;
-    VALUE(SPI1STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
-    spi_wfifo[0]    = 0;
-    spi_rfifo[0]    = 0;
-    VALUE(SPI1BRG)  = 0;
-    VALUE(SPI2CON)  = 0;
-    VALUE(SPI2STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
-    spi_wfifo[1]    = 0;
-    spi_rfifo[1]    = 0;
-    VALUE(SPI2BRG)  = 0;
-    VALUE(SPI3CON)  = 0;
-    VALUE(SPI3STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
-    spi_wfifo[2]    = 0;
-    spi_rfifo[2]    = 0;
-    VALUE(SPI3BRG)  = 0;
-    VALUE(SPI4CON)  = 0;
-    VALUE(SPI4STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
-    spi_wfifo[3]    = 0;
-    spi_rfifo[3]    = 0;
-    VALUE(SPI4BRG)  = 0;
+    spi_reset();
 }
 
-void io_init (void *datap, void *data2p, void *bootp)
+void io_init (void *bootp)
 {
-    iomem = datap;
-    iomem2 = data2p;
     bootmem = bootp;
 
     // Preset DEVCFG data, from Max32 bootloader.
@@ -1285,7 +1123,7 @@ void io_init (void *datap, void *data2p, void *bootp)
     sdcard_reset();
 }
 
-void io_poll()
+void uart_poll()
 {
     int port;
 
@@ -1316,7 +1154,7 @@ void io_poll()
  * Return true when any I/O is active.
  * Check uart output and pending input.
  */
-int io_active()
+int uart_active()
 {
     int port;
 

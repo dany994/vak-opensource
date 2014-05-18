@@ -35,11 +35,10 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <arpa/telnet.h>
-
 #include "globals.h"
 
 /* Number of ports instantiated */
-#define VTTY_NPORTS 6
+#define VTTY_NUNITS 6
 
 /*
  * 4 Kb should be enough for a keyboard buffer
@@ -89,7 +88,7 @@ struct virtual_tty {
     pthread_mutex_t lock;
 };
 
-static vtty_t porttab[VTTY_NPORTS];
+static vtty_t unittab[VTTY_NUNITS];
 static pthread_t vtty_thread;
 
 #define VTTY_LOCK(tty)      pthread_mutex_lock(&(tty)->lock);
@@ -261,13 +260,13 @@ static int vtty_tcp_conn_accept (vtty_t * vtty)
 /*
  * Create a virtual tty
  */
-void vtty_create (unsigned port, char *name, int tcp_port)
+void vtty_create (unsigned unit, char *name, int tcp_port)
 {
-    vtty_t *vtty = porttab + port;
+    vtty_t *vtty = unittab + unit;
 
-    if (port >= VTTY_NPORTS) {
+    if (unit >= VTTY_NUNITS) {
         fprintf (stderr, "%s: unable to create a virtual tty port #%u.\n",
-            name, port);
+            name, unit);
         exit(1);
     }
 
@@ -294,11 +293,11 @@ void vtty_create (unsigned port, char *name, int tcp_port)
 /*
  * Delete a virtual tty
  */
-void vtty_delete (unsigned port)
+void vtty_delete (unsigned unit)
 {
-    vtty_t *vtty = porttab + port;
+    vtty_t *vtty = unittab + unit;
 
-    if (port < VTTY_NPORTS && (vtty->fstream || vtty->tcp_port)) {
+    if (unit < VTTY_NUNITS && (vtty->fstream || vtty->tcp_port)) {
 
         if (vtty->fstream && vtty->fstream != stdout) {
             fclose (vtty->fstream);
@@ -406,9 +405,9 @@ static int vtty_read (vtty_t * vtty)
 /*
  * Read a character (until one is available) and store it in buffer
  */
-static void vtty_read_and_store (int port)
+static void vtty_read_and_store (int unit)
 {
-    vtty_t *vtty = porttab + port;
+    vtty_t *vtty = unittab + unit;
     int c;
 
     /* wait until we get a character input */
@@ -513,12 +512,12 @@ static void vtty_read_and_store (int port)
         vtty->telnet_opt = c;
         /* if telnet client can support ttype, ask it to send ttype string */
         if ((vtty->telnet_cmd == WILL) && (vtty->telnet_opt == TELOPT_TTYPE)) {
-            vtty_put_char (port, IAC);
-            vtty_put_char (port, SB);
-            vtty_put_char (port, TELOPT_TTYPE);
-            vtty_put_char (port, TELQUAL_SEND);
-            vtty_put_char (port, IAC);
-            vtty_put_char (port, SE);
+            vtty_put_char (unit, IAC);
+            vtty_put_char (unit, SB);
+            vtty_put_char (unit, TELOPT_TTYPE);
+            vtty_put_char (unit, TELQUAL_SEND);
+            vtty_put_char (unit, IAC);
+            vtty_put_char (unit, SE);
         }
         vtty->input_state = VTTY_INPUT_TEXT;
         return;
@@ -556,22 +555,22 @@ static void vtty_read_and_store (int port)
     }
 }
 
-int vtty_is_full (unsigned port)
+int vtty_is_full (unsigned unit)
 {
-    vtty_t *vtty = porttab + port;
+    vtty_t *vtty = unittab + unit;
 
-    return (port < VTTY_NPORTS) && (vtty->read_ptr == vtty->write_ptr);
+    return (unit < VTTY_NUNITS) && (vtty->read_ptr == vtty->write_ptr);
 }
 
 /*
  * Read a character from the buffer (-1 if the buffer is empty)
  */
-int vtty_get_char (unsigned port)
+int vtty_get_char (unsigned unit)
 {
-    vtty_t *vtty = porttab + port;
+    vtty_t *vtty = unittab + unit;
     u_char c;
 
-    if (port >= VTTY_NPORTS)
+    if (unit >= VTTY_NUNITS)
         return -1;
     VTTY_LOCK (vtty);
 
@@ -592,12 +591,12 @@ int vtty_get_char (unsigned port)
 /*
  * Returns TRUE if a character is available in buffer
  */
-int vtty_is_char_avail (unsigned port)
+int vtty_is_char_avail (unsigned unit)
 {
-    vtty_t *vtty = porttab + port;
+    vtty_t *vtty = unittab + unit;
     int res;
 
-    if (port >= VTTY_NPORTS)
+    if (unit >= VTTY_NUNITS)
         return 0;
     VTTY_LOCK (vtty);
     res = (vtty->read_ptr != vtty->write_ptr);
@@ -608,11 +607,11 @@ int vtty_is_char_avail (unsigned port)
 /*
  * Put char to vtty
  */
-void vtty_put_char (unsigned port, char ch)
+void vtty_put_char (unsigned unit, char ch)
 {
-    vtty_t *vtty = porttab + port;
+    vtty_t *vtty = unittab + unit;
 
-    if (port >= VTTY_NPORTS)
+    if (unit >= VTTY_NUNITS)
         return;
     if (vtty->tcp_port) {
         if (vtty->state == VTTY_STATE_TCP_RUNNING &&
@@ -633,13 +632,13 @@ int vtty_wait (fd_set *rfdp)
 {
     vtty_t *vtty;
     struct timeval tv;
-    int fd, fd_max, res, port;
+    int fd, fd_max, res, unit;
 
     /* Build the FD set */
     FD_ZERO (rfdp);
     fd_max = -1;
-    for (port=0; port<VTTY_NPORTS; port++) {
-	vtty = porttab + port;
+    for (unit=0; unit<VTTY_NUNITS; unit++) {
+	vtty = unittab + unit;
 	if (! vtty->select_fd)
 	    continue;
 
@@ -665,8 +664,8 @@ int vtty_wait (fd_set *rfdp)
     if (res == -1) {
 	if (errno != EINTR) {
 	    perror ("vtty_thread: select");
-	    for (port=0; port<VTTY_NPORTS; port++) {
-		vtty = porttab + port;
+	    for (unit=0; unit<VTTY_NUNITS; unit++) {
+		vtty = unittab + unit;
 		if (vtty->name)
 		    fprintf (stderr, "   %s: FD %d\n", vtty->name, vtty->fd);
 	    }
@@ -682,7 +681,7 @@ int vtty_wait (fd_set *rfdp)
 static void *vtty_thread_main (void *arg)
 {
     vtty_t *vtty;
-    int fd, port;
+    int fd, unit;
     fd_set rfds;
 
     for (;;) {
@@ -690,8 +689,8 @@ static void *vtty_thread_main (void *arg)
 	    continue;
 
         /* Examine active FDs and call user handlers */
-        for (port=0; port<VTTY_NPORTS; port++) {
-            vtty = porttab + port;
+        for (unit=0; unit<VTTY_NUNITS; unit++) {
+            vtty = unittab + unit;
             if (! vtty->select_fd)
                 continue;
 
@@ -700,7 +699,7 @@ static void *vtty_thread_main (void *arg)
                 continue;
 
             if (FD_ISSET (fd, &rfds)) {
-                vtty_read_and_store (port);
+                vtty_read_and_store (unit);
             }
 
             /* Flush any pending output */

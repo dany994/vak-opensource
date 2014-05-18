@@ -6,25 +6,27 @@ IMPERAS_ERROR   := $(error "Please source 'imperas.environ' to setup Imperas env
 endif
 
 #
-# This will take the platform.c file in this directory.
-# Compile to executable using the HOST compiler.
+# PIC32 MX7
 #
-EXECUTABLE	= pic32mx7 #pic32mz
-OPT             = -O2 -g -DEXPLORER16
-#OPT		= -O0 -g
-OPT_MX7         = -DPIC32MX7
-OPT_MZ          = -DPIC32MZ
+EXECUTABLE	= pic32mx7 
+OPT             = -DPIC32MX7
+OBJ		= obj/mx.o 
 
-OBJ_MX7		= obj/loadhex.o \
-                  obj/mx.o \
-                  obj/main-mx7.o \
-                  obj/sdcard.o \
-                  obj/vtty.o
+#
+# PIC32 MZ
+#
+#EXECUTABLE	= pic32mz
+#OPT		= -DPIC32MZ
+#OBJ		= obj/mz.o 
 
-OBJ_MZ		= obj/loadhex.o \
-                  obj/mz.o \
-                  obj/main-mz.o \
-                  obj/vtty.o
+OPT             += -O2 -g -DEXPLORER16
+#OPT		+= -O0 -g
+
+OBJ		+= obj/loadhex.o \
+                   obj/main.o \
+                   obj/sdcard.o \
+                   obj/spi.o \
+                   obj/vtty.o
 
 CFLAGS          = -m32 -g -Wall -Werror $(OPT) \
                   -I$(IMPERAS_HOME)/ImpPublic/include/common \
@@ -36,19 +38,8 @@ LDFLAGS         = -L$(IMPERAS_HOME)/bin/$(IMPERAS_ARCH) -lRuntimeLoader \
 
 all:		$(EXECUTABLE)
 
-pic32mx7:       $(OBJ_MX7)
+$(EXECUTABLE):  $(OBJ)
 		$(CC) -m32 -o $@ $^ $(LDFLAGS)
-
-pic32mz:        $(OBJ_MZ)
-		$(CC) -m32 -o $@ $^ $(LDFLAGS)
-
-obj/main-mx7.o: main.c
-		@mkdir -p $(@D)
-		$(CC) -c -o $@ $< $(CFLAGS) $(OPT_MX7)
-
-obj/main-mz.o:  main.c
-		@mkdir -p $(@D)
-		$(CC) -c -o $@ $< $(CFLAGS) $(OPT_MZ)
 
 obj/%.o:        %.c
 		@mkdir -p $(@D)

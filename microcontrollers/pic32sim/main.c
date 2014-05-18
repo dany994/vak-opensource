@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <signal.h>
@@ -37,8 +36,8 @@ char *progname;                         // base name of current program
 static uint32_t progmem [PROGRAM_FLASH_SIZE/4];
 static uint32_t bootmem [BOOT_FLASH_SIZE/4];
 static char datamem [DATA_MEM_SIZE];    // storage for RAM area
-static char iomem [0x10000];            // backing storage for I/O area
-static char iomem2 [0x10000];           // backing storage for second I/O area
+uint32_t iomem [0x10000/4];             // backing storage for I/O area
+uint32_t iomem2 [0x10000/4];            // backing storage for second I/O area
 
 int trace_instructions;                 // print cpu instructions and registers
 int trace_peripherals;                  // trace special function registers
@@ -49,7 +48,12 @@ icmNetP eic_vector;                     // EIC vector number
 
 static void usage()
 {
-    icmPrintf("PIC32 simulator\n");
+#ifdef PIC32MX7
+    icmPrintf("Simulator of PIC32MX7 microcontroller\n");
+#endif
+#ifdef PIC32MZ
+    icmPrintf("Simulator of PIC32MZ microcontroller\n");
+#endif
     icmPrintf("Usage:\n");
     icmPrintf("        %s [-vtm] application.hex [sd0.img [sd1.img]]\n", progname);
     icmPrintf("Options:\n");
@@ -348,11 +352,11 @@ int main(int argc, char **argv)
     // Data memory.
     icmMapNativeMemory (bus, ICM_PRIV_RWX, DATA_MEM_START,
         DATA_MEM_START + DATA_MEM_SIZE - 1, datamem);
-
+#ifdef PIC32MX7
     // User space 96 kbytes.
     icmMapNativeMemory (bus, ICM_PRIV_RWX, USER_MEM_START + 0x8000,
         USER_MEM_START + DATA_MEM_SIZE - 1, datamem + 0x8000);
-
+#endif
     // Program memory.
     icmMapNativeMemory (bus, ICM_PRIV_RX, PROGRAM_FLASH_START,
         PROGRAM_FLASH_START + PROGRAM_FLASH_SIZE - 1, progmem);
@@ -406,7 +410,7 @@ int main(int argc, char **argv)
     //
     // Generic reset of all peripherals.
     //
-    io_init (iomem, iomem2, bootmem);
+    io_init (bootmem);
 
     //
     // Load Program
@@ -431,12 +435,12 @@ int main(int argc, char **argv)
 	    /* Suspended on WAIT instructon. */
 	    stop_reason = ICM_SR_SCHED;
 
-	    if (! io_active())
+	    if (! uart_active())
 		pause_idle();
 	}
 
 	// poll uarts
-	io_poll();
+	uart_poll();
     } while (stop_reason == ICM_SR_SCHED);
 
     //
