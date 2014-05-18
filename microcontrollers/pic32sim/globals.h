@@ -32,7 +32,7 @@
 #define USER_MEM_START      0xbf000000
 #define DATA_MEM_SIZE       (128*1024)          // 128 kbytes
 #define IO_MEM_START        0x1f800000
-#define IO_MEM_SIZE         (64*1024)           // 64 kbytes
+#define IO_MEM_SIZE         (1024*1024)         // 1 Mbyte
 #define IO2_MEM_START       0x1f880000
 #define IO2_MEM_SIZE        (64*1024)           // 64 kbytes
 
@@ -44,10 +44,9 @@
 #define PROGMEM(addr) progmem [(addr & 0xfffff) >> 2]
 #define BOOTMEM(addr) bootmem [(addr & 0xffff) >> 2]
 
-#define VALUE(name) (name & 0x80000 ? iomem2 : iomem) [(name & 0xffff) >> 2]
+#define VALUE(name) iomem[(name & 0xfffff) >> 2]
 
 extern uint32_t iomem[];        // image of I/O area
-extern uint32_t iomem2[];       // image of second I/O area
 
 extern char *progname;          // base name of current program
 extern int trace_peripherals;   // trace special function registers

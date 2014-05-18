@@ -56,5 +56,8 @@ clean:
 obj/loadhex.o: loadhex.c globals.h
 obj/main.o: main.c globals.h
 obj/mx7.o: mx7.c globals.h pic32mx.h
+obj/mz.o: mz.c globals.h pic32mz.h
 obj/sdcard.o: sdcard.c globals.h
+obj/spi.o: spi.c globals.h pic32mx.h pic32mz.h
+obj/uart.o: uart.c globals.h pic32mx.h pic32mz.h
 obj/vtty.o: vtty.c globals.h
