@@ -21,6 +21,8 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
+#include <stdint.h>
+
 #define PROGRAM_FLASH_START 0x1d000000
 #define PROGRAM_FLASH_SIZE  (512*1024)          // 512 kbytes
 #define BOOT_FLASH_START    0x1fc00000
@@ -41,18 +43,28 @@
 #define PROGMEM(addr) progmem [(addr & 0xfffff) >> 2]
 #define BOOTMEM(addr) bootmem [(addr & 0xffff) >> 2]
 
+#define VALUE(name) (name & 0x80000 ? iomem2 : iomem) [(name & 0xffff) >> 2]
+
+extern uint32_t iomem[];        // image of I/O area
+extern uint32_t iomem2[];       // image of second I/O area
 
 extern char *progname;          // base name of current program
 extern int trace_peripherals;   // trace special function registers
 
 int load_file(void *progmem, void *bootmem, const char *filename);
 
-void io_init (void *datap, void *data2p, void *bootp);
+void io_init (void *bootp);
 void io_reset (void);
-void io_poll (void);
 unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep);
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep);
-int io_active (void);
+
+void uart_poll (void);
+int uart_active (void);
+
+void spi_reset (void);
+void spi_control (int unit);
+unsigned spi_readbuf (int unit);
+void spi_writebuf (int unit, unsigned val);
 
 void soft_reset (void);
 void set_irq (int irq);
@@ -70,11 +82,11 @@ void sdcard_reset (void);
 void sdcard_select (int unit, int on);
 unsigned sdcard_io (unsigned data);
 
-void vtty_create (unsigned port, char *name, int tcp_port);
-void vtty_delete (unsigned port);
-int vtty_get_char (unsigned port);
-void vtty_put_char (unsigned port, char ch);
-int vtty_is_char_avail (unsigned port);
-int vtty_is_full (unsigned port);
+void vtty_create (unsigned unit, char *name, int tcp_port);
+void vtty_delete (unsigned unit);
+int vtty_get_char (unsigned unit);
+void vtty_put_char (unsigned unit, char ch);
+int vtty_is_char_avail (unsigned unit);
+int vtty_is_full (unsigned unit);
 void vtty_init (void);
 int vtty_wait (fd_set *rfdp);
