@@ -23,11 +23,9 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <signal.h>
-
 #include "icm/icmCpuManager.h"
 #include "globals.h"
 
@@ -159,9 +157,9 @@ void timer_irq (void *arg, Uns32 value)
 {
     //icmPrintf("--- timer interrupt: %u\n", value);
     if (value)
-        set_irq (0);
+        irq_raise (0);
     else
-        clear_irq (0);
+        irq_clear (0);
 }
 
 /* 

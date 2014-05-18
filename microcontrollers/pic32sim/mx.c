@@ -22,7 +22,6 @@
  * this software.
  */
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include "globals.h"
 #include "pic32mx.h"
@@ -50,28 +49,6 @@
 static uint32_t *bootmem;       // image of boot memory
 
 static unsigned syskey_unlock;	// syskey state
-
-/*-------------------------------------------------------------------------
- * UART
- */
-#define NUM_UART        6               // number of UART ports
-#define UART_IRQ_ERR    0               // error irq offset
-#define UART_IRQ_RX     1               // receiver irq offset
-#define UART_IRQ_TX     2               // transmitter irq offset
-
-static unsigned uart_irq[NUM_UART] = {  // UART interrupt numbers
-    PIC32_IRQ_U1E,
-    PIC32_IRQ_U2E,
-    PIC32_IRQ_U3E,
-    PIC32_IRQ_U4E,
-    PIC32_IRQ_U5E,
-    PIC32_IRQ_U6E,
-};
-static int uart_oactive[NUM_UART];      // UART output active
-static unsigned uart_sta[NUM_UART] =    // UxSTA address
-    { U1STA, U2STA, U3STA, U4STA, U5STA, U6STA };
-static unsigned uart_mode[NUM_UART] =    // UxMODE address
-    { U1MODE, U2MODE, U3MODE, U4MODE, U5MODE, U6MODE };
 
 /*
  * PIC32MX7 specific table:
@@ -185,7 +162,7 @@ static const int irq_to_vector[] = {
     PIC32_VECT_U5,      /* 75 - UART5 Transmitter */
 };
 
-void update_irq_flag()
+static void update_irq_status()
 {
     /* Assume no interrupts pending. */
     int cause_ripl = 0;
@@ -228,91 +205,25 @@ void update_irq_flag()
 /*
  * Set interrupt flag status
  */
-void set_irq (int irq)
+void irq_raise (int irq)
 {
     if (VALUE(IFS(irq >> 5)) & (1 << (irq & 31)))
         return;
 //printf ("-- %s() irq = %d\n", __func__, irq);
     VALUE(IFS(irq >> 5)) |= 1 << (irq & 31);
-    update_irq_flag();
+    update_irq_status();
 }
 
 /*
  * Clear interrupt flag status
  */
-void clear_irq (int irq)
+void irq_clear (int irq)
 {
     if (! (VALUE(IFS(irq >> 5)) & (1 << (irq & 31))))
         return;
 //printf ("-- %s() irq = %d\n", __func__, irq);
     VALUE(IFS(irq >> 5)) &= ~(1 << (irq & 31));
-    update_irq_flag();
-}
-
-static unsigned uart_get_char (int port)
-{
-    unsigned value;
-
-    // Read a byte from input queue
-    value = vtty_get_char (port);
-    VALUE(uart_sta[port]) &= ~PIC32_USTA_URXDA;
-
-    if (vtty_is_char_avail (port)) {
-        // One more byte available
-        VALUE(uart_sta[port]) |= PIC32_USTA_URXDA;
-    } else {
-        clear_irq (uart_irq[port] + UART_IRQ_RX);
-    }
-    return value;
-}
-
-static void uart_poll_status (int port)
-{
-    // Keep receiver idle, transmit shift register always empty
-    VALUE(uart_sta[port]) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-
-    if (vtty_is_char_avail (port)) {
-        // Receive data available
-        VALUE(uart_sta[port]) |= PIC32_USTA_URXDA;
-    }
-    //printf ("<%x>", VALUE(uart_sta[port])); fflush (stdout);
-}
-
-static void uart_put_char (int port, unsigned data)
-{
-    vtty_put_char (port, data);
-    if ((VALUE(uart_mode[port]) & PIC32_UMODE_ON) &&
-        (VALUE(uart_sta[port]) & PIC32_USTA_UTXEN) &&
-        ! uart_oactive[port])
-    {
-        uart_oactive[port] = 1;
-        //set_irq (uart_irq[port] + UART_IRQ_TX);
-    }
-}
-
-static void uart_update_mode (int port)
-{
-    if (! (VALUE(uart_mode[port]) & PIC32_UMODE_ON)) {
-        clear_irq (uart_irq[port] + UART_IRQ_RX);
-        clear_irq (uart_irq[port] + UART_IRQ_TX);
-        VALUE(uart_sta[port]) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                                   PIC32_USTA_PERR | PIC32_USTA_UTXBF);
-        VALUE(uart_sta[port]) |= PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    }
-}
-
-static void uart_update_status (int port)
-{
-    if (! (VALUE(uart_sta[port]) & PIC32_USTA_URXEN)) {
-        clear_irq (uart_irq[port] + UART_IRQ_RX);
-        VALUE(uart_sta[port]) &= ~(PIC32_USTA_URXDA | PIC32_USTA_FERR |
-                                   PIC32_USTA_PERR);
-    }
-    if (! (VALUE(uart_sta[port]) & PIC32_USTA_UTXEN)) {
-        clear_irq (uart_irq[port] + UART_IRQ_TX);
-        VALUE(uart_sta[port]) &= ~PIC32_USTA_UTXBF;
-        VALUE(uart_sta[port]) |= PIC32_USTA_TRMT;
-    }
+    update_irq_status();
 }
 
 static void gpio_write (int gpio_port, unsigned lat_value)
@@ -728,7 +639,7 @@ void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **n
     WRITEOP (IPC10); goto irq;
     WRITEOP (IPC11); goto irq;
     WRITEOP (IPC12);
-irq:    update_irq_flag();
+irq:    update_irq_status();
         return;
 
     /*-------------------------------------------------------------------------
@@ -1072,40 +983,7 @@ void io_reset()
     VALUE(CNEN)  = 0;			// Input change interrupt enable
     VALUE(CNPUE) = 0;			// Input pin pull-up enable
 
-    /*
-     * UARTs 1-6.
-     */
-    VALUE(U1MODE)  = 0;
-    VALUE(U1STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE(U1TXREG) = 0;
-    VALUE(U1RXREG) = 0;
-    VALUE(U1BRG)   = 0;
-    VALUE(U2MODE)  = 0;
-    VALUE(U2STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE(U2TXREG) = 0;
-    VALUE(U2RXREG) = 0;
-    VALUE(U2BRG)   = 0;
-    VALUE(U3MODE)  = 0;
-    VALUE(U3STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE(U3TXREG) = 0;
-    VALUE(U3RXREG) = 0;
-    VALUE(U3BRG)   = 0;
-    VALUE(U4MODE)  = 0;
-    VALUE(U4STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE(U4TXREG) = 0;
-    VALUE(U4RXREG) = 0;
-    VALUE(U4BRG)   = 0;
-    VALUE(U5MODE)  = 0;
-    VALUE(U5STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE(U5TXREG) = 0;
-    VALUE(U5RXREG) = 0;
-    VALUE(U5BRG)   = 0;
-    VALUE(U6MODE)  = 0;
-    VALUE(U6STA)   = PIC32_USTA_RIDLE | PIC32_USTA_TRMT;
-    VALUE(U6TXREG) = 0;
-    VALUE(U6RXREG) = 0;
-    VALUE(U6BRG)   = 0;
-
+    uart_reset();
     spi_reset();
 }
 
@@ -1121,48 +999,4 @@ void io_init (void *bootp)
 
     io_reset();
     sdcard_reset();
-}
-
-void uart_poll()
-{
-    int port;
-
-    for (port=0; port<NUM_UART; port++) {
-	if (! (VALUE(uart_mode[port]) & PIC32_UMODE_ON)) {
-    	    uart_oactive[port] = 0;
-	    continue;
-	}
-
-	/* UART enabled. */
-	if ((VALUE(uart_sta[port]) & PIC32_USTA_URXEN) && vtty_is_char_avail (port)) {
-	    /* Receive data available. */
-	    VALUE(uart_sta[port]) |= PIC32_USTA_URXDA;
-
-	    /* Activate receive interrupt. */
-	    set_irq (uart_irq[port] + UART_IRQ_RX);
-	    continue;
-	}
-	if ((VALUE(uart_sta[port]) & PIC32_USTA_UTXEN) && uart_oactive[port]) {
-	    /* Activate transmit interrupt. */
-	    set_irq (uart_irq[port] + UART_IRQ_TX);
-	}
-    	uart_oactive[port] = 0;
-    }
-}
-
-/*
- * Return true when any I/O is active.
- * Check uart output and pending input.
- */
-int uart_active()
-{
-    int port;
-
-    for (port=0; port<NUM_UART; port++) {
-    	if (uart_oactive[port])	
-	    return 1;
-    	if (vtty_is_char_avail (port)) 
-	    return 1;
-    }
-    return 0;
 }

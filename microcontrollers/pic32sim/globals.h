@@ -21,6 +21,7 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
+#include <stdlib.h>
 #include <stdint.h>
 
 #define PROGRAM_FLASH_START 0x1d000000
@@ -58,6 +59,12 @@ void io_reset (void);
 unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep);
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep);
 
+void uart_reset (void);
+unsigned uart_get_char (int unit);
+void uart_poll_status (int unit);
+void uart_put_char (int unit, unsigned data);
+void uart_update_mode (int unit);
+void uart_update_status (int unit);
 void uart_poll (void);
 int uart_active (void);
 
@@ -67,8 +74,8 @@ unsigned spi_readbuf (int unit);
 void spi_writebuf (int unit, unsigned val);
 
 void soft_reset (void);
-void set_irq (int irq);
-void clear_irq (int irq);
+void irq_raise (int irq);
+void irq_clear (int irq);
 void eic_level_vector (int ripl, int vector);
 
 extern unsigned sdcard_spi_port;    // SPI port number of SD card
