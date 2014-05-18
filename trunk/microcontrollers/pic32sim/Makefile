@@ -10,7 +10,7 @@ endif
 #
 EXECUTABLE	= pic32mx7 
 OPT             = -DPIC32MX7
-OBJ		= obj/mx.o 
+OBJ		= obj/mx7.o 
 
 #
 # PIC32 MZ
@@ -55,6 +55,6 @@ clean:
 ###
 obj/loadhex.o: loadhex.c globals.h
 obj/main.o: main.c globals.h
-obj/mx.o: mx.c globals.h pic32mx.h
+obj/mx7.o: mx7.c globals.h pic32mx.h
 obj/sdcard.o: sdcard.c globals.h
 obj/vtty.o: vtty.c globals.h
