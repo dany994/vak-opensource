@@ -34,8 +34,7 @@ char *progname;                         // base name of current program
 static uint32_t progmem [PROGRAM_FLASH_SIZE/4];
 static uint32_t bootmem [BOOT_FLASH_SIZE/4];
 static char datamem [DATA_MEM_SIZE];    // storage for RAM area
-uint32_t iomem [0x10000/4];             // backing storage for I/O area
-uint32_t iomem2 [0x10000/4];            // backing storage for second I/O area
+uint32_t iomem [0x100000/4];            // backing storage for I/O area
 
 int trace_instructions;                 // print cpu instructions and registers
 int trace_peripherals;                  // trace special function registers
@@ -87,7 +86,7 @@ static void print_user_attribute (const char *owner, const char *name,
 static void mem_read (icmProcessorP proc, Addr address, Uns32 bytes,
     void *value, void *user_data, Addr VA, Bool isFetch)
 {
-    Uns32 offset = address & 0xffff;
+    Uns32 offset = address & 0xfffff;
     const char *name = "???";
     Uns32 data;
 
@@ -143,7 +142,7 @@ static void mem_write (icmProcessorP proc, Addr address, Uns32 bytes,
         icmExit(proc);
     }
     data = *(Uns32*) value;
-    io_write32 (address, (Uns32*) (user_data + (address & 0xfffc)),
+    io_write32 (address, (Uns32*) (user_data + (address & 0xffffc)),
         data, &name);
     if (trace_peripherals && name != 0) {
         icmPrintf("--- I/O Write %08x to %s \n", data, name);
@@ -366,8 +365,6 @@ int main(int argc, char **argv)
     // I/O memory.
     icmMapExternalMemory(bus, "IO", ICM_PRIV_RW, IO_MEM_START,
         IO_MEM_START + IO_MEM_SIZE - 1, mem_read, mem_write, iomem);
-    icmMapExternalMemory(bus, "IO2", ICM_PRIV_RW, IO2_MEM_START,
-        IO2_MEM_START + IO2_MEM_SIZE - 1, mem_read, mem_write, iomem2);
 
     if (sim_attrs & ICM_VERBOSE) {
         // Print all user attributes.
