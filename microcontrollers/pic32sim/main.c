@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <getopt.h>
 #include <signal.h>
 
@@ -157,6 +158,25 @@ void timer_irq (void *arg, Uns32 value)
         set_irq (0);
     else
         clear_irq (0);
+}
+
+/* 
+ * When uarts are idle, insert uspeep()
+ * to decrease the cpu load.
+ */
+static void pause_idle()
+{
+    static unsigned idle_timeout;
+    fd_set rfds;
+    
+    if (idle_timeout > 0) {
+	idle_timeout--;
+	return;
+    }
+    idle_timeout = 2000;
+
+    /* Wait for incoming data */
+    vtty_wait (&rfds);
 }
 
 void quit()
@@ -401,10 +421,7 @@ int main(int argc, char **argv)
     //
     icmSetPC(processor, 0xbfc00000);
     icmPrintf("\n***** Start '%s' *****\n", cpu_type);
-#if 0
-    // Simulate the platform until done
-    icmSimulatePlatform();
-#else
+
     // Run the processor one instruction at a time until finished
     icmStopReason stop_reason;
     do {
@@ -413,12 +430,14 @@ int main(int argc, char **argv)
 	if (stop_reason == ICM_SR_HALT) {
 	    /* Suspended on WAIT instructon. */
 	    stop_reason = ICM_SR_SCHED;
+
+	    if (! io_active())
+		pause_idle();
 	}
 
 	// poll uarts
 	io_poll();
     } while (stop_reason == ICM_SR_SCHED);
-#endif
 
     //
     // quit() implicitly called on return

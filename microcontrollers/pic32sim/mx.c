@@ -1311,3 +1311,20 @@ void io_poll()
     	uart_oactive[port] = 0;
     }
 }
+
+/*
+ * Return true when any I/O is active.
+ * Check uart output and pending input.
+ */
+int io_active()
+{
+    int port;
+
+    for (port=0; port<NUM_UART; port++) {
+    	if (uart_oactive[port])	
+	    return 1;
+    	if (vtty_is_char_avail (port)) 
+	    return 1;
+    }
+    return 0;
+}

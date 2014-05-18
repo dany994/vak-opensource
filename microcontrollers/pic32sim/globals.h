@@ -52,6 +52,7 @@ void io_reset (void);
 void io_poll (void);
 unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep);
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep);
+int io_active (void);
 
 void soft_reset (void);
 void set_irq (int irq);
@@ -76,3 +77,4 @@ void vtty_put_char (unsigned port, char ch);
 int vtty_is_char_avail (unsigned port);
 int vtty_is_full (unsigned port);
 void vtty_init (void);
+int vtty_wait (fd_set *rfdp);
