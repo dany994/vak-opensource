@@ -461,6 +461,10 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI1BRGCLR); *bufp = 0; break;
     STORAGE (SPI1BRGSET); *bufp = 0; break;
     STORAGE (SPI1BRGINV); *bufp = 0; break;
+    STORAGE (SPI1CON2); break;                   // Control 2
+    STORAGE (SPI1CON2CLR); *bufp = 0; break;
+    STORAGE (SPI1CON2SET); *bufp = 0; break;
+    STORAGE (SPI1CON2INV); *bufp = 0; break;
 
     /*-------------------------------------------------------------------------
      * SPI 2.
@@ -480,6 +484,10 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI2BRGCLR); *bufp = 0; break;
     STORAGE (SPI2BRGSET); *bufp = 0; break;
     STORAGE (SPI2BRGINV); *bufp = 0; break;
+    STORAGE (SPI2CON2); break;                   // Control 2
+    STORAGE (SPI2CON2CLR); *bufp = 0; break;
+    STORAGE (SPI2CON2SET); *bufp = 0; break;
+    STORAGE (SPI2CON2INV); *bufp = 0; break;
 
     /*-------------------------------------------------------------------------
      * SPI 3.
@@ -499,6 +507,10 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI3BRGCLR); *bufp = 0; break;
     STORAGE (SPI3BRGSET); *bufp = 0; break;
     STORAGE (SPI3BRGINV); *bufp = 0; break;
+    STORAGE (SPI3CON2); break;                   // Control 2
+    STORAGE (SPI3CON2CLR); *bufp = 0; break;
+    STORAGE (SPI3CON2SET); *bufp = 0; break;
+    STORAGE (SPI3CON2INV); *bufp = 0; break;
 
     /*-------------------------------------------------------------------------
      * SPI 4.
@@ -518,6 +530,10 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (SPI4BRGCLR); *bufp = 0; break;
     STORAGE (SPI4BRGSET); *bufp = 0; break;
     STORAGE (SPI4BRGINV); *bufp = 0; break;
+    STORAGE (SPI4CON2); break;                   // Control 2
+    STORAGE (SPI4CON2CLR); *bufp = 0; break;
+    STORAGE (SPI4CON2SET); *bufp = 0; break;
+    STORAGE (SPI4CON2INV); *bufp = 0; break;
 
     default:
         fprintf (stderr, "--- Read %08x: peripheral register not supported\n",
@@ -833,6 +849,8 @@ irq:    update_irq_status();
         spi_writebuf (0, data);
         return;
     WRITEOP (SPI1BRG); return;                      // Baud rate
+    WRITEOP (SPI1CON2); return;                     // Control 2
+
     WRITEOP (SPI2CON);                              // Control
 	spi_control (1);
         return;
@@ -842,6 +860,8 @@ irq:    update_irq_status();
         spi_writebuf (1, data);
         return;
     WRITEOP (SPI2BRG); return;                      // Baud rate
+    WRITEOP (SPI2CON2); return;                     // Control 2
+
     WRITEOP (SPI3CON);                              // Control
 	spi_control (2);
         return;
@@ -851,6 +871,8 @@ irq:    update_irq_status();
         spi_writebuf (2, data);
         return;
     WRITEOP (SPI3BRG); return;                      // Baud rate
+    WRITEOP (SPI3CON2); return;                     // Control 2
+
     WRITEOP (SPI4CON);                              // Control
 	spi_control (3);
         return;
@@ -860,6 +882,7 @@ irq:    update_irq_status();
         spi_writebuf (3, data);
         return;
     WRITEOP (SPI4BRG); return;      // Baud rate
+    WRITEOP (SPI4CON2); return;                     // Control 2
 
     default:
         fprintf (stderr, "--- Write %08x to %08x: peripheral register not supported\n",
@@ -879,7 +902,7 @@ void io_reset()
     /*
      * Prefetch controller.
      */
-    VALUE(CHECON) = 0x00000007;
+    VALUE(PRECON) = 0x00000007;
 
     /*
      * System controller.

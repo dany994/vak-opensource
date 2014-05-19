@@ -9,7 +9,7 @@ endif
 # PIC32 MX7
 #
 EXECUTABLE	= pic32mx7 
-OPT             = -DPIC32MX7
+OPT		= -DPIC32MX7
 OBJ		= obj/mx7.o 
 
 #
@@ -51,7 +51,7 @@ obj/%.o:        %.c??
 		$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:
-		rm -rf *.exe *.log *.so *.o obj $(EXECUTABLE) *~
+		rm -rf *.exe *.log *.so *.o obj pic32mx7 pic32mz *~
 ###
 obj/loadhex.o: loadhex.c globals.h
 obj/main.o: main.c globals.h

@@ -22,28 +22,59 @@
  * this software.
  */
 #include "globals.h"
-#include "pic32mx.h"
 
-#define NUM_SPI         4               // number of SPI ports
+#ifdef PIC32MX7
+#   include "pic32mx.h"
+#   define NUM_SPI      4               // number of SPI ports
+#endif
+
+#ifdef PIC32MZ
+#   include "pic32mz.h"
+#   define NUM_SPI      6               // number of SPI ports
+#endif
+
 #define SPI_IRQ_FAULT   0               // error irq offset
 #define SPI_IRQ_TX      1               // transmitter irq offset
 #define SPI_IRQ_RX      2               // receiver irq offset
+
+static unsigned spi_buf[NUM_SPI][4];    // SPI transmit and receive buffer
+static unsigned spi_rfifo[NUM_SPI];     // SPI read fifo counter
+static unsigned spi_wfifo[NUM_SPI];     // SPI write fifo counter
+
+unsigned sdcard_spi_port;               // SPI port number of SD card
 
 static unsigned spi_irq[NUM_SPI] = {    // SPI interrupt numbers
     PIC32_IRQ_SPI1E,
     PIC32_IRQ_SPI2E,
     PIC32_IRQ_SPI3E,
     PIC32_IRQ_SPI4E,
+#ifdef PIC32MZ
+    PIC32_IRQ_SPI5E,
+    PIC32_IRQ_SPI6E,
+#endif
 };
-static unsigned spi_buf[NUM_SPI][4];    // SPI transmit and receive buffer
-static unsigned spi_rfifo[NUM_SPI];     // SPI read fifo counter
-static unsigned spi_wfifo[NUM_SPI];     // SPI write fifo counter
-static unsigned spi_con[NUM_SPI] =      // SPIxCON address
-    { SPI1CON, SPI2CON, SPI3CON, SPI4CON };
-static unsigned spi_stat[NUM_SPI] =     // SPIxSTAT address
-    { SPI1STAT, SPI2STAT, SPI3STAT, SPI4STAT };
 
-unsigned sdcard_spi_port;               // SPI port number of SD card
+static unsigned spi_con[NUM_SPI] = {    // SPIxCON address
+    SPI1CON, 
+    SPI2CON, 
+    SPI3CON, 
+    SPI4CON, 
+#ifdef PIC32MZ
+    SPI5CON, 
+    SPI6CON, 
+#endif
+};
+
+static unsigned spi_stat[NUM_SPI] = {	// SPIxSTAT address
+    SPI1STAT, 
+    SPI2STAT, 
+    SPI3STAT, 
+    SPI4STAT, 
+#ifdef PIC32MZ
+    SPI5STAT, 
+    SPI6STAT, 
+#endif
+};
 
 unsigned spi_readbuf (int unit)
 {
@@ -123,19 +154,42 @@ void spi_reset()
     spi_wfifo[0]    = 0;
     spi_rfifo[0]    = 0;
     VALUE(SPI1BRG)  = 0;
+
     VALUE(SPI2CON)  = 0;
     VALUE(SPI2STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
     spi_wfifo[1]    = 0;
     spi_rfifo[1]    = 0;
     VALUE(SPI2BRG)  = 0;
+
     VALUE(SPI3CON)  = 0;
     VALUE(SPI3STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
     spi_wfifo[2]    = 0;
     spi_rfifo[2]    = 0;
     VALUE(SPI3BRG)  = 0;
+
     VALUE(SPI4CON)  = 0;
     VALUE(SPI4STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
     spi_wfifo[3]    = 0;
     spi_rfifo[3]    = 0;
     VALUE(SPI4BRG)  = 0;
+#ifdef PIC32MZ
+    VALUE(SPI5CON)  = 0;
+    VALUE(SPI5STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
+    spi_wfifo[4]    = 0;
+    spi_rfifo[4]    = 0;
+    VALUE(SPI5BRG)  = 0;
+
+    VALUE(SPI6CON)  = 0;
+    VALUE(SPI6STAT) = PIC32_SPISTAT_SPITBE;     // Transmit buffer is empty
+    spi_wfifo[5]    = 0;
+    spi_rfifo[5]    = 0;
+    VALUE(SPI6BRG)  = 0;
+
+    VALUE(SPI1CON2) = 0;
+    VALUE(SPI2CON2) = 0;
+    VALUE(SPI3CON2) = 0;
+    VALUE(SPI4CON2) = 0;
+    VALUE(SPI5CON2) = 0;
+    VALUE(SPI6CON2) = 0;
+#endif
 }
