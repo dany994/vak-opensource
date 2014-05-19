@@ -22,7 +22,14 @@
  * this software.
  */
 #include "globals.h"
-#include "pic32mx.h"
+
+#ifdef PIC32MX7
+#   include "pic32mx.h"
+#endif
+
+#ifdef PIC32MZ
+#   include "pic32mz.h"
+#endif
 
 #define NUM_UART        6               // number of UART ports
 #define UART_IRQ_ERR    0               // error irq offset
