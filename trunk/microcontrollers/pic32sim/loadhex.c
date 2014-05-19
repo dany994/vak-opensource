@@ -275,6 +275,6 @@ int load_file(void *progmem, void *bootmem, const char *filename)
             return 0;
         }
     }
-    printf("File '%s', length %d bytes\n", filename, memory_len);
+    printf("Flash file '%s', %d bytes\n", filename, memory_len);
     return 1;
 }

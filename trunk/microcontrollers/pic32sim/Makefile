@@ -6,22 +6,27 @@ IMPERAS_ERROR   := $(error "Please source 'imperas.environ' to setup Imperas env
 endif
 
 #
-# PIC32 MX7
+# Processor: PIC32 MX7
 #
-EXECUTABLE	= pic32mx7 
-OPT		= -DPIC32MX7
-OBJ		= obj/mx7.o 
+EXECUTABLE	= pic32mx7
+PROCESSOR	= PIC32MX7
+OBJ		= obj/mx7.o
 
 #
-# PIC32 MZ
+# Processor: PIC32 MZ
 #
 #EXECUTABLE	= pic32mz
-#OPT		= -DPIC32MZ
-#OBJ		= obj/mz.o 
+#PROCESSOR	= PIC32MZ
+#OBJ		= obj/mz.o
 
-OPT             += -O2 -g -DEXPLORER16
-#OPT		+= -O0 -g
+#
+# Board type
+#
+BOARD		= EXPLORER16
+#BOARD		= MAXIMITE
+#BOARD		= MAX32
 
+OPTIMIZE        = -O2
 OBJ		+= obj/loadhex.o \
                    obj/main.o \
                    obj/sdcard.o \
@@ -29,7 +34,7 @@ OBJ		+= obj/loadhex.o \
                    obj/uart.o \
                    obj/vtty.o
 
-CFLAGS          = -m32 -g -Wall -Werror $(OPT) \
+CFLAGS          = -m32 -g -Wall -Werror $(OPTIMIZE) -D$(PROCESSOR) -D$(BOARD) \
                   -I$(IMPERAS_HOME)/ImpPublic/include/common \
                   -I$(IMPERAS_HOME)/ImpPublic/include/host \
                   -I$(IMPERAS_HOME)/ImpProprietary/include/host

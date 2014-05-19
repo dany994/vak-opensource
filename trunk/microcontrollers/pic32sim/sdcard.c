@@ -154,6 +154,7 @@ void sdcard_init (int unit, const char *name, const char *filename, int cs_port,
     }
     fstat (d->fd, &st);
     d->kbytes = st.st_size / 1024;
+    printf("Card%u image '%s', %d kbytes\n", unit, filename, d->kbytes);
 }
 
 void sdcard_select (int unit, int on)

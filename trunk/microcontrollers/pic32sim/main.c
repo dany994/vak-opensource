@@ -282,7 +282,7 @@ int main(int argc, char **argv)
     icmAddUns64Attr(user_attrs, "config1PC",    1);     // Enable performance counters
     icmAddUns64Attr(user_attrs, "config1WR",    1);     // Enable watch registers
     icmAddUns64Attr(user_attrs, "config3ULRI",  1);     // UserLocal register implemented
-    icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Realistic initialization of cache
+    icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Cache initialized by hardware
 #endif
 
     // Processor configuration
