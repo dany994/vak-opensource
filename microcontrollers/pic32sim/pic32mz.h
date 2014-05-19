@@ -308,7 +308,7 @@
 /*--------------------------------------
  * Peripheral registers.
  */
-#define PIC32_R(a)		*(volatile unsigned*)(0xBF800000 + (a))
+#define PIC32_R(a)		(0xBF800000 + (a))
 
 /*--------------------------------------
  * Port A-K registers.
@@ -1080,51 +1080,150 @@
 #define RPG8R           PIC32_R (0x16A0)
 #define RPG9R           PIC32_R (0x16A4)
 
-#if 0 // TODO
+/*--------------------------------------
+ * Prefetch cache controller registers.
+ */
+#define PRECON          PIC32_R (0xe0000)       /* Prefetch cache control */
+#define PRECONCLR	PIC32_R (0xe0004)
+#define PRECONSET	PIC32_R (0xe0008)
+#define PRECONINV	PIC32_R (0xe000C)
+#define PRESTAT         PIC32_R (0xe0010)       /* Prefetch status */
+#define PRESTATCLR	PIC32_R (0xe0014)
+#define PRESTATSET	PIC32_R (0xe0018)
+#define PRESTATINV	PIC32_R (0xe001C)
+// TODO: other prefetech registers
+
+/*--------------------------------------
+ * System controller registers.
+ */
+#define CFGCON          PIC32_R (0x0000)
+#define DEVID           PIC32_R (0x0020)
+#define SYSKEY          PIC32_R (0x0030)
+#define CFGEBIA	        PIC32_R (0x00c0)
+#define CFGEBIACLR	PIC32_R (0x00c4)
+#define CFGEBIASET	PIC32_R (0x00c8)
+#define CFGEBIAINV	PIC32_R (0x00cc)
+#define CFGEBIC         PIC32_R (0x00d0)
+#define CFGEBICCLR	PIC32_R (0x00d4)
+#define CFGEBICSET	PIC32_R (0x00d8)
+#define CFGEBICINV	PIC32_R (0x00dc)
+#define CFGPG           PIC32_R (0x00e0)
+
+#define OSCCON          PIC32_R (0x1200)    /* Oscillator Control */
+#define OSCTUN          PIC32_R (0x1210)
+#define SPLLCON         PIC32_R (0x1220)
+#define RCON	        PIC32_R (0x1240)
+#define RSWRST          PIC32_R (0x1250)
+#define RNMICON         PIC32_R (0x1260)
+#define PWRCON          PIC32_R (0x1270)   
+#define REFO1CON        PIC32_R (0x1280)
+#define REFO1TRIM       PIC32_R (0x1290)
+#define REFO2CON        PIC32_R (0x12A0)
+#define REFO2TRIM       PIC32_R (0x12B0)
+#define REFO3CON        PIC32_R (0x12C0)
+#define REFO3TRIM       PIC32_R (0x12D0)
+#define REFO4CON        PIC32_R (0x12E0)
+#define REFO4TRIM       PIC32_R (0x12F0)
+#define PB1DIV          PIC32_R (0x1300)
+#define PB2DIV          PIC32_R (0x1310)
+#define PB3DIV          PIC32_R (0x1320)
+#define PB4DIV          PIC32_R (0x1330)
+#define PB5DIV          PIC32_R (0x1340)
+#define PB7DIV          PIC32_R (0x1360)
+#define PB8DIV          PIC32_R (0x1370)   
+
 /*--------------------------------------
  * A/D Converter registers.
  */
-#define AD1CON1		PIC32_R (0x9000) /* Control register 1 */
-#define AD1CON1CLR	PIC32_R (0x9004)
-#define AD1CON1SET	PIC32_R (0x9008)
-#define AD1CON1INV	PIC32_R (0x900C)
-#define AD1CON2		PIC32_R (0x9010) /* Control register 2 */
-#define AD1CON2CLR	PIC32_R (0x9014)
-#define AD1CON2SET	PIC32_R (0x9018)
-#define AD1CON2INV	PIC32_R (0x901C)
-#define AD1CON3		PIC32_R (0x9020) /* Control register 3 */
-#define AD1CON3CLR	PIC32_R (0x9024)
-#define AD1CON3SET	PIC32_R (0x9028)
-#define AD1CON3INV	PIC32_R (0x902C)
-#define AD1CHS		PIC32_R (0x9040) /* Channel select */
-#define AD1CHSCLR	PIC32_R (0x9044)
-#define AD1CHSSET	PIC32_R (0x9048)
-#define AD1CHSINV	PIC32_R (0x904C)
-#define AD1CSSL		PIC32_R (0x9050) /* Input scan selection */
-#define AD1CSSLCLR	PIC32_R (0x9054)
-#define AD1CSSLSET	PIC32_R (0x9058)
-#define AD1CSSLINV	PIC32_R (0x905C)
-#define AD1PCFG		PIC32_R (0x9060) /* Port configuration */
-#define AD1PCFGCLR	PIC32_R (0x9064)
-#define AD1PCFGSET	PIC32_R (0x9068)
-#define AD1PCFGINV	PIC32_R (0x906C)
-#define ADC1BUF0	PIC32_R (0x9070) /* Result words */
-#define ADC1BUF1	PIC32_R (0x9080)
-#define ADC1BUF2	PIC32_R (0x9090)
-#define ADC1BUF3	PIC32_R (0x90A0)
-#define ADC1BUF4	PIC32_R (0x90B0)
-#define ADC1BUF5	PIC32_R (0x90C0)
-#define ADC1BUF6	PIC32_R (0x90D0)
-#define ADC1BUF7	PIC32_R (0x90E0)
-#define ADC1BUF8	PIC32_R (0x90F0)
-#define ADC1BUF9	PIC32_R (0x9100)
-#define ADC1BUFA	PIC32_R (0x9110)
-#define ADC1BUFB	PIC32_R (0x9120)
-#define ADC1BUFC	PIC32_R (0x9130)
-#define ADC1BUFD	PIC32_R (0x9140)
-#define ADC1BUFE	PIC32_R (0x9150)
-#define ADC1BUFF	PIC32_R (0x9160)
+#define AD1CON1         PIC32_R (0x4b000)   /* Control register 1 */
+#define AD1CON2         PIC32_R (0x4b004)   /* Control register 2 */
+#define AD1CON3         PIC32_R (0x4b008)   /* Control register 3 */
+#define AD1IMOD         PIC32_R (0x4b00c)
+#define AD1GIRQEN1      PIC32_R (0x4b010)
+#define AD1GIRQEN2      PIC32_R (0x4b014)
+#define AD1CSS1         PIC32_R (0x4b018)
+#define AD1CSS2         PIC32_R (0x4b01c)
+#define AD1DSTAT1       PIC32_R (0x4b020)
+#define AD1DSTAT2       PIC32_R (0x4b024)
+#define AD1CMPEN1       PIC32_R (0x4b028)
+#define AD1CMP1         PIC32_R (0x4b02c)
+#define AD1CMPEN2       PIC32_R (0x4b030)
+#define AD1CMP2         PIC32_R (0x4b034)
+#define AD1CMPEN3       PIC32_R (0x4b038)
+#define AD1CMP3         PIC32_R (0x4b03c)
+#define AD1CMPEN4       PIC32_R (0x4b040)
+#define AD1CMP4         PIC32_R (0x4b044)
+#define AD1CMPEN5       PIC32_R (0x4b048)
+#define AD1CMP5         PIC32_R (0x4b04c)
+#define AD1CMPEN6       PIC32_R (0x4b050)
+#define AD1CMP6         PIC32_R (0x4b054)
+#define AD1FLTR1        PIC32_R (0x4b058)
+#define AD1FLTR2        PIC32_R (0x4b05c)
+#define AD1FLTR3        PIC32_R (0x4b060)
+#define AD1FLTR4        PIC32_R (0x4b064)
+#define AD1FLTR5        PIC32_R (0x4b068)
+#define AD1FLTR6        PIC32_R (0x4b06c)
+#define AD1TRG1         PIC32_R (0x4b070)
+#define AD1TRG2         PIC32_R (0x4b074)
+#define AD1TRG3         PIC32_R (0x4b078)
+#define AD1CMPCON1      PIC32_R (0x4b090)
+#define AD1CMPCON2      PIC32_R (0x4b094)
+#define AD1CMPCON3      PIC32_R (0x4b098)
+#define AD1CMPCON4      PIC32_R (0x4b09c)
+#define AD1CMPCON5      PIC32_R (0x4b0a0)
+#define AD1CMPCON6      PIC32_R (0x4b0a4)
+#define AD1DATA0        PIC32_R (0x4b0b8)
+#define AD1DATA1        PIC32_R (0x4b0bc)
+#define AD1DATA2        PIC32_R (0x4b0c0)
+#define AD1DATA3        PIC32_R (0x4b0c4)
+#define AD1DATA4        PIC32_R (0x4b0c8)
+#define AD1DATA5        PIC32_R (0x4b0cc)
+#define AD1DATA6        PIC32_R (0x4b0d0)
+#define AD1DATA7        PIC32_R (0x4b0d4)
+#define AD1DATA8        PIC32_R (0x4b0d8)
+#define AD1DATA9        PIC32_R (0x4b0dc)
+#define AD1DATA10       PIC32_R (0x4b0e0)
+#define AD1DATA11       PIC32_R (0x4b0e4)
+#define AD1DATA12       PIC32_R (0x4b0e8)
+#define AD1DATA13       PIC32_R (0x4b0ec)
+#define AD1DATA14       PIC32_R (0x4b0f0)
+#define AD1DATA15       PIC32_R (0x4b0f4)
+#define AD1DATA16       PIC32_R (0x4b0f8)
+#define AD1DATA17       PIC32_R (0x4b0fc)
+#define AD1DATA18       PIC32_R (0x4b100)
+#define AD1DATA19       PIC32_R (0x4b104)
+#define AD1DATA20       PIC32_R (0x4b108)
+#define AD1DATA21       PIC32_R (0x4b10c)
+#define AD1DATA22       PIC32_R (0x4b110)
+#define AD1DATA23       PIC32_R (0x4b114)
+#define AD1DATA24       PIC32_R (0x4b118)
+#define AD1DATA25       PIC32_R (0x4b11c)
+#define AD1DATA26       PIC32_R (0x4b120)
+#define AD1DATA27       PIC32_R (0x4b124)
+#define AD1DATA28       PIC32_R (0x4b128)
+#define AD1DATA29       PIC32_R (0x4b12c)
+#define AD1DATA30       PIC32_R (0x4b130)
+#define AD1DATA31       PIC32_R (0x4b134)
+#define AD1DATA32       PIC32_R (0x4b138)
+#define AD1DATA33       PIC32_R (0x4b13c)
+#define AD1DATA34       PIC32_R (0x4b140)
+#define AD1DATA35       PIC32_R (0x4b144)
+#define AD1DATA36       PIC32_R (0x4b148)
+#define AD1DATA37       PIC32_R (0x4b14c)
+#define AD1DATA38       PIC32_R (0x4b150)
+#define AD1DATA39       PIC32_R (0x4b154)
+#define AD1DATA40       PIC32_R (0x4b158)
+#define AD1DATA41       PIC32_R (0x4b15c)
+#define AD1DATA42       PIC32_R (0x4b160)
+#define AD1DATA43       PIC32_R (0x4b164)
+#define AD1DATA44       PIC32_R (0x4b168)
+#define AD1CAL1         PIC32_R (0x4b200)   /* Calibration Data */
+#define AD1CAL2         PIC32_R (0x4b204)
+#define AD1CAL3         PIC32_R (0x4b208)
+#define AD1CAL4         PIC32_R (0x4b20c)
+#define AD1CAL5         PIC32_R (0x4b210)
 
+#if 0 // TODO
 /*--------------------------------------
  * USB registers.
  */
@@ -1397,23 +1496,6 @@
 #define DMAADDR         PIC32_R (0x83020)       /* DMA Address */
 // TODO: other DMA registers.
 
-/*--------------------------------------
- * System controller registers.
- */
-#define OSCCON          PIC32_R (0xF000)
-#define OSCTUN          PIC32_R (0xF010)
-#define DDPCON          PIC32_R (0xF200)        /* Debug Data Port Control */
-#define DEVID           PIC32_R (0xF220)
-#define SYSKEY          PIC32_R (0xF230)
-#define RCON            PIC32_R (0xF600)
-#define RCONCLR         PIC32_R (0xF604)
-#define RCONSET         PIC32_R (0xF608)
-#define RCONINV         PIC32_R (0xF60C)
-#define RSWRST          PIC32_R (0xF610)
-#define RSWRSTCLR       PIC32_R (0xF614)
-#define RSWRSTSET       PIC32_R (0xF618)
-#define RSWRSTINV       PIC32_R (0xF61C)
-
 /*
  * Reset control register.
  */
@@ -1426,42 +1508,6 @@
 #define PIC32_RCON_EXTR         0x00000080
 #define PIC32_RCON_VREGS        0x00000100
 #define PIC32_RCON_CMR          0x00000200
-
-/*--------------------------------------
- * Prefetch cache controller registers.
- */
-#define CHECON          PIC32_R (0x84000)       /* Prefetch cache control */
-#define CHECONCLR	PIC32_R (0x84004)
-#define CHECONSET	PIC32_R (0x84008)
-#define CHECONINV	PIC32_R (0x8400C)
-// TODO: other prefetech registers
-
-/*--------------------------------------
- * Bus matrix control registers.
- */
-#define BMXCON          PIC32_R (0x82000)       /* Memory configuration */
-#define BMXCONCLR	PIC32_R (0x82004)
-#define BMXCONSET	PIC32_R (0x82008)
-#define BMXCONINV	PIC32_R (0x8200C)
-#define BMXDKPBA        PIC32_R (0x82010)       /* Data RAM kernel program base address */
-#define BMXDKPBACLR	PIC32_R (0x82014)
-#define BMXDKPBASET	PIC32_R (0x82018)
-#define BMXDKPBAINV	PIC32_R (0x8201C)
-#define BMXDUDBA        PIC32_R (0x82020)       /* Data RAM user data base address */
-#define BMXDUDBACLR	PIC32_R (0x82024)
-#define BMXDUDBASET	PIC32_R (0x82028)
-#define BMXDUDBAINV	PIC32_R (0x8202C)
-#define BMXDUPBA        PIC32_R (0x82030)       /* Data RAM user program base address */
-#define BMXDUPBACLR	PIC32_R (0x82034)
-#define BMXDUPBASET	PIC32_R (0x82038)
-#define BMXDUPBAINV	PIC32_R (0x8203C)
-#define BMXDRMSZ        PIC32_R (0x82040)       /* Data RAM size */
-#define BMXPUPBA        PIC32_R (0x82050)       /* Program Flash user program base address */
-#define BMXPUPBACLR	PIC32_R (0x82054)
-#define BMXPUPBASET	PIC32_R (0x82058)
-#define BMXPUPBAINV	PIC32_R (0x8205C)
-#define BMXPFMSZ        PIC32_R (0x82060)       /* Program Flash size */
-#define BMXBOOTSZ       PIC32_R (0x82070)       /* Boot Flash size */
 
 /*--------------------------------------
  * Real time clock and calendar.
@@ -1541,48 +1587,115 @@
 #define PIC32_NVMCON_WREN       0x00004000
 #define PIC32_NVMCON_WR         0x00008000
 
+#endif // TODO
+
 /*--------------------------------------
  * Interrupt controller registers.
  */
-#define INTCON		PIC32_R (0x81000)	/* Interrupt Control */
-#define INTCONCLR	PIC32_R (0x81004)
-#define INTCONSET	PIC32_R (0x81008)
-#define INTCONINV	PIC32_R (0x8100C)
-#define INTSTAT		PIC32_R (0x81010)	/* Interrupt Status */
-#define IPTMR		PIC32_R (0x81020)	/* Temporal Proximity Timer */
-#define IPTMRCLR	PIC32_R (0x81024)
-#define IPTMRSET	PIC32_R (0x81028)
-#define IPTMRINV	PIC32_R (0x8102C)
-#define IFS(n)		PIC32_R (0x81030+((n)<<4)) /* IFS(0..2) - Interrupt Flag Status */
-#define IFSCLR(n)	PIC32_R (0x81034+((n)<<4))
-#define IFSSET(n)	PIC32_R (0x81038+((n)<<4))
-#define IFSINV(n)	PIC32_R (0x8103C+((n)<<4))
-#define IEC(n)		PIC32_R (0x81060+((n)<<4)) /* IEC(0..2) - Interrupt Enable Control */
-#define IECCLR(n)	PIC32_R (0x81064+((n)<<4))
-#define IECSET(n)	PIC32_R (0x81068+((n)<<4))
-#define IECINV(n)	PIC32_R (0x8106C+((n)<<4))
-#define IPC(n)		PIC32_R (0x81090+((n)<<4)) /* IPC(0..12) - Interrupt Priority Control */
-#define IPCCLR(n)	PIC32_R (0x81094+((n)<<4))
-#define IPCSET(n)	PIC32_R (0x81098+((n)<<4))
-#define IPCINV(n)	PIC32_R (0x8109C+((n)<<4))
+#define INTCON		PIC32_R (0x10000)	/* Interrupt Control */
+#define INTCONCLR	PIC32_R (0x10004)
+#define INTCONSET	PIC32_R (0x10008)
+#define INTCONINV	PIC32_R (0x1000C)
+#define PRISS		PIC32_R (0x10010)	/* Priority Shadow Select */
+#define PRISSCLR	PIC32_R (0x10014)
+#define PRISSSET	PIC32_R (0x10018)
+#define PRISSINV	PIC32_R (0x1001C)
+#define INTSTAT		PIC32_R (0x10020)	/* Interrupt Status */
+#define IPTMR		PIC32_R (0x10030)	/* Temporal Proximity Timer */
+#define IPTMRCLR	PIC32_R (0x10034)
+#define IPTMRSET	PIC32_R (0x10038)
+#define IPTMRINV	PIC32_R (0x1003C)
+#define IFS(n)		PIC32_R (0x10040+((n)<<4)) /* IFS(0..5) - Interrupt Flag Status */
+#define IFSCLR(n)	PIC32_R (0x10044+((n)<<4))
+#define IFSSET(n)	PIC32_R (0x10048+((n)<<4))
+#define IFSINV(n)	PIC32_R (0x1004C+((n)<<4))
+#define IFS0            IFS(0)
+#define IFS1            IFS(1)
+#define IFS2            IFS(2)
+#define IFS3            IFS(3)
+#define IFS4            IFS(4)
+#define IFS5            IFS(5)
+#define IEC(n)		PIC32_R (0x100c0+((n)<<4)) /* IEC(0..5) - Interrupt Enable Control */
+#define IECCLR(n)	PIC32_R (0x100c4+((n)<<4))
+#define IECSET(n)	PIC32_R (0x100c8+((n)<<4))
+#define IECINV(n)	PIC32_R (0x100cC+((n)<<4))
+#define IEC0            IEC(0)
+#define IEC1            IEC(1)
+#define IEC2            IEC(2)
+#define IEC3            IEC(3)
+#define IEC4            IEC(4)
+#define IEC5            IEC(5)
+#define IPC(n)		PIC32_R (0x10140+((n)<<4)) /* IPC(0..47) - Interrupt Priority Control */
+#define IPCCLR(n)	PIC32_R (0x10144+((n)<<4))
+#define IPCSET(n)	PIC32_R (0x10148+((n)<<4))
+#define IPCINV(n)	PIC32_R (0x1014C+((n)<<4))
+#define IPC0            IPC(0)
+#define IPC1            IPC(1)
+#define IPC2            IPC(2)
+#define IPC3            IPC(3)
+#define IPC4            IPC(4)
+#define IPC5            IPC(5)
+#define IPC6            IPC(6)
+#define IPC7            IPC(7)
+#define IPC8            IPC(8)
+#define IPC9            IPC(9)
+#define IPC10           IPC(10)
+#define IPC11           IPC(11)
+#define IPC12           IPC(12)
+#define IPC13           IPC(13)
+#define IPC14           IPC(14)
+#define IPC15           IPC(15)
+#define IPC16           IPC(16)
+#define IPC17           IPC(17)
+#define IPC18           IPC(18)
+#define IPC19           IPC(19)
+#define IPC20           IPC(20)
+#define IPC21           IPC(21)
+#define IPC22           IPC(22)
+#define IPC23           IPC(23)
+#define IPC24           IPC(24)
+#define IPC25           IPC(25)
+#define IPC26           IPC(26)
+#define IPC27           IPC(27)
+#define IPC28           IPC(28)
+#define IPC29           IPC(29)
+#define IPC30           IPC(30)
+#define IPC31           IPC(31)
+#define IPC32           IPC(32)
+#define IPC33           IPC(33)
+#define IPC34           IPC(34)
+#define IPC35           IPC(35)
+#define IPC36           IPC(36)
+#define IPC37           IPC(37)
+#define IPC38           IPC(38)
+#define IPC39           IPC(39)
+#define IPC40           IPC(40)
+#define IPC41           IPC(41)
+#define IPC42           IPC(42)
+#define IPC43           IPC(43)
+#define IPC44           IPC(44)
+#define IPC45           IPC(45)
+#define IPC46           IPC(46)
+#define IPC47           IPC(47)
+#define OFF(n)		PIC32_R (0x10540+((n)<<2)) /* OFF(0..190) - Interrupt Vector Address Offset */
 
 /*
  * Interrupt Control register.
  */
-#define PIC32_INTCON_INT0EP	0x0001	/* External interrupt 0 polarity rising edge */
-#define PIC32_INTCON_INT1EP	0x0002	/* External interrupt 1 polarity rising edge */
-#define PIC32_INTCON_INT2EP	0x0004	/* External interrupt 2 polarity rising edge */
-#define PIC32_INTCON_INT3EP	0x0008	/* External interrupt 3 polarity rising edge */
-#define PIC32_INTCON_INT4EP	0x0010	/* External interrupt 4 polarity rising edge */
-#define PIC32_INTCON_TPC(x)	((x)<<8) /* Temporal proximity group priority */
-#define PIC32_INTCON_MVEC	0x1000	/* Multi-vectored mode */
-#define PIC32_INTCON_FRZ	0x4000	/* Freeze in debug mode */
-#define PIC32_INTCON_SS0	0x8000	/* Single vector has a shadow register set */
+#define PIC32_INTCON_INT0EP	0x00000001  /* External interrupt 0 polarity rising edge */
+#define PIC32_INTCON_INT1EP	0x00000002  /* External interrupt 1 polarity rising edge */
+#define PIC32_INTCON_INT2EP	0x00000004  /* External interrupt 2 polarity rising edge */
+#define PIC32_INTCON_INT3EP	0x00000008  /* External interrupt 3 polarity rising edge */
+#define PIC32_INTCON_INT4EP	0x00000010  /* External interrupt 4 polarity rising edge */
+#define PIC32_INTCON_TPC(x)	((x)<<8)    /* Temporal proximity group priority */
+#define PIC32_INTCON_MVEC	0x00001000  /* Multi-vectored mode */
+#define PIC32_INTCON_SS0	0x00010000  /* Single vector has a shadow register set */
+#define PIC32_INTCON_VS(x)	((x)<<16)   /* Temporal proximity group priority */
 
 /*
  * Interrupt Status register.
  */
-#define PIC32_INTSTAT_VEC(s)	((s) & 0xFF)	/* Interrupt vector */
+#define PIC32_INTSTAT_VEC(s)	((s) & 0x3f)	/* Interrupt vector */
 #define PIC32_INTSTAT_SRIPL(s)	((s) >> 8 & 7)	/* Requested priority level */
 #define PIC32_INTSTAT_SRIPL_MASK 0x0700
 
@@ -1597,8 +1710,6 @@
 #define PIC32_IPC_IP2(x)	((x)<<18)	/* Interrupt 2 priority */
 #define PIC32_IPC_IS3(x)	((x)<<24)	/* Interrupt 3 subpriority */
 #define PIC32_IPC_IP3(x)	((x)<<26)	/* Interrupt 3 priority */
-
-#endif // TODO
 
 /*
  * IRQ numbers for PIC32MZ
@@ -1795,5 +1906,6 @@
 #define PIC32_IRQ_U6RX      189 /* UART6 Receive Done */
 #define PIC32_IRQ_U6TX      190 /* UART6 Transfer Done */
                          /* 191 -- Reserved */
+#define PIC32_IRQ_LAST      190 /* Last valid irq number */
 
 #endif /* _IO_PIC32MZ_H */
