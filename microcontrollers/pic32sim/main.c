@@ -161,7 +161,7 @@ void timer_irq (void *arg, Uns32 value)
         irq_clear (0);
 }
 
-/* 
+/*
  * When uarts are idle, insert uspeep()
  * to decrease the cpu load.
  */
@@ -169,7 +169,7 @@ static void pause_idle()
 {
     static unsigned idle_timeout;
     fd_set rfds;
-    
+
     if (idle_timeout > 0) {
 	idle_timeout--;
 	return;
@@ -279,7 +279,6 @@ int main(int argc, char **argv)
     icmAddUns64Attr(user_attrs, "config1DS",    0);     // Dcache: 64 sets per way
     icmAddUns64Attr(user_attrs, "config1DL",    3);     // Dcache: line size 16 bytes
     icmAddUns64Attr(user_attrs, "config1DA",    3);     // Dcache: 4-way associativity
-    icmAddUns64Attr(user_attrs, "config1PC",    1);     // Enable performance counters
     icmAddUns64Attr(user_attrs, "config1WR",    1);     // Enable watch registers
     icmAddUns64Attr(user_attrs, "config3ULRI",  1);     // UserLocal register implemented
     icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Cache initialized by hardware
