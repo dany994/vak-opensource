@@ -313,7 +313,7 @@
 /*--------------------------------------
  * Peripheral registers.
  */
-#define PIC32_R(a)		(0xBF800000 + (a))
+#define PIC32_R(a)		(0x1F800000 + (a))
 
 /*--------------------------------------
  * Port A-K registers.
@@ -1120,7 +1120,7 @@
 #define RCON	        PIC32_R (0x1240)
 #define RSWRST          PIC32_R (0x1250)
 #define RNMICON         PIC32_R (0x1260)
-#define PWRCON          PIC32_R (0x1270)   
+#define PWRCON          PIC32_R (0x1270)
 #define REFO1CON        PIC32_R (0x1280)
 #define REFO1TRIM       PIC32_R (0x1290)
 #define REFO2CON        PIC32_R (0x12A0)
@@ -1135,7 +1135,7 @@
 #define PB4DIV          PIC32_R (0x1330)
 #define PB5DIV          PIC32_R (0x1340)
 #define PB7DIV          PIC32_R (0x1360)
-#define PB8DIV          PIC32_R (0x1370)   
+#define PB8DIV          PIC32_R (0x1370)
 
 /*--------------------------------------
  * A/D Converter registers.
@@ -1248,7 +1248,7 @@
 #define SPI1CON2CLR	PIC32_R (0x21044)
 #define SPI1CON2SET	PIC32_R (0x21048)
 #define SPI1CON2INV	PIC32_R (0x2104c)
-                                   
+
 #define SPI2CON		PIC32_R (0x21200) /* Control */
 #define SPI2CONCLR	PIC32_R (0x21204)
 #define SPI2CONSET	PIC32_R (0x21208)
@@ -1266,7 +1266,7 @@
 #define SPI2CON2CLR	PIC32_R (0x21244)
 #define SPI2CON2SET	PIC32_R (0x21248)
 #define SPI2CON2INV	PIC32_R (0x2124c)
-                                   
+
 #define SPI3CON		PIC32_R (0x21400) /* Control */
 #define SPI3CONCLR	PIC32_R (0x21404)
 #define SPI3CONSET	PIC32_R (0x21408)
@@ -1284,7 +1284,7 @@
 #define SPI3CON2CLR	PIC32_R (0x21444)
 #define SPI3CON2SET	PIC32_R (0x21448)
 #define SPI3CON2INV	PIC32_R (0x2144c)
-                                   
+
 #define SPI4CON		PIC32_R (0x21600) /* Control */
 #define SPI4CONCLR	PIC32_R (0x21604)
 #define SPI4CONSET	PIC32_R (0x21608)
@@ -1302,7 +1302,7 @@
 #define SPI4CON2CLR	PIC32_R (0x21644)
 #define SPI4CON2SET	PIC32_R (0x21648)
 #define SPI4CON2INV	PIC32_R (0x2164c)
-                                   
+
 #define SPI5CON		PIC32_R (0x21800) /* Control */
 #define SPI5CONCLR	PIC32_R (0x21804)
 #define SPI5CONSET	PIC32_R (0x21808)
@@ -1320,7 +1320,7 @@
 #define SPI5CON2CLR	PIC32_R (0x21844)
 #define SPI5CON2SET	PIC32_R (0x21848)
 #define SPI5CON2INV	PIC32_R (0x2184c)
-                                   
+
 #define SPI6CON		PIC32_R (0x21a00) /* Control */
 #define SPI6CONCLR	PIC32_R (0x21a04)
 #define SPI6CONSET	PIC32_R (0x21a08)

@@ -25,16 +25,23 @@
 #include <stdint.h>
 
 #define PROGRAM_FLASH_START 0x1d000000
-#define PROGRAM_FLASH_SIZE  (512*1024)          // 512 kbytes
 #define BOOT_FLASH_START    0x1fc00000
-#define BOOT_FLASH_SIZE     (12*1024)           // 12 kbytes
 #define DATA_MEM_START      0x00000000
-#define USER_MEM_START      0xbf000000
-#define DATA_MEM_SIZE       (128*1024)          // 128 kbytes
 #define IO_MEM_START        0x1f800000
 #define IO_MEM_SIZE         (1024*1024)         // 1 Mbyte
-#define IO2_MEM_START       0x1f880000
-#define IO2_MEM_SIZE        (64*1024)           // 64 kbytes
+
+#ifdef PIC32MX7
+#define PROGRAM_FLASH_SIZE  (512*1024)          // 512 kbytes
+#define BOOT_FLASH_SIZE     (12*1024)           // 12 kbytes
+#define DATA_MEM_SIZE       (128*1024)          // 128 kbytes
+#define USER_MEM_START      0xbf000000
+#endif
+
+#ifdef PIC32MZ
+#define PROGRAM_FLASH_SIZE  (2*1024*1024)       // 2 Mbytes
+#define BOOT_FLASH_SIZE     (64*1024)           // 64 kbytes
+#define DATA_MEM_SIZE       (512*1024)          // 512 kbytes
+#endif
 
 #define IN_PROGRAM_MEM(addr) (addr >= PROGRAM_FLASH_START && \
                              addr < PROGRAM_FLASH_START+PROGRAM_FLASH_SIZE)

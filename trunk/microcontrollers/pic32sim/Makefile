@@ -8,16 +8,16 @@ endif
 #
 # Processor: PIC32 MX7
 #
-EXECUTABLE	= pic32mx7
-PROCESSOR	= PIC32MX7
-OBJ		= obj/mx7.o
+#EXECUTABLE	= pic32mx7
+#PROCESSOR	= PIC32MX7
+#OBJ		= obj/mx7.o
 
 #
 # Processor: PIC32 MZ
 #
-#EXECUTABLE	= pic32mz
-#PROCESSOR	= PIC32MZ
-#OBJ		= obj/mz.o
+EXECUTABLE	= pic32mz
+PROCESSOR	= PIC32MZ
+OBJ		= obj/mz.o
 
 #
 # Board type
