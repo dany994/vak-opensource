@@ -619,8 +619,10 @@ void vtty_put_char (unsigned unit, char ch)
             fprintf (stderr, "%s: put char %#x failed (%s)\n",
                 vtty->name, (unsigned char) ch, strerror (errno));
         }
-    } else {
+    } else if (vtty->fstream) {
         fwrite (&ch, 1, 1, vtty->fstream);
+    } else {
+        fprintf (stderr, "uart%u: not configured\n", unit+1);
     }
 }
 

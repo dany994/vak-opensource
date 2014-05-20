@@ -279,7 +279,7 @@ int main(int argc, char **argv)
     icmAddUns64Attr(user_attrs, "config1DS",    0);     // Dcache: 64 sets per way
     icmAddUns64Attr(user_attrs, "config1DL",    3);     // Dcache: line size 16 bytes
     icmAddUns64Attr(user_attrs, "config1DA",    3);     // Dcache: 4-way associativity
-    icmAddUns64Attr(user_attrs, "config1WR",    1);     // Enable watch registers
+    icmAddUns64Attr(user_attrs, "config1WR",    0);     // Disable watch registers
     icmAddUns64Attr(user_attrs, "config3ULRI",  1);     // UserLocal register implemented
     icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Cache initialized by hardware
 #endif
@@ -398,7 +398,11 @@ int main(int argc, char **argv)
     //
     // Create virtual console on UART2
     //
+#if defined(EXPLORER16) && defined(PIC32MX7)
     vtty_create (1, "uart2", 0);
+#else
+    vtty_create (0, "uart1", 0);
+#endif
     vtty_init();
 
     //
