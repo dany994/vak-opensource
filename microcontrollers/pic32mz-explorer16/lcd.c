@@ -161,7 +161,7 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLIDIV_1 |        /* PLL input divider = 1 */
     DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
     DEVCFG2_FPLLICLK_FRC |      /* Select FRC as input to PLL */
-    DEVCFG1_FPLLMULT(50) |      /* PLL multiplier = 50x */
+    DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 #endif
 #if 0
@@ -170,13 +170,17 @@ PIC32_DEVCFG (
      * PLL multiplies it to 200 MHz. */
     DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
     DEVCFG1_POSCMOD_HS |        /* Using primary oscillator */
+    DEVCFG1_FCKS_ENABLE |       /* Enable clock switching */
+    DEVCFG1_FCKM_ENABLE |       /* Enable fail-safe clock monitoring */
+    DEVCFG1_IESO |              /* Internal-external switch over enable */
     DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
 
     DEVCFG2_FPLLIDIV_3 |        /* PLL input divider = 3 */
     DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
-    DEVCFG1_FPLLMULT(50) |      /* PLL multiplier = 50x */
+    DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 #endif
+    DEVCFG3_FETHIO |            /* Default Ethernet pins */
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
 
 /*
