@@ -221,7 +221,7 @@
 #define DEVCFG1_DMTINV_63_64    0x00000030 /* 63/64 of counter value */
 #define DEVCFG1_DMTINV_127_128  0x00000038 /* 127/128 of counter value */
 #define DEVCFG1_FSOSCEN         0x00000040 /* Secondary oscillator enable */
-#define DEVCFG1_IESO            0x00000080 /* Internal-external switch over */
+#define DEVCFG1_IESO            0x00000080 /* Internal-external switch over enable */
 #define DEVCFG1_POSCMOD_MASK    0x00000300 /* Primary oscillator config */
 #define DEVCFG1_POSCMOD_EXT     0x00000000 /* External mode */
 #define DEVCFG1_POSCMOD_HS      0x00000200 /* HS oscillator */
@@ -281,9 +281,9 @@
 #define DEVCFG2_FPLLRNG_21_42   0x00000040 /* 21-42 MHz */
 #define DEVCFG2_FPLLRNG_34_64   0x00000050 /* 34-64 MHz */
 #define DEVCFG2_FPLLICLK_FRC    0x00000080 /* Select FRC as input to PLL */
-#define DEVCFG1_FPLLMULT(n)     (((n)-1)<<8) /* PLL Feedback Divider */
+#define DEVCFG2_FPLLMULT(n)     (((n)-1)<<8) /* PLL Feedback Divider */
 #define DEVCFG2_FPLLODIV_MASK   0x00070000 /* Default PLL output divisor */
-#define DEVCFG2_FPLLODIV_2      0x00000000 /* 2x */
+#define DEVCFG2_FPLLODIV_2      0x00010000 /* 2x */
 #define DEVCFG2_FPLLODIV_4      0x00020000 /* 4x */
 #define DEVCFG2_FPLLODIV_8      0x00030000 /* 8x */
 #define DEVCFG2_FPLLODIV_16     0x00040000 /* 16x */
