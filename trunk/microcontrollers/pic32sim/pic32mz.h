@@ -1027,9 +1027,9 @@
 #define SS6R            PIC32_R (0x14DC)
 #define C1RXR           PIC32_R (0x14E0)
 #define C2RXR           PIC32_R (0x14E4)
-#define REFCLK1R        PIC32_R (0x14E8)
-#define REFCLK3R        PIC32_R (0x14F0)
-#define REFCLK4R        PIC32_R (0x14F4)
+#define REFCLKI1R       PIC32_R (0x14E8)
+#define REFCLKI3R       PIC32_R (0x14F0)
+#define REFCLKI4R       PIC32_R (0x14F4)
 
 #define RPA14R          PIC32_R (0x1538)
 #define RPA15R          PIC32_R (0x153C)

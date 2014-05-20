@@ -225,14 +225,126 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (RSWRST); break;	// Software Reset
 
     /*-------------------------------------------------------------------------
+     * Peripheral port select registers: input.
+     */
+    STORAGE (INT1R); break;
+    STORAGE (INT2R); break;
+    STORAGE (INT3R); break;
+    STORAGE (INT4R); break;
+    STORAGE (T2CKR); break;
+    STORAGE (T3CKR); break;
+    STORAGE (T4CKR); break;
+    STORAGE (T5CKR); break;
+    STORAGE (T6CKR); break;
+    STORAGE (T7CKR); break;
+    STORAGE (T8CKR); break;
+    STORAGE (T9CKR); break;
+    STORAGE (IC1R); break;
+    STORAGE (IC2R); break;
+    STORAGE (IC3R); break;
+    STORAGE (IC4R); break;
+    STORAGE (IC5R); break;
+    STORAGE (IC6R); break;
+    STORAGE (IC7R); break;
+    STORAGE (IC8R); break;
+    STORAGE (IC9R); break;
+    STORAGE (OCFAR); break;
+    STORAGE (U1RXR); break;
+    STORAGE (U1CTSR); break;
+    STORAGE (U2RXR); break;
+    STORAGE (U2CTSR); break;
+    STORAGE (U3RXR); break;
+    STORAGE (U3CTSR); break;
+    STORAGE (U4RXR); break;
+    STORAGE (U4CTSR); break;
+    STORAGE (U5RXR); break;
+    STORAGE (U5CTSR); break;
+    STORAGE (U6RXR); break;
+    STORAGE (U6CTSR); break;
+    STORAGE (SDI1R); break;
+    STORAGE (SS1R); break;
+    STORAGE (SDI2R); break;
+    STORAGE (SS2R); break;
+    STORAGE (SDI3R); break;
+    STORAGE (SS3R); break;
+    STORAGE (SDI4R); break;
+    STORAGE (SS4R); break;
+    STORAGE (SDI5R); break;
+    STORAGE (SS5R); break;
+    STORAGE (SDI6R); break;
+    STORAGE (SS6R); break;
+    STORAGE (C1RXR); break;
+    STORAGE (C2RXR); break;
+    STORAGE (REFCLKI1R); break;
+    STORAGE (REFCLKI3R); break;
+    STORAGE (REFCLKI4R); break;
+
+    /*-------------------------------------------------------------------------
+     * Peripheral port select registers: output.
+     */
+    STORAGE (RPA14R); break;
+    STORAGE (RPA15R); break;
+    STORAGE (RPB0R); break;
+    STORAGE (RPB1R); break;
+    STORAGE (RPB2R); break;
+    STORAGE (RPB3R); break;
+    STORAGE (RPB5R); break;
+    STORAGE (RPB6R); break;
+    STORAGE (RPB7R); break;
+    STORAGE (RPB8R); break;
+    STORAGE (RPB9R); break;
+    STORAGE (RPB10R); break;
+    STORAGE (RPB14R); break;
+    STORAGE (RPB15R); break;
+    STORAGE (RPC1R); break;
+    STORAGE (RPC2R); break;
+    STORAGE (RPC3R); break;
+    STORAGE (RPC4R); break;
+    STORAGE (RPC13R); break;
+    STORAGE (RPC14R); break;
+    STORAGE (RPD0R); break;
+    STORAGE (RPD1R); break;
+    STORAGE (RPD2R); break;
+    STORAGE (RPD3R); break;
+    STORAGE (RPD4R); break;
+    STORAGE (RPD5R); break;
+    STORAGE (RPD6R); break;
+    STORAGE (RPD7R); break;
+    STORAGE (RPD9R); break;
+    STORAGE (RPD10R); break;
+    STORAGE (RPD11R); break;
+    STORAGE (RPD12R); break;
+    STORAGE (RPD14R); break;
+    STORAGE (RPD15R); break;
+    STORAGE (RPE3R); break;
+    STORAGE (RPE5R); break;
+    STORAGE (RPE8R); break;
+    STORAGE (RPE9R); break;
+    STORAGE (RPF0R); break;
+    STORAGE (RPF1R); break;
+    STORAGE (RPF2R); break;
+    STORAGE (RPF3R); break;
+    STORAGE (RPF4R); break;
+    STORAGE (RPF5R); break;
+    STORAGE (RPF8R); break;
+    STORAGE (RPF12R); break;
+    STORAGE (RPF13R); break;
+    STORAGE (RPG0R); break;
+    STORAGE (RPG1R); break;
+    STORAGE (RPG6R); break;
+    STORAGE (RPG7R); break;
+    STORAGE (RPG8R); break;
+    STORAGE (RPG9R); break;
+
+    /*-------------------------------------------------------------------------
      * General purpose IO signals.
      */
     STORAGE (TRISA); break;     // Port A: mask of inputs
     STORAGE (PORTA); break;     // Port A: read inputs
     STORAGE (LATA); break;      // Port A: read outputs
     STORAGE (ODCA); break;      // Port A: open drain configuration
-    STORAGE (CNPUA); break;     // Input pin pull-up 
-    STORAGE (CNPDA); break;     // Input pin pull-down 
+    STORAGE (CNPUA); break;     // Input pin pull-up
+    STORAGE (CNPDA); break;     // Input pin pull-down
     STORAGE (CNCONA); break;    // Interrupt-on-change control
     STORAGE (CNENA); break;     // Input change interrupt enable
     STORAGE (CNSTATA); break;   // Input change status
@@ -241,8 +353,8 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (PORTB); break;     // Port B: read inputs
     STORAGE (LATB); break;      // Port B: read outputs
     STORAGE (ODCB); break;      // Port B: open drain configuration
-    STORAGE (CNPUB); break;     // Input pin pull-up 
-    STORAGE (CNPDB); break;     // Input pin pull-down 
+    STORAGE (CNPUB); break;     // Input pin pull-up
+    STORAGE (CNPDB); break;     // Input pin pull-down
     STORAGE (CNCONB); break;    // Interrupt-on-change control
     STORAGE (CNENB); break;     // Input change interrupt enable
     STORAGE (CNSTATB); break;   // Input change status
@@ -251,8 +363,8 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (PORTC); break;     // Port C: read inputs
     STORAGE (LATC); break;      // Port C: read outputs
     STORAGE (ODCC); break;      // Port C: open drain configuration
-    STORAGE (CNPUC); break;     // Input pin pull-up 
-    STORAGE (CNPDC); break;     // Input pin pull-down 
+    STORAGE (CNPUC); break;     // Input pin pull-up
+    STORAGE (CNPDC); break;     // Input pin pull-down
     STORAGE (CNCONC); break;    // Interrupt-on-change control
     STORAGE (CNENC); break;     // Input change interrupt enable
     STORAGE (CNSTATC); break;   // Input change status
@@ -275,8 +387,8 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
 	break;
     STORAGE (LATD); break;      // Port D: read outputs
     STORAGE (ODCD); break;      // Port D: open drain configuration
-    STORAGE (CNPUD); break;     // Input pin pull-up 
-    STORAGE (CNPDD); break;     // Input pin pull-down 
+    STORAGE (CNPUD); break;     // Input pin pull-up
+    STORAGE (CNPDD); break;     // Input pin pull-down
     STORAGE (CNCOND); break;    // Interrupt-on-change control
     STORAGE (CNEND); break;     // Input change interrupt enable
     STORAGE (CNSTATD); break;   // Input change status
@@ -285,8 +397,8 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (PORTE); break;	// Port E: read inputs
     STORAGE (LATE); break;      // Port E: read outputs
     STORAGE (ODCE); break;      // Port E: open drain configuration
-    STORAGE (CNPUE); break;     // Input pin pull-up 
-    STORAGE (CNPDE); break;     // Input pin pull-down 
+    STORAGE (CNPUE); break;     // Input pin pull-up
+    STORAGE (CNPDE); break;     // Input pin pull-down
     STORAGE (CNCONE); break;    // Interrupt-on-change control
     STORAGE (CNENE); break;     // Input change interrupt enable
     STORAGE (CNSTATE); break;   // Input change status
@@ -295,8 +407,8 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (PORTF); break;     // Port F: read inputs
     STORAGE (LATF); break;      // Port F: read outputs
     STORAGE (ODCF); break;      // Port F: open drain configuration
-    STORAGE (CNPUF); break;     // Input pin pull-up 
-    STORAGE (CNPDF); break;     // Input pin pull-down 
+    STORAGE (CNPUF); break;     // Input pin pull-up
+    STORAGE (CNPDF); break;     // Input pin pull-down
     STORAGE (CNCONF); break;    // Interrupt-on-change control
     STORAGE (CNENF); break;     // Input change interrupt enable
     STORAGE (CNSTATF); break;   // Input change status
@@ -305,8 +417,8 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (PORTG); break;     // Port G: read inputs
     STORAGE (LATG); break;      // Port G: read outputs
     STORAGE (ODCG); break;      // Port G: open drain configuration
-    STORAGE (CNPUG); break;     // Input pin pull-up 
-    STORAGE (CNPDG); break;     // Input pin pull-down 
+    STORAGE (CNPUG); break;     // Input pin pull-up
+    STORAGE (CNPDG); break;     // Input pin pull-down
     STORAGE (CNCONG); break;    // Interrupt-on-change control
     STORAGE (CNENG); break;     // Input change interrupt enable
     STORAGE (CNSTATG); break;   // Input change status
@@ -543,6 +655,142 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     return *bufp;
 }
 
+static void pps_input_group1 (unsigned address, unsigned data)
+{
+    // 0000 = RPD1
+    // 0001 = RPG9
+    // 0010 = RPB14
+    // 0011 = RPD0
+    // 0101 = RPB6
+    // 0110 = RPD5
+    // 0111 = RPB2
+    // 1000 = RPF3
+    // 1001 = RPF13
+    // 1011 = RPF2
+    // 1100 = RPC2
+    // 1101 = RPE8
+}
+
+static void pps_input_group2 (unsigned address, unsigned data)
+{
+    // 0000 = RPD9
+    // 0001 = RPG6
+    // 0010 = RPB8
+    // 0011 = RPB15
+    // 0100 = RPD4
+    // 0101 = RPB0
+    // 0110 = RPE3
+    // 0111 = RPB7
+    // 1001 = RPF12
+    // 1010 = RPD12
+    // 1011 = RPF8
+    // 1100 = RPC3
+    // 1101 = RPE9
+}
+
+static void pps_input_group3 (unsigned address, unsigned data)
+{
+    // 0000 = RPD2
+    // 0001 = RPG8
+    // 0010 = RPF4
+    // 0011 = RPD10
+    // 0100 = RPF1
+    // 0101 = RPB9
+    // 0110 = RPB10
+    // 0111 = RPC14
+    // 1000 = RPB5
+    // 1010 = RPC1
+    // 1011 = RPD14
+    // 1100 = RPG1
+    // 1101 = RPA14
+    // 1110 = RPD6
+}
+
+static void pps_input_group4 (unsigned address, unsigned data)
+{
+    // 0000 = RPD3
+    // 0001 = RPG7
+    // 0010 = RPF5
+    // 0011 = RPD11
+    // 0100 = RPF0
+    // 0101 = RPB1
+    // 0110 = RPE5
+    // 0111 = RPC13
+    // 1000 = RPB3
+    // 1010 = RPC4
+    // 1011 = RPD15
+    // 1100 = RPG0
+    // 1101 = RPA15
+    // 1110 = RPD7
+}
+
+static void pps_output_group1 (unsigned address, unsigned data)
+{
+    // 0000 = No Connect
+    // 0001 = U1TX
+    // 0010 = U2RTS
+    // 0011 = U5TX
+    // 0100 = U6RTS
+    // 0101 = SDO1
+    // 0110 = SDO2
+    // 0111 = SDO3
+    // 1000 = SDO4
+    // 1001 = SDO5
+    // 1011 = OC4
+    // 1100 = OC7
+    // 1111 = REFCLKO1
+}
+
+static void pps_output_group2 (unsigned address, unsigned data)
+{
+    // 0000 = No Connect
+    // 0001 = U1RTS
+    // 0010 = U2TX
+    // 0011 = U5RTS
+    // 0100 = U6TX
+    // 0110 = SS2
+    // 1000 = SDO4
+    // 1010 = SDO6
+    // 1011 = OC2
+    // 1100 = OC1
+    // 1101 = OC9
+    // 1111 = C2TX
+}
+
+static void pps_output_group3 (unsigned address, unsigned data)
+{
+    // 0000 = No Connect
+    // 0001 = U3TX
+    // 0010 = U4RTS
+    // 0101 = SDO1
+    // 0110 = SDO2
+    // 0111 = SDO3
+    // 1001 = SDO5
+    // 1010 = SS6
+    // 1011 = OC3
+    // 1100 = OC6
+    // 1101 = REFCLKO4
+    // 1110 = C2OUT
+    // 1111 = C1TX
+}
+
+static void pps_output_group4 (unsigned address, unsigned data)
+{
+    // 0000 = No Connect
+    // 0001 = U3RTS
+    // 0010 = U4TX
+    // 0100 = U6TX
+    // 0101 = SS1
+    // 0111 = SS3
+    // 1000 = SS4
+    // 1001 = SS5
+    // 1010 = SDO6
+    // 1011 = OC5
+    // 1100 = OC8
+    // 1110 = C1OUT
+    // 1111 = REFCLKO3
+}
+
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep)
 {
     switch (address) {
@@ -577,41 +825,41 @@ void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **n
     WRITEOP (IPC10); goto irq;
     WRITEOP (IPC11); goto irq;
     WRITEOP (IPC12); goto irq;
-    WRITEOP (IPC13); goto irq; 
-    WRITEOP (IPC14); goto irq; 
-    WRITEOP (IPC15); goto irq; 
-    WRITEOP (IPC16); goto irq; 
-    WRITEOP (IPC17); goto irq; 
-    WRITEOP (IPC18); goto irq; 
-    WRITEOP (IPC19); goto irq; 
-    WRITEOP (IPC20); goto irq; 
-    WRITEOP (IPC21); goto irq; 
-    WRITEOP (IPC22); goto irq; 
-    WRITEOP (IPC23); goto irq; 
-    WRITEOP (IPC24); goto irq; 
-    WRITEOP (IPC25); goto irq; 
-    WRITEOP (IPC26); goto irq; 
-    WRITEOP (IPC27); goto irq; 
-    WRITEOP (IPC28); goto irq; 
-    WRITEOP (IPC29); goto irq; 
-    WRITEOP (IPC30); goto irq; 
-    WRITEOP (IPC31); goto irq; 
-    WRITEOP (IPC32); goto irq; 
-    WRITEOP (IPC33); goto irq; 
-    WRITEOP (IPC34); goto irq; 
-    WRITEOP (IPC35); goto irq; 
-    WRITEOP (IPC36); goto irq; 
-    WRITEOP (IPC37); goto irq; 
-    WRITEOP (IPC38); goto irq; 
-    WRITEOP (IPC39); goto irq; 
-    WRITEOP (IPC40); goto irq; 
-    WRITEOP (IPC41); goto irq; 
-    WRITEOP (IPC42); goto irq; 
-    WRITEOP (IPC43); goto irq; 
-    WRITEOP (IPC44); goto irq; 
-    WRITEOP (IPC45); goto irq; 
-    WRITEOP (IPC46); goto irq; 
-    WRITEOP (IPC47); 
+    WRITEOP (IPC13); goto irq;
+    WRITEOP (IPC14); goto irq;
+    WRITEOP (IPC15); goto irq;
+    WRITEOP (IPC16); goto irq;
+    WRITEOP (IPC17); goto irq;
+    WRITEOP (IPC18); goto irq;
+    WRITEOP (IPC19); goto irq;
+    WRITEOP (IPC20); goto irq;
+    WRITEOP (IPC21); goto irq;
+    WRITEOP (IPC22); goto irq;
+    WRITEOP (IPC23); goto irq;
+    WRITEOP (IPC24); goto irq;
+    WRITEOP (IPC25); goto irq;
+    WRITEOP (IPC26); goto irq;
+    WRITEOP (IPC27); goto irq;
+    WRITEOP (IPC28); goto irq;
+    WRITEOP (IPC29); goto irq;
+    WRITEOP (IPC30); goto irq;
+    WRITEOP (IPC31); goto irq;
+    WRITEOP (IPC32); goto irq;
+    WRITEOP (IPC33); goto irq;
+    WRITEOP (IPC34); goto irq;
+    WRITEOP (IPC35); goto irq;
+    WRITEOP (IPC36); goto irq;
+    WRITEOP (IPC37); goto irq;
+    WRITEOP (IPC38); goto irq;
+    WRITEOP (IPC39); goto irq;
+    WRITEOP (IPC40); goto irq;
+    WRITEOP (IPC41); goto irq;
+    WRITEOP (IPC42); goto irq;
+    WRITEOP (IPC43); goto irq;
+    WRITEOP (IPC44); goto irq;
+    WRITEOP (IPC45); goto irq;
+    WRITEOP (IPC46); goto irq;
+    WRITEOP (IPC47);
 irq:    update_irq_status();
         return;
 
@@ -649,6 +897,124 @@ irq:    update_irq_status();
 	break;
 
     /*-------------------------------------------------------------------------
+     * Peripheral port select registers: input.
+     */
+    STORAGE (INT1R);    pps_input_group1 (address, data); break;
+    STORAGE (T4CKR);    pps_input_group1 (address, data); break;
+    STORAGE (T9CKR);    pps_input_group1 (address, data); break;
+    STORAGE (IC1R);     pps_input_group1 (address, data); break;
+    STORAGE (IC6R);     pps_input_group1 (address, data); break;
+    STORAGE (U3CTSR);   pps_input_group1 (address, data); break;
+    STORAGE (U4RXR);    pps_input_group1 (address, data); break;
+    STORAGE (U6RXR);    pps_input_group1 (address, data); break;
+    STORAGE (SS2R);     pps_input_group1 (address, data); break;
+    STORAGE (SDI6R);    pps_input_group1 (address, data); break;
+    STORAGE (OCFAR);    pps_input_group1 (address, data); break;
+    STORAGE (REFCLKI3R);pps_input_group1 (address, data); break;
+
+    STORAGE (INT2R);    pps_input_group2 (address, data); break;
+    STORAGE (T3CKR);    pps_input_group2 (address, data); break;
+    STORAGE (T8CKR);    pps_input_group2 (address, data); break;
+    STORAGE (IC2R);     pps_input_group2 (address, data); break;
+    STORAGE (IC5R);     pps_input_group2 (address, data); break;
+    STORAGE (IC9R);     pps_input_group2 (address, data); break;
+    STORAGE (U1CTSR);   pps_input_group2 (address, data); break;
+    STORAGE (U2RXR);    pps_input_group2 (address, data); break;
+    STORAGE (U5CTSR);   pps_input_group2 (address, data); break;
+    STORAGE (SS1R);     pps_input_group2 (address, data); break;
+    STORAGE (SS3R);     pps_input_group2 (address, data); break;
+    STORAGE (SS4R);     pps_input_group2 (address, data); break;
+    STORAGE (SS5R);     pps_input_group2 (address, data); break;
+    STORAGE (C2RXR);    pps_input_group2 (address, data); break;
+
+    STORAGE (INT3R);    pps_input_group3 (address, data); break;
+    STORAGE (T2CKR);    pps_input_group3 (address, data); break;
+    STORAGE (T6CKR);    pps_input_group3 (address, data); break;
+    STORAGE (IC3R);     pps_input_group3 (address, data); break;
+    STORAGE (IC7R);     pps_input_group3 (address, data); break;
+    STORAGE (U1RXR);    pps_input_group3 (address, data); break;
+    STORAGE (U2CTSR);   pps_input_group3 (address, data); break;
+    STORAGE (U5RXR);    pps_input_group3 (address, data); break;
+    STORAGE (U6CTSR);   pps_input_group3 (address, data); break;
+    STORAGE (SDI1R);    pps_input_group3 (address, data); break;
+    STORAGE (SDI3R);    pps_input_group3 (address, data); break;
+    STORAGE (SDI5R);    pps_input_group3 (address, data); break;
+    STORAGE (SS6R);     pps_input_group3 (address, data); break;
+    STORAGE (REFCLKI1R);pps_input_group3 (address, data); break;
+
+    STORAGE (INT4R);    pps_input_group4 (address, data); break;
+    STORAGE (T5CKR);    pps_input_group4 (address, data); break;
+    STORAGE (T7CKR);    pps_input_group4 (address, data); break;
+    STORAGE (IC4R);     pps_input_group4 (address, data); break;
+    STORAGE (IC8R);     pps_input_group4 (address, data); break;
+    STORAGE (U3RXR);    pps_input_group4 (address, data); break;
+    STORAGE (U4CTSR);   pps_input_group4 (address, data); break;
+    STORAGE (SDI2R);    pps_input_group4 (address, data); break;
+    STORAGE (SDI4R);    pps_input_group4 (address, data); break;
+    STORAGE (C1RXR);    pps_input_group4 (address, data); break;
+    STORAGE (REFCLKI4R);pps_input_group4 (address, data); break;
+
+    /*-------------------------------------------------------------------------
+     * Peripheral port select registers: output.
+     */
+    STORAGE (RPA15R);   pps_output_group1 (address, data); break;
+    STORAGE (RPB1R);    pps_output_group1 (address, data); break;
+    STORAGE (RPB3R);    pps_output_group1 (address, data); break;
+    STORAGE (RPC4R);    pps_output_group1 (address, data); break;
+    STORAGE (RPC13R);   pps_output_group1 (address, data); break;
+    STORAGE (RPD3R);    pps_output_group1 (address, data); break;
+    STORAGE (RPD7R);    pps_output_group1 (address, data); break;
+    STORAGE (RPD11R);   pps_output_group1 (address, data); break;
+    STORAGE (RPD15R);   pps_output_group1 (address, data); break;
+    STORAGE (RPE5R);    pps_output_group1 (address, data); break;
+    STORAGE (RPF0R);    pps_output_group1 (address, data); break;
+    STORAGE (RPF5R);    pps_output_group1 (address, data); break;
+    STORAGE (RPG0R);    pps_output_group1 (address, data); break;
+    STORAGE (RPG7R);    pps_output_group1 (address, data); break;
+
+    STORAGE (RPB2R);    pps_output_group2 (address, data); break;
+    STORAGE (RPB6R);    pps_output_group2 (address, data); break;
+    STORAGE (RPB14R);   pps_output_group2 (address, data); break;
+    STORAGE (RPC2R);    pps_output_group2 (address, data); break;
+    STORAGE (RPD0R);    pps_output_group2 (address, data); break;
+    STORAGE (RPD1R);    pps_output_group2 (address, data); break;
+    STORAGE (RPD5R);    pps_output_group2 (address, data); break;
+    STORAGE (RPE8R);    pps_output_group2 (address, data); break;
+    STORAGE (RPF2R);    pps_output_group2 (address, data); break;
+    STORAGE (RPF3R);    pps_output_group2 (address, data); break;
+    STORAGE (RPF13R);   pps_output_group2 (address, data); break;
+    STORAGE (RPG9R);    pps_output_group2 (address, data); break;
+
+    STORAGE (RPA14R);   pps_output_group3 (address, data); break;
+    STORAGE (RPB5R);    pps_output_group3 (address, data); break;
+    STORAGE (RPB9R);    pps_output_group3 (address, data); break;
+    STORAGE (RPB10R);   pps_output_group3 (address, data); break;
+    STORAGE (RPC1R);    pps_output_group3 (address, data); break;
+    STORAGE (RPC14R);   pps_output_group3 (address, data); break;
+    STORAGE (RPD2R);    pps_output_group3 (address, data); break;
+    STORAGE (RPD6R);    pps_output_group3 (address, data); break;
+    STORAGE (RPD10R);   pps_output_group3 (address, data); break;
+    STORAGE (RPD14R);   pps_output_group3 (address, data); break;
+    STORAGE (RPF1R);    pps_output_group3 (address, data); break;
+    STORAGE (RPF4R);    pps_output_group3 (address, data); break;
+    STORAGE (RPG1R);    pps_output_group3 (address, data); break;
+    STORAGE (RPG8R);    pps_output_group3 (address, data); break;
+
+    STORAGE (RPB0R);    pps_output_group4 (address, data); break;
+    STORAGE (RPB7R);    pps_output_group4 (address, data); break;
+    STORAGE (RPB8R);    pps_output_group4 (address, data); break;
+    STORAGE (RPB15R);   pps_output_group4 (address, data); break;
+    STORAGE (RPC3R);    pps_output_group4 (address, data); break;
+    STORAGE (RPD4R);    pps_output_group4 (address, data); break;
+    STORAGE (RPD9R);    pps_output_group4 (address, data); break;
+    STORAGE (RPD12R);   pps_output_group4 (address, data); break;
+    STORAGE (RPE3R);    pps_output_group4 (address, data); break;
+    STORAGE (RPE9R);    pps_output_group4 (address, data); break;
+    STORAGE (RPF8R);    pps_output_group4 (address, data); break;
+    STORAGE (RPF12R);   pps_output_group4 (address, data); break;
+    STORAGE (RPG6R);    pps_output_group4 (address, data); break;
+
+    /*-------------------------------------------------------------------------
      * General purpose IO signals.
      */
     WRITEOP (TRISA); return;	    // Port A: mask of inputs
@@ -657,8 +1023,8 @@ irq:    update_irq_status();
         gpio_write (0, VALUE(LATA));
 	return;
     WRITEOP (ODCA); return;	    // Port A: open drain configuration
-    WRITEOP (CNPUA); return;	    // Input pin pull-up 
-    WRITEOP (CNPDA); return;	    // Input pin pull-down 
+    WRITEOP (CNPUA); return;	    // Input pin pull-up
+    WRITEOP (CNPDA); return;	    // Input pin pull-down
     WRITEOP (CNCONA); return;	    // Interrupt-on-change control
     WRITEOP (CNENA); return;	    // Input change interrupt enable
     WRITEOP (CNSTATA); return;	    // Input change status
@@ -669,8 +1035,8 @@ irq:    update_irq_status();
         gpio_write (1, VALUE(LATB));
 	return;
     WRITEOP (ODCB); return;	    // Port B: open drain configuration
-    WRITEOP (CNPUB); return;	    // Input pin pull-up 
-    WRITEOP (CNPDB); return;	    // Input pin pull-down 
+    WRITEOP (CNPUB); return;	    // Input pin pull-up
+    WRITEOP (CNPDB); return;	    // Input pin pull-down
     WRITEOP (CNCONB); return;	    // Interrupt-on-change control
     WRITEOP (CNENB); return;	    // Input change interrupt enable
     WRITEOP (CNSTATB); return;	    // Input change status
@@ -681,8 +1047,8 @@ irq:    update_irq_status();
         gpio_write (2, VALUE(LATC));
 	return;
     WRITEOP (ODCC); return;	    // Port C: open drain configuration
-    WRITEOP (CNPUC); return;	    // Input pin pull-up 
-    WRITEOP (CNPDC); return;	    // Input pin pull-down 
+    WRITEOP (CNPUC); return;	    // Input pin pull-up
+    WRITEOP (CNPDC); return;	    // Input pin pull-down
     WRITEOP (CNCONC); return;	    // Interrupt-on-change control
     WRITEOP (CNENC); return;	    // Input change interrupt enable
     WRITEOP (CNSTATC); return;	    // Input change status
@@ -693,8 +1059,8 @@ irq:    update_irq_status();
         gpio_write (3, VALUE(LATD));
 	return;
     WRITEOP (ODCD); return;	    // Port D: open drain configuration
-    WRITEOP (CNPUD); return;	    // Input pin pull-up 
-    WRITEOP (CNPDD); return;	    // Input pin pull-down 
+    WRITEOP (CNPUD); return;	    // Input pin pull-up
+    WRITEOP (CNPDD); return;	    // Input pin pull-down
     WRITEOP (CNCOND); return;	    // Interrupt-on-change control
     WRITEOP (CNEND); return;	    // Input change interrupt enable
     WRITEOP (CNSTATD); return;	    // Input change status
@@ -705,8 +1071,8 @@ irq:    update_irq_status();
         gpio_write (4, VALUE(LATE));
 	return;
     WRITEOP (ODCE); return;	    // Port E: open drain configuration
-    WRITEOP (CNPUE); return;	    // Input pin pull-up 
-    WRITEOP (CNPDE); return;	    // Input pin pull-down 
+    WRITEOP (CNPUE); return;	    // Input pin pull-up
+    WRITEOP (CNPDE); return;	    // Input pin pull-down
     WRITEOP (CNCONE); return;	    // Interrupt-on-change control
     WRITEOP (CNENE); return;	    // Input change interrupt enable
     WRITEOP (CNSTATE); return;	    // Input change status
@@ -717,8 +1083,8 @@ irq:    update_irq_status();
         gpio_write (5, VALUE(LATF));
 	return;
     WRITEOP (ODCF); return;	    // Port F: open drain configuration
-    WRITEOP (CNPUF); return;	    // Input pin pull-up 
-    WRITEOP (CNPDF); return;	    // Input pin pull-down 
+    WRITEOP (CNPUF); return;	    // Input pin pull-up
+    WRITEOP (CNPDF); return;	    // Input pin pull-down
     WRITEOP (CNCONF); return;	    // Interrupt-on-change control
     WRITEOP (CNENF); return;	    // Input change interrupt enable
     WRITEOP (CNSTATF); return;	    // Input change status
@@ -729,8 +1095,8 @@ irq:    update_irq_status();
         gpio_write (6, VALUE(LATG));
 	return;
     WRITEOP (ODCG); return;	    // Port G: open drain configuration
-    WRITEOP (CNPUG); return;	    // Input pin pull-up 
-    WRITEOP (CNPDG); return;	    // Input pin pull-down 
+    WRITEOP (CNPUG); return;	    // Input pin pull-up
+    WRITEOP (CNPDG); return;	    // Input pin pull-down
     WRITEOP (CNCONG); return;	    // Interrupt-on-change control
     WRITEOP (CNENG); return;	    // Input change interrupt enable
     WRITEOP (CNSTATG); return;	    // Input change status
@@ -924,8 +1290,8 @@ void io_reset()
     VALUE(PORTA) = 0xFFFF;		// Port A: read inputs, write outputs
     VALUE(LATA)  = 0xFFFF;		// Port A: read/write outputs
     VALUE(ODCA)  = 0;			// Port A: open drain configuration
-    VALUE(CNPUA) = 0;			// Input pin pull-up 
-    VALUE(CNPDA) = 0;			// Input pin pull-down 
+    VALUE(CNPUA) = 0;			// Input pin pull-up
+    VALUE(CNPDA) = 0;			// Input pin pull-down
     VALUE(CNCONA) = 0;			// Interrupt-on-change control
     VALUE(CNENA) = 0;			// Input change interrupt enable
     VALUE(CNSTATA) = 0;			// Input change status
@@ -934,8 +1300,8 @@ void io_reset()
     VALUE(PORTB) = 0xFFFF;		// Port B: read inputs, write outputs
     VALUE(LATB)  = 0xFFFF;		// Port B: read/write outputs
     VALUE(ODCB)  = 0;			// Port B: open drain configuration
-    VALUE(CNPUB) = 0;			// Input pin pull-up 
-    VALUE(CNPDB) = 0;			// Input pin pull-down 
+    VALUE(CNPUB) = 0;			// Input pin pull-up
+    VALUE(CNPDB) = 0;			// Input pin pull-down
     VALUE(CNCONB) = 0;			// Interrupt-on-change control
     VALUE(CNENB) = 0;			// Input change interrupt enable
     VALUE(CNSTATB) = 0;			// Input change status
@@ -944,8 +1310,8 @@ void io_reset()
     VALUE(PORTC) = 0xFFFF;		// Port C: read inputs, write outputs
     VALUE(LATC)  = 0xFFFF;		// Port C: read/write outputs
     VALUE(ODCC)  = 0;			// Port C: open drain configuration
-    VALUE(CNPUC) = 0;			// Input pin pull-up 
-    VALUE(CNPDC) = 0;			// Input pin pull-down 
+    VALUE(CNPUC) = 0;			// Input pin pull-up
+    VALUE(CNPDC) = 0;			// Input pin pull-down
     VALUE(CNCONC) = 0;			// Interrupt-on-change control
     VALUE(CNENC) = 0;			// Input change interrupt enable
     VALUE(CNSTATC) = 0;			// Input change status
@@ -954,8 +1320,8 @@ void io_reset()
     VALUE(PORTD) = 0xFFFF;		// Port D: read inputs, write outputs
     VALUE(LATD)  = 0xFFFF;		// Port D: read/write outputs
     VALUE(ODCD)  = 0;			// Port D: open drain configuration
-    VALUE(CNPUD) = 0;			// Input pin pull-up 
-    VALUE(CNPDD) = 0;			// Input pin pull-down 
+    VALUE(CNPUD) = 0;			// Input pin pull-up
+    VALUE(CNPDD) = 0;			// Input pin pull-down
     VALUE(CNCOND) = 0;			// Interrupt-on-change control
     VALUE(CNEND) = 0;			// Input change interrupt enable
     VALUE(CNSTATD) = 0;			// Input change status
@@ -964,8 +1330,8 @@ void io_reset()
     VALUE(PORTE) = 0xFFFF;		// Port D: read inputs, write outputs
     VALUE(LATE)  = 0xFFFF;		// Port E: read/write outputs
     VALUE(ODCE)  = 0;			// Port E: open drain configuration
-    VALUE(CNPUE) = 0;			// Input pin pull-up 
-    VALUE(CNPDE) = 0;			// Input pin pull-down 
+    VALUE(CNPUE) = 0;			// Input pin pull-up
+    VALUE(CNPDE) = 0;			// Input pin pull-down
     VALUE(CNCONE) = 0;			// Interrupt-on-change control
     VALUE(CNENE) = 0;			// Input change interrupt enable
     VALUE(CNSTATE) = 0;			// Input change status
@@ -974,8 +1340,8 @@ void io_reset()
     VALUE(PORTF) = 0xFFFF;		// Port F: read inputs, write outputs
     VALUE(LATF)  = 0xFFFF;		// Port F: read/write outputs
     VALUE(ODCF)  = 0;			// Port F: open drain configuration
-    VALUE(CNPUF) = 0;			// Input pin pull-up 
-    VALUE(CNPDF) = 0;			// Input pin pull-down 
+    VALUE(CNPUF) = 0;			// Input pin pull-up
+    VALUE(CNPDF) = 0;			// Input pin pull-down
     VALUE(CNCONF) = 0;			// Interrupt-on-change control
     VALUE(CNENF) = 0;			// Input change interrupt enable
     VALUE(CNSTATF) = 0;			// Input change status
@@ -984,8 +1350,8 @@ void io_reset()
     VALUE(PORTG) = 0xFFFF;		// Port G: read inputs, write outputs
     VALUE(LATG)  = 0xFFFF;		// Port G: read/write outputs
     VALUE(ODCG)  = 0;			// Port G: open drain configuration
-    VALUE(CNPUG) = 0;			// Input pin pull-up 
-    VALUE(CNPDG) = 0;			// Input pin pull-down 
+    VALUE(CNPUG) = 0;			// Input pin pull-up
+    VALUE(CNPDG) = 0;			// Input pin pull-down
     VALUE(CNCONG) = 0;			// Interrupt-on-change control
     VALUE(CNENG) = 0;			// Input change interrupt enable
     VALUE(CNSTATG) = 0;			// Input change status
