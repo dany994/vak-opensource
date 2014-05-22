@@ -313,7 +313,7 @@
 /*--------------------------------------
  * Peripheral registers.
  */
-#define PIC32_R(a)		*(volatile unsigned*) (0x1F800000 + (a))
+#define PIC32_R(a)		*(volatile unsigned*) (0x9F800000 + (a))
 
 /*--------------------------------------
  * Port A-K registers.
