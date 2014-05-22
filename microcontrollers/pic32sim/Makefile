@@ -22,9 +22,10 @@ OBJ		= obj/mz.o
 #
 # Board type
 #
-BOARD		= EXPLORER16
+#BOARD		= EXPLORER16
 #BOARD		= MAXIMITE
 #BOARD		= MAX32
+BOARD		= WIFIRE
 
 OPTIMIZE        = -O2
 OBJ		+= obj/loadhex.o \
@@ -56,7 +57,7 @@ obj/%.o:        %.c??
 		$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:
-		rm -rf *.exe *.log *.so *.o obj pic32mx7 pic32mz *~
+		rm -rf *.exe *.log *.so *.o obj *~
 ###
 obj/loadhex.o: loadhex.c globals.h
 obj/main.o: main.c globals.h

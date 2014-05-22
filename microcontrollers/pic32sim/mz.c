@@ -217,12 +217,20 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * System controller.
      */
-    STORAGE (OSCCON); break;	// Oscillator Control
-    STORAGE (OSCTUN); break;	// Oscillator Tuning
+    STORAGE (CFGCON); break;	// Configuration Control
     STORAGE (DEVID); break;	// Device Identifier
     STORAGE (SYSKEY); break;	// System Key
     STORAGE (RCON); break;	// Reset Control
     STORAGE (RSWRST); break;	// Software Reset
+    STORAGE (OSCCON); break;	// Oscillator Control
+    STORAGE (OSCTUN); break;	// Oscillator Tuning
+    STORAGE (PB1DIV); break;	// Peripheral bus 1 divisor
+    STORAGE (PB2DIV); break;	// Peripheral bus 2 divisor
+    STORAGE (PB3DIV); break;	// Peripheral bus 3 divisor
+    STORAGE (PB4DIV); break;	// Peripheral bus 4 divisor
+    STORAGE (PB5DIV); break;	// Peripheral bus 5 divisor
+    STORAGE (PB7DIV); break;	// Peripheral bus 7 divisor
+    STORAGE (PB8DIV); break;	// Peripheral bus 8 divisor
 
     /*-------------------------------------------------------------------------
      * Peripheral port select registers: input.
@@ -339,6 +347,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     /*-------------------------------------------------------------------------
      * General purpose IO signals.
      */
+    STORAGE (ANSELA); break;    // Port A: analog select
     STORAGE (TRISA); break;     // Port A: mask of inputs
     STORAGE (PORTA); break;     // Port A: read inputs
     STORAGE (LATA); break;      // Port A: read outputs
@@ -349,6 +358,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (CNENA); break;     // Input change interrupt enable
     STORAGE (CNSTATA); break;   // Input change status
 
+    STORAGE (ANSELB); break;    // Port B: analog select
     STORAGE (TRISB); break;     // Port B: mask of inputs
     STORAGE (PORTB); break;     // Port B: read inputs
     STORAGE (LATB); break;      // Port B: read outputs
@@ -359,6 +369,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (CNENB); break;     // Input change interrupt enable
     STORAGE (CNSTATB); break;   // Input change status
 
+    STORAGE (ANSELC); break;    // Port C: analog select
     STORAGE (TRISC); break;     // Port C: mask of inputs
     STORAGE (PORTC); break;     // Port C: read inputs
     STORAGE (LATC); break;      // Port C: read outputs
@@ -369,22 +380,9 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (CNENC); break;     // Input change interrupt enable
     STORAGE (CNSTATC); break;   // Input change status
 
+    STORAGE (ANSELD); break;    // Port D: analog select
     STORAGE (TRISD); break;     // Port D: mask of inputs
-    STORAGE (PORTD);		// Port D: read inputs
-#ifdef MAXIMITE
-#if 0
-	/* Poll PS2 keyboard */
-	if (keyboard_clock())
-	    d->port_d &= ~MASKD_PS2C;
-	else
-	    d->port_d |= MASKD_PS2C;
-	if (keyboard_data())
-	    d->port_d &= ~MASKD_PS2D;
-	else
-	    d->port_d |= MASKD_PS2D;
-#endif
-#endif
-	break;
+    STORAGE (PORTD); break;	// Port D: read inputs
     STORAGE (LATD); break;      // Port D: read outputs
     STORAGE (ODCD); break;      // Port D: open drain configuration
     STORAGE (CNPUD); break;     // Input pin pull-up
@@ -393,6 +391,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (CNEND); break;     // Input change interrupt enable
     STORAGE (CNSTATD); break;   // Input change status
 
+    STORAGE (ANSELE); break;    // Port E: analog select
     STORAGE (TRISE); break;     // Port E: mask of inputs
     STORAGE (PORTE); break;	// Port E: read inputs
     STORAGE (LATE); break;      // Port E: read outputs
@@ -403,6 +402,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (CNENE); break;     // Input change interrupt enable
     STORAGE (CNSTATE); break;   // Input change status
 
+    STORAGE (ANSELF); break;    // Port F: analog select
     STORAGE (TRISF); break;     // Port F: mask of inputs
     STORAGE (PORTF); break;     // Port F: read inputs
     STORAGE (LATF); break;      // Port F: read outputs
@@ -413,6 +413,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (CNENF); break;     // Input change interrupt enable
     STORAGE (CNSTATF); break;   // Input change status
 
+    STORAGE (ANSELG); break;    // Port G: analog select
     STORAGE (TRISG); break;     // Port G: mask of inputs
     STORAGE (PORTG); break;     // Port G: read inputs
     STORAGE (LATG); break;      // Port G: read outputs
@@ -793,6 +794,8 @@ static void pps_output_group4 (unsigned address, unsigned data)
 
 void io_write32 (unsigned address, unsigned *bufp, unsigned data, const char **namep)
 {
+    unsigned mask;
+
     switch (address) {
     /*-------------------------------------------------------------------------
      * Interrupt controller registers.
@@ -872,8 +875,16 @@ irq:    update_irq_status();
     /*-------------------------------------------------------------------------
      * System controller.
      */
-    STORAGE (OSCCON); break;	// Oscillator Control
-    STORAGE (OSCTUN); break;	// Oscillator Tuning
+    STORAGE (CFGCON);           // Configuration Control
+        // TODO: use unlock sequence
+        mask = PIC32_CFGCON_DMAPRI | PIC32_CFGCON_CPUPRI |
+            PIC32_CFGCON_ICACLK | PIC32_CFGCON_OCACLK |
+            PIC32_CFGCON_IOLOCK | PIC32_CFGCON_PMDLOCK |
+            PIC32_CFGCON_PGLOCK | PIC32_CFGCON_USBSSEN |
+            PIC32_CFGCON_ECC_MASK | PIC32_CFGCON_JTAGEN |
+            PIC32_CFGCON_TROEN | PIC32_CFGCON_TDOEN;
+        data = (data & mask) | (*bufp & ~mask);
+        break;
     READONLY(DEVID);		// Device Identifier
     STORAGE (SYSKEY);		// System Key
 	/* Unlock state machine. */
@@ -895,6 +906,15 @@ irq:    update_irq_status();
             sdcard_reset();
         }
 	break;
+    STORAGE (OSCCON); break;	// Oscillator Control
+    STORAGE (OSCTUN); break;	// Oscillator Tuning
+    STORAGE (PB1DIV); break;	// Peripheral bus 1 divisor
+    STORAGE (PB2DIV); break;	// Peripheral bus 2 divisor
+    STORAGE (PB3DIV); break;	// Peripheral bus 3 divisor
+    STORAGE (PB4DIV); break;	// Peripheral bus 4 divisor
+    STORAGE (PB5DIV); break;	// Peripheral bus 5 divisor
+    STORAGE (PB7DIV); break;	// Peripheral bus 7 divisor
+    STORAGE (PB8DIV); break;	// Peripheral bus 8 divisor
 
     /*-------------------------------------------------------------------------
      * Peripheral port select registers: input.
@@ -1017,6 +1037,7 @@ irq:    update_irq_status();
     /*-------------------------------------------------------------------------
      * General purpose IO signals.
      */
+    WRITEOP (ANSELA); return;	    // Port A: analog select
     WRITEOP (TRISA); return;	    // Port A: mask of inputs
     WRITEOPX(PORTA, LATA);          // Port A: write outputs
     WRITEOP (LATA);                 // Port A: write outputs
@@ -1029,6 +1050,7 @@ irq:    update_irq_status();
     WRITEOP (CNENA); return;	    // Input change interrupt enable
     WRITEOP (CNSTATA); return;	    // Input change status
 
+    WRITEOP (ANSELB); return;	    // Port B: analog select
     WRITEOP (TRISB); return;	    // Port B: mask of inputs
     WRITEOPX(PORTB, LATB);          // Port B: write outputs
     WRITEOP (LATB);		    // Port B: write outputs
@@ -1041,6 +1063,7 @@ irq:    update_irq_status();
     WRITEOP (CNENB); return;	    // Input change interrupt enable
     WRITEOP (CNSTATB); return;	    // Input change status
 
+    WRITEOP (ANSELC); return;	    // Port C: analog select
     WRITEOP (TRISC); return;	    // Port C: mask of inputs
     WRITEOPX(PORTC, LATC);          // Port C: write outputs
     WRITEOP (LATC);                 // Port C: write outputs
@@ -1053,6 +1076,7 @@ irq:    update_irq_status();
     WRITEOP (CNENC); return;	    // Input change interrupt enable
     WRITEOP (CNSTATC); return;	    // Input change status
 
+    WRITEOP (ANSELD); return;	    // Port D: analog select
     WRITEOP (TRISD); return;	    // Port D: mask of inputs
     WRITEOPX(PORTD, LATD);          // Port D: write outputs
     WRITEOP (LATD);		    // Port D: write outputs
@@ -1065,6 +1089,7 @@ irq:    update_irq_status();
     WRITEOP (CNEND); return;	    // Input change interrupt enable
     WRITEOP (CNSTATD); return;	    // Input change status
 
+    WRITEOP (ANSELE); return;	    // Port E: analog select
     WRITEOP (TRISE); return;	    // Port E: mask of inputs
     WRITEOPX(PORTE, LATE);          // Port E: write outputs
     WRITEOP (LATE);		    // Port E: write outputs
@@ -1077,6 +1102,7 @@ irq:    update_irq_status();
     WRITEOP (CNENE); return;	    // Input change interrupt enable
     WRITEOP (CNSTATE); return;	    // Input change status
 
+    WRITEOP (ANSELF); return;	    // Port F: analog select
     WRITEOP (TRISF); return;	    // Port F: mask of inputs
     WRITEOPX(PORTF, LATF);          // Port F: write outputs
     WRITEOP (LATF);		    // Port F: write outputs
@@ -1089,6 +1115,7 @@ irq:    update_irq_status();
     WRITEOP (CNENF); return;	    // Input change interrupt enable
     WRITEOP (CNSTATF); return;	    // Input change status
 
+    WRITEOP (ANSELG); return;	    // Port G: analog select
     WRITEOP (TRISG); return;	    // Port G: mask of inputs
     WRITEOPX(PORTG, LATG);          // Port G: write outputs
     WRITEOP (LATG);		    // Port G: write outputs
@@ -1273,19 +1300,28 @@ void io_reset()
     /*
      * System controller.
      */
-    VALUE(OSCCON) = 0x01453320;         // from ubw32 board
-    VALUE(OSCTUN) = 0;
+    syskey_unlock  = 0;
+    VALUE(CFGCON) = PIC32_CFGCON_ECC_DISWR | PIC32_CFGCON_TDOEN;
     VALUE(DEVID)  = 0x04307053;         // 795F512L
     VALUE(SYSKEY) = 0;
     VALUE(RCON)   = 0;
     VALUE(RSWRST) = 0;
-    syskey_unlock  = 0;
+    VALUE(OSCCON) = 0x01453320;         // from ubw32 board
+    VALUE(OSCTUN) = 0;
+    VALUE(PB1DIV) = 0x00008801;
+    VALUE(PB2DIV) = 0x00008801;
+    VALUE(PB3DIV) = 0x00008801;
+    VALUE(PB4DIV) = 0x00008801;
+    VALUE(PB5DIV) = 0x00008801;
+    VALUE(PB7DIV) = 0x00008800;
+    VALUE(PB8DIV) = 0x00008801;
 
     /*
      * General purpose IO signals.
      * All pins are inputs, high, open drains and pullups disabled.
      * No interrupts on change.
      */
+    VALUE(ANSELA) = 0xFFFF;		// Port A: analog select
     VALUE(TRISA) = 0xFFFF;		// Port A: mask of inputs
     VALUE(PORTA) = 0xFFFF;		// Port A: read inputs, write outputs
     VALUE(LATA)  = 0xFFFF;		// Port A: read/write outputs
@@ -1296,6 +1332,7 @@ void io_reset()
     VALUE(CNENA) = 0;			// Input change interrupt enable
     VALUE(CNSTATA) = 0;			// Input change status
 
+    VALUE(ANSELB) = 0xFFFF;		// Port B: analog select
     VALUE(TRISB) = 0xFFFF;		// Port B: mask of inputs
     VALUE(PORTB) = 0xFFFF;		// Port B: read inputs, write outputs
     VALUE(LATB)  = 0xFFFF;		// Port B: read/write outputs
@@ -1306,9 +1343,13 @@ void io_reset()
     VALUE(CNENB) = 0;			// Input change interrupt enable
     VALUE(CNSTATB) = 0;			// Input change status
 
+    VALUE(ANSELC) = 0xFFFF;		// Port C: analog select
     VALUE(TRISC) = 0xFFFF;		// Port C: mask of inputs
     VALUE(PORTC) = 0xFFFF;		// Port C: read inputs, write outputs
     VALUE(LATC)  = 0xFFFF;		// Port C: read/write outputs
+#ifdef WIFIRE
+    VALUE(LATC) ^= 0x1000;		// Disable latc[15] for the cipKIT bootloader
+#endif
     VALUE(ODCC)  = 0;			// Port C: open drain configuration
     VALUE(CNPUC) = 0;			// Input pin pull-up
     VALUE(CNPDC) = 0;			// Input pin pull-down
@@ -1316,6 +1357,7 @@ void io_reset()
     VALUE(CNENC) = 0;			// Input change interrupt enable
     VALUE(CNSTATC) = 0;			// Input change status
 
+    VALUE(ANSELD) = 0xFFFF;		// Port D: analog select
     VALUE(TRISD) = 0xFFFF;		// Port D: mask of inputs
     VALUE(PORTD) = 0xFFFF;		// Port D: read inputs, write outputs
     VALUE(LATD)  = 0xFFFF;		// Port D: read/write outputs
@@ -1326,8 +1368,9 @@ void io_reset()
     VALUE(CNEND) = 0;			// Input change interrupt enable
     VALUE(CNSTATD) = 0;			// Input change status
 
+    VALUE(ANSELE) = 0xFFFF;		// Port E: analog select
     VALUE(TRISE) = 0xFFFF;		// Port E: mask of inputs
-    VALUE(PORTE) = 0xFFFF;		// Port D: read inputs, write outputs
+    VALUE(PORTE) = 0xFFFF;		// Port E: read inputs, write outputs
     VALUE(LATE)  = 0xFFFF;		// Port E: read/write outputs
     VALUE(ODCE)  = 0;			// Port E: open drain configuration
     VALUE(CNPUE) = 0;			// Input pin pull-up
@@ -1336,6 +1379,7 @@ void io_reset()
     VALUE(CNENE) = 0;			// Input change interrupt enable
     VALUE(CNSTATE) = 0;			// Input change status
 
+    VALUE(ANSELF) = 0xFFFF;		// Port F: analog select
     VALUE(TRISF) = 0xFFFF;		// Port F: mask of inputs
     VALUE(PORTF) = 0xFFFF;		// Port F: read inputs, write outputs
     VALUE(LATF)  = 0xFFFF;		// Port F: read/write outputs
@@ -1346,6 +1390,7 @@ void io_reset()
     VALUE(CNENF) = 0;			// Input change interrupt enable
     VALUE(CNSTATF) = 0;			// Input change status
 
+    VALUE(ANSELG) = 0xFFFF;		// Port G: analog select
     VALUE(TRISG) = 0xFFFF;		// Port G: mask of inputs
     VALUE(PORTG) = 0xFFFF;		// Port G: read inputs, write outputs
     VALUE(LATG)  = 0xFFFF;		// Port G: read/write outputs

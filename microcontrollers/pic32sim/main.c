@@ -272,6 +272,7 @@ int main(int argc, char **argv)
     cpu_type = "microAptivP";
     icmAddUns64Attr(user_attrs, "pridRevision", 0x28);  // Product revision
     icmAddUns64Attr(user_attrs, "srsctlHSS",    7);     // Number of shadow register sets
+#if 0
     icmAddStringAttr(user_attrs,"cacheenable", "full"); // Enable cache
     icmAddUns64Attr(user_attrs, "config1IS",    2);     // Icache: 256 sets per way
     icmAddUns64Attr(user_attrs, "config1IL",    3);     // Icache: line size 16 bytes
@@ -279,6 +280,7 @@ int main(int argc, char **argv)
     icmAddUns64Attr(user_attrs, "config1DS",    0);     // Dcache: 64 sets per way
     icmAddUns64Attr(user_attrs, "config1DL",    3);     // Dcache: line size 16 bytes
     icmAddUns64Attr(user_attrs, "config1DA",    3);     // Dcache: 4-way associativity
+#endif
     icmAddUns64Attr(user_attrs, "config1WR",    0);     // Disable watch registers
     icmAddUns64Attr(user_attrs, "config3ULRI",  1);     // UserLocal register implemented
     icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Cache initialized by hardware
@@ -391,6 +393,11 @@ int main(int argc, char **argv)
     sdcard_spi_port = 3;                        // SD card at SPI4,
     cs0_port = 4; cs0_pin = 0;                  // select0 at E0,
     cs1_port = -1; cs1_pin = -1;                // select1 not available
+#elif defined WIFIRE
+    //TODO
+    sdcard_spi_port = 3;                        // SD card at SPI4,
+    cs0_port = 4; cs0_pin = 0;                  // select0 at E0,
+    cs1_port = -1; cs1_pin = -1;                // select1 not available
 #endif
     sdcard_init (0, "sd0", sd0_file, cs0_port, cs0_pin);
     sdcard_init (1, "sd1", sd1_file, cs1_port, cs1_pin);
@@ -398,7 +405,9 @@ int main(int argc, char **argv)
     //
     // Create virtual console on UART2
     //
-#if defined(EXPLORER16) && defined(PIC32MX7)
+#if defined(WIFIRE)
+    vtty_create (4, "uart4", 0);
+#elif defined(EXPLORER16) && defined(PIC32MX7)
     vtty_create (1, "uart2", 0);
 #else
     vtty_create (0, "uart1", 0);

@@ -1,44 +1,31 @@
 /*
  * Include processor definitions.
  */
-#include "pic32mz.h"
+#include "pic32mx.h"
 
-#define MHZ     200             /* CPU clock. */
+#define MHZ     80              /* CPU clock. */
 
 /*
  * Chip configuration.
  */
 PIC32_DEVCFG (
-    DEVCFG0_JTAG_DISABLE |      /* Disable JTAG port */
-    DEVCFG0_TRC_DISABLE,        /* Disable trace port */
-#if 1
-    /* Case #1: using internal fast RC oscillator.
-     * The frequency is around 8 MHz.
-     * PLL multiplies it to 200 MHz. */
-    DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
-    DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
-    DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
+    DEVCFG0_DEBUG_DISABLED,     /* ICE debugger disabled */
 
-    DEVCFG2_FPLLIDIV_1 |        /* PLL input divider = 1 */
-    DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
-    DEVCFG2_FPLLICLK_FRC |      /* Select FRC as input to PLL */
-    DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
-    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
-#endif
-#if 0
-    /* THIS DOES NOT WORK!
-     * Case #2: using primary oscillator with external crystal 24 MHz.
-     * PLL multiplies it to 200 MHz. */
-    DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
-    DEVCFG1_POSCMOD_HS |        /* Using primary oscillator */
-    DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
+    DEVCFG1_FNOSC_PRIPLL |      /* Primary oscillator with PLL */
+    DEVCFG1_POSCMOD_HS |        /* HS oscillator */
+    DEVCFG1_OSCIOFNC_OFF |      /* CLKO output disable */
+    DEVCFG1_FPBDIV_2 |          /* Peripheral bus clock = SYSCLK/2 */
+    DEVCFG1_FCKM_DISABLE |      /* Fail-safe clock monitor disable */
+    DEVCFG1_FCKS_DISABLE,       /* Clock switching disable */
 
-    DEVCFG2_FPLLIDIV_3 |        /* PLL input divider = 3 */
-    DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
-    DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
-    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
-#endif
-    DEVCFG3_USERID(0xffff));    /* User-defined ID */
+    DEVCFG2_FPLLIDIV_2 |        /* PLL divider = 1/2 */
+    DEVCFG2_FPLLMUL_20 |        /* PLL multiplier = 20x */
+    DEVCFG2_UPLLIDIV_2 |        /* USB PLL divider = 1/2 */
+    DEVCFG2_UPLLDIS |           /* Disable USB PLL */
+    DEVCFG2_FPLLODIV_1,         /* PLL postscaler = 1/1 */
+
+    DEVCFG3_USERID(0xffff) |    /* User-defined ID */
+    DEVCFG3_FSRSSEL_7);         /* Assign irq priority 7 to shadow set */
 
 /*
  * Boot code at bfc00000.
@@ -82,15 +69,15 @@ void udelay (unsigned usec)
 void putch (unsigned char c)
 {
     /* Wait for transmitter shift register empty. */
-    while (! (U1STA & PIC32_USTA_TRMT))
+    while (! (U2STA & PIC32_USTA_TRMT))
         continue;
 
 again:
     /* Send byte. */
-    U1TXREG = c;
+    U2TXREG = c;
 
     /* Wait for transmitter shift register empty. */
-    while (! (U1STA & PIC32_USTA_TRMT))
+    while (! (U2STA & PIC32_USTA_TRMT))
         continue;
 
     if (c == '\n') {
@@ -108,8 +95,8 @@ unsigned getch (void)
 
     for (;;) {
         /* Wait until receive data available. */
-        if (U1STA & PIC32_USTA_URXDA) {
-            c = (unsigned char) U1RXREG;
+        if (U2STA & PIC32_USTA_URXDA) {
+            c = (unsigned char) U2RXREG;
             break;
         }
     }
@@ -156,14 +143,18 @@ int main()
     TRISFCLR = 0x3000;
 
     /* Initialize UART. */
-    U1RXR = 2;                          /* assign UART1 receive to pin RPF4 */
+#ifdef U2RXR
+    U2RXR = 2;                          /* assign UART1 receive to pin RPF4 */
+#endif
+#ifdef RPF5R
     RPF5R = 1;                          /* assign pin RPF5 to UART1 transmit */
+#endif
 
-    U1BRG = PIC32_BRG_BAUD (MHZ * 500000, 115200);
-    U1STA = 0;
-    U1MODE = PIC32_UMODE_PDSEL_8NPAR |      /* 8-bit data, no parity */
+    U2BRG = PIC32_BRG_BAUD (MHZ * 500000, 115200);
+    U2STA = 0;
+    U2MODE = PIC32_UMODE_PDSEL_8NPAR |      /* 8-bit data, no parity */
              PIC32_UMODE_ON;                /* UART Enable */
-    U1STASET = PIC32_USTA_URXEN |           /* Receiver Enable */
+    U2STASET = PIC32_USTA_URXEN |           /* Receiver Enable */
                PIC32_USTA_UTXEN;            /* Transmit Enable */
 
     /*
