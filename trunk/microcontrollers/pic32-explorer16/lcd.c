@@ -3,7 +3,7 @@
  */
 #include "pic32mx.h"
 
-#define MHZ     80              /* CPU clock is 8 MHz. */
+#define MHZ     80              /* CPU clock. */
 
 #define PMDATA  PMDIN
 
