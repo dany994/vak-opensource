@@ -38,6 +38,7 @@ uint32_t iomem [0x100000/4];            // backing storage for I/O area
 
 int trace_instructions;                 // print cpu instructions and registers
 int trace_peripherals;                  // trace special function registers
+int cache_enable;                       // enable I and D caches
 
 icmProcessorP processor;                // top level processor object
 icmNetP eic_ripl;                       // EIC request priority level
@@ -58,6 +59,7 @@ static void usage()
     icmPrintf("        -i      trace CPU instructions and registers\n");
     icmPrintf("        -r      trace special function registers\n");
     icmPrintf("        -m      enable magic opcodes\n");
+    icmPrintf("        -c      enable cache\n");
     exit(-1);
 }
 
@@ -214,7 +216,7 @@ int main(int argc, char **argv)
     Uns32 magic_opcodes = 0;
 
     for (;;) {
-        switch (getopt (argc, argv, "virm")) {
+        switch (getopt (argc, argv, "virmc")) {
         case EOF:
             break;
         case 'v':
@@ -228,6 +230,9 @@ int main(int argc, char **argv)
             continue;
         case 'm':
             magic_opcodes++;
+            continue;
+        case 'c':
+            cache_enable++;
             continue;
         default:
             usage ();
@@ -272,19 +277,27 @@ int main(int argc, char **argv)
     cpu_type = "microAptivP";
     icmAddUns64Attr(user_attrs, "pridRevision", 0x28);  // Product revision
     icmAddUns64Attr(user_attrs, "srsctlHSS",    7);     // Number of shadow register sets
-#if 0
-    icmAddStringAttr(user_attrs,"cacheenable", "full"); // Enable cache
-    icmAddUns64Attr(user_attrs, "config1IS",    2);     // Icache: 256 sets per way
-    icmAddUns64Attr(user_attrs, "config1IL",    3);     // Icache: line size 16 bytes
-    icmAddUns64Attr(user_attrs, "config1IA",    3);     // Icache: 4-way associativity
-    icmAddUns64Attr(user_attrs, "config1DS",    0);     // Dcache: 64 sets per way
-    icmAddUns64Attr(user_attrs, "config1DL",    3);     // Dcache: line size 16 bytes
-    icmAddUns64Attr(user_attrs, "config1DA",    3);     // Dcache: 4-way associativity
-#endif
     icmAddUns64Attr(user_attrs, "config1WR",    0);     // Disable watch registers
     icmAddUns64Attr(user_attrs, "config3ULRI",  1);     // UserLocal register implemented
     icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Cache initialized by hardware
 #endif
+
+    if (cache_enable) {
+        icmAddStringAttr(user_attrs,"cacheenable", "full"); // Enable cache
+        icmAddUns64Attr(user_attrs, "config1IS",    2);     // Icache: 256 sets per way
+        icmAddUns64Attr(user_attrs, "config1IL",    3);     // Icache: line size 16 bytes
+        icmAddUns64Attr(user_attrs, "config1IA",    3);     // Icache: 4-way associativity
+        icmAddUns64Attr(user_attrs, "config1DS",    0);     // Dcache: 64 sets per way
+        icmAddUns64Attr(user_attrs, "config1DL",    3);     // Dcache: line size 16 bytes
+        icmAddUns64Attr(user_attrs, "config1DA",    3);     // Dcache: 4-way associativity
+    } else {
+        icmAddUns64Attr(user_attrs, "config1IS",    0);
+        icmAddUns64Attr(user_attrs, "config1IL",    0);
+        icmAddUns64Attr(user_attrs, "config1IA",    0);
+        icmAddUns64Attr(user_attrs, "config1DS",    0);
+        icmAddUns64Attr(user_attrs, "config1DL",    0);
+        icmAddUns64Attr(user_attrs, "config1DA",    0);
+    }
 
     // Processor configuration
     icmAddStringAttr(user_attrs,"variant", cpu_type);
@@ -406,7 +419,7 @@ int main(int argc, char **argv)
     // Create virtual console on UART2
     //
 #if defined(WIFIRE)
-    vtty_create (4, "uart4", 0);
+    vtty_create (3, "uart4", 0);
 #elif defined(EXPLORER16) && defined(PIC32MX7)
     vtty_create (1, "uart2", 0);
 #else
