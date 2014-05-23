@@ -279,7 +279,6 @@ int main(int argc, char **argv)
     icmAddUns64Attr(user_attrs, "srsctlHSS",    7);     // Number of shadow register sets
     icmAddUns64Attr(user_attrs, "config1WR",    0);     // Disable watch registers
     icmAddUns64Attr(user_attrs, "config3ULRI",  1);     // UserLocal register implemented
-    icmAddUns64Attr(user_attrs, "config7HCI",   1);     // Cache initialized by hardware
 #endif
 
     if (cache_enable) {
@@ -290,6 +289,7 @@ int main(int argc, char **argv)
         icmAddUns64Attr(user_attrs, "config1DS",    0);     // Dcache: 64 sets per way
         icmAddUns64Attr(user_attrs, "config1DL",    3);     // Dcache: line size 16 bytes
         icmAddUns64Attr(user_attrs, "config1DA",    3);     // Dcache: 4-way associativity
+        icmAddUns64Attr(user_attrs, "config7HCI",   0);     // Cache initialized by software
     } else {
         icmAddUns64Attr(user_attrs, "config1IS",    0);
         icmAddUns64Attr(user_attrs, "config1IL",    0);
