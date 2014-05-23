@@ -1096,7 +1096,7 @@
 #define PRESTATCLR	PIC32_R (0xe0014)
 #define PRESTATSET	PIC32_R (0xe0018)
 #define PRESTATINV	PIC32_R (0xe001C)
-// TODO: other prefetech registers
+// TODO: other prefetch registers
 
 /*--------------------------------------
  * System controller registers.

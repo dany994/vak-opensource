@@ -882,7 +882,7 @@
 #define CHECONCLR	PIC32_R (0x84004)
 #define CHECONSET	PIC32_R (0x84008)
 #define CHECONINV	PIC32_R (0x8400C)
-// TODO: other prefetech registers
+// TODO: other prefetch registers
 
 /*--------------------------------------
  * Bus matrix control registers.
