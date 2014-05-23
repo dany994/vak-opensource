@@ -407,23 +407,22 @@ int main(int argc, char **argv)
     cs0_port = 4; cs0_pin = 0;                  // select0 at E0,
     cs1_port = -1; cs1_pin = -1;                // select1 not available
 #elif defined WIFIRE
-    //TODO
-    sdcard_spi_port = 3;                        // SD card at SPI4,
-    cs0_port = 4; cs0_pin = 0;                  // select0 at E0,
+    sdcard_spi_port = 2;                        // SD card at SPI3,
+    cs0_port = 2; cs0_pin = 3;                  // select0 at C3,
     cs1_port = -1; cs1_pin = -1;                // select1 not available
 #endif
     sdcard_init (0, "sd0", sd0_file, cs0_port, cs0_pin);
     sdcard_init (1, "sd1", sd1_file, cs1_port, cs1_pin);
 
     //
-    // Create virtual console on UART2
+    // Create console port.
     //
-#if defined(WIFIRE)
-    vtty_create (3, "uart4", 0);
-#elif defined(EXPLORER16) && defined(PIC32MX7)
-    vtty_create (1, "uart2", 0);
+#if defined(EXPLORER16) && defined(PIC32MX7)
+    vtty_create (1, "uart2", 0);                // console on UART2
+#elif defined(WIFIRE)
+    vtty_create (3, "uart4", 0);                // console on UART4
 #else
-    vtty_create (0, "uart1", 0);
+    vtty_create (0, "uart1", 0);                // console on UART1
 #endif
     vtty_init();
 
