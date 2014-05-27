@@ -36,8 +36,7 @@ static uint32_t bootmem [BOOT_FLASH_SIZE/4];
 static char datamem [DATA_MEM_SIZE];    // storage for RAM area
 uint32_t iomem [0x100000/4];            // backing storage for I/O area
 
-int trace_instructions;                 // print cpu instructions and registers
-int trace_peripherals;                  // trace special function registers
+int trace_flag;                         // print cpu instructions and registers
 int cache_enable;                       // enable I and D caches
 
 icmProcessorP processor;                // top level processor object
@@ -53,13 +52,13 @@ static void usage()
     icmPrintf("Simulator of PIC32MZ microcontroller\n");
 #endif
     icmPrintf("Usage:\n");
-    icmPrintf("        %s [-vtm] application.hex [sd0.img [sd1.img]]\n", progname);
+    icmPrintf("    %s [options] [boot.hex] application.hex \n", progname);
     icmPrintf("Options:\n");
-    icmPrintf("        -v      verbose mode\n");
-    icmPrintf("        -i      trace CPU instructions and registers\n");
-    icmPrintf("        -r      trace special function registers\n");
-    icmPrintf("        -m      enable magic opcodes\n");
-    icmPrintf("        -c      enable cache\n");
+    icmPrintf("    -v           verbose mode\n");
+    icmPrintf("    -t filename  trace CPU instructions and registers\n");
+    icmPrintf("    -d sd0.img   SD card image (repeat for sd1)\n");
+    icmPrintf("    -m           enable magic opcodes\n");
+    icmPrintf("    -c           enable cache\n");
     exit(-1);
 }
 
@@ -99,7 +98,7 @@ static void mem_read (icmProcessorP proc, Addr address, Uns32 bytes,
             // Unaligned read.
             data >>= offset * 8;
         }
-        if (trace_peripherals) {
+        if (trace_flag) {
             icmPrintf("--- I/O Read  %02x from %s\n", data, name);
         }
         *(Uns8*) value = data;
@@ -110,14 +109,14 @@ static void mem_read (icmProcessorP proc, Addr address, Uns32 bytes,
             // Unaligned read.
             data >>= 16;
         }
-        if (trace_peripherals) {
+        if (trace_flag) {
             icmPrintf("--- I/O Read  %04x from %s\n", data, name);
         }
         *(Uns16*) value = data;
         break;
     case 4:
         data = io_read32 (address, (Uns32*) (user_data + offset), &name);
-        if (trace_peripherals) {
+        if (trace_flag) {
             icmPrintf("--- I/O Read  %08x from %s\n", data, name);
         }
         *(Uns32*) value = data;
@@ -146,7 +145,7 @@ static void mem_write (icmProcessorP proc, Addr address, Uns32 bytes,
     data = *(Uns32*) value;
     io_write32 (address, (Uns32*) (user_data + (address & 0xffffc)),
         data, &name);
-    if (trace_peripherals && name != 0) {
+    if (trace_flag && name != 0) {
         icmPrintf("--- I/O Write %08x to %s \n", data, name);
     }
 }
@@ -185,12 +184,16 @@ static void pause_idle()
 void quit()
 {
     icmPrintf("***** Stop *****\n");
+    if (trace_flag)
+        fprintf(stderr, "***** Stop *****\n");
     icmTerminate();
 }
 
 void killed(int sig)
 {
     icmPrintf("\n***** Killed *****\n");
+    if (trace_flag)
+        fprintf(stderr, "\n***** Killed *****\n");
     exit(1);
 }
 
@@ -210,29 +213,40 @@ int main(int argc, char **argv)
     // Parse command line arguments.
     // Setup the configuration attributes for the simulator
     //
-    Uns32 icm_attrs   = 0;
-    Uns32 sim_attrs   = ICM_STOP_ON_CTRLC;
-    Uns32 model_flags = 0;
-    Uns32 magic_opcodes = 0;
+    Uns32 icm_attrs      = 0;
+    Uns32 sim_attrs      = ICM_STOP_ON_CTRLC;
+    Uns32 model_flags    = 0;
+    Uns32 magic_opcodes  = 0;
+    char *trace_filename = 0;
+    const char *sd0_file = 0;
+    const char *sd1_file = 0;
 
     for (;;) {
-        switch (getopt (argc, argv, "virmc")) {
+        switch (getopt (argc, argv, "vmct:d:")) {
         case EOF:
             break;
         case 'v':
             sim_attrs |= ICM_VERBOSE;
-            continue;
-        case 'i':
-            trace_instructions++;
-            continue;
-        case 'r':
-            trace_peripherals++;
             continue;
         case 'm':
             magic_opcodes++;
             continue;
         case 'c':
             cache_enable++;
+            continue;
+        case 't':
+            trace_flag++;
+            trace_filename = optarg;
+            continue;
+        case 'd':
+            if (sd0_file == 0)
+                sd0_file = optarg;
+            else if (sd1_file == 0)
+                sd1_file = optarg;
+            else {
+                icmPrintf("Too many -d options: %s", optarg);
+                return -1;
+            }
             continue;
         default:
             usage ();
@@ -242,14 +256,9 @@ int main(int argc, char **argv)
     argc -= optind;
     argv += optind;
 
-    if (argc < 1 || argc > 3) {
-        if (argc > 0)
-            icmPrintf("%s: Wrong number of args (%d)\n", progname, argc);
+    if (argc < 1) {
         usage ();
     }
-    const char *app_file = argv[0];
-    const char *sd0_file = argc >= 2 ? argv[1] : 0;
-    const char *sd1_file = argc >= 3 ? argv[2] : 0;
 
     //
     // Initialize CpuManager
@@ -313,7 +322,16 @@ int main(int argc, char **argv)
     // Interrupt pin for Timer interrupt
     icmAddUns64Attr(user_attrs, "intctlIPTI", 0);
 
-    if (trace_instructions) {
+    if (trace_filename) {
+        // Redirect standard output to file.
+        if (freopen (trace_filename, "w", stdout) != stdout) {
+            perror (trace_filename);
+            return -1;
+        }
+        fprintf(stderr, "Output redirected to %s\n", trace_filename);
+    }
+
+    if (trace_flag) {
         // Enable MIPS-format trace
         icmAddStringAttr(user_attrs, "MIPS_TRACE", "enable");
         icm_attrs |= ICM_ATTR_TRACE |
@@ -394,22 +412,29 @@ int main(int argc, char **argv)
     // Initialize SD card.
     //
     int cs0_port, cs0_pin, cs1_port, cs1_pin;
+    const char *board;
 #if defined EXPLORER16
+    board = "Microchip Explorer16";
     sdcard_spi_port = 0;                        // SD card at SPI1,
     cs0_port = 1; cs0_pin = 1;                  // select0 at B1,
     cs1_port = 1; cs1_pin = 2;                  // select1 at B2
 #elif defined MAX32
+    board = "chipKIT Max32";
     sdcard_spi_port = 3;                        // SD card at SPI4,
     cs0_port = 3; cs0_pin = 3;                  // select0 at D3,
     cs1_port = 3; cs1_pin = 4;                  // select1 at D4
 #elif defined MAXIMITE
+    board = "Maximite Computer";
     sdcard_spi_port = 3;                        // SD card at SPI4,
     cs0_port = 4; cs0_pin = 0;                  // select0 at E0,
     cs1_port = -1; cs1_pin = -1;                // select1 not available
 #elif defined WIFIRE
+    board = "chipKIT WiFire";
     sdcard_spi_port = 2;                        // SD card at SPI3,
     cs0_port = 2; cs0_pin = 3;                  // select0 at C3,
     cs1_port = -1; cs1_pin = -1;                // select1 not available
+#else
+#error Unknown board type.
 #endif
     sdcard_init (0, "sd0", sd0_file, cs0_port, cs0_pin);
     sdcard_init (1, "sd1", sd1_file, cs1_port, cs1_pin);
@@ -431,12 +456,26 @@ int main(int argc, char **argv)
     //
     io_init (bootmem);
 
+    if (trace_flag) {
+        icmPrintf("Board '%s'.\n", board);
+        if (cache_enable)
+            icmPrintf("Cache enabled.\n");
+        if (magic_opcodes)
+            icmPrintf("Magic opcodes enabled.\n");
+    }
+
     //
-    // Load Program
+    // Load program(s)
     //
-    if (! load_file(progmem, bootmem, app_file)) {
-        icmPrintf("Failed for '%s'", app_file);
-        return -1;
+    for (; argc-- > 0; argv++) {
+        const char *app_file = argv[0];
+
+        if (! load_file(progmem, bootmem, app_file)) {
+            icmPrintf("Failed for '%s'\n", app_file);
+            if (trace_flag)
+                fprintf(stderr, "Cannot load file '%s'\n", app_file);
+            return -1;
+        }
     }
 
     //
@@ -444,6 +483,8 @@ int main(int argc, char **argv)
     //
     icmSetPC(processor, 0xbfc00000);
     icmPrintf("\n***** Start '%s' *****\n", cpu_type);
+    if (trace_flag)
+        fprintf(stderr, "***** Start '%s' *****\n", cpu_type);
 
     // Run the processor one instruction at a time until finished
     icmStopReason stop_reason;
@@ -473,7 +514,7 @@ int main(int argc, char **argv)
 //
 void eic_level_vector (int ripl, int vector)
 {
-    if (trace_peripherals || trace_instructions)
+    if (trace_flag)
         printf ("--- RIPL = %u\n", ripl);
 
     icmWriteNet (eic_vector, 0);
@@ -487,6 +528,6 @@ void soft_reset()
 
     value = 4;
     if (! icmWriteProcessorMemory (processor, address, &value, 4)) {
-        printf ("--- Cannot write %#x to %#x\n", value, address);
+        icmPrintf ("--- Cannot write %#x to %#x\n", value, address);
     }
 }

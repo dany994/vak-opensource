@@ -350,21 +350,7 @@ unsigned io_read32 (unsigned address, unsigned *bufp, const char **namep)
     STORAGE (LATC); break;      // Port C: read outputs
     STORAGE (ODCC); break;      // Port C: open drain configuration
     STORAGE (TRISD); break;     // Port D: mask of inputs
-    STORAGE (PORTD);		// Port D: read inputs
-#ifdef MAXIMITE
-#if 0
-	/* Poll PS2 keyboard */
-	if (keyboard_clock())
-	    d->port_d &= ~MASKD_PS2C;
-	else
-	    d->port_d |= MASKD_PS2C;
-	if (keyboard_data())
-	    d->port_d &= ~MASKD_PS2D;
-	else
-	    d->port_d |= MASKD_PS2D;
-#endif
-#endif
-	break;
+    STORAGE (PORTD); break;	// Port D: read inputs
     STORAGE (LATD); break;      // Port D: read outputs
     STORAGE (ODCD); break;      // Port D: open drain configuration
     STORAGE (TRISE); break;     // Port E: mask of inputs

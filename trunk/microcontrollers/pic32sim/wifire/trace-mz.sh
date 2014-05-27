@@ -1,2 +1,2 @@
 #!/bin/sh
-../pic32mz -i -r -m wifire-uart.hex > wifire.trace
+../pic32mz -m -t wifire.trace boot.hex uart.hex

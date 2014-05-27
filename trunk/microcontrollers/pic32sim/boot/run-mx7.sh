@@ -1,2 +1,2 @@
 #!/bin/sh
-../pic32mx7 -i -r -m boot-test.hex | tee mx7.trace
+../pic32mx7 -t mx7.trace -m boot-test.hex
