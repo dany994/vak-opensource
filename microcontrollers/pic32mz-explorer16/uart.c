@@ -26,11 +26,13 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 #endif
 #if 1
-    /* THIS DOES NOT WORK!
-     * Case #2: using primary oscillator with external crystal 24 MHz.
+    /* Case #2: using primary oscillator with external crystal 24 MHz.
      * PLL multiplies it to 200 MHz. */
     DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
     DEVCFG1_POSCMOD_EXT |       /* External generator */
+    DEVCFG1_FCKS_ENABLE |       /* Enable clock switching */
+    DEVCFG1_FCKM_ENABLE |       /* Enable fail-safe clock monitoring */
+    DEVCFG1_IESO |              /* Internal-external switch over enable */
     DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
 
     DEVCFG2_FPLLIDIV_3 |        /* PLL input divider = 3 */
@@ -38,6 +40,7 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 #endif
+    DEVCFG3_FETHIO |            /* Default Ethernet pins */
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
 
 /*
