@@ -1,2 +1,2 @@
 #!/bin/sh
-../../pic32mx7 -d /home/vak/Project/retrobsd/sdcard.rd unix-mx7-explorer16.hex
+../../pic32mx7 -d sdcard-860.rd explorer16-860.hex
