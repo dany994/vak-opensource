@@ -5,10 +5,11 @@ Copyright (c) 2005-2014 Imperas Software Ltd.  Contains Imperas Proprietary Info
 Licensed Software, All Rights Reserved.
 Visit www.IMPERAS.com for multicore debug, verification and analysis solutions.
 
-OVPsim started: Mon May 26 18:19:21 2014
+OVPsim started: Mon May 26 19:11:50 2014
 
 
-Flash file 'wifire-uart.hex', 12096 bytes
+Flash file 'boot.hex', 6916 bytes
+Flash file 'uart.hex', 5180 bytes
 
 ***** Start 'microAptivP' *****
 -
@@ -43,7 +44,7 @@ PerfCtl1= 00000000
 Info (MIPS32_AVP) AVP test PASS
 ***** Stop *****
 
-OVPsim finished: Mon May 26 18:19:21 2014
+OVPsim finished: Mon May 26 19:11:50 2014
 
 
 OVPsim (32-Bit) v20140430.0 Open Virtual Platform simulator from www.OVPworld.org.

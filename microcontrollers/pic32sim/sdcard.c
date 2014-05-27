@@ -394,7 +394,7 @@ unsigned sdcard_io (unsigned data)
             break;
         }
     }
-    if (trace_peripherals) {
+    if (trace_flag) {
         TRACE ("sdcard%d: send %02x, reply %02x\n", d->unit, data, reply);
     }
     return reply;

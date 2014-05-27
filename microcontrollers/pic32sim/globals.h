@@ -56,7 +56,7 @@
 extern uint32_t iomem[];        // image of I/O area
 
 extern char *progname;          // base name of current program
-extern int trace_peripherals;   // trace special function registers
+extern int trace_flag;          // trace enable
 
 int load_file(void *progmem, void *bootmem, const char *filename);
 

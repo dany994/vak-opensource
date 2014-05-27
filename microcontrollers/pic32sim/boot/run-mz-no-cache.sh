@@ -1,2 +1,2 @@
 #!/bin/sh
-../pic32mz -i -r -m boot-test.hex | tee mz-no-cache.trace
+../pic32mz -t mz-no-cache.trace -m boot-test.hex
