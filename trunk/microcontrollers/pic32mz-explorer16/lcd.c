@@ -150,7 +150,7 @@ void lcd_puts (char *s)
 PIC32_DEVCFG (
     DEVCFG0_JTAG_DISABLE |      /* Disable JTAG port */
     DEVCFG0_TRC_DISABLE,        /* Disable trace port */
-#if 1
+#if 0
     /* Case #1: using internal fast RC oscillator.
      * The frequency is around 8 MHz.
      * PLL multiplies it to 200 MHz. */
@@ -164,12 +164,11 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
 #endif
-#if 0
-    /* THIS DOES NOT WORK!
-     * Case #2: using primary oscillator with external crystal 24 MHz.
+#if 1
+    /* Case #2: using primary oscillator with external crystal 24 MHz.
      * PLL multiplies it to 200 MHz. */
     DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
-    DEVCFG1_POSCMOD_HS |        /* Using primary oscillator */
+    DEVCFG1_POSCMOD_EXT |       /* External generator */
     DEVCFG1_FCKS_ENABLE |       /* Enable clock switching */
     DEVCFG1_FCKM_ENABLE |       /* Enable fail-safe clock monitoring */
     DEVCFG1_IESO |              /* Internal-external switch over enable */
