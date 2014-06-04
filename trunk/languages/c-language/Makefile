@@ -1,5 +1,5 @@
-PROG            = float
-CFLAGS		= -m32 -O -Wall
+PROG            = bswap
+CFLAGS		= -m32 -O -Wall -Werror
 LDFLAGS		= -m32
 #CC		= i586-mingw32msvc-gcc
 
