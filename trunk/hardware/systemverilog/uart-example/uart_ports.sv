@@ -2,9 +2,9 @@
 `define UART_PORTS_SV
 
 interface uart_ports (
-	output  logic       reset,
-	input   wire        txclk,
-	output  logic       ld_tx_data,
+    output  logic       reset,
+    input   wire        txclk,
+    output  logic       ld_tx_data,
     output  logic [7:0] tx_data,
     output  logic       tx_enable,
     output  logic       tx_out,
