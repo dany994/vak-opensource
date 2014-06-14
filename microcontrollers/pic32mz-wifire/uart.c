@@ -3,20 +3,6 @@
  */
 #include "pic32mz.h"
 
-#define MHZ     200             /* CPU clock. */
-
-/*
- * Secondary entry point at bd000000.
- */
-asm ("          .section .exception");
-asm ("          .globl _init");
-asm ("          .type _init, function");
-asm ("_init:    la      $ra, _start");
-asm ("          jr      $ra");
-asm ("          .org    0xfc");
-asm ("          .word   -1");           /* Image header pointer. */
-asm ("          .text");
-
 /*
  * Main entry point at bd001000.
  * Setup stack pointer and $gp registers, and jump to main().
@@ -31,24 +17,12 @@ asm ("          jr      $ra");
 asm ("          .text");
 
 /*
- * Delay for a given number of microseconds.
- * The processor has a 32-bit hardware Count register,
- * which increments at half CPU rate.
- * We use it to get a precise delay.
+ * Image header pointer.
  */
-void udelay (unsigned usec)
-{
-    unsigned now = mfc0 (C0_COUNT, 0);
-    unsigned final = now + usec * MHZ / 2;
-
-    for (;;) {
-        now = mfc0 (C0_COUNT, 0);
-
-        /* This comparison is valid only when using a signed type. */
-        if ((int) (now - final) >= 0)
-            break;
-    }
-}
+asm ("          .section .exception");
+asm ("          .org    0xfc");
+asm ("          .word   -1");
+asm ("          .text");
 
 /*
  * Send a byte to the UART transmitter, with interrupts disabled.
@@ -71,23 +45,6 @@ again:
         c = '\r';
         goto again;
     }
-}
-
-/*
- * Wait for the byte to be received and return it.
- */
-unsigned getch (void)
-{
-    unsigned c;
-
-    for (;;) {
-        /* Wait until receive data available. */
-        if (U4STA & PIC32_USTA_URXDA) {
-            c = (unsigned char) U4RXREG;
-            break;
-        }
-    }
-    return c;
 }
 
 int hexchar (unsigned val)
@@ -115,15 +72,6 @@ void printreg (const char *p, unsigned val)
 
 int main()
 {
-#if 0
-    /* Initialize UART. */
-    U4BRG = PIC32_BRG_BAUD (MHZ * 500000, 115200);
-    U4STA = 0;
-    U4MODE = PIC32_UMODE_PDSEL_8NPAR |      /* 8-bit data, no parity */
-             PIC32_UMODE_ON;                /* UART Enable */
-    U4STASET = PIC32_USTA_URXEN |           /* Receiver Enable */
-               PIC32_USTA_UTXEN;            /* Transmit Enable */
-#endif
     /*
      * Print initial state of control registers.
      */

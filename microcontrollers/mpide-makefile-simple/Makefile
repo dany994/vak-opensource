@@ -10,7 +10,8 @@
 # BOARD_TAG    - The tag for the board e.g. uno or mega
 #                'make show_boards' shows a list
 #
-MPIDE_DIR       = /opt/mpide-0022-linux32-20110822
+#MPIDE_DIR       = /opt/mpide-0022-linux32-20110822
+MPIDE_DIR       = /opt/mpide-0023-linux32-20140316
 
 APPLICATION     = blink
 
