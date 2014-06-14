@@ -15,19 +15,19 @@ LDFLAGS         = -T pic32mz.ld -e _start
 #PROG            = blink
 PROG            = uart
 
-all:            $(PROG).srec
+all:            $(PROG).hex
 
-$(PROG).srec:   $(PROG).c
+$(PROG).hex:   $(PROG).c
 		$(CC) $(CFLAGS) -c $<
 		$(CC) $(LDFLAGS) $(PROG).o $(LIBS) -o $(PROG).elf
-		$(OBJCOPY) -O srec $(PROG).elf $(PROG).srec
+		$(OBJCOPY) -O ihex $(PROG).elf $(PROG).hex
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
 
-load:           $(PROG).srec
-		pic32prog $(PROG).srec
+load:           $(PROG).hex
+		pic32prog $(PROG).hex
 
 clean:
-		rm -f *.o *.lst *~ *.elf *.srec *.dis
+		rm -f *.o *.lst *~ *.elf *.hex *.dis
 
-debug:          $(PROG).srec
+debug:          $(PROG).hex
 		$(GDB) $(PROG).elf

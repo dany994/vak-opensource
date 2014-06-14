@@ -7,8 +7,40 @@
 #
 APP             = Blink
 
+OBJS            = tmp/$(APP).cpp.o \
+                  tmp/cpp-startup.S.o \
+                  tmp/crti.S.o \
+                  tmp/crtn.S.o \
+                  tmp/pic32_software_reset.S.o \
+                  tmp/vector_table.S.o \
+                  tmp/exceptions.c.o \
+                  tmp/HardwareSerial_cdcacm.c.o \
+                  tmp/HardwareSerial_usb.c.o \
+                  tmp/pins_arduino.c.o \
+                  tmp/task_manager.c.o \
+                  tmp/WInterrupts.c.o \
+                  tmp/wiring.c.o \
+                  tmp/wiring_analog.c.o \
+                  tmp/wiring_digital.c.o \
+                  tmp/wiring_pulse.c.o \
+                  tmp/wiring_shift.c.o \
+                  tmp/WSystem.c.o \
+                  tmp/HardwareSerial.cpp.o \
+                  tmp/main.cpp.o \
+                  tmp/Print.cpp.o \
+                  tmp/Tone.cpp.o \
+                  tmp/WMath.cpp.o \
+                  tmp/WString.cpp.o
+
+ifndef MPIDE
+ifneq (,$(wildcard /opt/mpide-0023-linux32-20140605-test))
+    # Linux
+    MPIDE       = /opt/mpide-0023-linux32-20140605-test/hardware
+endif
+endif
 ifndef MPIDE
 ifneq (,$(wildcard /Applications/mpide.app))
+    # Mac OS X
     MPIDE       = /Applications/mpide.app/Contents/Resources/Java/hardware
 endif
 endif
@@ -39,42 +71,20 @@ LIBS            = -lm
 COPYFLAGS       = -j .eeprom --set-section-flags=.eeprom=alloc,load \
                     --no-change-warnings --change-section-lma .eeprom=0
 
-PROGTOOL        = $(MPIDE)/tools/avr/bin/avrdude \
+ifneq (,$(wildcard $(MPIDE)/tools/avrdude))
+    # Linux
+    PROGTOOL    = $(MPIDE)/tools/avrdude \
+                  -C $(MPIDE)/tools/avrdude.conf -P /dev/ttyUSB0
+endif
+ifneq (,$(wildcard $(MPIDE)/tools/avr/bin/avrdude))
+    # Mac OS X
+    PROGTOOL    = $(MPIDE)/tools/avr/bin/avrdude \
                   -C $(MPIDE)/tools/avr/etc/avrdude.conf \
-                  -c stk500v2 -p 32MZ2048ECG100 -b 115200
-ifneq (,$(wildcard /dev/ttyUSB0))
-    PROGTOOL    += -P /dev/ttyUSB0
+                  -P /dev/tty.usbserial-*
 endif
-ifneq (,$(wildcard /dev/tty.usbserial-*))
-    PROGTOOL    += -P /dev/tty.usbserial-*
-endif
+PROGTOOL        += -c stk500v2 -p 32MZ2048ECG100 -b 115200
 
 VPATH           = . $(MPIDE)/pic32/cores/pic32
-
-OBJS            = tmp/$(APP).cpp.o \
-                  tmp/cpp-startup.S.o \
-                  tmp/crti.S.o \
-                  tmp/crtn.S.o \
-                  tmp/pic32_software_reset.S.o \
-                  tmp/vector_table.S.o \
-                  tmp/exceptions.c.o \
-                  tmp/HardwareSerial_cdcacm.c.o \
-                  tmp/HardwareSerial_usb.c.o \
-                  tmp/pins_arduino.c.o \
-                  tmp/task_manager.c.o \
-                  tmp/WInterrupts.c.o \
-                  tmp/wiring.c.o \
-                  tmp/wiring_analog.c.o \
-                  tmp/wiring_digital.c.o \
-                  tmp/wiring_pulse.c.o \
-                  tmp/wiring_shift.c.o \
-                  tmp/WSystem.c.o \
-                  tmp/HardwareSerial.cpp.o \
-                  tmp/main.cpp.o \
-                  tmp/Print.cpp.o \
-                  tmp/Tone.cpp.o \
-                  tmp/WMath.cpp.o \
-                  tmp/WString.cpp.o
 
 all:            tmp tmp/$(APP).hex
 
