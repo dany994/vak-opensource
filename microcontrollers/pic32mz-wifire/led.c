@@ -50,13 +50,22 @@ void udelay (unsigned usec)
 int main()
 {
     /* Use pin PG6 as output: LED control. */
-    TRISGCLR = 1 << 6;
+    TRISGCLR = 1 << 6;      // G6
+    TRISDCLR = 1 << 4;      // D4
+    TRISBCLR = 1 << 11;     // B11
+    TRISGCLR = 1 << 15;     // G15
 
     while (1) {
-        /* Invert pin PG6. */
-        PORTGINV = 1 << 6;
+        LATGINV = 1 << 6;   /* Invert pin PG6. */
+        udelay (100000);    /* Delay. */
 
-        /* Delay. */
-        udelay (500000);
+        LATDINV = 1 << 4;   /* Invert pin PD4. */
+        udelay (100000);    /* Delay. */
+
+        LATBINV = 1 << 11;  /* Invert pin PB11. */
+        udelay (100000);    /* Delay. */
+
+        LATGINV = 1 << 15;  /* Invert pin PG15. */
+        udelay (100000);    /* Delay. */
     }
 }
