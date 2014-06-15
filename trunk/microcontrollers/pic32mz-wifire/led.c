@@ -49,11 +49,11 @@ void udelay (unsigned usec)
 
 int main()
 {
-    /* Use pin PG6 as output: LED control. */
-    TRISGCLR = 1 << 6;      // G6
-    TRISDCLR = 1 << 4;      // D4
-    TRISBCLR = 1 << 11;     // B11
-    TRISGCLR = 1 << 15;     // G15
+    /* Use LED pins as output. */
+    TRISGCLR = 1 << 6;      /* LED1: G6 */
+    TRISDCLR = 1 << 4;      /* LED1: D4 */
+    TRISBCLR = 1 << 11;     /* LED1: B11 */
+    TRISGCLR = 1 << 15;     /* LED1: G15 */
 
     LATGCLR = 1 << 6;       /* Clear pin PG6. */
     LATDCLR = 1 << 4;       /* Clear pin PD4. */
