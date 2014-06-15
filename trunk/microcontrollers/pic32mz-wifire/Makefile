@@ -10,15 +10,19 @@ GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
 CFLAGS          = -O -Wall -Werror -DPIC32MZ
 LDFLAGS         = -T using-bootloader.ld -e _start -mdebugger
 
-# Linux
-PROGTOOL        = /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude \
+ifneq (,$(wildcard /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude))
+    # Linux
+    PROGTOOL    = /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude \
                   -C /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude.conf \
-                  -P /dev/ttyUSB0 -c stk500v2 -p 32MZ2048ECG100 -b 115200
-
-# Mac OS X
-#PROGTOOL        = /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude \
-#                  -C /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf \
-#                  -P /dev/tty.usbserial-* -c stk500v2 -p 32MZ2048ECG100 -b 115200 -D
+                  -P /dev/ttyUSB0
+endif
+ifneq (,$(wildcard /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude))
+    # Mac OS X
+    PROGTOOL    = /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude \
+                  -C /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf \
+                  -P /dev/tty.usbserial-*
+endif
+PROGTOOL        += -c stk500v2 -p 32MZ2048ECG100 -b 115200
 
 PROG            = led
 #PROG            = uart
