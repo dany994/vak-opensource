@@ -11,14 +11,14 @@ CFLAGS          = -O -Wall -Werror -DPIC32MZ
 LDFLAGS         = -T using-bootloader.ld -e _start -mdebugger
 
 # Linux
-#PROGTOOL        = /opt/mpide-0023-linux-20120903/hardware/tools/avrdude \
-#                  -C /opt/mpide-0023-linux-20120903/hardware/tools/avrdude.conf \
-#                  -P /dev/ttyUSB0 -c stk500v2 -p 32MZ2048ECG100 -b 115200
+PROGTOOL        = /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude \
+                  -C /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude.conf \
+                  -P /dev/ttyUSB0 -c stk500v2 -p 32MZ2048ECG100 -b 115200
 
 # Mac OS X
-PROGTOOL        = /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude \
-                  -C /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf \
-                  -P /dev/tty.usbserial-* -c stk500v2 -p 32MZ2048ECG100 -b 115200 -D
+#PROGTOOL        = /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude \
+#                  -C /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf \
+#                  -P /dev/tty.usbserial-* -c stk500v2 -p 32MZ2048ECG100 -b 115200 -D
 
 PROG            = led
 #PROG            = uart
