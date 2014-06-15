@@ -24,8 +24,8 @@ ifneq (,$(wildcard /Applications/Mpide.app/Contents/Resources/Java/hardware/tool
 endif
 PROGTOOL        += -c stk500v2 -p 32MZ2048ECG100 -b 115200
 
-PROG            = led
-#PROG            = uart
+#PROG            = led
+PROG            = uart
 
 all:            $(PROG).hex
 

@@ -3,26 +3,49 @@
  */
 #include "pic32mz.h"
 
+#define MHZ     200             /* CPU clock in MHz. */
+
 /*
  * Main entry point at bd001000.
  * Setup stack pointer and $gp registers, and jump to main().
  */
-asm ("          .section .startup");
+asm ("          .section .startup,code");
 asm ("          .globl _start");
 asm ("          .type _start, function");
 asm ("_start:   la      $sp, _estack");
 asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
 asm ("          jr      $ra");
-asm ("          .text");
+asm ("          .section .text,code");
 
 /*
  * Image header pointer.
  */
-asm ("          .section .exception");
-asm ("          .org    0xfc");
-asm ("          .word   -1");
-asm ("          .text");
+asm ("          .section .exception,code");
+asm ("          .org    0xf8");
+asm ("_ebase:   .word   0x9d000000");           /* EBase value. */
+asm ("_imgptr:  .word   -1");                   /* Image header pointer. */
+asm ("          .section .text,code");
+
+/*
+ * Delay for a given number of microseconds.
+ * The processor has a 32-bit hardware Count register,
+ * which increments at half CPU rate.
+ * We use it to get a precise delay.
+ */
+void udelay (unsigned usec)
+{
+    unsigned now = mfc0 (C0_COUNT, 0);
+    unsigned final = now + usec * MHZ / 2;
+
+    for (;;) {
+        now = mfc0 (C0_COUNT, 0);
+
+        /* This comparison is valid only when using a signed type. */
+        if ((int) (now - final) >= 0)
+            break;
+    }
+}
 
 /*
  * Send a byte to the UART transmitter, with interrupts disabled.
@@ -72,6 +95,24 @@ void printreg (const char *p, unsigned val)
 
 int main()
 {
+    /* Use LED pins as output. */
+    TRISGCLR = 1 << 6;      /* LED1: G6 */
+    TRISDCLR = 1 << 4;      /* LED1: D4 */
+    TRISBCLR = 1 << 11;     /* LED1: B11 */
+    TRISGCLR = 1 << 15;     /* LED1: G15 */
+
+    LATGCLR = 1 << 6;       /* Clear pin PG6. */
+    LATDCLR = 1 << 4;       /* Clear pin PD4. */
+    LATBCLR = 1 << 11;      /* Clear pin PB11. */
+    LATGCLR = 1 << 15;      /* Clear pin PG15. */
+
+    /* Initialize UART. */
+    U4BRG = PIC32_BRG_BAUD (MHZ * 500000, 115200);
+    U4STA = 0;
+    U4MODE = PIC32_UMODE_PDSEL_8NPAR |      /* 8-bit data, no parity */
+             PIC32_UMODE_ON;                /* UART Enable */
+    U4STASET = PIC32_USTA_URXEN |           /* Receiver Enable */
+               PIC32_USTA_UTXEN;            /* Transmit Enable */
     /*
      * Print initial state of control registers.
      */
@@ -104,5 +145,14 @@ int main()
         asm volatile ("sltiu $zero, $zero, 0xABC2");
 
         putch ('.');
+
+        LATGINV = 1 << 6;   /* Invert pin PG6. */
+        udelay (200000);    /* Delay. */
+        LATDINV = 1 << 4;   /* Invert pin PD4. */
+        udelay (200000);    /* Delay. */
+        LATBINV = 1 << 11;  /* Invert pin PB11. */
+        udelay (200000);    /* Delay. */
+        LATGINV = 1 << 15;  /* Invert pin PG15. */
+        udelay (200000);    /* Delay. */
     }
 }
