@@ -23,8 +23,8 @@ asm ("          .section .text,code");
  */
 asm ("          .section .exception,code");
 asm ("          .org    0xf8");
-asm ("          .word   0x9d000000");           /* EBase value. */
-asm ("          .word   -1");                   /* Image header pointer. */
+asm ("_ebase:   .word   0x9d000000");           /* EBase value. */
+asm ("_imgptr:  .word   -1");                   /* Image header pointer. */
 asm ("          .section .text,code");
 
 /*
@@ -55,17 +55,22 @@ int main()
     TRISBCLR = 1 << 11;     // B11
     TRISGCLR = 1 << 15;     // G15
 
+    LATGCLR = 1 << 6;       /* Clear pin PG6. */
+    LATDCLR = 1 << 4;       /* Clear pin PD4. */
+    LATBCLR = 1 << 11;      /* Clear pin PB11. */
+    LATGCLR = 1 << 15;      /* Clear pin PG15. */
+
     while (1) {
         LATGINV = 1 << 6;   /* Invert pin PG6. */
-        udelay (100000);    /* Delay. */
+        udelay (200000);    /* Delay. */
 
         LATDINV = 1 << 4;   /* Invert pin PD4. */
-        udelay (100000);    /* Delay. */
+        udelay (200000);    /* Delay. */
 
         LATBINV = 1 << 11;  /* Invert pin PB11. */
-        udelay (100000);    /* Delay. */
+        udelay (200000);    /* Delay. */
 
         LATGINV = 1 << 15;  /* Invert pin PG15. */
-        udelay (100000);    /* Delay. */
+        udelay (200000);    /* Delay. */
     }
 }
