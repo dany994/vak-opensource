@@ -6,27 +6,26 @@
 #define MHZ     200             /* CPU clock in MHz. */
 
 /*
- * Secondary entry point at bd000000.
- */
-asm ("          .section .exception");
-asm ("          .globl _init");
-asm ("          .type _init, function");
-asm ("_init:    la      $ra, _start");
-asm ("          jr      $ra");
-asm ("          .text");
-
-/*
  * Main entry point at bd001000.
  * Setup stack pointer and $gp registers, and jump to main().
  */
-asm ("          .section .startup");
+asm ("          .section .startup,code");
 asm ("          .globl _start");
 asm ("          .type _start, function");
 asm ("_start:   la      $sp, _estack");
 asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
 asm ("          jr      $ra");
-asm ("          .text");
+asm ("          .section .text,code");
+
+/*
+ * Secondary entry point at bd000000.
+ */
+asm ("          .section .exception,code");
+asm ("          .org    0xf8");
+asm ("          .word   0x9d000000");           /* EBase value. */
+asm ("          .word   -1");                   /* Image header pointer. */
+asm ("          .section .text,code");
 
 /*
  * Delay for a given number of microseconds.
