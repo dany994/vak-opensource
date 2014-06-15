@@ -102,8 +102,10 @@ tmp/$(APP).cpp.o: $(APP).pde
 		$(GNU)g++ -c $(CXXFLAGS) tmp/$(APP).cpp -o $@
 
 tmp/$(APP).hex: $(OBJS)
-		$(GNU)g++ $(LDFLAGS) $(OBJS) $(LIBS) -o tmp/$(APP).elf
+		$(GNU)ar -cr tmp/code.a $(OBJS)
+		$(GNU)g++ $(LDFLAGS) tmp/code.a $(LIBS) -Wl,-Map=tmp/$(APP).map -o tmp/$(APP).elf
 		$(GNU)objcopy -O ihex $(COPYFLAGS) tmp/$(APP).elf tmp/$(APP).eep
+		$(GNU)objdump -d -S tmp/$(APP).elf > tmp/$(APP).dis
 		$(GNU)bin2hex -a tmp/$(APP).elf
 
 tmp/%.c.o:      %.c
