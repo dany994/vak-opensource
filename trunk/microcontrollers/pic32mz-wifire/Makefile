@@ -32,8 +32,8 @@ all:            $(PROG).hex
 $(PROG).hex:    $(PROG).c
 		$(CC) $(CFLAGS) -c $<
 		$(CC) $(LDFLAGS) $(PROG).o -o $(PROG).elf
-#		$(OBJCOPY) -O ihex $(PROG).elf $(PROG).hex
-		$(BIN2HEX) -a $(PROG).elf
+		$(OBJCOPY) -O ihex $(PROG).elf $(PROG).hex
+#		$(BIN2HEX) -a $(PROG).elf
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
 
 load:           $(PROG).hex
