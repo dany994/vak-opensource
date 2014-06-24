@@ -1,7 +1,6 @@
-#P              = /usr/local/cpp-chipKIT-newlibtest-linux32-20111010/bin/pic32-
-#P              = /usr/local/mipsel441/bin/mipsel-elf32-
-P               = /usr/local/pic32-tools/bin/pic32-
-CC              = $(P)gcc -mips32r2 -g -nostdlib
+#P              = /usr/local/mips-gcc-4.8.1/bin/mips-elf-
+P               = /usr/local/mips-2013.11/bin/mips-sde-elf-
+CC              = $(P)gcc -mips32r2 -EL -g -nostdlib
 GDB             = mipsel-elf32-gdb
 OBJCOPY         = $(P)objcopy
 OBJDUMP         = $(P)objdump

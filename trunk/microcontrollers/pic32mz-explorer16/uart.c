@@ -195,6 +195,12 @@ int main()
     printreg ("Debug   ", mfc0(23, 0));
     printreg ("PerfCtl0", mfc0(25, 0));
     printreg ("PerfCtl1", mfc0(25, 2));
+    printreg ("DEVID   ", DEVID);
+    printreg ("OSCCON  ", OSCCON);
+    printreg ("DEVCFG0 ", DEVCFG0);
+    printreg ("DEVCFG1 ", DEVCFG1);
+    printreg ("DEVCFG2 ", DEVCFG2);
+    printreg ("DEVCFG3 ", DEVCFG3);
 
     while (1) {
         /* Invert pins PA7-PA0. */
