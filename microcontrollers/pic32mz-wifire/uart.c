@@ -9,23 +9,23 @@
  * Main entry point at bd001000.
  * Setup stack pointer and $gp registers, and jump to main().
  */
-asm ("          .section .startup,code");
+asm ("          .section .startup");
 asm ("          .globl _start");
 asm ("          .type _start, function");
 asm ("_start:   la      $sp, _estack");
 asm ("          la      $ra, main");
 asm ("          la      $gp, _gp");
 asm ("          jr      $ra");
-asm ("          .section .text,code");
+asm ("          .text");
 
 /*
  * Image header pointer.
  */
-asm ("          .section .exception,code");
+asm ("          .section .exception");
 asm ("          .org    0xf8");
 asm ("_ebase:   .word   0x9d000000");           /* EBase value. */
 asm ("_imgptr:  .word   -1");                   /* Image header pointer. */
-asm ("          .section .text,code");
+asm ("          .text");
 
 /*
  * Delay for a given number of microseconds.
@@ -139,6 +139,7 @@ int main()
     printreg ("Debug   ", mfc0(23, 0));
     printreg ("PerfCtl0", mfc0(25, 0));
     printreg ("PerfCtl1", mfc0(25, 2));
+    printreg ("SPLLCON ", SPLLCON);
 
     while (1) {
         /* Stop simulation. */
