@@ -1,5 +1,6 @@
-P               = /usr/local/pic32-tools/bin/pic32-
-CC              = $(P)gcc -mips32r2 -g -nostdlib
+#P               = /usr/local/pic32-tools/bin/pic32-
+P               = /usr/local/mips-2013.11/bin/mips-sde-elf-
+CC              = $(P)gcc -mips32r2 -EL -g -nostdlib
 OBJCOPY         = $(P)objcopy
 OBJDUMP         = $(P)objdump
 BIN2HEX         = $(P)bin2hex
@@ -8,7 +9,7 @@ BIN2HEX         = $(P)bin2hex
 #GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
 GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
 CFLAGS          = -O -Wall -Werror -DPIC32MZ
-LDFLAGS         = -T using-bootloader.ld -e _start -mdebugger
+LDFLAGS         = -T using-bootloader.ld -e _start #-mdebugger
 
 ifneq (,$(wildcard /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude))
     # Linux
