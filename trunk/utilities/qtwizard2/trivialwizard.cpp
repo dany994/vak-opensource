@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
     wizard.addPage(createConclusionPage());
 
     wizard.setWindowTitle("Trivial Wizard");
+    wizard.setWizardStyle(QWizard::MacStyle);
 #ifdef Q_OS_SYMBIAN
     wizard.showMaximized();
 #else
