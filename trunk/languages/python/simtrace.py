@@ -3,7 +3,7 @@
 #
 # Print the sequence of function calls from the Imperas trace file.
 #
-import sys, string, subprocess
+import sys, string, subprocess, bisect
 
 if len(sys.argv) != 3:
     print "Usage: simtrace file.trace vmunix.elf"
@@ -21,26 +21,23 @@ for line in nm_command.stdout.readlines():
     if addr > max_addr:
         max_addr = addr
     #print "%08x = %s" % (addr, func)
+
 table_keys = sorted(table.keys())
 #print table_keys
 
 # Find a name of the function for the given address.
 # Return the name and the offset.
 def find_function (addr):
-    if addr > max_addr:
-        return ("", 0)
-    if addr in table_keys:
-        return (table[addr], 0)
-    last = 0
-    for a in table_keys:
-        if a > addr:
-            break
-        last = a
-    return (table[last], addr - last)
+    if addr <= max_addr:
+        i = bisect.bisect_right(table_keys, addr)
+        if i > 0:
+            last = table_keys[i-1]
+            return (table[last], addr - last)
+    return ("", 0)
 
 # Print a function name for the given address.
 last_func = ""
-def process_instruction(addr):
+def process_instruction(addr, op, level):
     #print "--- process_instruction(%#x)" % addr
     global last_func
 
@@ -51,11 +48,9 @@ def process_instruction(addr):
     (func, offset) = find_function (addr)
     if func != last_func:
         if offset == 0:
-            print "%08x : %s" % (addr, func)
-        elif offset > 0x10000:
-            print "%08x : ???" % (addr)
+            print "%08x : %*s%s" % (addr, level*2, "", func)
         else:
-            print "%08x : %s + %u" % (addr, func, offset)
+            print "%08x : %*s%s + %u" % (addr, level*2, "", func, offset)
         last_func = func
 
 # Check whether the string is a hex number
@@ -66,6 +61,9 @@ def is_hex(s):
 # Read the trace file.
 trace_file = open (sys.argv[1])
 pc = 0
+op = ""
+last_op = ""
+level = 0
 for line in trace_file.readlines():
     word = line.split()
     if len(word) < 7:
@@ -83,11 +81,27 @@ for line in trace_file.readlines():
     if cca != "2:" and cca != "3:":
         print "Warning: unexpected CCA value!"
 
+    if last_op == "JAL":
+        level = level + 1
+    elif last_op == "JR":
+        level = level - 1
+
     #print pc, ":", string.join(word[6:])
-    process_instruction(pc)
+    process_instruction(pc, op, level)
+
+    # Keep the history of two last instructions
+    last_op = op
+    op = word[6]
+
+    if word[6] == "JAL" or word[6] == "JALR":
+        op = "JAL"
+    elif (word[6] == "JR" or word[6] == "JR.HB") and word[7] == "$31":
+        op = "JR"
+    else:
+        op = ""
 
 # Print the last executed address.
 if pc != 0:
     last_func = ""
-    print "=== Stopped at %#x: ===" % pc
-    process_instruction(pc)
+    print "=== Stopped at: ==="
+    process_instruction(pc, 0)
