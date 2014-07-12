@@ -3,6 +3,18 @@
 
 SDL_Surface *screen;
 
+void print_key (SDL_Event *ev)
+{
+        printf ("Key %s  state:%d   mod:%04x  sym:0x%02x  unicode:0x%02x  scancode:0x%02x\n",
+            ev->type == SDL_KEYUP ? "released" : "pressed",
+            ev->key.state,
+            ev->key.keysym.mod,
+            ev->key.keysym.sym,
+            ev->key.keysym.unicode,
+            ev->key.keysym.scancode
+        );
+}
+
 void render ()
 {
 	/* Lock surface if needed */
@@ -63,9 +75,12 @@ int main (int argc, char *argv[])
 		while (SDL_PollEvent (&event)) {
 			switch (event.type) {
 			case SDL_KEYDOWN:
+			        print_key (&event);
 				break;
 
 			case SDL_KEYUP:
+			        print_key (&event);
+
 				/* If escape is pressed, return (and thus, quit) */
 				if (event.key.keysym.sym == SDLK_ESCAPE)
 					return 0;

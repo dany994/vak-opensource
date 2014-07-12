@@ -37,13 +37,9 @@ def find_function (addr):
 
 # Print a function name for the given address.
 last_func = ""
-def process_instruction(addr, op, level):
+def process_instruction(addr, level):
     #print "--- process_instruction(%#x)" % addr
     global last_func
-
-    # Skip bootloader region.
-    if addr > max_addr:
-        return
 
     (func, offset) = find_function (addr)
     if func != last_func:
@@ -66,6 +62,21 @@ last_op = ""
 level = 0
 for line in trace_file.readlines():
     word = line.split()
+    if len(word) > 0 and word[0] == "---":
+        if pc > max_addr and len(word) == 6 and word[1] == "I/O" and \
+            word[2] == "Read" and word[5] == "U4STA":
+            # Skip bootloader timeout
+            continue
+
+        # Print i/o events.
+        print line.strip()
+        continue
+
+    if len(word) > 1 and word[0] == "Info" and word[1] == "(MIPS32_EXCEPT)":
+        # Print exceptions.
+        print "---", string.join(word[3:])
+        continue
+
     if len(word) < 7:
         continue
 
@@ -78,6 +89,10 @@ for line in trace_file.readlines():
         continue
     pc = int(va, 16)
 
+    # Skip bootloader region.
+    if pc > max_addr:
+        continue
+
     if cca != "2:" and cca != "3:":
         print "Warning: unexpected CCA value!"
 
@@ -87,7 +102,7 @@ for line in trace_file.readlines():
         level = level - 1
 
     #print pc, ":", string.join(word[6:])
-    process_instruction(pc, op, level)
+    process_instruction(pc, level)
 
     # Keep the history of two last instructions
     last_op = op

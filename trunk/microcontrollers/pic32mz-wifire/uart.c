@@ -140,6 +140,8 @@ int main()
     printreg ("PerfCtl0", mfc0(25, 0));
     printreg ("PerfCtl1", mfc0(25, 2));
     printreg ("SPLLCON ", SPLLCON);
+    printreg ("SBT2REG0", SBT2REG0);
+    printreg ("SBT3REG0", SBT3REG0);
 
     while (1) {
         /* Stop simulation. */
