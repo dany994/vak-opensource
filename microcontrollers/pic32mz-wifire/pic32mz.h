@@ -1394,6 +1394,197 @@
 #define PIC32_SPISTAT_SPIBUSY	0x00000800      /* SPI is busy */
 
 /*--------------------------------------
+ * System bus registers.
+ */
+#define SBFLAG		PIC32_R (0xF0510)
+
+#define SBT0ELOG1       PIC32_R (0xF8020)       /* System Bus */
+#define SBT0ELOG2       PIC32_R (0xF8024)
+#define SBT0ECON        PIC32_R (0xF8028)
+#define SBT0ECLRS       PIC32_R (0xF8030)
+#define SBT0ECLRM       PIC32_R (0xF8038)
+#define SBT0REG0        PIC32_R (0xF8040)
+#define SBT0RD0         PIC32_R (0xF8050)
+#define SBT0WR0         PIC32_R (0xF8058)
+#define SBT0REG1        PIC32_R (0xF8060)
+#define SBT0RD1         PIC32_R (0xF8070)
+#define SBT0WR1         PIC32_R (0xF8078)
+
+#define SBT1ELOG1       PIC32_R (0xF8420)       /* Flash Memory */
+#define SBT1ELOG2       PIC32_R (0xF8424)
+#define SBT1ECON        PIC32_R (0xF8428)
+#define SBT1ECLRS       PIC32_R (0xF8430)
+#define SBT1ECLRM       PIC32_R (0xF8438)
+#define SBT1REG0        PIC32_R (0xF8440)
+#define SBT1RD0         PIC32_R (0xF8450)
+#define SBT1WR0         PIC32_R (0xF8458)
+#define SBT1REG2        PIC32_R (0xF8480)
+#define SBT1RD2         PIC32_R (0xF8490)
+#define SBT1WR2         PIC32_R (0xF8498)
+#define SBT1REG3        PIC32_R (0xF84A0)
+#define SBT1RD3         PIC32_R (0xF84B0)
+#define SBT1WR3         PIC32_R (0xF84B8)
+#define SBT1REG4        PIC32_R (0xF84C0)
+#define SBT1RD4         PIC32_R (0xF84D0)
+#define SBT1WR4         PIC32_R (0xF84D8)
+#define SBT1REG5        PIC32_R (0xF84E0)
+#define SBT1RD5         PIC32_R (0xF84F0)
+#define SBT1WR5         PIC32_R (0xF84F8)
+#define SBT1REG6        PIC32_R (0xF8500)
+#define SBT1RD6         PIC32_R (0xF8510)
+#define SBT1WR6         PIC32_R (0xF8518)
+#define SBT1REG7        PIC32_R (0xF8520)
+#define SBT1RD7         PIC32_R (0xF8530)
+#define SBT1WR7         PIC32_R (0xF8538)
+#define SBT1REG8        PIC32_R (0xF8540)
+#define SBT1RD8         PIC32_R (0xF8550)
+#define SBT1WR8         PIC32_R (0xF8558)
+
+#define SBT2ELOG1       PIC32_R (0xF8820)       /* RAM Bank 1 Memory */
+#define SBT2ELOG2       PIC32_R (0xF8824)
+#define SBT2ECON        PIC32_R (0xF8828)
+#define SBT2ECLRS       PIC32_R (0xF8830)
+#define SBT2ECLRM       PIC32_R (0xF8838)
+#define SBT2REG0        PIC32_R (0xF8840)
+#define SBT2RD0         PIC32_R (0xF8850)
+#define SBT2WR0         PIC32_R (0xF8858)
+#define SBT2REG1        PIC32_R (0xF8860)
+#define SBT2RD1         PIC32_R (0xF8870)
+#define SBT2WR1         PIC32_R (0xF8878)
+#define SBT2REG2        PIC32_R (0xF8880)
+#define SBT2RD2         PIC32_R (0xF8890)
+#define SBT2WR2         PIC32_R (0xF8898)
+
+#define SBT3ELOG1       PIC32_R (0xF8C20)       /* RAM Bank 2 Memory */
+#define SBT3ELOG2       PIC32_R (0xF8C24)
+#define SBT3ECON        PIC32_R (0xF8C28)
+#define SBT3ECLRS       PIC32_R (0xF8C30)
+#define SBT3ECLRM       PIC32_R (0xF8C38)
+#define SBT3REG0        PIC32_R (0xF8C40)
+#define SBT3RD0         PIC32_R (0xF8C50)
+#define SBT3WR0         PIC32_R (0xF8C58)
+#define SBT3REG1        PIC32_R (0xF8C60)
+#define SBT3RD1         PIC32_R (0xF8C70)
+#define SBT3WR1         PIC32_R (0xF8C78)
+#define SBT3REG2        PIC32_R (0xF8C80)
+#define SBT3RD2         PIC32_R (0xF8C90)
+#define SBT3WR2         PIC32_R (0xF8C98)
+
+#define SBT4ELOG1       PIC32_R (0xF9020)       /* External Memory via EBI */
+#define SBT4ELOG2       PIC32_R (0xF9024)
+#define SBT4ECON        PIC32_R (0xF9028)
+#define SBT4ECLRS       PIC32_R (0xF9030)
+#define SBT4ECLRM       PIC32_R (0xF9038)
+#define SBT4REG0        PIC32_R (0xF9040)
+#define SBT4RD0         PIC32_R (0xF9050)
+#define SBT4WR0         PIC32_R (0xF9058)
+#define SBT4REG2        PIC32_R (0xF9080)
+#define SBT4RD2         PIC32_R (0xF9090)
+#define SBT4WR2         PIC32_R (0xF9098)
+
+#define SBT5ELOG1       PIC32_R (0xF9420)       /* Peripheral Set 1 */
+#define SBT5ELOG2       PIC32_R (0xF9424)
+#define SBT5ECON        PIC32_R (0xF9428)
+#define SBT5ECLRS       PIC32_R (0xF9430)
+#define SBT5ECLRM       PIC32_R (0xF9438)
+#define SBT5REG0        PIC32_R (0xF9440)
+#define SBT5RD0         PIC32_R (0xF9450)
+#define SBT5WR0         PIC32_R (0xF9458)
+#define SBT5REG1        PIC32_R (0xF9460)
+#define SBT5RD1         PIC32_R (0xF9470)
+#define SBT5WR1         PIC32_R (0xF9478)
+#define SBT5REG2        PIC32_R (0xF9480)
+#define SBT5RD2         PIC32_R (0xF9490)
+#define SBT5WR2         PIC32_R (0xF9498)
+
+#define SBT6ELOG1       PIC32_R (0xF9820)       /* Peripheral Set 2 */
+#define SBT6ELOG2       PIC32_R (0xF9824)
+#define SBT6ECON        PIC32_R (0xF9828)
+#define SBT6ECLRS       PIC32_R (0xF9830)
+#define SBT6ECLRM       PIC32_R (0xF9838)
+#define SBT6REG0        PIC32_R (0xF9840)
+#define SBT6RD0         PIC32_R (0xF9850)
+#define SBT6WR0         PIC32_R (0xF9858)
+#define SBT6REG1        PIC32_R (0xF9860)
+#define SBT6RD1         PIC32_R (0xF9870)
+#define SBT6WR1         PIC32_R (0xF9878)
+
+#define SBT7ELOG1       PIC32_R (0xF9C20)       /* Peripheral Set 3 */
+#define SBT7ELOG2       PIC32_R (0xF9C24)
+#define SBT7ECON        PIC32_R (0xF9C28)
+#define SBT7ECLRS       PIC32_R (0xF9C30)
+#define SBT7ECLRM       PIC32_R (0xF9C38)
+#define SBT7REG0        PIC32_R (0xF9C40)
+#define SBT7RD0         PIC32_R (0xF9C50)
+#define SBT7WR0         PIC32_R (0xF9C58)
+#define SBT7REG1        PIC32_R (0xF9C60)
+#define SBT7RD1         PIC32_R (0xF9C70)
+#define SBT7WR1         PIC32_R (0xF9C78)
+
+#define SBT8ELOG1       PIC32_R (0xFA020)       /* Peripheral Set 4 */
+#define SBT8ELOG2       PIC32_R (0xFA024)
+#define SBT8ECON        PIC32_R (0xFA028)
+#define SBT8ECLRS       PIC32_R (0xFA030)
+#define SBT8ECLRM       PIC32_R (0xFA038)
+#define SBT8REG0        PIC32_R (0xFA040)
+#define SBT8RD0         PIC32_R (0xFA050)
+#define SBT8WR0         PIC32_R (0xFA058)
+#define SBT8REG1        PIC32_R (0xFA060)
+#define SBT8RD1         PIC32_R (0xFA070)
+#define SBT8WR1         PIC32_R (0xFA078)
+
+#define SBT9ELOG1       PIC32_R (0xFA420)       /* Peripheral Set 5 */
+#define SBT9ELOG2       PIC32_R (0xFA424)
+#define SBT9ECON        PIC32_R (0xFA428)
+#define SBT9ECLRS       PIC32_R (0xFA430)
+#define SBT9ECLRM       PIC32_R (0xFA438)
+#define SBT9REG0        PIC32_R (0xFA440)
+#define SBT9RD0         PIC32_R (0xFA450)
+#define SBT9WR0         PIC32_R (0xFA458)
+#define SBT9REG1        PIC32_R (0xFA460)
+#define SBT9RD1         PIC32_R (0xFA470)
+#define SBT9WR1         PIC32_R (0xFA478)
+
+#define SBT10ELOG1      PIC32_R (0xFA820)       /* Peripheral Set 6 */
+#define SBT10ELOG2      PIC32_R (0xFA824)
+#define SBT10ECON       PIC32_R (0xFA828)
+#define SBT10ECLRS      PIC32_R (0xFA830)
+#define SBT10ECLRM      PIC32_R (0xFA838)
+#define SBT10REG0       PIC32_R (0xFA840)
+#define SBT10RD0        PIC32_R (0xFA850)
+#define SBT10WR0        PIC32_R (0xFA858)
+
+#define SBT11ELOG1      PIC32_R (0xFAC20)       /* External Memory via SQI */
+#define SBT11ELOG2      PIC32_R (0xFAC24)
+#define SBT11ECON       PIC32_R (0xFAC28)
+#define SBT11ECLRS      PIC32_R (0xFAC30)
+#define SBT11ECLRM      PIC32_R (0xFAC38)
+#define SBT11REG0       PIC32_R (0xFAC40)
+#define SBT11RD0        PIC32_R (0xFAC50)
+#define SBT11WR0        PIC32_R (0xFAC58)
+#define SBT11REG1       PIC32_R (0xFAC60)
+#define SBT11RD1        PIC32_R (0xFAC70)
+#define SBT11WR1        PIC32_R (0xFAC78)
+
+#define SBT12ELOG1      PIC32_R (0xFB020)       /* Peripheral Set 7 */
+#define SBT12ELOG2      PIC32_R (0xFB024)
+#define SBT12ECON       PIC32_R (0xFB028)
+#define SBT12ECLRS      PIC32_R (0xFB030)
+#define SBT12ECLRM      PIC32_R (0xFB038)
+#define SBT12REG0       PIC32_R (0xFB040)
+#define SBT12RD0        PIC32_R (0xFB050)
+#define SBT12WR0        PIC32_R (0xFB058)
+
+#define SBT13ELOG1      PIC32_R (0xFB420)       /* Peripheral Set 8 */
+#define SBT13ELOG2      PIC32_R (0xFB424)
+#define SBT13ECON       PIC32_R (0xFB428)
+#define SBT13ECLRS      PIC32_R (0xFB430)
+#define SBT13ECLRM      PIC32_R (0xFB438)
+#define SBT13REG0       PIC32_R (0xFB440)
+#define SBT13RD0        PIC32_R (0xFB450)
+#define SBT13WR0        PIC32_R (0xFB458)
+
+/*--------------------------------------
  * Interrupt controller registers.
  */
 #define INTCON		PIC32_R (0x10000)	/* Interrupt Control */
