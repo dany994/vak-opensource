@@ -90,6 +90,9 @@ ERROR(struct uufsd *u, const char *str)
 }
 #endif	/* _LIBUFS */
 
+#undef btodb
+#define btodb(bytes) ((unsigned)(bytes) >> DEV_BSHIFT)
+
 __BEGIN_DECLS
 
 /*

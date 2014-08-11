@@ -35,6 +35,7 @@
 
 #include <sys/buf.h>	/* XXX For struct workhead. */
 
+#if 0
 /*
  * Arguments to mount UFS-based filesystems
  */
@@ -42,6 +43,7 @@ struct ufs_args {
 	char	*fspec;			/* block special device to mount */
 	struct	oexport_args export;	/* network export information */
 };
+#endif
 
 #ifdef _KERNEL
 

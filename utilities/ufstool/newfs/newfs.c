@@ -77,7 +77,7 @@ __FBSDID("$FreeBSD$");
 #include <syslog.h>
 #include <unistd.h>
 
-#include <libutil.h>
+//#include <libutil.h>
 
 #include "newfs.h"
 
@@ -151,13 +151,13 @@ main(int argc, char *argv[])
 			Jflag = 1;
 			break;
 		case 'L':
-			volumelabel = optarg;
+			volumelabel = (u_char*) optarg;
 			i = -1;
 			while (isalnum(volumelabel[++i]));
 			if (volumelabel[i] != '\0') {
 				errx(1, "bad volume label. Valid characters are alphanumerics.");
 			}
-			if (strlen(volumelabel) >= MAXVOLLEN) {
+			if (strlen((char*)volumelabel) >= MAXVOLLEN) {
 				errx(1, "bad volume label. Length is longer than %d.",
 				    MAXVOLLEN);
 			}
@@ -269,7 +269,7 @@ main(int argc, char *argv[])
 			else if (strcmp(optarg, "time") == 0)
 				opt = FS_OPTTIME;
 			else
-				errx(1, 
+				errx(1,
 		"%s: unknown optimization preference: use `space' or `time'",
 				    optarg);
 			break;
@@ -345,10 +345,11 @@ main(int argc, char *argv[])
 		/* set fssize from the partition */
 	} else {
 	    if (sectorsize == 0)
-		if (ioctl(disk.d_fd, DIOCGSECTORSIZE, &sectorsize) == -1)
-		    sectorsize = 0;	/* back out on error for safety */
-	    if (sectorsize && ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize) != -1)
-		getfssize(&fssize, special, mediasize / sectorsize, reserved);
+                sectorsize = 0;	/* back out on error for safety */
+#if 0
+            if (sectorsize && ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize) != -1)
+                getfssize(&fssize, special, mediasize / sectorsize, reserved);
+#endif
 	}
 	pp = NULL;
 	lp = getdisklabel(special);
@@ -360,9 +361,11 @@ main(int argc, char *argv[])
 			errx(1, "%s: can't figure out file system partition",
 					special);
 		cp = &part_name;
+#if 0
 		if (isdigit(*cp))
 			pp = &lp->d_partitions[RAW_PART];
 		else
+#endif
 			pp = &lp->d_partitions[*cp - 'a'];
 		oldpartition = *pp;
 		if (pp->p_size == 0)
@@ -437,7 +440,7 @@ getdisklabel(char *s)
 {
 	static struct disklabel lab;
 	struct disklabel *lp;
-
+#if 0
 	if (is_file) {
 		if (read(disk.d_fd, bootarea, BBSIZE) != BBSIZE)
 			err(4, "cannot read bootarea");
@@ -450,7 +453,7 @@ getdisklabel(char *s)
 		lp = &lab;
 		return &lab;
 	}
-
+#endif
 	if (ioctl(disk.d_fd, DIOCGDINFO, (char *)&lab) != -1)
 		return (&lab);
 	unlabeled++;
@@ -468,7 +471,8 @@ rewritelabel(char *s, struct disklabel *lp)
 	if (unlabeled)
 		return;
 	lp->d_checksum = 0;
-	lp->d_checksum = dkcksum(lp);
+	//lp->d_checksum = dkcksum(lp);
+#if 0
 	if (is_file) {
 		bsd_disklabel_le_enc(bootarea + 0 /* labeloffset */ +
 			1 /* labelsoffset */ * sectorsize, lp);
@@ -477,6 +481,7 @@ rewritelabel(char *s, struct disklabel *lp)
 			errx(1, "cannot write label");
 		return;
 	}
+#endif
 	if (ioctl(disk.d_fd, DIOCWDINFO, (char *)lp) == -1)
 		warn("ioctl (WDINFO): %s: can't rewrite disk label", s);
 }
@@ -521,10 +526,75 @@ usage()
 	exit(1);
 }
 
+/*
+ * Convert an expression of the following forms to a uint64_t.
+ *	1) A positive decimal number.
+ *	2) A positive decimal number followed by a 'b' or 'B' (mult by 1).
+ *	3) A positive decimal number followed by a 'k' or 'K' (mult by 1 << 10).
+ *	4) A positive decimal number followed by a 'm' or 'M' (mult by 1 << 20).
+ *	5) A positive decimal number followed by a 'g' or 'G' (mult by 1 << 30).
+ *	6) A positive decimal number followed by a 't' or 'T' (mult by 1 << 40).
+ *	7) A positive decimal number followed by a 'p' or 'P' (mult by 1 << 50).
+ *	8) A positive decimal number followed by a 'e' or 'E' (mult by 1 << 60).
+ */
+static int
+expand_number(const char *buf, uint64_t *num)
+{
+	uint64_t number;
+	unsigned shift;
+	char *endptr;
+
+	number = strtoumax(buf, &endptr, 0);
+
+	if (endptr == buf) {
+		/* No valid digits. */
+		errno = EINVAL;
+		return (-1);
+	}
+
+	switch (tolower((unsigned char)*endptr)) {
+	case 'e':
+		shift = 60;
+		break;
+	case 'p':
+		shift = 50;
+		break;
+	case 't':
+		shift = 40;
+		break;
+	case 'g':
+		shift = 30;
+		break;
+	case 'm':
+		shift = 20;
+		break;
+	case 'k':
+		shift = 10;
+		break;
+	case 'b':
+	case '\0': /* No unit. */
+		*num = number;
+		return (0);
+	default:
+		/* Unrecognized unit. */
+		errno = EINVAL;
+		return (-1);
+	}
+
+	if ((number << shift) >> shift != number) {
+		/* Overflow */
+		errno = ERANGE;
+		return (-1);
+	}
+
+	*num = number << shift;
+	return (0);
+}
+
 static int
 expand_number_int(const char *buf, int *num)
 {
-	int64_t num64;
+	uint64_t num64;
 	int rval;
 
 	rval = expand_number(buf, &num64);
