@@ -15,5 +15,7 @@ WARNS?=	1
 CFLAGS+=-DFS_DEBUG -I${GROWFS}
 DPADD=	${LIBUFS}
 LDADD=	-lufs
+CFLAGS+= -I${.CURDIR}/.. -I${.CURDIR}/../libufs
+LDFLAGS+= -L${.CURDIR}/../libufs
 
 .include <bsd.prog.mk>

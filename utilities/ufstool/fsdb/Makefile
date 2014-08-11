@@ -11,6 +11,9 @@ CFLAGS+= -I${.CURDIR}/../fsck_ffs
 WARNS?= 2
 LDADD=	-ledit -ltermcap
 DPADD=	${LIBEDIT} ${LIBTERMCAP}
-.PATH:	${.CURDIR}/../fsck_ffs ${.CURDIR}/../../sys/ufs/ffs
+CFLAGS+= -I${.CURDIR}/.. -I${.CURDIR}/../libufs -Werror
+LDFLAGS+= -L${.CURDIR}/../libufs
+
+.PATH:	${.CURDIR}/../fsck_ffs ${.CURDIR}/../ufs/ffs
 
 .include <bsd.prog.mk>

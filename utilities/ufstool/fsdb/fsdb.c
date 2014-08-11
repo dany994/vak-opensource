@@ -3,7 +3,7 @@
 /*
  *  Copyright (c) 1995 John T. Kohl
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -14,7 +14,7 @@
  *     documentation and/or other materials provided with the distribution.
  *  3. The name of the author may not be used to endorse or promote products
  *     derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -61,7 +61,7 @@ static int find_blks64(uint64_t *buf, int size, uint64_t *blknum);
 static int find_indirblks32(uint32_t blk, int ind_level, uint32_t *blknum);
 static int find_indirblks64(uint64_t blk, int ind_level, uint64_t *blknum);
 
-static void 
+static void
 usage(void)
 {
 	fprintf(stderr, "usage: fsdb [-d] [-f] [-r] fsname\n");
@@ -201,7 +201,7 @@ helpfn(int argc, char *argv[])
 
     printf("Commands are:\n%-10s %5s %5s   %s\n",
 	   "command", "min args", "max args", "what");
-    
+
     for (cmdtp = cmds; cmdtp->cmd; cmdtp++)
 	printf("%-10s %5u %5u   %s\n",
 		cmdtp->cmd, cmdtp->minargc-1, cmdtp->maxargc-1, cmdtp->helptxt);
@@ -401,7 +401,7 @@ const char *typename[] = {
     "whiteout",
 };
 
-int diroff; 
+int diroff;
 int slot;
 
 int
@@ -531,8 +531,8 @@ CMDFUNCSTART(findblk)
 	    }
 	    /* Look through direct data blocks. */
 	    if (is_ufs2 ?
-		find_blks64(curinode->dp2.di_db, NDADDR, wantedblk64) :
-		find_blks32(curinode->dp1.di_db, NDADDR, wantedblk32))
+		find_blks64((uint64_t*)curinode->dp2.di_db, NDADDR, wantedblk64) :
+		find_blks32((uint32_t*)curinode->dp1.di_db, NDADDR, wantedblk32))
 		goto end;
 	    for (i = 0; i < NIADDR; i++) {
 		/*
@@ -724,7 +724,7 @@ CMDFUNCSTART(focusname)
 	return 1;
 
     ocurrent = curinum;
-    
+
     if (argv[1][0] == '/') {
 	curinum = ROOTINO;
 	curinode = ginode(ROOTINO);
@@ -800,7 +800,7 @@ CMDFUNCSTART(chinum)
     char *cp;
     ino_t inum;
     struct inodesc idesc;
-    
+
     slotcount = 0;
     if (!checkactivedir())
 	return 1;
@@ -850,7 +850,7 @@ CMDFUNCSTART(chname)
     int rval;
     char *cp;
     struct inodesc idesc;
-    
+
     slotcount = 0;
     if (!checkactivedir())
 	return 1;
@@ -928,11 +928,11 @@ CMDFUNCSTART(chlen)
 	return 1;
 
     len = strtol(argv[1], &cp, 0);
-    if (cp == argv[1] || *cp != '\0' || len < 0) { 
+    if (cp == argv[1] || *cp != '\0' || len < 0) {
 	warnx("bad length `%s'", argv[1]);
 	return 1;
     }
-    
+
     DIP_SET(curinode, di_size, len);
     inodirty();
     printactive(0);
@@ -949,11 +949,11 @@ CMDFUNCSTART(chmode)
 	return 1;
 
     modebits = strtol(argv[1], &cp, 8);
-    if (cp == argv[1] || *cp != '\0' || (modebits & ~07777)) { 
+    if (cp == argv[1] || *cp != '\0' || (modebits & ~07777)) {
 	warnx("bad modebits `%s'", argv[1]);
 	return 1;
     }
-    
+
     DIP_SET(curinode, di_mode, DIP(curinode, di_mode) & ~07777);
     DIP_SET(curinode, di_mode, DIP(curinode, di_mode) | modebits);
     inodirty();
@@ -971,11 +971,11 @@ CMDFUNCSTART(chaflags)
 	return 1;
 
     flags = strtoul(argv[1], &cp, 0);
-    if (cp == argv[1] || *cp != '\0' ) { 
+    if (cp == argv[1] || *cp != '\0' ) {
 	warnx("bad flags `%s'", argv[1]);
 	return 1;
     }
-    
+
     if (flags > UINT_MAX) {
 	warnx("flags set beyond 32-bit range of field (%lx)\n", flags);
 	return(1);
@@ -996,11 +996,11 @@ CMDFUNCSTART(chgen)
 	return 1;
 
     gen = strtol(argv[1], &cp, 0);
-    if (cp == argv[1] || *cp != '\0' ) { 
+    if (cp == argv[1] || *cp != '\0' ) {
 	warnx("bad gen `%s'", argv[1]);
 	return 1;
     }
-    
+
     if (gen > INT_MAX || gen < INT_MIN) {
 	warnx("gen set beyond 32-bit range of field (%lx)\n", gen);
 	return(1);
@@ -1021,7 +1021,7 @@ CMDFUNCSTART(linkcount)
 	return 1;
 
     lcnt = strtol(argv[1], &cp, 0);
-    if (cp == argv[1] || *cp != '\0' ) { 
+    if (cp == argv[1] || *cp != '\0' ) {
 	warnx("bad link count `%s'", argv[1]);
 	return 1;
     }
@@ -1029,7 +1029,7 @@ CMDFUNCSTART(linkcount)
 	warnx("max link count is %d\n", USHRT_MAX);
 	return 1;
     }
-    
+
     DIP_SET(curinode, di_nlink, lcnt);
     inodirty();
     printactive(0);
@@ -1047,7 +1047,7 @@ CMDFUNCSTART(chowner)
 	return 1;
 
     uid = strtoul(argv[1], &cp, 0);
-    if (cp == argv[1] || *cp != '\0' ) { 
+    if (cp == argv[1] || *cp != '\0' ) {
 	/* try looking up name */
 	if ((pwd = getpwnam(argv[1]))) {
 	    uid = pwd->pw_uid;
@@ -1056,7 +1056,7 @@ CMDFUNCSTART(chowner)
 	    return 1;
 	}
     }
-    
+
     DIP_SET(curinode, di_uid, uid);
     inodirty();
     printactive(0);
@@ -1074,7 +1074,7 @@ CMDFUNCSTART(chgroup)
 	return 1;
 
     gid = strtoul(argv[1], &cp, 0);
-    if (cp == argv[1] || *cp != '\0' ) { 
+    if (cp == argv[1] || *cp != '\0' ) {
 	if ((grp = getgrnam(argv[1]))) {
 	    gid = grp->gr_gid;
 	} else {
@@ -1082,7 +1082,7 @@ CMDFUNCSTART(chgroup)
 	    return 1;
 	}
     }
-    
+
     DIP_SET(curinode, di_gid, gid);
     inodirty();
     printactive(0);
@@ -1115,7 +1115,7 @@ badformat:
     for (p = name; *p; p++)
 	if (*p < '0' || *p > '9')
 	    goto badformat;
-    
+
     p = name;
 #define VAL() ((*p++) - '0')
     t.tm_year = VAL();
