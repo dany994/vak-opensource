@@ -789,6 +789,7 @@ ino_blkatoff(union dinode *ip, ino_t ino, ufs_lbn_t lbn, int *frags)
 	}
 	err_suj("lbn %jd not in ino\n", lbn);
 	/* NOTREACHED */
+        return 0;
 }
 
 /*
