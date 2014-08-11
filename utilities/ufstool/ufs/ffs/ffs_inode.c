@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_quota.h"
 
@@ -125,7 +124,7 @@ loop:
 		 * get reclaimed (VI_DOOMED flag) in a forcible downgrade
 		 * or unmount. For an unmount, the entire filesystem will be
 		 * gone, so we cannot attempt to touch anything associated
-		 * with it while the vnode is unlocked; all we can do is 
+		 * with it while the vnode is unlocked; all we can do is
 		 * pause briefly and try again. If when we relock the vnode
 		 * we discover that it has been reclaimed, updating it is no
 		 * longer necessary and we can just return an error.
@@ -431,7 +430,7 @@ ffs_truncate(vp, length, flags, cred)
 	}
 	ip->i_flag |= IN_CHANGE | IN_UPDATE;
 	allerror = ffs_update(vp, !DOINGASYNC(vp));
-	
+
 	/*
 	 * Having written the new inode to disk, save its new configuration
 	 * and put back the old block pointers long enough to process them.
@@ -705,4 +704,3 @@ ffs_rdonly(struct inode *ip)
 
 	return (ip->i_ump->um_fs->fs_ronly != 0);
 }
-

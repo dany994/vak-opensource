@@ -219,7 +219,6 @@ struct bufarea *pbp;		/* current inode block */
 #define	sblock		(*sblk.b_un.b_fs)
 
 enum fixstate {DONTKNOW, NOFIX, FIX, IGNORE};
-ino_t cursnapshot;
 
 struct inodesc {
 	enum fixstate id_fix;	/* policy on fixing errors */
@@ -311,7 +310,6 @@ int	Zflag;			/* zero empty data blocks */
 int	inoopt;			/* trim out unused inodes */
 char	ckclean;		/* only do work if not cleanly unmounted */
 int	cvtlevel;		/* convert to newer file system format */
-int	bkgrdcheck;		/* determine if background check is possible */
 int	bkgrdsumadj;		/* whether the kernel have ability to adjust superblock summary */
 char	usedsoftdep;		/* just fix soft dependency inconsistencies */
 char	preen;			/* just fix normal inconsistencies */
@@ -336,7 +334,6 @@ int	lfmode;			/* lost & found directory creation mode */
 ufs2_daddr_t n_blks;		/* number of blocks in use */
 ino_t n_files;			/* number of files in use */
 
-volatile sig_atomic_t	got_siginfo;	/* received a SIGINFO */
 volatile sig_atomic_t	got_sigalarm;	/* received a SIGALRM */
 
 #define	clearinode(dp) \
@@ -394,7 +391,7 @@ Calloc(int cnt, int size)
 struct fstab;
 
 #undef btodb
-#define btodb(bytes) ((unsigned)(bytes) >> DEV_BSHIFT)
+#define btodb(bytes) ((unsigned)(bytes) >> 9)
 
 #define setproctitle(fmt, ...) /*empty*/
 
@@ -439,7 +436,6 @@ struct inoinfo *getinoinfo(ino_t inumber);
 union dinode   *getnextinode(ino_t inumber, int rebuildcg);
 void		getpathname(char *namebuf, ino_t curdir, ino_t ino);
 union dinode   *ginode(ino_t inumber);
-void		infohandler(int sig);
 void		alarmhandler(int sig);
 void		inocleanup(void);
 void		inodirty(void);
@@ -447,7 +443,7 @@ struct inostat *inoinfo(ino_t inum);
 void		IOstats(char *what);
 int		linkup(ino_t orphan, ino_t parentdir, char *name);
 int		makeentry(ino_t parent, ino_t ino, const char *name);
-void		panic(const char *fmt, ...) __printflike(1, 2);
+void		panic(const char *fmt, ...);
 void		pass1(void);
 void		pass1b(void);
 int		pass1check(struct inodesc *);
@@ -456,10 +452,10 @@ void		pass3(void);
 void		pass4(void);
 int		pass4check(struct inodesc *);
 void		pass5(void);
-void		pfatal(const char *fmt, ...) __printflike(1, 2);
+void		pfatal(const char *fmt, ...);
 void		pinode(ino_t ino);
 void		propagate(void);
-void		pwarn(const char *fmt, ...) __printflike(1, 2);
+void		pwarn(const char *fmt, ...);
 int		readsb(int listerr);
 int		reply(const char *question);
 void		rwerror(const char *mesg, ufs2_daddr_t blk);
@@ -469,5 +465,35 @@ int		setup(char *dev);
 void		gjournal_check(const char *filesys);
 int		suj_check(const char *filesys);
 void		update_maps(struct cg *, struct cg*, int);
+
+#define	TAILQ_FIRST(head)	((head)->tqh_first)
+
+#define	TAILQ_LAST(head, headname)					\
+	(*(((struct headname *)((head)->tqh_last))->tqh_last))
+
+#define	TAILQ_NEXT(elm, field) ((elm)->field.tqe_next)
+
+#define	TAILQ_PREV(elm, headname, field)				\
+	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
+
+#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TAILQ_FIRST((head));				\
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
+	    (var) = (tvar))
+
+#define	TAILQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
+	for ((var) = TAILQ_LAST((head), headname);			\
+	    (var) && ((tvar) = TAILQ_PREV((var), headname, field), 1);	\
+	    (var) = (tvar))
+
+
+#define	LIST_FIRST(head)	((head)->lh_first)
+
+#define	LIST_NEXT(elm, field)	((elm)->field.le_next)
+
+#define	LIST_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = LIST_FIRST((head));				\
+	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
+	    (var) = (tvar))
 
 #endif	/* !_FSCK_H_ */

@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_ufs.h"
 
@@ -431,7 +430,7 @@ ufs_extattr_iterate_directory(struct ufsmount *ump, struct vnode *dvp,
 		}
 	}
 	free(dirbuf, M_TEMP);
-	
+
 	return (0);
 }
 
@@ -615,7 +614,7 @@ ufs_extattr_enable(struct ufsmount *ump, int attrnamespace,
 	attribute->uele_attrnamespace = attrnamespace;
 	bzero(&attribute->uele_fileheader,
 	    sizeof(struct ufs_extattr_fileheader));
-	
+
 	attribute->uele_backing_vnode = backing_vnode;
 
 	auio.uio_iov = &aiov;
@@ -745,7 +744,7 @@ ufs_extattrctl(struct mount *mp, int cmd, struct vnode *filename_vp,
 		error = ufs_extattr_start(mp, td);
 
 		return (error);
-		
+
 	case UFS_EXTATTR_CMD_STOP:
 		if (filename_vp != NULL) {
 			VOP_UNLOCK(filename_vp, 0);
@@ -893,7 +892,7 @@ ufs_extattr_get(struct vnode *vp, int attrnamespace, const char *name,
 	local_aio.uio_td = td;
 	local_aio.uio_offset = base_offset;
 	local_aio.uio_resid = sizeof(struct ufs_extattr_header);
-	
+
 	/*
 	 * Acquire locks.
 	 *
@@ -987,7 +986,7 @@ vop_deleteextattr {
 */
 {
 	struct mount *mp = ap->a_vp->v_mount;
-	struct ufsmount *ump = VFSTOUFS(mp); 
+	struct ufsmount *ump = VFSTOUFS(mp);
 	int error;
 
 	ufs_extattr_uepm_lock(ump);
@@ -1018,7 +1017,7 @@ vop_setextattr {
 */
 {
 	struct mount *mp = ap->a_vp->v_mount;
-	struct ufsmount *ump = VFSTOUFS(mp); 
+	struct ufsmount *ump = VFSTOUFS(mp);
 	int error;
 
 	/*
@@ -1163,7 +1162,7 @@ ufs_extattr_rm(struct vnode *vp, int attrnamespace, const char *name,
 	off_t base_offset;
 	int error = 0, ioflag;
 
-	if (vp->v_mount->mnt_flag & MNT_RDONLY)  
+	if (vp->v_mount->mnt_flag & MNT_RDONLY)
 		return (EROFS);
 	if (!(ump->um_extattr.uepm_flags & UFS_EXTATTR_UEPM_STARTED))
 		return (EOPNOTSUPP);

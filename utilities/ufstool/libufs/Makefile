@@ -26,7 +26,7 @@ CFLAGS+= -D_LIBUFS
 .if defined(LIBUFS_DEBUG)
 CFLAGS+= -D_LIBUFS_DEBUGGING
 .endif
-CFLAGS+= -I${.CURDIR} -I${.CURDIR}/..
+CFLAGS+= -I${.CURDIR} -I${.CURDIR}/.. -DMAXBSIZE=8192
 SHLIB_LD= :
 
 .include <bsd.lib.mk>

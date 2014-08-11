@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)pass4.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -58,12 +57,14 @@ pass4(void)
 	idesc.id_type = ADDR;
 	idesc.id_func = pass4check;
 	for (cg = 0; cg < sblock.fs_ncg; cg++) {
+#if 0
 		if (got_siginfo) {
 			printf("%s: phase 4: cyl group %d of %d (%d%%)\n",
 			    cdevname, cg, sblock.fs_ncg,
 			    cg * 100 / sblock.fs_ncg);
 			got_siginfo = 0;
 		}
+#endif
 		if (got_sigalarm) {
 			setproctitle("%s p4 %d%%", cdevname,
 			    cg * 100 / sblock.fs_ncg);
@@ -98,9 +99,6 @@ pass4(void)
 				break;
 
 			case DCLEAR:
-				/* if on snapshot, already cleared */
-				if (cursnapshot != 0)
-					break;
 				dp = ginode(inumber);
 				if (DIP(dp, di_size) == 0) {
 					clri(&idesc, "ZERO LENGTH", 1);

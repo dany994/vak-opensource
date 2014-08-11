@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)pass1.c	8.6 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -111,12 +110,14 @@ pass1(void)
 		} else {
 			inosused = sblock.fs_ipg;
 		}
+#if 0
 		if (got_siginfo) {
 			printf("%s: phase 1: cyl group %d of %d (%d%%)\n",
 			    cdevname, c, sblock.fs_ncg,
 			    c * 100 / sblock.fs_ncg);
 			got_siginfo = 0;
 		}
+#endif
 		if (got_sigalarm) {
 			setproctitle("%s p1 %d%%", cdevname,
 			     c * 100 / sblock.fs_ncg);
@@ -431,17 +432,8 @@ pass1check(struct inodesc *idesc)
 	if (idesc->id_type == SNAP) {
 		if (blkno == BLK_NOCOPY)
 			return (KEEPON);
-		if (idesc->id_number == cursnapshot) {
-			if (blkno == blkstofrags(&sblock, idesc->id_lbn))
-				return (KEEPON);
-			if (blkno == BLK_SNAP) {
-				blkno = blkstofrags(&sblock, idesc->id_lbn);
-				idesc->id_entryno -= idesc->id_numfrags;
-			}
-		} else {
-			if (blkno == BLK_SNAP)
-				return (KEEPON);
-		}
+		if (blkno == BLK_SNAP)
+			return (KEEPON);
 	}
 	if ((anyout = chkrange(blkno, idesc->id_numfrags)) != 0) {
 		blkerror(idesc->id_number, "BAD", blkno);

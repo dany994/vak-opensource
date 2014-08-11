@@ -58,7 +58,7 @@
  * the ``cgbase(fs, cg)'' macro.
  *
  * Depending on the architecture and the media, the superblock may
- * reside in any one of four places. For tiny media where every block 
+ * reside in any one of four places. For tiny media where every block
  * counts, it is placed at the very front of the partition. Historically,
  * UFS1 placed it 8K from the front to leave room for the disk label and
  * a small bootstrap. For UFS2 it got moved to 64K from the front to leave
@@ -343,7 +343,7 @@ struct fs {
 	ufs2_daddr_t fs_csaddr;		/* blk addr of cyl grp summary area */
 	int64_t	 fs_pendingblocks;	/* (u) blocks being freed */
 	u_int32_t fs_pendinginodes;	/* (u) inodes being freed */
-	uint32_t fs_snapinum[FSMAXSNAP];/* list of snapshot inode numbers */
+	u_int32_t fs_snapinum[FSMAXSNAP];/* list of snapshot inode numbers */
 	u_int32_t fs_avgfilesize;	/* expected average file size */
 	u_int32_t fs_avgfpdir;		/* expected # of files per directory */
 	int32_t	 fs_save_cgsize;	/* save real cg size to use fs_bsize */
@@ -351,7 +351,7 @@ struct fs {
 	int32_t  fs_sujfree;		/* SUJ free list */
 	int32_t	 fs_sparecon32[23];	/* reserved for future constants */
 	int32_t  fs_flags;		/* see FS_ flags below */
-	int32_t	 fs_contigsumsize;	/* size of cluster summary array */ 
+	int32_t	 fs_contigsumsize;	/* size of cluster summary array */
 	int32_t	 fs_maxsymlinklen;	/* max length of an internal symlink */
 	int32_t	 fs_old_inodefmt;	/* format of on-disk inodes */
 	u_int64_t fs_maxfilesize;	/* maximum representable file size */
@@ -512,7 +512,7 @@ struct cg {
 #define cg_clustersfree(cgp) \
     ((u_int8_t *)((u_int8_t *)(cgp) + (cgp)->cg_clusteroff))
 #define cg_clustersum(cgp) \
-    ((int32_t *)((uintptr_t)(cgp) + (cgp)->cg_clustersumoff))
+    ((int32_t *)((size_t)(cgp) + (cgp)->cg_clustersumoff))
 
 /*
  * Turn filesystem block numbers into disk block addresses.
@@ -689,11 +689,11 @@ lbn_offset(struct fs *fs, int level)
  * the header is present on each.
  */
 struct jsegrec {
-	uint64_t	jsr_seq;	/* Our sequence number */
-	uint64_t	jsr_oldest;	/* Oldest valid sequence number */
-	uint16_t	jsr_cnt;	/* Count of valid records */
-	uint16_t	jsr_blocks;	/* Count of device bsize blocks. */
-	uint32_t	jsr_crc;	/* 32bit crc of the valid space */
+	u_int64_t	jsr_seq;	/* Our sequence number */
+	u_int64_t	jsr_oldest;	/* Oldest valid sequence number */
+	u_int16_t	jsr_cnt;	/* Count of valid records */
+	u_int16_t	jsr_blocks;	/* Count of device bsize blocks. */
+	u_int32_t	jsr_crc;	/* 32bit crc of the valid space */
 	ufs_time_t	jsr_time;	/* timestamp for mount instance */
 };
 
@@ -701,13 +701,13 @@ struct jsegrec {
  * Reference record.  Records a single link count modification.
  */
 struct jrefrec {
-	uint32_t	jr_op;
-	uint32_t	jr_ino;
-	uint32_t	jr_parent;
-	uint16_t	jr_nlink;
-	uint16_t	jr_mode;
+	u_int32_t	jr_op;
+	u_int32_t	jr_ino;
+	u_int32_t	jr_parent;
+	u_int16_t	jr_nlink;
+	u_int16_t	jr_mode;
 	int64_t		jr_diroff;
-	uint64_t	jr_unused;
+	u_int64_t	jr_unused;
 };
 
 /*
@@ -715,10 +715,10 @@ struct jrefrec {
  * nlink is unchanged but we must search both locations.
  */
 struct jmvrec {
-	uint32_t	jm_op;
-	uint32_t	jm_ino;
-	uint32_t	jm_parent;
-	uint16_t	jm_unused;
+	u_int32_t	jm_op;
+	u_int32_t	jm_ino;
+	u_int32_t	jm_parent;
+	u_int16_t	jm_unused;
 	int64_t		jm_oldoff;
 	int64_t		jm_newoff;
 };
@@ -728,13 +728,13 @@ struct jmvrec {
  * freed or a set of frags are allocated.
  */
 struct jblkrec {
-	uint32_t	jb_op;
-	uint32_t	jb_ino;
+	u_int32_t	jb_op;
+	u_int32_t	jb_ino;
 	ufs2_daddr_t	jb_blkno;
 	ufs_lbn_t	jb_lbn;
-	uint16_t	jb_frags;
-	uint16_t	jb_oldfrags;
-	uint32_t	jb_unused;
+	u_int16_t	jb_frags;
+	u_int16_t	jb_oldfrags;
+	u_int32_t	jb_unused;
 };
 
 /*
@@ -742,11 +742,11 @@ struct jblkrec {
  * completed at check time.  Also used for sync records.
  */
 struct jtrncrec {
-	uint32_t	jt_op;
-	uint32_t	jt_ino;
+	u_int32_t	jt_op;
+	u_int32_t	jt_ino;
 	int64_t		jt_size;
-	uint32_t	jt_extsize;
-	uint32_t	jt_pad[3];
+	u_int32_t	jt_extsize;
+	u_int32_t	jt_pad[3];
 };
 
 union jrec {

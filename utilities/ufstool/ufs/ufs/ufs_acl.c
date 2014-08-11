@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_ufs.h"
 #include "opt_quota.h"
@@ -84,7 +83,7 @@ ufs_sync_acl_from_inode(struct inode *ip, struct acl *acl)
 			    ACL_USER_OBJ, ip->i_mode);
 			acl->acl_entry[i].ae_id = ACL_UNDEFINED_ID;
 			break;
-	
+
 		case ACL_GROUP_OBJ:
 			acl_group_obj = &acl->acl_entry[i];
 			acl->acl_entry[i].ae_id = ACL_UNDEFINED_ID;
@@ -104,7 +103,7 @@ ufs_sync_acl_from_inode(struct inode *ip, struct acl *acl)
 		case ACL_USER:
 		case ACL_GROUP:
 			break;
-	
+
 		default:
 			panic("ufs_sync_acl_from_inode(): bad ae_tag");
 		}

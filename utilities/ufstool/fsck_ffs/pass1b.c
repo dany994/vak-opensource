@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)pass1b.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -61,12 +60,14 @@ pass1b(void)
 	duphead = duplist;
 	inumber = 0;
 	for (c = 0; c < sblock.fs_ncg; c++) {
+#if 0
 		if (got_siginfo) {
 			printf("%s: phase 1b: cyl group %d of %d (%d%%)\n",
 			    cdevname, c, sblock.fs_ncg,
 			    c * 100 / sblock.fs_ncg);
 			got_siginfo = 0;
 		}
+#endif
 		if (got_sigalarm) {
 			setproctitle("%s p1b %d%%", cdevname,
 			    c * 100 / sblock.fs_ncg);

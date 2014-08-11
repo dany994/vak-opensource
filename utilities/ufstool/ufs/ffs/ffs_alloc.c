@@ -60,7 +60,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_quota.h"
 
@@ -491,7 +490,7 @@ ffs_reallocblks(ap)
 		return (ffs_reallocblks_ufs1(ap));
 	return (ffs_reallocblks_ufs2(ap));
 }
-	
+
 static int
 ffs_reallocblks_ufs1(ap)
 	struct vop_reallocblks_args /* {
@@ -1158,7 +1157,7 @@ ffs_dirpref(pip)
 		maxcontigdirs = 1;
 
 	/*
-	 * Limit number of dirs in one cg and reserve space for 
+	 * Limit number of dirs in one cg and reserve space for
 	 * regular files, but only if we have no deficit in
 	 * inodes or space.
 	 *
@@ -1217,7 +1216,7 @@ ffs_dirpref(pip)
  * direct block and the data blocks for the first indirect immediately
  * follow it.
  *
- * If no blocks have been allocated in any other section, the indirect 
+ * If no blocks have been allocated in any other section, the indirect
  * block(s) are allocated in the same cylinder group as its inode in an
  * area reserved immediately following the inode blocks. The policy for
  * the data blocks is to place them in a cylinder group with a greater than
@@ -2833,7 +2832,7 @@ sysctl_ffs_fsck(SYSCTL_HANDLER_ARGS)
 				    (intmax_t)cmd.value);
 			else
 				printf("%s: free blocks %jd-%jd\n",
-				    mp->mnt_stat.f_mntonname, 
+				    mp->mnt_stat.f_mntonname,
 				    (intmax_t)cmd.value,
 				    (intmax_t)cmd.value + cmd.size - 1);
 		}

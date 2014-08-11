@@ -11,7 +11,7 @@ SRCS=	dir.c ea.c fsutil.c inode.c main.c pass1.c pass1b.c pass2.c pass3.c \
 DPADD=	${LIBUFS}
 LDADD=	-lufs
 WARNS?=	2
-CFLAGS+= -I${.CURDIR} -I${.CURDIR}/.. -I${.CURDIR}/../mount -I${.CURDIR}/../libufs -Werror
+CFLAGS+= -I${.CURDIR} -I${.CURDIR}/.. -I${.CURDIR}/../mount -I${.CURDIR}/../libufs -DMAXBSIZE=8192 -Werror
 LDFLAGS+= -L${.CURDIR}/../libufs
 
 .PATH:	${.CURDIR}/../ufs/ffs ${.CURDIR}/../mount

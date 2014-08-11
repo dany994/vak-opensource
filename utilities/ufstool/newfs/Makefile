@@ -10,7 +10,7 @@ SRCS=	newfs.c mkfs.c geom_bsd_enc.c
 
 WARNS?=	3
 MAN=	newfs.8
-CFLAGS+= -I${.CURDIR}/.. -I${.CURDIR}/../libufs -DBBSIZE=512
+CFLAGS+= -I${.CURDIR}/.. -I${.CURDIR}/../libufs -DBBSIZE=512 -DMAXBSIZE=8192
 LDFLAGS+= -L${.CURDIR}/../libufs
 
 .include <bsd.prog.mk>

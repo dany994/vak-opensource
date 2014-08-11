@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -239,7 +238,7 @@ ffs_isfreeblock(fs, cp, h)
 	u_char *cp;
 	ufs1_daddr_t h;
 {
- 
+
 	switch ((int)fs->fs_frag) {
 	case 8:
 		return (cp[h] == 0);

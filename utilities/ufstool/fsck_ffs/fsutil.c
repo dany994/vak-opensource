@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -340,9 +339,6 @@ flush(int fd, struct bufarea *bp)
 void
 rwerror(const char *mesg, ufs2_daddr_t blk)
 {
-
-	if (bkgrdcheck)
-		exit(EEXIT);
 	if (preen == 0)
 		printf("\n");
 	pfatal("CANNOT %s: %ld", mesg, (long)blk);
@@ -365,7 +361,7 @@ ckfini(int markclean)
 		return;
 	}
 	flush(fswritefd, &sblk);
-	if (havesb && cursnapshot == 0 && sblock.fs_magic == FS_UFS2_MAGIC &&
+	if (havesb && sblock.fs_magic == FS_UFS2_MAGIC &&
 	    sblk.b_bno != sblock.fs_sblockloc / dev_bsize &&
 	    !preen && reply("UPDATE STANDARD SUPERBLOCK")) {
 		sblk.b_bno = sblock.fs_sblockloc / dev_bsize;
@@ -392,7 +388,7 @@ ckfini(int markclean)
 	}
 	free(cgbufs);
 	pbp = pdirbp = (struct bufarea *)0;
-	if (cursnapshot == 0 && sblock.fs_clean != markclean) {
+	if (sblock.fs_clean != markclean) {
 		if ((sblock.fs_clean = markclean) != 0) {
 			sblock.fs_flags &= ~(FS_UNCLEAN | FS_NEEDSFSCK);
 			sblock.fs_pendingblocks = 0;
@@ -837,9 +833,8 @@ getpathname(char *namebuf, ino_t curdir, ino_t ino)
 }
 
 void
-catch(int sig __unused)
+catch(int sig)
 {
-
 	ckfini(0);
 	exit(12);
 }
@@ -850,7 +845,7 @@ catch(int sig __unused)
  * so that reboot sequence may be interrupted.
  */
 void
-catchquit(int sig __unused)
+catchquit(int sig)
 {
 	printf("returning to single-user after file system check\n");
 	returntosingle = 1;

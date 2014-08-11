@@ -39,7 +39,6 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -48,6 +47,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/uio.h>
+#include <sys/time.h>
 #include <sys/disklabel.h>
 
 #include <ufs/ufs/dinode.h>
@@ -65,11 +65,9 @@ __FBSDID("$FreeBSD$");
 
 #include "fsck.h"
 
-static void usage(void) __dead2;
+static void usage(void);
 static int argtoi(int flag, const char *req, const char *str, int base);
 static int checkfilesys(char *filesys);
-static int chkdoreload(struct statfs *mntp);
-static struct statfs *getmntpt(const char *);
 
 int
 main(int argc, char *argv[])
@@ -82,7 +80,7 @@ main(int argc, char *argv[])
 	sync();
 	skipclean = 1;
 	inoopt = 0;
-	while ((ch = getopt(argc, argv, "b:c:CdEfFm:nprSyZ")) != -1) {
+	while ((ch = getopt(argc, argv, "b:c:CdEfm:nprSyZ")) != -1) {
 		switch (ch) {
 		case 'b':
 			skipclean = 0;
@@ -108,10 +106,6 @@ main(int argc, char *argv[])
 
 		case 'f':
 			skipclean = 0;
-			break;
-
-		case 'F':
-			bkgrdcheck = 1;
 			break;
 
 		case 'm':
@@ -165,7 +159,6 @@ main(int argc, char *argv[])
 		(void)signal(SIGINT, catch);
 	if (ckclean)
 		(void)signal(SIGQUIT, catchquit);
-	signal(SIGINFO, infohandler);
 
 	/*
 	 * Push up our allowed memory limit so we can cope
@@ -204,7 +197,6 @@ checkfilesys(char *filesys)
 {
 	ufs2_daddr_t n_ffree, n_bfree;
 	struct dups *dp;
-	struct statfs *mntp;
 	struct stat snapdir;
 	struct group *grp;
 	struct iovec *iov;
@@ -226,35 +218,9 @@ checkfilesys(char *filesys)
 	 * if it is listed among the mounted file systems. Failing that
 	 * check to see if it is listed in /etc/fstab.
 	 */
-	mntp = getmntpt(filesys);
-	if (mntp != NULL)
-		filesys = mntp->f_mntfromname;
-	else
-		filesys = blockcheck(filesys);
-	/*
-	 * If -F flag specified, check to see whether a background check
-	 * is possible and needed. If possible and needed, exit with
-	 * status zero. Otherwise exit with status non-zero. A non-zero
-	 * exit status will cause a foreground check to be run.
-	 */
+	filesys = blockcheck(filesys);
+
 	sblock_init();
-	if (bkgrdcheck) {
-		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || readsb(0) == 0)
-			exit(3);	/* Cannot read superblock */
-		close(fsreadfd);
-		/* Earlier background failed or journaled */
-		if (sblock.fs_flags & (FS_NEEDSFSCK | FS_SUJ))
-			exit(4);
-		if ((sblock.fs_flags & FS_DOSOFTDEP) == 0)
-			exit(5);	/* Not running soft updates */
-		size = MIBSIZE;
-		if (sysctlnametomib("vfs.ffs.adjrefcnt", adjrefcnt, &size) < 0)
-			exit(6);	/* Lacks kernel support */
-		if ((mntp == NULL && sblock.fs_clean == 1) ||
-		    (mntp != NULL && (sblock.fs_flags & FS_UNCLEAN) == 0))
-			exit(7);	/* Filesystem clean, report it now */
-		exit(0);
-	}
 	if (ckclean && skipclean) {
 		/*
 		 * If file system is gjournaled, check it here.
@@ -271,9 +237,7 @@ checkfilesys(char *filesys)
 			}
 			if ((sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
 				gjournal_check(filesys);
-				if (chkdoreload(mntp) == 0)
-					exit(0);
-				exit(4);
+				exit(0);
 			} else {
 				pfatal(
 			    "UNEXPECTED INCONSISTENCY, CANNOT RUN FAST FSCK\n");
@@ -304,9 +268,7 @@ checkfilesys(char *filesys)
 			if (preen || reply("USE JOURNAL")) {
 				if (suj_check(filesys) == 0) {
 					printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
-					if (chkdoreload(mntp) == 0)
-						exit(0);
-					exit(4);
+					exit(0);
 				}
 			}
 			printf("** Skipping journal, falling through to full fsck\n\n");
@@ -329,8 +291,6 @@ checkfilesys(char *filesys)
 	 */
 	if (preen == 0) {
 		printf("** Last Mounted on %s\n", sblock.fs_fsmnt);
-		if (mntp != NULL && mntp->f_flags & MNT_ROOTFS)
-			printf("** Root file system\n");
 		printf("** Phase 1 - Check Blocks and Sizes\n");
 	}
 	pass1();
@@ -434,8 +394,6 @@ checkfilesys(char *filesys)
 	/*
 	 * Check to see if the file system is mounted read-write.
 	 */
-	if (mntp != NULL && (mntp->f_flags & MNT_RDONLY) == 0)
-		resolved = 0;
 	ckfini(resolved);
 
 	for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
@@ -447,107 +405,13 @@ checkfilesys(char *filesys)
 		printf("\n***** FILE SYSTEM WAS MODIFIED *****\n");
 	if (rerun)
 		printf("\n***** PLEASE RERUN FSCK *****\n");
-	if (chkdoreload(mntp) != 0) {
-		if (!fsmodified)
-			return (0);
-		if (!preen)
-			printf("\n***** REBOOT NOW *****\n");
-		sync();
-		return (4);
-	}
 	return (0);
-}
-
-static int
-chkdoreload(struct statfs *mntp)
-{
-#if 0
-	struct iovec *iov;
-	int iovlen;
-	char errmsg[255];
-
-	if (mntp == NULL)
-		return (0);
-
-	iov = NULL;
-	iovlen = 0;
-	errmsg[0] = '\0';
-	/*
-	 * We modified a mounted file system.  Do a mount update on
-	 * it unless it is read-write, so we can continue using it
-	 * as safely as possible.
-	 */
-	if (mntp->f_flags & MNT_RDONLY) {
-		build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
-		build_iovec(&iov, &iovlen, "from", mntp->f_mntfromname,
-		    (size_t)-1);
-		build_iovec(&iov, &iovlen, "fspath", mntp->f_mntonname,
-		    (size_t)-1);
-		build_iovec(&iov, &iovlen, "errmsg", errmsg,
-		    sizeof(errmsg));
-		build_iovec(&iov, &iovlen, "update", NULL, 0);
-		build_iovec(&iov, &iovlen, "reload", NULL, 0);
-		/*
-		 * XX: We need the following line until we clean up
-		 * nmount parsing of root mounts and NFS root mounts.
-		 */
-		build_iovec(&iov, &iovlen, "ro", NULL, 0);
-		if (nmount(iov, iovlen, mntp->f_flags) == 0) {
-			return (0);
-		}
-		pwarn("mount reload of '%s' failed: %s %s\n\n",
-		    mntp->f_mntonname, strerror(errno), errmsg);
-		return (1);
-	}
-#endif
-	return (0);
-}
-
-/*
- * Get the mount point information for name.
- */
-static struct statfs *
-getmntpt(const char *name)
-{
-	struct stat devstat, mntdevstat;
-	char device[sizeof(_PATH_DEV) - 1 + MNAMELEN];
-	char *ddevname;
-	struct statfs *mntbuf, *statfsp;
-	int i, mntsize, isdev;
-
-	if (stat(name, &devstat) != 0)
-		return (NULL);
-	if (S_ISCHR(devstat.st_mode) || S_ISBLK(devstat.st_mode))
-		isdev = 1;
-	else
-		isdev = 0;
-	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
-	for (i = 0; i < mntsize; i++) {
-		statfsp = &mntbuf[i];
-		ddevname = statfsp->f_mntfromname;
-		if (*ddevname != '/') {
-			strcpy(device, _PATH_DEV);
-			strcat(device, ddevname);
-			strcpy(statfsp->f_mntfromname, device);
-		}
-		if (isdev == 0) {
-			if (strcmp(name, statfsp->f_mntonname))
-				continue;
-			return (statfsp);
-		}
-		if (stat(ddevname, &mntdevstat) == 0 &&
-		    mntdevstat.st_rdev == devstat.st_rdev)
-			return (statfsp);
-	}
-	statfsp = NULL;
-	return (statfsp);
 }
 
 static void
 usage(void)
 {
-	(void) fprintf(stderr,
-"usage: %s [-BEFfnpry] [-b block] [-c level] [-m mode] filesystem ...\n",
-	    getprogname());
+	fprintf(stderr,
+            "usage: fsck [-BEFfnpry] [-b block] [-c level] [-m mode] filesystem ...\n");
 	exit(1);
 }

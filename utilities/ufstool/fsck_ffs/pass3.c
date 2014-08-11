@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)pass3.c	8.2 (Berkeley) 4/27/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -55,12 +54,14 @@ pass3(void)
 	char namebuf[MAXNAMLEN+1];
 
 	for (inpindex = inplast - 1; inpindex >= 0; inpindex--) {
+#if 0
 		if (got_siginfo) {
 			printf("%s: phase 3: dir %d of %d (%d%%)\n", cdevname,
 			    (int)(inplast - inpindex - 1), (int)inplast,
 			    (int)((inplast - inpindex - 1) * 100 / inplast));
 			got_siginfo = 0;
 		}
+#endif
 		if (got_sigalarm) {
 			setproctitle("%s p3 %d%%", cdevname,
 			    (int)((inplast - inpindex - 1) * 100 / inplast));
