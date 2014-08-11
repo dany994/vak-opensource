@@ -31,7 +31,6 @@
 #include <sys/mount.h>
 #include <sys/disklabel.h>
 #include <sys/stat.h>
-#include <sys/vfs.h>
 
 #include <ufs/ufs/ufsmount.h>
 #include <ufs/ufs/dinode.h>
@@ -91,7 +90,6 @@ ufs_disk_fillout_blank(struct uufsd *disk, const char *name)
 {
 	struct stat st;
 	struct fstab *fs;
-	struct statfs sfs;
 	const char *oname;
 	char dev[MAXPATHLEN];
 	int fd, ret;
@@ -134,12 +132,8 @@ again:	if ((ret = stat(name, &st)) < 0) {
 		 * The mount point is not listed in /etc/fstab, so it may be
 		 * file system mounted by hand.
 		 */
-		if (statfs(name, &sfs) < 0) {
-			ERROR(disk, "could not find special device");
-			return (-1);
-		}
-		strncpy(dev, "" /*sfs.f_mntfromname*/, sizeof(dev));
-		name = dev;
+		ERROR(disk, "could not find special device");
+		return (-1);
 	} else {
 		ERROR(disk, "could not find special device");
 		return (-1);

@@ -466,6 +466,7 @@ void		gjournal_check(const char *filesys);
 int		suj_check(const char *filesys);
 void		update_maps(struct cg *, struct cg*, int);
 
+#ifndef TAILQ_FIRST
 #define	TAILQ_FIRST(head)	((head)->tqh_first)
 
 #define	TAILQ_LAST(head, headname)					\
@@ -495,5 +496,6 @@ void		update_maps(struct cg *, struct cg*, int);
 	for ((var) = LIST_FIRST((head));				\
 	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
 	    (var) = (tvar))
+#endif
 
 #endif	/* !_FSCK_H_ */
