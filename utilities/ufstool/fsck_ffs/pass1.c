@@ -141,7 +141,7 @@ pass1(void)
 				}
 				break;
 			}
-			if (inosused < 0)
+			if ((int)inosused < 0)
 				inosused = 0;
 		}
 		/*
@@ -192,7 +192,7 @@ pass1(void)
 			else
 				cgp->cg_initediblk = mininos;
 			pwarn("CYLINDER GROUP %d: RESET FROM %ju TO %d %s\n",
-			    c, i, cgp->cg_initediblk, "VALID INODES");
+			    c, (long)i, cgp->cg_initediblk, "VALID INODES");
 			dirty(cgbp);
 		}
 		if (inosused < sblock.fs_ipg)
@@ -366,9 +366,11 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 	inoinfo(inumber)->ino_type = IFTODT(mode);
 	badblk = dupblk = 0;
 	idesc->id_number = inumber;
+#ifdef SF_SNAPSHOT
 	if (DIP(dp, di_flags) & SF_SNAPSHOT)
 		idesc->id_type = SNAP;
 	else
+#endif
 		idesc->id_type = ADDR;
 	(void)ckinode(dp, idesc);
 	if (sblock.fs_magic == FS_UFS2_MAGIC && dp->dp2.di_extsize > 0) {
@@ -400,20 +402,9 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 			printf(" (CORRECTED)\n");
 		else if (reply("CORRECT") == 0)
 			return (1);
-		if (bkgrdflag == 0) {
-			dp = ginode(inumber);
-			DIP_SET(dp, di_blocks, idesc->id_entryno);
-			inodirty();
-		} else {
-			cmd.value = idesc->id_number;
-			cmd.size = idesc->id_entryno - DIP(dp, di_blocks);
-			if (debug)
-				printf("adjblkcnt ino %ju amount %lld\n",
-				    (uintmax_t)cmd.value, (long long)cmd.size);
-			if (sysctl(adjblkcnt, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST INODE BLOCK COUNT", cmd.value);
-		}
+		dp = ginode(inumber);
+		DIP_SET(dp, di_blocks, idesc->id_entryno);
+		inodirty();
 	}
 	return (1);
 unknown:

@@ -202,8 +202,7 @@ opendisk(const char *devnam)
 		    disk->d_error);
 	}
 	fs = &disk->d_fs;
-	if (real_dev_bsize == 0 && ioctl(disk->d_fd, DIOCGSECTORSIZE,
-	    &real_dev_bsize) == -1)
+	if (real_dev_bsize == 0)
 		real_dev_bsize = secsize;
 	if (debug)
 		printf("dev_bsize %u\n", real_dev_bsize);
@@ -563,7 +562,7 @@ blk_freemask(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t lbn, int frags)
 	}
 	if (debug)
 		printf("blk_freemask: blk %jd sblk %jd off %d mask 0x%X\n",
-		    blk, sblk->sb_blk, off, mask);
+		    (uintmax_t)blk, (uintmax_t)sblk->sb_blk, off, mask);
 	return (mask >> off);
 }
 
@@ -648,7 +647,7 @@ blk_free(ufs2_daddr_t bno, int mask, int frags)
 
 	if (debug)
 		printf("Freeing %d frags at blk %jd mask 0x%x\n",
-		    frags, bno, mask);
+		    frags, (uintmax_t)bno, mask);
 	cg = dtog(fs, bno);
 	sc = cg_lookup(cg);
 	cgp = sc->sc_cgp;
@@ -832,7 +831,7 @@ ino_clrat(ino_t parent, off_t diroff, ino_t child)
 
 	if (debug)
 		printf("Clearing inode %ju from parent %ju at offset %jd\n",
-		    (uintmax_t)child, (uintmax_t)parent, diroff);
+		    (uintmax_t)child, (uintmax_t)parent, (uintmax_t)diroff);
 
 	lbn = lblkno(fs, diroff);
 	doff = blkoff(fs, diroff);
@@ -843,7 +842,7 @@ ino_clrat(ino_t parent, off_t diroff, ino_t child)
 	dp = (struct direct *)&block[doff];
 	if (dp->d_ino != child)
 		errx(1, "Inode %ju does not exist in %ju at %jd",
-		    (uintmax_t)child, (uintmax_t)parent, diroff);
+		    (uintmax_t)child, (uintmax_t)parent, (uintmax_t)diroff);
 	dp->d_ino = 0;
 	dblk_dirty(blk);
 	/*
@@ -894,8 +893,8 @@ ino_isat(ino_t parent, off_t diroff, ino_t child, int *mode, int *isdot)
 		if (debug)
 			printf("ino %ju absent from %ju due to offset %jd"
 			    " exceeding size %jd\n",
-			    (uintmax_t)child, (uintmax_t)parent, diroff,
-			    DIP(dip, di_size));
+			    (uintmax_t)child, (uintmax_t)parent, (uintmax_t)diroff,
+			    (uintmax_t)DIP(dip, di_size));
 		return (0);
 	}
 	blk = ino_blkatoff(dip, parent, lbn, &frags);
@@ -926,7 +925,7 @@ ino_isat(ino_t parent, off_t diroff, ino_t child, int *mode, int *isdot)
 	if (dpoff != doff) {
 		if (debug)
 			printf("ino %ju not found in %ju, lbn %jd, dpoff %d\n",
-			    (uintmax_t)child, (uintmax_t)parent, lbn, dpoff);
+			    (uintmax_t)child, (uintmax_t)parent, (uintmax_t)lbn, dpoff);
 		return (0);
 	}
 	/*
@@ -981,7 +980,7 @@ indir_visit(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, uint64_t *frags,
 	if ((flags & VISIT_ROOT) == 0 && blk_isindir(blk, ino, lbn) == 0) {
 		if (debug)
 			printf("blk %jd ino %ju lbn %jd(%d) is not indir.\n",
-			    blk, (uintmax_t)ino, lbn, level);
+			    (uintmax_t)blk, (uintmax_t)ino, (uintmax_t)lbn, level);
 		goto out;
 	}
 	lbnadd = 1;
@@ -1135,7 +1134,7 @@ ino_adjblks(struct suj_ino *sino)
 		return;
 	if (debug)
 		printf("ino %ju adjusting block count from %jd to %jd\n",
-		    (uintmax_t)ino, DIP(ip, di_blocks), blocks);
+		    (uintmax_t)ino, (uintmax_t)DIP(ip, di_blocks), (uintmax_t)blocks);
 	DIP_SET(ip, di_blocks, blocks);
 	ino_dirty(ino);
 }
@@ -1527,7 +1526,7 @@ ino_trunc(ino_t ino, off_t size)
 	cursize = DIP(ip, di_size);
 	if (debug)
 		printf("Truncating ino %ju, mode %o to size %jd from size %jd\n",
-		    (uintmax_t)ino, mode, size, cursize);
+		    (uintmax_t)ino, mode, (uintmax_t)size, (uintmax_t)cursize);
 
 	/* Skip datablocks for short links and devices. */
 	if (mode == 0 || mode == IFBLK || mode == IFCHR ||
@@ -1659,7 +1658,7 @@ ino_check(struct suj_ino *sino)
 			printf("jrefrec: op %d ino %ju, nlink %d, parent %d, "
 			    "diroff %jd, mode %o, isat %d, isdot %d\n",
 			    rrec->jr_op, (uintmax_t)rrec->jr_ino,
-			    rrec->jr_nlink, rrec->jr_parent, rrec->jr_diroff,
+			    rrec->jr_nlink, rrec->jr_parent, (uintmax_t)rrec->jr_diroff,
 			    rrec->jr_mode, isat, isdot);
 		mode = rrec->jr_mode & IFMT;
 		if (rrec->jr_op == JOP_REMREF)
@@ -1719,8 +1718,8 @@ blk_check(struct suj_blk *sblk)
 		}
 		if (debug)
 			printf("op %d blk %jd ino %ju lbn %jd frags %d isat %d (%d)\n",
-			    brec->jb_op, blk, (uintmax_t)brec->jb_ino,
-			    brec->jb_lbn, brec->jb_frags, isat, frags);
+			    brec->jb_op, (uintmax_t)blk, (uintmax_t)brec->jb_ino,
+			    (uintmax_t)brec->jb_lbn, brec->jb_frags, isat, frags);
 		/*
 		 * If we found the block at this address we still have to
 		 * determine if we need to free the tail end that was
@@ -1873,7 +1872,7 @@ cg_write(struct suj_cg *sc)
 		}
 		fragno = blkstofrags(fs, cgbno);
 		blk = blkmap(fs, blksfree, fragno);
-		ffs_fragacct(fs, blk, cgp->cg_frsum, 1);
+		ffs_fragacct(fs, blk, (int32_t*)cgp->cg_frsum, 1);
 		for (i = 0; i < fs->fs_frag; i++)
 			if (isset(blksfree, fragno + i))
 				cgp->cg_cs.cs_nffree++;
@@ -1962,14 +1961,14 @@ ino_append(union jrec *rec)
 	refrec = &rec->rec_jrefrec;
 	if (debug && mvrec->jm_op == JOP_MVREF)
 		printf("ino move: ino %d, parent %d, diroff %jd, oldoff %jd\n",
-		    mvrec->jm_ino, mvrec->jm_parent, mvrec->jm_newoff,
-		    mvrec->jm_oldoff);
+		    mvrec->jm_ino, mvrec->jm_parent, (uintmax_t)mvrec->jm_newoff,
+		    (uintmax_t)mvrec->jm_oldoff);
 	else if (debug &&
 	    (refrec->jr_op == JOP_ADDREF || refrec->jr_op == JOP_REMREF))
 		printf("ino ref: op %d, ino %d, nlink %d, "
 		    "parent %d, diroff %jd\n",
 		    refrec->jr_op, refrec->jr_ino, refrec->jr_nlink,
-		    refrec->jr_parent, refrec->jr_diroff);
+		    refrec->jr_parent, (uintmax_t)refrec->jr_diroff);
 	sino = ino_lookup(((struct jrefrec *)rec)->jr_ino, 1);
 	sino->si_hasrecs = 1;
 	srec = errmalloc(sizeof(*srec));
@@ -2182,8 +2181,8 @@ blk_build(struct jblkrec *blkrec)
 	if (debug)
 		printf("blk_build: op %d blkno %jd frags %d oldfrags %d "
 		    "ino %d lbn %jd\n",
-		    blkrec->jb_op, blkrec->jb_blkno, blkrec->jb_frags,
-		    blkrec->jb_oldfrags, blkrec->jb_ino, blkrec->jb_lbn);
+		    blkrec->jb_op, (uintmax_t)blkrec->jb_blkno, blkrec->jb_frags,
+		    blkrec->jb_oldfrags, blkrec->jb_ino, (uintmax_t)blkrec->jb_lbn);
 
 	blk = blknum(fs, blkrec->jb_blkno);
 	frag = fragnum(fs, blkrec->jb_blkno);
@@ -2232,7 +2231,7 @@ ino_build_trunc(struct jtrncrec *rec)
 
 	if (debug)
 		printf("ino_build_trunc: op %d ino %d, size %jd\n",
-		    rec->jt_op, rec->jt_ino, rec->jt_size);
+		    rec->jt_op, rec->jt_ino, (uintmax_t)rec->jt_size);
 	sino = ino_lookup(rec->jt_ino, 1);
 	if (rec->jt_op == JOP_SYNC) {
 		sino->si_trunc = NULL;
@@ -2256,8 +2255,8 @@ suj_build(void)
 	TAILQ_FOREACH(seg, &allsegs, ss_next) {
 		if (debug)
 			printf("seg %jd has %d records, oldseq %jd.\n",
-			    seg->ss_rec.jsr_seq, seg->ss_rec.jsr_cnt,
-			    seg->ss_rec.jsr_oldest);
+			    (uintmax_t)seg->ss_rec.jsr_seq, seg->ss_rec.jsr_cnt,
+			    (uintmax_t)seg->ss_rec.jsr_oldest);
 		off = 0;
 		rec = (union jrec *)seg->ss_blk;
 		for (i = 0; i < seg->ss_rec.jsr_cnt; off += JREC_SIZE, rec++) {
@@ -2301,7 +2300,7 @@ suj_prune(void)
 	int discard;
 
 	if (debug)
-		printf("Pruning up to %jd\n", oldseq);
+		printf("Pruning up to %jd\n", (uintmax_t)oldseq);
 	/* First free the expired segments. */
 	TAILQ_FOREACH_SAFE(seg, &allsegs, ss_next, segn) {
 		if (seg->ss_rec.jsr_seq >= oldseq)
@@ -2329,7 +2328,7 @@ suj_prune(void)
 	}
 	if (newseq != oldseq) {
 		TAILQ_FOREACH(seg, &allsegs, ss_next) {
-			printf("%jd, ", seg->ss_rec.jsr_seq);
+			printf("%jd, ", (uintmax_t)seg->ss_rec.jsr_seq);
 		}
 		printf("\n");
 		err_suj("Journal file sequence mismatch %jd != %jd\n",
@@ -2351,14 +2350,14 @@ suj_prune(void)
 		discard = 1;
 		if (debug)
 			printf("Journal order mismatch %jd != %jd pruning\n",
-			    newseq-1, seg->ss_rec.jsr_seq);
+			    (uintmax_t)newseq-1, (uintmax_t)seg->ss_rec.jsr_seq);
 		TAILQ_REMOVE(&allsegs, seg, ss_next);
 		free(seg->ss_blk);
 		free(seg);
 	}
 	if (debug)
 		printf("Processing journal segments from %jd to %jd\n",
-		    oldseq, newseq-1);
+		    (uintmax_t)oldseq, (uintmax_t)newseq-1);
 }
 
 /*
@@ -2389,7 +2388,7 @@ suj_verifyino(union dinode *ip)
 
 	if (DIP(ip, di_size) < SUJ_MIN) {
 		printf("Invalid size %jd for journal inode %ju\n",
-		    DIP(ip, di_size), (uintmax_t)sujino);
+		    (uintmax_t)DIP(ip, di_size), (uintmax_t)sujino);
 		return (-1);
 	}
 
@@ -2572,7 +2571,7 @@ restart:
 			if (rec->jsr_time != fs->fs_mtime) {
 				if (debug)
 					printf("Rec time %jd != fs mtime %jd\n",
-					    rec->jsr_time, fs->fs_mtime);
+					    (uintmax_t)rec->jsr_time, (uintmax_t)fs->fs_mtime);
 				jblocks_advance(suj_jblocks, recsize);
 				continue;
 			}
@@ -2612,7 +2611,7 @@ restart:
 					continue;
 				if (debug)
 					printf("Incomplete record %jd (%d)\n",
-					    rec->jsr_seq, i);
+					    (uintmax_t)rec->jsr_seq, i);
 				recsize = i * real_dev_bsize;
 				jblocks_advance(suj_jblocks, recsize);
 				goto restart;
@@ -2718,7 +2717,7 @@ suj_check(const char *filesys)
 	 * available journal blocks in with suj_read().
 	 */
 	printf("** Reading %jd byte journal from inode %ju.\n",
-	    DIP(jip, di_size), (uintmax_t)sujino);
+	    (uintmax_t)DIP(jip, di_size), (uintmax_t)sujino);
 	suj_jblocks = jblocks_create();
 	blocks = ino_visit(jip, sujino, suj_add_block, 0);
 	if (blocks != numfrags(fs, DIP(jip, di_size))) {
@@ -2756,9 +2755,9 @@ suj_check(const char *filesys)
 	closedisk(filesys);
 	if (jrecs > 0 || jbytes > 0) {
 		printf("** %jd journal records in %jd bytes for %.2f%% utilization\n",
-		    jrecs, jbytes, ((float)jrecs / (float)(jbytes / JREC_SIZE)) * 100);
+		    (uintmax_t)jrecs, (uintmax_t)jbytes, ((float)jrecs / (float)(jbytes / JREC_SIZE)) * 100);
 		printf("** Freed %jd inodes (%jd dirs) %jd blocks, and %jd frags.\n",
-		    freeinos, freedir, freeblocks, freefrags);
+		    (uintmax_t)freeinos, (uintmax_t)freedir, (uintmax_t)freeblocks, (uintmax_t)freefrags);
 	}
 
 	return (0);

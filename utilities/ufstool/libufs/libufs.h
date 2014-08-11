@@ -93,6 +93,31 @@ ERROR(struct uufsd *u, const char *str)
 #undef btodb
 #define btodb(bytes) ((unsigned)(bytes) >> DEV_BSHIFT)
 
+#ifndef UF_NODUMP
+# define UF_NODUMP      0x00000001
+#endif
+#ifndef UF_IMMUTABLE
+# define UF_IMMUTABLE   0x00000002
+#endif
+#ifndef UF_APPEND
+# define UF_APPEND      0x00000004
+#endif
+#ifndef UF_NOUNLINK
+# define UF_NOUNLINK    0x00000010
+#endif
+#ifndef SF_ARCHIVED
+# define SF_ARCHIVED    0x00010000
+#endif
+#ifndef SF_IMMUTABLE
+# define SF_IMMUTABLE   0x00020000
+#endif
+#ifndef SF_APPEND
+# define SF_APPEND      0x00040000
+#endif
+#ifndef SF_NOUNLINK
+# define SF_NOUNLINK    0x00080000
+#endif
+
 __BEGIN_DECLS
 
 /*

@@ -190,15 +190,15 @@ pass5(void)
 		newcg->cg_cs.cs_nffree = 0;
 		newcg->cg_cs.cs_nbfree = 0;
 		newcg->cg_cs.cs_nifree = fs->fs_ipg;
-		if (cg->cg_rotor >= 0 && cg->cg_rotor < newcg->cg_ndblk)
+		if (~cg->cg_rotor != 0 && cg->cg_rotor < newcg->cg_ndblk)
 			newcg->cg_rotor = cg->cg_rotor;
 		else
 			newcg->cg_rotor = 0;
-		if (cg->cg_frotor >= 0 && cg->cg_frotor < newcg->cg_ndblk)
+		if (~cg->cg_frotor != 0 && cg->cg_frotor < newcg->cg_ndblk)
 			newcg->cg_frotor = cg->cg_frotor;
 		else
 			newcg->cg_frotor = 0;
-		if (cg->cg_irotor >= 0 && cg->cg_irotor < fs->fs_ipg)
+		if (~cg->cg_irotor != 0 && cg->cg_irotor < fs->fs_ipg)
 			newcg->cg_irotor = cg->cg_irotor;
 		else
 			newcg->cg_irotor = 0;
@@ -271,7 +271,7 @@ pass5(void)
 			} else if (frags > 0) {
 				newcg->cg_cs.cs_nffree += frags;
 				blk = blkmap(fs, cg_blksfree(newcg), i);
-				ffs_fragacct(fs, blk, newcg->cg_frsum, 1);
+				ffs_fragacct(fs, blk, (int32_t*)newcg->cg_frsum, 1);
 			}
 		}
 		if ((Eflag || Zflag) && start != -1)
@@ -305,17 +305,11 @@ pass5(void)
 				sump[run]++;
 			}
 		}
-		if (bkgrdflag != 0) {
-			cstotal.cs_nffree += cg->cg_cs.cs_nffree;
-			cstotal.cs_nbfree += cg->cg_cs.cs_nbfree;
-			cstotal.cs_nifree += cg->cg_cs.cs_nifree;
-			cstotal.cs_ndir += cg->cg_cs.cs_ndir;
-		} else {
-			cstotal.cs_nffree += newcg->cg_cs.cs_nffree;
-			cstotal.cs_nbfree += newcg->cg_cs.cs_nbfree;
-			cstotal.cs_nifree += newcg->cg_cs.cs_nifree;
-			cstotal.cs_ndir += newcg->cg_cs.cs_ndir;
-		}
+		cstotal.cs_nffree += newcg->cg_cs.cs_nffree;
+		cstotal.cs_nbfree += newcg->cg_cs.cs_nbfree;
+		cstotal.cs_nifree += newcg->cg_cs.cs_nifree;
+		cstotal.cs_ndir += newcg->cg_cs.cs_ndir;
+
 		cs = &fs->fs_cs(fs, c);
 		if (cursnapshot == 0 &&
 		    memcmp(&newcg->cg_cs, cs, sizeof *cs) != 0 &&
@@ -334,8 +328,8 @@ pass5(void)
 			memmove(cg, newcg, (size_t)basesize);
 			dirty(cgbp);
 		}
-		if (bkgrdflag != 0 || usedsoftdep || debug)
-			update_maps(cg, newcg, bkgrdflag);
+		if (usedsoftdep || debug)
+			update_maps(cg, newcg, 0);
 		if (cursnapshot == 0 &&
 		    memcmp(cg_inosused(newcg), cg_inosused(cg), mapsize) != 0 &&
 		    dofix(&idesc[1], "BLK(S) MISSING IN BIT MAPS")) {
@@ -586,7 +580,7 @@ clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end)
 {
 
 	if (debug)
-		printf("Zero frags %jd to %jd\n", start, end);
+		printf("Zero frags %jd to %jd\n", (intmax_t)start, (intmax_t)end);
 	if (Zflag)
 		blzero(fswritefd, fsbtodb(&sblock, start),
 		    lfragtosize(&sblock, end - start + 1));

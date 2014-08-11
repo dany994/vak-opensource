@@ -66,7 +66,6 @@ static void slowio_end(void);
 static void printIOstats(void);
 
 static long diskreads, totaldiskreads, totalreads; /* Disk cache statistics */
-static struct timespec startpass, finishpass;
 struct timeval slowio_starttime;
 int slowio_delay_usec = 10000;	/* Initial IO delay for background fsck */
 int slowio_pollcnt;
@@ -106,7 +105,7 @@ reply(const char *question)
 		pfatal("INTERNAL ERROR: GOT TO reply()");
 	persevere = !strcmp(question, "CONTINUE");
 	printf("\n");
-	if (!persevere && (nflag || (fswritefd < 0 && bkgrdflag == 0))) {
+	if (!persevere && (nflag || fswritefd < 0)) {
 		printf("%s? no\n\n", question);
 		resolved = 0;
 		return (0);
@@ -299,23 +298,13 @@ void
 getblk(struct bufarea *bp, ufs2_daddr_t blk, long size)
 {
 	ufs2_daddr_t dblk;
-	struct timespec start, finish;
 
 	dblk = fsbtodb(&sblock, blk);
 	if (bp->b_bno == dblk) {
 		totalreads++;
 	} else {
 		flush(fswritefd, bp);
-		if (debug) {
-			readcnt[bp->b_type]++;
-			clock_gettime(CLOCK_REALTIME_PRECISE, &start);
-		}
 		bp->b_errs = blread(fsreadfd, bp->b_un.b_buf, dblk, size);
-		if (debug) {
-			clock_gettime(CLOCK_REALTIME_PRECISE, &finish);
-			timespecsub(&finish, &start);
-			timespecadd(&readtime[bp->b_type], &finish);
-		}
 		bp->b_bno = dblk;
 		bp->b_size = size;
 	}
@@ -368,25 +357,6 @@ ckfini(int markclean)
 	struct bufarea *bp, *nbp;
 	int ofsmodified, cnt;
 
-	if (bkgrdflag) {
-		unlink(snapname);
-		if ((!(sblock.fs_flags & FS_UNCLEAN)) != markclean) {
-			cmd.value = FS_UNCLEAN;
-			cmd.size = markclean ? -1 : 1;
-			if (sysctlbyname("vfs.ffs.setflags", 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("SET FILE SYSTEM FLAGS", FS_UNCLEAN);
-			if (!preen) {
-				printf("\n***** FILE SYSTEM MARKED %s *****\n",
-				    markclean ? "CLEAN" : "DIRTY");
-				if (!markclean)
-					rerun = 1;
-			}
-		} else if (!preen && !markclean) {
-			printf("\n***** FILE SYSTEM STILL DIRTY *****\n");
-			rerun = 1;
-		}
-	}
 	if (debug && totalreads > 0)
 		printf("cache with %d buffers missed %ld of %ld (%d%%)\n",
 		    numbufs, totaldiskreads, totalreads,
@@ -465,8 +435,6 @@ IOstats(char *what)
 		printf("%s: no I/O\n\n", what);
 		return;
 	}
-	if (startpass.tv_sec == 0)
-		startpass = startprog;
 	printf("%s: I/O statistics\n", what);
 	printIOstats();
 	totaldiskreads += diskreads;
@@ -477,7 +445,6 @@ IOstats(char *what)
 		readtime[i].tv_sec = readtime[i].tv_nsec = 0;
 		readcnt[i] = 0;
 	}
-	clock_gettime(CLOCK_REALTIME_PRECISE, &startpass);
 }
 
 void
@@ -490,7 +457,6 @@ finalIOstats(void)
 	printf("Final I/O statistics\n");
 	totaldiskreads += diskreads;
 	diskreads = totaldiskreads;
-	startpass = startprog;
 	for (i = 0; i < BT_NUMBUFTYPES; i++) {
 		timespecadd(&totalreadtime[i], &readtime[i]);
 		totalreadcnt[i] += readcnt[i];
@@ -505,10 +471,6 @@ static void printIOstats(void)
 	long long msec, totalmsec;
 	int i;
 
-	clock_gettime(CLOCK_REALTIME_PRECISE, &finishpass);
-	timespecsub(&finishpass, &startpass);
-	printf("Running time: %jd.%03ld sec\n",
-		(intmax_t)finishpass.tv_sec, finishpass.tv_nsec / 1000000);
 	printf("buffer reads by type:\n");
 	for (totalmsec = 0, i = 0; i < BT_NUMBUFTYPES; i++)
 		totalmsec += readtime[i].tv_sec * 1000 +
@@ -538,15 +500,11 @@ blread(int fd, char *buf, ufs2_daddr_t blk, long size)
 
 	offset = blk;
 	offset *= dev_bsize;
-	if (bkgrdflag)
-		slowio_start();
 	totalreads++;
 	diskreads++;
 	if (lseek(fd, offset, 0) < 0)
 		rwerror("SEEK BLK", blk);
 	else if (read(fd, buf, (int)size) == size) {
-		if (bkgrdflag)
-			slowio_end();
 		return (0);
 	}
 
@@ -622,11 +580,12 @@ blerase(int fd, ufs2_daddr_t blk, long size)
 
 	if (fd < 0)
 		return;
+#ifdef DIOCGDELETE
 	ioarg[0] = blk * dev_bsize;
 	ioarg[1] = size;
 	ioctl(fd, DIOCGDELETE, ioarg);
 	/* we don't really care if we succeed or not */
-	return;
+#endif
 }
 
 /*
@@ -960,16 +919,6 @@ pfatal(const char *fmt, ...)
 		/*
 		 * Force foreground fsck to clean up inconsistency.
 		 */
-		if (bkgrdflag) {
-			cmd.value = FS_NEEDSFSCK;
-			cmd.size = 1;
-			if (sysctlbyname("vfs.ffs.setflags", 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				pwarn("CANNOT SET FS_NEEDSFSCK FLAG\n");
-			fprintf(stdout, "CANNOT RUN IN BACKGROUND\n");
-			ckfini(0);
-			exit(EEXIT);
-		}
 		return;
 	}
 	if (cdevname == NULL)
@@ -982,13 +931,6 @@ pfatal(const char *fmt, ...)
 	/*
 	 * Force foreground fsck to clean up inconsistency.
 	 */
-	if (bkgrdflag) {
-		cmd.value = FS_NEEDSFSCK;
-		cmd.size = 1;
-		if (sysctlbyname("vfs.ffs.setflags", 0, 0,
-		    &cmd, sizeof cmd) == -1)
-			pwarn("CANNOT SET FS_NEEDSFSCK FLAG\n");
-	}
 	ckfini(0);
 	exit(EEXIT);
 }

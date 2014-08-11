@@ -304,7 +304,6 @@ long	secsize;		/* actual disk sector size */
 u_int	real_dev_bsize;		/* actual disk sector size, not overriden */
 char	nflag;			/* assume a no response */
 char	yflag;			/* assume a yes response */
-int	bkgrdflag;		/* use a snapshot to run on an active system */
 int	bflag;			/* location of alternate super block */
 int	debug;			/* output debugging info */
 int	Eflag;			/* delete empty data blocks */
@@ -363,7 +362,7 @@ struct	ufs2_dinode ufs2_zino;
 
 int flushentry(void);
 /*
- * Wrapper for malloc() that flushes the cylinder group cache to try 
+ * Wrapper for malloc() that flushes the cylinder group cache to try
  * to get space.
  */
 static inline void*
@@ -378,7 +377,7 @@ Malloc(int size)
 }
 
 /*
- * Wrapper for calloc() that flushes the cylinder group cache to try 
+ * Wrapper for calloc() that flushes the cylinder group cache to try
  * to get space.
  */
 static inline void*
@@ -394,6 +393,10 @@ Calloc(int cnt, int size)
 
 struct fstab;
 
+#undef btodb
+#define btodb(bytes) ((unsigned)(bytes) >> DEV_BSHIFT)
+
+#define setproctitle(fmt, ...) /*empty*/
 
 void		adjust(struct inodesc *, int lcnt);
 ufs2_daddr_t	allocblk(long frags);

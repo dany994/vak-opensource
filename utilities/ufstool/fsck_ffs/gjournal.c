@@ -285,7 +285,7 @@ blkfree(ufs2_daddr_t bno, long size)
 		 * decrement the counts associated with the old frags
 		 */
 		blk = blkmap(fs, blksfree, bbase);
-		ffs_fragacct(fs, blk, cgp->cg_frsum, -1);
+		ffs_fragacct(fs, blk, (int32_t*)cgp->cg_frsum, -1);
 		/*
 		 * deallocate the fragment
 		 */
@@ -302,7 +302,7 @@ blkfree(ufs2_daddr_t bno, long size)
 		 * add back in counts associated with the new frags
 		 */
 		blk = blkmap(fs, blksfree, bbase);
-		ffs_fragacct(fs, blk, cgp->cg_frsum, 1);
+		ffs_fragacct(fs, blk, (int32_t*)cgp->cg_frsum, 1);
 		/*
 		 * if a complete block has been reassembled, account for it
 		 */
