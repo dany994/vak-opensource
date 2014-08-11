@@ -36,7 +36,6 @@ static const char sccsid[] = "@(#)inode.c	8.8 (Berkeley) 4/28/95";
 __FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/stdint.h>
 #include <sys/sysctl.h>
 
 #include <ufs/ufs/dinode.h>
@@ -536,21 +535,10 @@ clri(struct inodesc *idesc, const char *type, int flag)
 		if (preen)
 			printf(" (CLEARED)\n");
 		n_files--;
-		if (bkgrdflag == 0) {
-			(void)ckinode(dp, idesc);
-			inoinfo(idesc->id_number)->ino_state = USTATE;
-			clearinode(dp);
-			inodirty();
-		} else {
-			cmd.value = idesc->id_number;
-			cmd.size = -DIP(dp, di_nlink);
-			if (debug)
-				printf("adjrefcnt ino %ld amt %lld\n",
-				    (long)cmd.value, (long long)cmd.size);
-			if (sysctl(adjrefcnt, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST INODE", cmd.value);
-		}
+		(void)ckinode(dp, idesc);
+		inoinfo(idesc->id_number)->ino_state = USTATE;
+		clearinode(dp);
+		inodirty();
 	}
 }
 

@@ -81,91 +81,22 @@ setup(char *dev)
 	cursnapshot = 0;
 	if (stat(dev, &statb) < 0) {
 		printf("Can't stat %s: %s\n", dev, strerror(errno));
-		if (bkgrdflag) {
-			unlink(snapname);
-			bkgrdflag = 0;
-		}
 		return (0);
 	}
 	if ((statb.st_mode & S_IFMT) != S_IFCHR &&
 	    (statb.st_mode & S_IFMT) != S_IFBLK) {
-		if (bkgrdflag != 0 && (statb.st_flags & SF_SNAPSHOT) == 0) {
-			unlink(snapname);
-			printf("background fsck lacks a snapshot\n");
-			exit(EEXIT);
-		}
-		if ((statb.st_flags & SF_SNAPSHOT) != 0 && cvtlevel == 0) {
-			cursnapshot = statb.st_ino;
-		} else {
-			if (cvtlevel == 0 ||
-			    (statb.st_flags & SF_SNAPSHOT) == 0) {
-				if (preen && bkgrdflag) {
-					unlink(snapname);
-					bkgrdflag = 0;
-				}
-				pfatal("%s is not a disk device", dev);
-				if (reply("CONTINUE") == 0) {
-					if (bkgrdflag) {
-						unlink(snapname);
-						bkgrdflag = 0;
-					}
-					return (0);
-				}
-			} else {
-				if (bkgrdflag) {
-					unlink(snapname);
-					bkgrdflag = 0;
-				}
-				pfatal("cannot convert a snapshot");
-				exit(EEXIT);
-			}
-		}
+		pfatal("%s is not a disk device", dev);
+		if (reply("CONTINUE") == 0) {
+			return (0);
+                }
 	}
 	if ((fsreadfd = open(dev, O_RDONLY)) < 0) {
-		if (bkgrdflag) {
-			unlink(snapname);
-			bkgrdflag = 0;
-		}
 		printf("Can't open %s: %s\n", dev, strerror(errno));
 		return (0);
 	}
-	if (bkgrdflag) {
-		unlink(snapname);
-		size = MIBSIZE;
-		if (sysctlnametomib("vfs.ffs.adjrefcnt", adjrefcnt, &size) < 0||
-		    sysctlnametomib("vfs.ffs.adjblkcnt", adjblkcnt, &size) < 0||
-		    sysctlnametomib("vfs.ffs.freefiles", freefiles, &size) < 0||
-		    sysctlnametomib("vfs.ffs.freedirs", freedirs, &size) < 0 ||
-		    sysctlnametomib("vfs.ffs.freeblks", freeblks, &size) < 0) {
-			pfatal("kernel lacks background fsck support\n");
-			exit(EEXIT);
-		}
-		/*
-		 * When kernel is lack of runtime bgfsck superblock summary
-		 * adjustment functionality, it does not mean we can not
-		 * continue, as old kernels will recompute the summary at
-		 * mount time.  However, it will be an unexpected softupdates
-		 * inconsistency if it turns out that the summary is still
-		 * incorrect.  Set a flag so subsequent operation can know
-		 * this.
-		 */
-		bkgrdsumadj = 1;
-		if (sysctlnametomib("vfs.ffs.adjndir", adjndir, &size) < 0 ||
-		    sysctlnametomib("vfs.ffs.adjnbfree", adjnbfree, &size) < 0 ||
-		    sysctlnametomib("vfs.ffs.adjnifree", adjnifree, &size) < 0 ||
-		    sysctlnametomib("vfs.ffs.adjnffree", adjnffree, &size) < 0 ||
-		    sysctlnametomib("vfs.ffs.adjnumclusters", adjnumclusters, &size) < 0) {
-			bkgrdsumadj = 0;
-			pwarn("kernel lacks runtime superblock summary adjustment support");
-		}
-		cmd.version = FFS_CMD_VERSION;
-		cmd.handle = fsreadfd;
-		fswritefd = -1;
-	}
 	if (preen == 0)
 		printf("** %s", dev);
-	if (bkgrdflag == 0 &&
-	    (nflag || (fswritefd = open(dev, O_WRONLY)) < 0)) {
+	if (nflag || (fswritefd = open(dev, O_WRONLY)) < 0) {
 		fswritefd = -1;
 		if (preen)
 			pfatal("NO WRITE ACCESS");
@@ -479,15 +410,13 @@ calcsb(char *dev, int devfd, struct fs *fs)
 	else
 		pp = &lp->d_partitions[*cp - 'a'];
 	if (pp->p_fstype != FS_BSDFFS) {
-		pfatal("%s: NOT LABELED AS A BSD FILE SYSTEM (%s)\n",
-			dev, pp->p_fstype < FSMAXTYPES ?
-			fstypenames[pp->p_fstype] : "unknown");
+		pfatal("%s: NOT LABELED AS A BSD FILE SYSTEM\n", dev);
 		return (0);
 	}
 	if (pp->p_fsize == 0 || pp->p_frag == 0 ||
 	    pp->p_cpg == 0 || pp->p_size == 0) {
-		pfatal("%s: %s: type %s fsize %d, frag %d, cpg %d, size %d\n",
-		    dev, "INCOMPLETE LABEL", fstypenames[pp->p_fstype],
+		pfatal("%s: INCOMPLETE LABEL: type %u fsize %d, frag %d, cpg %d, size %d\n",
+		    dev, pp->p_fstype,
 		    pp->p_fsize, pp->p_frag, pp->p_cpg, pp->p_size);
 		return (0);
 	}
@@ -525,12 +454,13 @@ static struct disklabel *
 getdisklabel(char *s, int fd)
 {
 	static struct disklabel lab;
-
+#if 0
 	if (ioctl(fd, DIOCGDINFO, (char *)&lab) < 0) {
 		if (s == NULL)
 			return ((struct disklabel *)NULL);
 		pwarn("ioctl (GCINFO): %s\n", strerror(errno));
 		errx(EEXIT, "%s: can't read disk label", s);
 	}
+#endif
 	return (&lab);
 }

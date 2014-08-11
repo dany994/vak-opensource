@@ -285,7 +285,7 @@ adjust(struct inodesc *idesc, int lcnt)
 		 * in preen mode, and are on a file system using soft updates,
 		 * then just toss any partially allocated files.
 		 */
-		if (resolved && (preen || bkgrdflag) && usedsoftdep) {
+		if (resolved && preen && usedsoftdep) {
 			clri(idesc, "UNREF", 1);
 			return;
 		} else {
@@ -323,20 +323,8 @@ adjust(struct inodesc *idesc, int lcnt)
 				printf(" (ADJUSTED)\n");
 		}
 		if (preen || reply("ADJUST") == 1) {
-			if (bkgrdflag == 0) {
-				DIP_SET(dp, di_nlink, DIP(dp, di_nlink) - lcnt);
-				inodirty();
-			} else {
-				cmd.value = idesc->id_number;
-				cmd.size = -lcnt;
-				if (debug)
-					printf("adjrefcnt ino %ld amt %lld\n",
-					    (long)cmd.value,
-					    (long long)cmd.size);
-				if (sysctl(adjrefcnt, MIBSIZE, 0, 0,
-				    &cmd, sizeof cmd) == -1)
-					rwerror("ADJUST INODE", cmd.value);
-			}
+			DIP_SET(dp, di_nlink, DIP(dp, di_nlink) - lcnt);
+			inodirty();
 		}
 	}
 }

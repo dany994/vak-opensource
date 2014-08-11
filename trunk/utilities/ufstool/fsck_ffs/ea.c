@@ -38,7 +38,6 @@ __FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
-#include <sys/stdint.h>
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>

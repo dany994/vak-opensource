@@ -82,16 +82,12 @@ main(int argc, char *argv[])
 	sync();
 	skipclean = 1;
 	inoopt = 0;
-	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:nprSyZ")) != -1) {
+	while ((ch = getopt(argc, argv, "b:c:CdEfFm:nprSyZ")) != -1) {
 		switch (ch) {
 		case 'b':
 			skipclean = 0;
 			bflag = argtoi('b', "number", optarg, 10);
 			printf("Alternate super block location: %d\n", bflag);
-			break;
-
-		case 'B':
-			bkgrdflag = 1;
 			break;
 
 		case 'c':
@@ -170,14 +166,7 @@ main(int argc, char *argv[])
 	if (ckclean)
 		(void)signal(SIGQUIT, catchquit);
 	signal(SIGINFO, infohandler);
-	if (bkgrdflag) {
-		signal(SIGALRM, alarmhandler);
-		itimerval.it_interval.tv_sec = 5;
-		itimerval.it_interval.tv_usec = 0;
-		itimerval.it_value.tv_sec = 5;
-		itimerval.it_value.tv_usec = 0;
-		setitimer(ITIMER_REAL, &itimerval, NULL);
-	}
+
 	/*
 	 * Push up our allowed memory limit so we can cope
 	 * with huge file systems.
@@ -291,94 +280,6 @@ checkfilesys(char *filesys)
 			}
 		}
 	}
-	/*
-	 * If we are to do a background check:
-	 *	Get the mount point information of the file system
-	 *	create snapshot file
-	 *	return created snapshot file
-	 *	if not found, clear bkgrdflag and proceed with normal fsck
-	 */
-	if (bkgrdflag) {
-		if (mntp == NULL) {
-			bkgrdflag = 0;
-			pfatal("NOT MOUNTED, CANNOT RUN IN BACKGROUND\n");
-		} else if ((mntp->f_flags & MNT_SOFTDEP) == 0) {
-			bkgrdflag = 0;
-			pfatal(
-			  "NOT USING SOFT UPDATES, CANNOT RUN IN BACKGROUND\n");
-		} else if ((mntp->f_flags & MNT_RDONLY) != 0) {
-			bkgrdflag = 0;
-			pfatal("MOUNTED READ-ONLY, CANNOT RUN IN BACKGROUND\n");
-		} else if ((fsreadfd = open(filesys, O_RDONLY)) >= 0) {
-			if (readsb(0) != 0) {
-				if (sblock.fs_flags & (FS_NEEDSFSCK | FS_SUJ)) {
-					bkgrdflag = 0;
-					pfatal(
-			"UNEXPECTED INCONSISTENCY, CANNOT RUN IN BACKGROUND\n");
-				}
-				if ((sblock.fs_flags & FS_UNCLEAN) == 0 &&
-				    skipclean && ckclean) {
-					/*
-					 * file system is clean;
-					 * skip snapshot and report it clean
-					 */
-					pwarn(
-					"FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
-					goto clean;
-				}
-			}
-			close(fsreadfd);
-		}
-		if (bkgrdflag) {
-			snprintf(snapname, sizeof snapname, "%s/.snap",
-			    mntp->f_mntonname);
-			if (stat(snapname, &snapdir) < 0) {
-				if (errno != ENOENT) {
-					bkgrdflag = 0;
-					pfatal(
-	"CANNOT FIND SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
-					    snapname, strerror(errno));
-				} else if ((grp = getgrnam("operator")) == 0 ||
-				    mkdir(snapname, 0770) < 0 ||
-				    chown(snapname, -1, grp->gr_gid) < 0 ||
-				    chmod(snapname, 0770) < 0) {
-					bkgrdflag = 0;
-					pfatal(
-	"CANNOT CREATE SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
-					    snapname, strerror(errno));
-				}
-			} else if (!S_ISDIR(snapdir.st_mode)) {
-				bkgrdflag = 0;
-				pfatal(
-			"%s IS NOT A DIRECTORY, CANNOT RUN IN BACKGROUND\n",
-				    snapname);
-			}
-		}
-		if (bkgrdflag) {
-			snprintf(snapname, sizeof snapname,
-			    "%s/.snap/fsck_snapshot", mntp->f_mntonname);
-			build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
-			build_iovec(&iov, &iovlen, "from", snapname,
-			    (size_t)-1);
-			build_iovec(&iov, &iovlen, "fspath", mntp->f_mntonname,
-			    (size_t)-1);
-			build_iovec(&iov, &iovlen, "errmsg", errmsg,
-			    sizeof(errmsg));
-			build_iovec(&iov, &iovlen, "update", NULL, 0);
-			build_iovec(&iov, &iovlen, "snapshot", NULL, 0);
-
-			while (nmount(iov, iovlen, mntp->f_flags) < 0) {
-				if (errno == EEXIST && unlink(snapname) == 0)
-					continue;
-				bkgrdflag = 0;
-				pfatal("CANNOT CREATE SNAPSHOT %s: %s %s\n",
-				    snapname, strerror(errno), errmsg);
-				break;
-			}
-			if (bkgrdflag != 0)
-				filesys = snapname;
-		}
-	}
 
 	switch (setup(filesys)) {
 	case 0:
@@ -432,7 +333,6 @@ checkfilesys(char *filesys)
 			printf("** Root file system\n");
 		printf("** Phase 1 - Check Blocks and Sizes\n");
 	}
-	clock_gettime(CLOCK_REALTIME_PRECISE, &startprog);
 	pass1();
 	IOstats("Pass1");
 
@@ -493,14 +393,9 @@ checkfilesys(char *filesys)
 	blks += cgsblock(&sblock, 0) - cgbase(&sblock, 0);
 	blks += howmany(sblock.fs_cssize, sblock.fs_fsize);
 	blks = maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
-	if (bkgrdflag && (files > 0 || blks > 0)) {
-		countdirs = sblock.fs_cstotal.cs_ndir - countdirs;
-		pwarn("Reclaimed: %ld directories, %jd files, %jd fragments\n",
-		    countdirs, files - countdirs, blks);
-	}
 	pwarn("%ld files, %jd used, %ju free ",
 	    (long)n_files, (intmax_t)n_blks,
-	    (uintmax_t)n_ffree + sblock.fs_frag * n_bfree);
+	    (uintmax_t)(n_ffree + sblock.fs_frag * n_bfree));
 	printf("(%ju frags, %ju blocks, %.1f%% fragmentation)\n",
 	    (uintmax_t)n_ffree, (uintmax_t)n_bfree,
 	    n_ffree * 100.0 / sblock.fs_dsize);
@@ -539,7 +434,7 @@ checkfilesys(char *filesys)
 	/*
 	 * Check to see if the file system is mounted read-write.
 	 */
-	if (bkgrdflag == 0 && mntp != NULL && (mntp->f_flags & MNT_RDONLY) == 0)
+	if (mntp != NULL && (mntp->f_flags & MNT_RDONLY) == 0)
 		resolved = 0;
 	ckfini(resolved);
 
@@ -566,6 +461,7 @@ checkfilesys(char *filesys)
 static int
 chkdoreload(struct statfs *mntp)
 {
+#if 0
 	struct iovec *iov;
 	int iovlen;
 	char errmsg[255];
@@ -603,6 +499,7 @@ chkdoreload(struct statfs *mntp)
 		    mntp->f_mntonname, strerror(errno), errmsg);
 		return (1);
 	}
+#endif
 	return (0);
 }
 
