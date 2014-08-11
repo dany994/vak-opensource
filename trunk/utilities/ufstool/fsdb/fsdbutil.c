@@ -3,7 +3,7 @@
 /*
  *  Copyright (c) 1995 John T. Kohl
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -14,7 +14,7 @@
  *     documentation and/or other materials provided with the distribution.
  *  3. The name of the author may not be used to endorse or promote products
  *     derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -102,7 +102,7 @@ argcount(struct cmdtable *cmdp, int argc, char *argv[])
     else
 	warnx("command `%s' takes from %u to %u arguments",
 	      cmdp->cmd, cmdp->minargc-1, cmdp->maxargc-1);
-	    
+
     warnx("usage: %s: %s", cmdp->cmd, cmdp->helptxt);
     return 1;
 }
@@ -129,7 +129,7 @@ printstat(const char *cp, ino_t inum, union dinode *dp)
 	printf("block special (%#jx)", (uintmax_t)DIP(dp, di_rdev));
 	break;
     case IFCHR:
-	printf("character special (%#jx)", DIP(dp, di_rdev));
+	printf("character special (%#jx)", (uintmax_t)DIP(dp, di_rdev));
 	break;
     case IFLNK:
 	fputs("symlink",stdout);
