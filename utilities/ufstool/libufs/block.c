@@ -30,7 +30,6 @@ __FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
-#include <sys/disk.h>
 #include <sys/disklabel.h>
 #include <sys/stat.h>
 
@@ -167,7 +166,7 @@ berase_helper(struct uufsd *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
 		ERROR(disk, "failed to allocate memory");
 		return (-1);
 	}
-	while (size > 0) { 
+	while (size > 0) {
 		pwrite_size = size;
 		if (pwrite_size > zero_chunk_size)
 			pwrite_size = zero_chunk_size;
