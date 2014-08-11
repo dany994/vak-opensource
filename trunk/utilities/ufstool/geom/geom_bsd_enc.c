@@ -69,7 +69,7 @@ bsd_disklabel_le_dec(u_char *ptr, struct disklabel *d, int maxpart)
 {
 	int i;
 	u_char *p, *pe;
-	uint16_t sum;
+	u_int16_t sum;
 
 	d->d_magic = le32dec(ptr + 0);
 	if (d->d_magic != DISKMAGIC)
@@ -148,7 +148,7 @@ bsd_disklabel_le_enc(u_char *ptr, struct disklabel *d)
 {
 	int i;
 	u_char *p, *pe;
-	uint16_t sum;
+	u_int16_t sum;
 
 	le32enc(ptr + 0, d->d_magic);
 	le16enc(ptr + 4, d->d_type);

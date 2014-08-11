@@ -145,7 +145,7 @@ mkfs(struct partition *pp, char *fsys)
 	if (Uflag)
 		sblock.fs_flags |= FS_DOSOFTDEP;
 	if (Lflag)
-		strlcpy(sblock.fs_volname, volumelabel, MAXVOLLEN);
+		strlcpy((char*)sblock.fs_volname, (char*)volumelabel, MAXVOLLEN);
 	if (Jflag)
 		sblock.fs_flags |= FS_GJOURNAL;
 	if (lflag)
@@ -505,9 +505,9 @@ restart:
 #	undef B2MBFACTOR
 
 	if (Eflag && !Nflag) {
-		printf("Erasing sectors [%jd...%jd]\n", 
-		    sblock.fs_sblockloc / disk.d_bsize,
-		    fsbtodb(&sblock, sblock.fs_size) - 1);
+		printf("Erasing sectors [%jd...%jd]\n",
+		    (long) (sblock.fs_sblockloc / disk.d_bsize),
+		    (long) fsbtodb(&sblock, sblock.fs_size) - 1);
 		berase(&disk, sblock.fs_sblockloc / disk.d_bsize,
 		    sblock.fs_size * sblock.fs_fsize - sblock.fs_sblockloc);
 	}
@@ -907,7 +907,7 @@ fsinit(time_t utime)
 				    alloc(sblock.fs_fsize, node.dp2.di_mode);
 			node.dp2.di_blocks =
 			    btodb(fragroundup(&sblock, node.dp2.di_size));
-				wtfs(fsbtodb(&sblock, node.dp2.di_db[0]), 
+				wtfs(fsbtodb(&sblock, node.dp2.di_db[0]),
 				    sblock.fs_fsize, iobuf);
 			iput(&node, ROOTINO + 1);
 		}

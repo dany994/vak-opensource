@@ -115,7 +115,7 @@ sbread(struct uufsd *disk)
 		bcopy(block, space, size);
 		space += size;
 	}
-	fs->fs_maxcluster = (uint32_t *)space;
+	fs->fs_maxcluster = (int32_t *)space;
 	disk->d_sbcsum = fs->fs_csp;
 
 	return (0);
