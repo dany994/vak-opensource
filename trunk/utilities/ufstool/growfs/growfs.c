@@ -56,7 +56,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <sys/disk.h>
 #include <sys/ucred.h>
 #include <sys/mount.h>
 
@@ -1258,7 +1257,7 @@ is_dev(const char *name)
 
 /*
  * Return mountpoint on which the device is currently mounted.
- */ 
+ */
 static const struct statfs *
 dev_to_statfs(const char *dev)
 {

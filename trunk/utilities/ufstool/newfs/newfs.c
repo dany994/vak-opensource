@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD$");
  */
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/disk.h>
 #include <sys/disklabel.h>
 #include <sys/file.h>
 #include <sys/mount.h>
@@ -453,9 +452,9 @@ getdisklabel(char *s)
 		lp = &lab;
 		return &lab;
 	}
-#endif
 	if (ioctl(disk.d_fd, DIOCGDINFO, (char *)&lab) != -1)
 		return (&lab);
+#endif
 	unlabeled++;
 	if (disktype) {
 		lp = getdiskbyname(disktype);
@@ -481,9 +480,9 @@ rewritelabel(char *s, struct disklabel *lp)
 			errx(1, "cannot write label");
 		return;
 	}
-#endif
 	if (ioctl(disk.d_fd, DIOCWDINFO, (char *)lp) == -1)
 		warn("ioctl (WDINFO): %s: can't rewrite disk label", s);
+#endif
 }
 
 static void
