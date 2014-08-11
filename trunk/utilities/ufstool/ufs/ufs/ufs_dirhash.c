@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_ufs.h"
 
@@ -83,11 +82,11 @@ static int ufs_dirhashcheck = 0;
 SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_docheck, CTLFLAG_RW, &ufs_dirhashcheck,
     0, "enable extra sanity tests");
 static int ufs_dirhashlowmemcount = 0;
-SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_lowmemcount, CTLFLAG_RD, 
+SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_lowmemcount, CTLFLAG_RD,
     &ufs_dirhashlowmemcount, 0, "number of times low memory hook called");
 static int ufs_dirhashreclaimage = 60;
-SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_reclaimage, CTLFLAG_RW, 
-    &ufs_dirhashreclaimage, 0, 
+SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_reclaimage, CTLFLAG_RW,
+    &ufs_dirhashreclaimage, 0,
     "max time in seconds of hash inactivity before deletion in low VM events");
 
 
@@ -610,7 +609,7 @@ restart:
 			 * We found an entry with the expected offset. This
 			 * is probably the entry we want, but if not, the
 			 * code below will retry.
-			 */ 
+			 */
 			slot = i;
 		} else
 			seqoff = -1;
@@ -806,7 +805,7 @@ ufsdirhash_add(struct inode *ip, struct direct *dirp, doff_t offset)
 
 	if ((dh = ufsdirhash_acquire(ip)) == NULL)
 		return;
-	
+
 	KASSERT(offset < dh->dh_dirblks * DIRBLKSIZ,
 	    ("ufsdirhash_add: bad offset"));
 	/*
@@ -1168,8 +1167,8 @@ ufsdirhash_getprev(struct direct *dirp, doff_t offset)
 }
 
 /*
- * Delete the given dirhash and reclaim its memory. Assumes that 
- * ufsdirhash_list is locked, and leaves it locked. Also assumes 
+ * Delete the given dirhash and reclaim its memory. Assumes that
+ * ufsdirhash_list is locked, and leaves it locked. Also assumes
  * that dh is locked. Returns the amount of memory freed.
  */
 static int
@@ -1180,7 +1179,7 @@ ufsdirhash_destroy(struct dirhash *dh)
 	int i, mem, narrays;
 
 	KASSERT(dh->dh_hash != NULL, ("dirhash: NULL hash on list"));
-	
+
 	/* Remove it from the list and detach its memory. */
 	TAILQ_REMOVE(&ufsdirhash_list, dh, dh_list);
 	dh->dh_onlist = 0;
@@ -1248,7 +1247,7 @@ ufsdirhash_lowmem()
 {
 	struct dirhash *dh, *dh_temp;
 	int memfreed = 0;
-	/* 
+	/*
 	 * Will free a *minimum* of 10% of the dirhash, but possibly much
 	 * more (depending on dirhashreclaimage). System with large dirhashes
 	 * probably also need a much larger dirhashreclaimage.
@@ -1259,8 +1258,8 @@ ufsdirhash_lowmem()
 	ufs_dirhashlowmemcount++;
 
 	DIRHASHLIST_LOCK();
-	/* 
-	 * Delete dirhashes not used for more than ufs_dirhashreclaimage 
+	/*
+	 * Delete dirhashes not used for more than ufs_dirhashreclaimage
 	 * seconds. If we can't get a lock on the dirhash, it will be skipped.
 	 */
 	TAILQ_FOREACH_SAFE(dh, &ufsdirhash_list, dh_list, dh_temp) {
@@ -1273,10 +1272,10 @@ ufsdirhash_lowmem()
 			ufsdirhash_release(dh);
 	}
 
-	/* 
-	 * If not enough memory was freed, keep deleting hashes from the head 
-	 * of the dirhash list. The ones closest to the head should be the 
-	 * oldest. 
+	/*
+	 * If not enough memory was freed, keep deleting hashes from the head
+	 * of the dirhash list. The ones closest to the head should be the
+	 * oldest.
 	 */
 	if (memfreed < memwanted) {
 		TAILQ_FOREACH_SAFE(dh, &ufsdirhash_list, dh_list, dh_temp) {
@@ -1303,7 +1302,7 @@ ufsdirhash_init()
 	TAILQ_INIT(&ufsdirhash_list);
 
 	/* Register a callback function to handle low memory signals */
-	EVENTHANDLER_REGISTER(vm_lowmem, ufsdirhash_lowmem, NULL, 
+	EVENTHANDLER_REGISTER(vm_lowmem, ufsdirhash_lowmem, NULL,
 	    EVENTHANDLER_PRI_FIRST);
 }
 

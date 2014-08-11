@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)dir.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -383,15 +382,13 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
 	pinode(orphan);
 	if (preen && DIP(dp, di_size) == 0)
 		return (0);
-	if (cursnapshot != 0) {
-		pfatal("FILE LINKUP IN SNAPSHOT");
-		return (0);
-	}
+
 	if (preen)
 		printf(" (RECONNECTED)\n");
 	else
 		if (reply("RECONNECT") == 0)
 			return (0);
+
 	if (lfdir == 0) {
 		dp = ginode(ROOTINO);
 		idesc.id_name = strdup(lfname);

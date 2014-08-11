@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)pass2.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -136,12 +135,14 @@ pass2(void)
 	curino.id_func = pass2check;
 	inpend = &inpsort[inplast];
 	for (inpp = inpsort; inpp < inpend; inpp++) {
+#if 0
 		if (got_siginfo) {
 			printf("%s: phase 2: dir %td of %d (%d%%)\n", cdevname,
 			    inpp - inpsort, (int)inplast,
 			    (int)((inpp - inpsort) * 100 / inplast));
 			got_siginfo = 0;
 		}
+#endif
 		if (got_sigalarm) {
 			setproctitle("%s p2 %d%%", cdevname,
 			    (int)((inpp - inpsort) * 100 / inplast));
@@ -231,31 +232,6 @@ pass2(void)
 		getpathname(pathbuf, inp->i_parent, inp->i_parent);
 		printf("SHOULD POINT TO I=%ju (%s)",
 		    (uintmax_t)inp->i_parent, pathbuf);
-		if (cursnapshot != 0) {
-			/*
-			 * We need to:
-			 *    setcwd(inp->i_number);
-			 *    setdotdot(inp->i_dotdot, inp->i_parent);
-			 */
-			cmd.value = inp->i_number;
-			if (sysctlbyname("vfs.ffs.setcwd", 0, 0,
-			    &cmd, sizeof cmd) == -1) {
-				/* kernel lacks support for these functions */
-				printf(" (IGNORED)\n");
-				continue;
-			}
-			cmd.value = inp->i_dotdot; /* verify same value */
-			cmd.size = inp->i_parent;  /* new parent */
-			if (sysctlbyname("vfs.ffs.setdotdot", 0, 0,
-			    &cmd, sizeof cmd) == -1) {
-				printf(" (FIX FAILED: %s)\n", strerror(errno));
-				continue;
-			}
-			printf(" (FIXED)\n");
-			inoinfo(inp->i_parent)->ino_linkcnt--;
-			inp->i_dotdot = inp->i_parent;
-			continue;
-		}
 		if (preen)
 			printf(" (FIXED)\n");
 		else if (reply("FIX") == 0)
@@ -438,36 +414,8 @@ again:
 				errmsg = "DUP/BAD";
 			else if (!preen && !usedsoftdep)
 				errmsg = "ZERO LENGTH DIRECTORY";
-			else if (cursnapshot == 0) {
+			else {
 				n = 1;
-				break;
-			} else {
-				getpathname(dirname, idesc->id_number,
-				    dirp->d_ino);
-				pwarn("ZERO LENGTH DIRECTORY %s I=%ju",
-				    dirname, (uintmax_t)dirp->d_ino);
-				/*
-				 * We need to:
-				 *    setcwd(idesc->id_parent);
-				 *    rmdir(dirp->d_name);
-				 */
-				cmd.value = idesc->id_number;
-				if (sysctlbyname("vfs.ffs.setcwd", 0, 0,
-				    &cmd, sizeof cmd) == -1) {
-					/* kernel lacks support */
-					printf(" (IGNORED)\n");
-					n = 1;
-					break;
-				}
-				if (rmdir(dirp->d_name) == -1) {
-					printf(" (REMOVAL FAILED: %s)\n",
-					    strerror(errno));
-					n = 1;
-					break;
-				}
-				/* ".." reference to parent is removed */
-				inoinfo(idesc->id_number)->ino_linkcnt--;
-				printf(" (REMOVED)\n");
 				break;
 			}
 			fileerror(idesc->id_number, dirp->d_ino, errmsg);
@@ -566,29 +514,6 @@ fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
 		getpathname(oldname, inp->i_number, inp->i_number);
 		pwarn("%s IS AN EXTRANEOUS HARD LINK TO DIRECTORY %s",
 		    newname, oldname);
-		if (cursnapshot != 0) {
-			/*
-			 * We need to
-			 *    setcwd(idesc->id_number);
-			 *    unlink(idesc->id_dirp->d_name);
-			 */
-			cmd.value = idesc->id_number;
-			if (sysctlbyname("vfs.ffs.setcwd", 0, 0,
-			    &cmd, sizeof cmd) == -1) {
-				printf(" (IGNORED)\n");
-				return (0);
-			}
-			cmd.value = (intptr_t)idesc->id_dirp->d_name;
-			cmd.size = inp->i_number; /* verify same name */
-			if (sysctlbyname("vfs.ffs.unlink", 0, 0,
-			    &cmd, sizeof cmd) == -1) {
-				printf(" (UNLINK FAILED: %s)\n",
-				    strerror(errno));
-				return (0);
-			}
-			printf(" (REMOVED)\n");
-			return (0);
-		}
 		if (preen) {
 			printf(" (REMOVED)\n");
 			return (1);
@@ -603,34 +528,6 @@ fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
 	getpathname(newname, inp->i_number, inp->i_number);
 	pwarn("%s IS AN EXTRANEOUS HARD LINK TO DIRECTORY %s", oldname,
 	    newname);
-	if (cursnapshot != 0) {
-		/*
-		 * We need to
-		 *    setcwd(inp->i_parent);
-		 *    unlink(last component of oldname pathname);
-		 */
-		cmd.value = inp->i_parent;
-		if (sysctlbyname("vfs.ffs.setcwd", 0, 0,
-		    &cmd, sizeof cmd) == -1) {
-			printf(" (IGNORED)\n");
-			return (0);
-		}
-		if ((cp = strchr(oldname, '/')) == NULL) {
-			printf(" (IGNORED)\n");
-			return (0);
-		}
-		cmd.value = (intptr_t)(cp + 1);
-		cmd.size = inp->i_number; /* verify same name */
-		if (sysctlbyname("vfs.ffs.unlink", 0, 0,
-		    &cmd, sizeof cmd) == -1) {
-			printf(" (UNLINK FAILED: %s)\n",
-			    strerror(errno));
-			return (0);
-		}
-		printf(" (REMOVED)\n");
-		inp->i_parent = idesc->id_number;  /* reparent to correct dir */
-		return (0);
-	}
 	if (!preen && !reply("REMOVE"))
 		return (0);
 	memset(&dotdesc, 0, sizeof(struct inodesc));

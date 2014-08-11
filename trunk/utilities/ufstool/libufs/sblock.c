@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -50,11 +49,11 @@ static int superblocks[] = SBLOCKSEARCH;
 int
 sbread(struct uufsd *disk)
 {
-	uint8_t block[MAXBSIZE];
+	u_int8_t block[MAXBSIZE];
 	struct fs *fs;
 	int sb, superblock;
 	int i, size, blks;
-	uint8_t *space;
+	u_int8_t *space;
 
 	ERROR(disk, NULL);
 
@@ -126,7 +125,7 @@ sbwrite(struct uufsd *disk, int all)
 {
 	struct fs *fs;
 	int blks, size;
-	uint8_t *space;
+	u_int8_t *space;
 	unsigned i;
 
 	ERROR(disk, NULL);
@@ -145,7 +144,7 @@ sbwrite(struct uufsd *disk, int all)
 	 * Write superblock summary information.
 	 */
 	blks = howmany(fs->fs_cssize, fs->fs_fsize);
-	space = (uint8_t *)disk->d_sbcsum;
+	space = (u_int8_t *)disk->d_sbcsum;
 	for (i = 0; i < blks; i += fs->fs_frag) {
 		size = fs->fs_bsize;
 		if (i + fs->fs_frag > blks)

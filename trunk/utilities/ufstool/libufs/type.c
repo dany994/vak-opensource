@@ -26,12 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/disklabel.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
 
 #include <ufs/ufs/ufsmount.h>
 #include <ufs/ufs/dinode.h>
@@ -63,7 +63,7 @@ ufs_disk_close(struct uufsd *disk)
 		disk->d_inoblock = NULL;
 	}
 	if (disk->d_mine & MINE_NAME) {
-		free((char *)(uintptr_t)disk->d_name);
+		free((char *)(intptr_t)disk->d_name);
 		disk->d_name = NULL;
 	}
 	if (disk->d_sbcsum != NULL) {
@@ -138,7 +138,7 @@ again:	if ((ret = stat(name, &st)) < 0) {
 			ERROR(disk, "could not find special device");
 			return (-1);
 		}
-		strlcpy(dev, sfs.f_mntfromname, sizeof(dev));
+		strncpy(dev, "" /*sfs.f_mntfromname*/, sizeof(dev));
 		name = dev;
 	} else {
 		ERROR(disk, "could not find special device");

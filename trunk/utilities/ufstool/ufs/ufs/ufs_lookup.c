@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_ufs.h"
 #include "opt_quota.h"
@@ -660,7 +659,7 @@ found:
 		 * The only purpose of this check is to return the correct
 		 * error.  Assume that we want to rename directory "a"
 		 * to a file "b", and that we have no ACL_WRITE_DATA on
-		 * a containing directory, but we _do_ have ACL_APPEND_DATA. 
+		 * a containing directory, but we _do_ have ACL_APPEND_DATA.
 		 * In that case, the VOP_ACCESS check above will return 0,
 		 * and the operation will fail with ENOTDIR instead
 		 * of EACCESS.
@@ -860,7 +859,7 @@ ufs_makedirentry(ip, cnp, newdirp)
  * Write a directory entry after a call to namei, using the parameters
  * that it left in nameidata. The argument dirp is the new directory
  * entry contents. Dvp is a pointer to the directory to be written,
- * which was left locked by namei. Remaining parameters (dp->i_offset, 
+ * which was left locked by namei. Remaining parameters (dp->i_offset,
  * dp->i_count) indicate how the space for the new entry is to be obtained.
  * Non-null bp indicates that a directory is being created (for the
  * soft dependency code).
@@ -1056,7 +1055,7 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp, isrename)
 #endif
 		if (DOINGSOFTDEP(dvp))
 			softdep_change_directoryentry_offset(bp, dp, dirbuf,
-			    (caddr_t)nep, (caddr_t)ep, dsize); 
+			    (caddr_t)nep, (caddr_t)ep, dsize);
 		else
 			bcopy((caddr_t)nep, (caddr_t)ep, dsize);
 	}

@@ -48,7 +48,6 @@ static char sccsid[] = "@(#)newfs.c	8.13 (Berkeley) 5/1/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * newfs: friendly front end to mkfs
@@ -456,11 +455,6 @@ getdisklabel(char *s)
 		return (&lab);
 #endif
 	unlabeled++;
-	if (disktype) {
-		lp = getdiskbyname(disktype);
-		if (lp != NULL)
-			return (lp);
-	}
 	return (NULL);
 }
 
@@ -488,10 +482,7 @@ rewritelabel(char *s, struct disklabel *lp)
 static void
 usage()
 {
-	fprintf(stderr,
-	    "usage: %s [ -fsoptions ] special-device%s\n",
-	    getprogname(),
-	    " [device-type]");
+	fprintf(stderr, "usage: newfs [ -fsoptions ] special-device [device-type]\n");
 	fprintf(stderr, "where fsoptions are:\n");
 	fprintf(stderr, "\t-E Erase previous disk content\n");
 	fprintf(stderr, "\t-J Enable journaling via gjournal\n");

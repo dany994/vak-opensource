@@ -107,10 +107,10 @@ struct	direct {
  * without the d_name field, plus enough space for the name with a terminating
  * null byte (dp->d_namlen+1), rounded up to a 4 byte boundary.
  *
- * 
+ *
  */
 #define	DIRECTSIZ(namlen)						\
-	(((uintptr_t)&((struct direct *)0)->d_name +			\
+	(((size_t)&((struct direct *)0)->d_name +			\
 	  ((namlen)+1)*sizeof(((struct direct *)0)->d_name[0]) + 3) & ~3)
 #if (BYTE_ORDER == LITTLE_ENDIAN)
 #define DIRSIZ(oldfmt, dp) \

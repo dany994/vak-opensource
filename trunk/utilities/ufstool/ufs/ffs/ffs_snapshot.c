@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_quota.h"
 
@@ -631,7 +630,7 @@ loop:
 	 * Acquire a lock on the snapdata structure, creating it if necessary.
 	 */
 	sn = ffs_snapdata_acquire(devvp);
-	/* 
+	/*
 	 * Change vnode to use shared snapshot lock instead of the original
 	 * private lock.
 	 */
@@ -1080,7 +1079,7 @@ expunge_ufs1(snapvp, cancelip, fs, acctfunc, expungetype, clearmode)
 /*
  * Descend an indirect block chain for vnode cancelvp accounting for all
  * its indirect blocks in snapvp.
- */ 
+ */
 static int
 indiracct_ufs1(snapvp, cancelvp, level, blkno, lbn, rlbn, remblks,
 	    blksperindir, fs, acctfunc, expungetype)
@@ -1364,7 +1363,7 @@ expunge_ufs2(snapvp, cancelip, fs, acctfunc, expungetype, clearmode)
 /*
  * Descend an indirect block chain for vnode cancelvp accounting for all
  * its indirect blocks in snapvp.
- */ 
+ */
 static int
 indiracct_ufs2(snapvp, cancelvp, level, blkno, lbn, rlbn, remblks,
 	    blksperindir, fs, acctfunc, expungetype)
@@ -1627,7 +1626,7 @@ ffs_snapremove(vp)
 		VI_UNLOCK(devvp);
 		lockmgr(&vp->v_lock, LK_EXCLUSIVE, NULL);
 		KASSERT(vp->v_vnlock == &sn->sn_lock,
-			("ffs_snapremove: lost lock mutation")); 
+			("ffs_snapremove: lost lock mutation"));
 		vp->v_vnlock = &vp->v_lock;
 		VI_LOCK(devvp);
 		lockmgr(&sn->sn_lock, LK_RELEASE, NULL);
@@ -2012,7 +2011,7 @@ ffs_snapshot_mount(mp)
 		 * necessary.
 		 */
 		sn = ffs_snapdata_acquire(devvp);
-		/* 
+		/*
 		 * Change vnode to use shared snapshot lock instead of the
 		 * original private lock.
 		 */
@@ -2102,7 +2101,7 @@ ffs_snapshot_unmount(mp)
 		    VI_MTX(devvp));
 		lockmgr(&vp->v_lock, LK_EXCLUSIVE, NULL);
 		KASSERT(vp->v_vnlock == &sn->sn_lock,
-		("ffs_snapshot_unmount: lost lock mutation")); 
+		("ffs_snapshot_unmount: lost lock mutation"));
 		vp->v_vnlock = &vp->v_lock;
 		lockmgr(&vp->v_lock, LK_RELEASE, NULL);
 		lockmgr(&sn->sn_lock, LK_RELEASE, NULL);

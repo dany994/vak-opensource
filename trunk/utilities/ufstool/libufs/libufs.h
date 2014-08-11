@@ -91,7 +91,7 @@ ERROR(struct uufsd *u, const char *str)
 #endif	/* _LIBUFS */
 
 #undef btodb
-#define btodb(bytes) ((unsigned)(bytes) >> DEV_BSHIFT)
+#define btodb(bytes) ((unsigned)(bytes) >> 9)
 
 #ifndef UF_NODUMP
 # define UF_NODUMP      0x00000001

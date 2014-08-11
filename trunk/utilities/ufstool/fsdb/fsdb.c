@@ -42,7 +42,7 @@ static const char rcsid[] =
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
-#include <timeconv.h>
+//#include <timeconv.h>
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>
@@ -51,7 +51,7 @@ static const char rcsid[] =
 #include "fsdb.h"
 #include "fsck.h"
 
-static void usage(void) __dead2;
+static void usage(void);
 int cmdloop(void);
 static int compare_blk32(uint32_t *wantedblk, uint32_t curblk);
 static int compare_blk64(uint64_t *wantedblk, uint64_t curblk);

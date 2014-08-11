@@ -33,7 +33,7 @@
 #ifndef _UFS_UFS_UFSMOUNT_H_
 #define _UFS_UFS_UFSMOUNT_H_
 
-#include <sys/buf.h>	/* XXX For struct workhead. */
+//#include <sys/buf.h>	/* XXX For struct workhead. */
 
 #if 0
 /*

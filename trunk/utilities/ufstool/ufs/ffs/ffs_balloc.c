@@ -60,7 +60,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -489,7 +488,7 @@ fail:
 	} else if (unwindidx >= 0) {
 		int r;
 
-		r = bread(vp, indirs[unwindidx].in_lbn, 
+		r = bread(vp, indirs[unwindidx].in_lbn,
 		    (int)fs->fs_bsize, NOCRED, &bp);
 		if (r) {
 			panic("Could not unwind indirect block, error %d", r);
@@ -572,7 +571,7 @@ ffs_balloc_ufs2(struct vnode *vp, off_t startoffset, int size,
 
 	if (DOINGSOFTDEP(vp))
 		softdep_prealloc(vp, MNT_WAIT);
-	
+
 	/*
 	 * Check for allocating external data.
 	 */
@@ -1058,7 +1057,7 @@ fail:
 	} else if (unwindidx >= 0) {
 		int r;
 
-		r = bread(vp, indirs[unwindidx].in_lbn, 
+		r = bread(vp, indirs[unwindidx].in_lbn,
 		    (int)fs->fs_bsize, NOCRED, &bp);
 		if (r) {
 			panic("Could not unwind indirect block, error %d", r);

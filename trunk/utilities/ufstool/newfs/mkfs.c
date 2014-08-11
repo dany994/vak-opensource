@@ -42,7 +42,6 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -138,14 +137,14 @@ mkfs(struct partition *pp, char *fsys)
 		utime = 1000000000;
 	} else {
 		time(&utime);
-		arc4random_stir();
+		srandom(utime);
 	}
 	sblock.fs_old_flags = FS_FLAGS_UPDATED;
 	sblock.fs_flags = 0;
 	if (Uflag)
 		sblock.fs_flags |= FS_DOSOFTDEP;
 	if (Lflag)
-		strlcpy((char*)sblock.fs_volname, (char*)volumelabel, MAXVOLLEN);
+		strncpy((char*)sblock.fs_volname, (char*)volumelabel, MAXVOLLEN);
 	if (Jflag)
 		sblock.fs_flags |= FS_GJOURNAL;
 	if (lflag)
@@ -240,7 +239,7 @@ restart:
 	 * transfer size permitted by the controller or buffering.
 	 */
 	if (maxcontig == 0)
-		maxcontig = MAX(1, MAXPHYS / bsize);
+		maxcontig = 1024*1024 / bsize;
 	sblock.fs_maxcontig = maxcontig;
 	if (sblock.fs_maxcontig < sblock.fs_maxbsize / sblock.fs_bsize) {
 		sblock.fs_maxcontig = sblock.fs_maxbsize / sblock.fs_bsize;
@@ -506,8 +505,8 @@ restart:
 
 	if (Eflag && !Nflag) {
 		printf("Erasing sectors [%jd...%jd]\n",
-		    (long) (sblock.fs_sblockloc / disk.d_bsize),
-		    (long) fsbtodb(&sblock, sblock.fs_size) - 1);
+		    (intmax_t) (sblock.fs_sblockloc / disk.d_bsize),
+		    (intmax_t) fsbtodb(&sblock, sblock.fs_size) - 1);
 		berase(&disk, sblock.fs_sblockloc / disk.d_bsize,
 		    sblock.fs_size * sblock.fs_fsize - sblock.fs_sblockloc);
 	}
@@ -1157,5 +1156,5 @@ newfs_random(void)
 
 	if (Rflag)
 		return (nextnum++);
-	return (arc4random());
+	return (random());
 }

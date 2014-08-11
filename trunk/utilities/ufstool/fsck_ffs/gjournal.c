@@ -52,7 +52,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -414,11 +413,13 @@ gjournal_check(const char *filesys)
 
 	for (cg = 0; cg < fs->fs_ncg; cg++) {
 		/* Show progress if requested. */
+#if 0
 		if (got_siginfo) {
 			printf("%s: phase j: cyl group %d of %d (%d%%)\n",
 			    cdevname, cg, fs->fs_ncg, cg * 100 / fs->fs_ncg);
 			got_siginfo = 0;
 		}
+#endif
 		if (got_sigalarm) {
 			setproctitle("%s pj %d%%", cdevname,
 			     cg * 100 / fs->fs_ncg);

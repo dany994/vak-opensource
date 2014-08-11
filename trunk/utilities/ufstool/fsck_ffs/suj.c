@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -55,7 +54,7 @@ __FBSDID("$FreeBSD$");
 #define	DOTDOT_OFFSET	DIRECTSIZ(1)
 #define	SUJ_HASHSIZE	2048
 #define	SUJ_HASHMASK	(SUJ_HASHSIZE - 1)
-#define	SUJ_HASH(x)	((x * 2654435761) & SUJ_HASHMASK)
+#define	SUJ_HASH(x)	((x * 2654435761U) & SUJ_HASHMASK)
 
 struct suj_seg {
 	TAILQ_ENTRY(suj_seg) ss_next;
@@ -148,7 +147,7 @@ uint64_t jrecs;
 static jmp_buf	jmpbuf;
 
 typedef void (*ino_visitor)(ino_t, ufs_lbn_t, ufs2_daddr_t, int);
-static void err_suj(const char *, ...) __dead2;
+static void err_suj(const char *, ...);
 static void ino_trunc(ino_t, off_t);
 static void ino_decr(ino_t);
 static void ino_adjust(struct suj_ino *);
@@ -171,7 +170,7 @@ errmalloc(size_t n)
  * the error and then offer to fallback to normal fsck.
  */
 static void
-err_suj(const char * restrict fmt, ...)
+err_suj(const char *fmt, ...)
 {
 	va_list ap;
 
@@ -1392,7 +1391,7 @@ ino_adjust(struct suj_ino *sino)
 	}
 	ip = ino_read(ino);
 	mode = DIP(ip, di_mode) & IFMT;
-	if (nlink > LINK_MAX)
+	if (nlink > 127)
 		err_suj("ino %ju nlink manipulation error, new %d, old %d\n",
 		    (uintmax_t)ino, nlink, DIP(ip, di_nlink));
 	if (debug)

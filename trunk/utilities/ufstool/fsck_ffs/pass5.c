@@ -33,7 +33,6 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -151,12 +150,14 @@ pass5(void)
 	for (d = fs->fs_size; d < dmax; d++)
 		setbmap(d);
 	for (c = 0; c < fs->fs_ncg; c++) {
+#if 0
 		if (got_siginfo) {
 			printf("%s: phase 5: cyl group %d of %d (%d%%)\n",
 			    cdevname, c, sblock.fs_ncg,
 			    c * 100 / sblock.fs_ncg);
 			got_siginfo = 0;
 		}
+#endif
 		if (got_sigalarm) {
 			setproctitle("%s p5 %d%%", cdevname,
 			    c * 100 / sblock.fs_ncg);
@@ -311,8 +312,7 @@ pass5(void)
 		cstotal.cs_ndir += newcg->cg_cs.cs_ndir;
 
 		cs = &fs->fs_cs(fs, c);
-		if (cursnapshot == 0 &&
-		    memcmp(&newcg->cg_cs, cs, sizeof *cs) != 0 &&
+		if (memcmp(&newcg->cg_cs, cs, sizeof *cs) != 0 &&
 		    dofix(&idesc[0], "FREE BLK COUNT(S) WRONG IN SUPERBLK")) {
 			memmove(cs, &newcg->cg_cs, sizeof *cs);
 			sbdirty();
@@ -322,83 +322,26 @@ pass5(void)
 			dirty(cgbp);
 			continue;
 		}
-		if (cursnapshot == 0 &&
-		    memcmp(newcg, cg, basesize) != 0 &&
+		if (memcmp(newcg, cg, basesize) != 0 &&
 		    dofix(&idesc[2], "SUMMARY INFORMATION BAD")) {
 			memmove(cg, newcg, (size_t)basesize);
 			dirty(cgbp);
 		}
 		if (usedsoftdep || debug)
 			update_maps(cg, newcg, 0);
-		if (cursnapshot == 0 &&
-		    memcmp(cg_inosused(newcg), cg_inosused(cg), mapsize) != 0 &&
+		if (memcmp(cg_inosused(newcg), cg_inosused(cg), mapsize) != 0 &&
 		    dofix(&idesc[1], "BLK(S) MISSING IN BIT MAPS")) {
 			memmove(cg_inosused(cg), cg_inosused(newcg),
 			      (size_t)mapsize);
 			dirty(cgbp);
 		}
 	}
-	if (cursnapshot == 0 &&
-	    memcmp(&cstotal, &fs->fs_cstotal, sizeof cstotal) != 0
+	if (memcmp(&cstotal, &fs->fs_cstotal, sizeof cstotal) != 0
 	    && dofix(&idesc[0], "SUMMARY BLK COUNT(S) WRONG IN SUPERBLK")) {
 		memmove(&fs->fs_cstotal, &cstotal, sizeof cstotal);
 		fs->fs_ronly = 0;
 		fs->fs_fmod = 0;
 		sbdirty();
-	}
-
-	/*
-	 * When doing background fsck on a snapshot, figure out whether
-	 * the superblock summary is inaccurate and correct it when
-	 * necessary.
-	 */
-	if (cursnapshot != 0) {
-		cmd.size = 1;
-
-		cmd.value = cstotal.cs_ndir - fs->fs_cstotal.cs_ndir;
-		if (cmd.value != 0) {
-			if (debug)
-				printf("adjndir by %+" PRIi64 "\n", cmd.value);
-			if (bkgrdsumadj == 0 || sysctl(adjndir, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF DIRECTORIES", cmd.value);
-		}
-
-		cmd.value = cstotal.cs_nbfree - fs->fs_cstotal.cs_nbfree;
-		if (cmd.value != 0) {
-			if (debug)
-				printf("adjnbfree by %+" PRIi64 "\n", cmd.value);
-			if (bkgrdsumadj == 0 || sysctl(adjnbfree, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE BLOCKS", cmd.value);
-		}
-
-		cmd.value = cstotal.cs_nifree - fs->fs_cstotal.cs_nifree;
-		if (cmd.value != 0) {
-			if (debug)
-				printf("adjnifree by %+" PRIi64 "\n", cmd.value);
-			if (bkgrdsumadj == 0 || sysctl(adjnifree, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE INODES", cmd.value);
-		}
-
-		cmd.value = cstotal.cs_nffree - fs->fs_cstotal.cs_nffree;
-		if (cmd.value != 0) {
-			if (debug)
-				printf("adjnffree by %+" PRIi64 "\n", cmd.value);
-			if (bkgrdsumadj == 0 || sysctl(adjnffree, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE FRAGS", cmd.value);
-		}
-
-		cmd.value = cstotal.cs_numclusters - fs->fs_cstotal.cs_numclusters;
-		if (cmd.value != 0) {
-			if (debug)
-				printf("adjnumclusters by %+" PRIi64 "\n", cmd.value);
-			if (bkgrdsumadj == 0 || sysctl(adjnumclusters, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE CLUSTERS", cmd.value);
-		}
 	}
 }
 
