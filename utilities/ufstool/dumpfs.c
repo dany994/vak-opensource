@@ -228,7 +228,7 @@ dumpfs(const char *name)
 	printf("cgrotor\t%d\tfmod\t%d\tronly\t%d\tclean\t%d\n",
 	    afs.fs_cgrotor, afs.fs_fmod, afs.fs_ronly, afs.fs_clean);
 	printf("metaspace %jd\tavgfpdir %d\tavgfilesize %d\n",
-	    afs.fs_metaspace, afs.fs_avgfpdir, afs.fs_avgfilesize);
+	    (intmax_t)afs.fs_metaspace, afs.fs_avgfpdir, afs.fs_avgfilesize);
 	printf("flags\t");
 	if (afs.fs_old_flags & FS_FLAGS_UPDATED)
 		fsflags = afs.fs_flags;
@@ -403,13 +403,13 @@ marshal(const char *name)
 	printf("-f %d ", fs->fs_fsize);
 	printf("-g %d ", fs->fs_avgfilesize);
 	printf("-h %d ", fs->fs_avgfpdir);
-	printf("-i %jd ", fragroundup(fs, lblktosize(fs, fragstoblks(fs,
+	printf("-i %jd ", (intmax_t)fragroundup(fs, lblktosize(fs, fragstoblks(fs,
 	    fs->fs_fpg)) / fs->fs_ipg));
 	if (fs->fs_flags & FS_SUJ)
 		printf("-j ");
 	if (fs->fs_flags & FS_GJOURNAL)
 		printf("-J ");
-	printf("-k %jd ", fs->fs_metaspace);
+	printf("-k %jd ", (intmax_t)fs->fs_metaspace);
 	if (fs->fs_flags & FS_MULTILABEL)
 		printf("-l ");
 	printf("-m %d ", fs->fs_minfree);
