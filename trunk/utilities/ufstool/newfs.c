@@ -50,7 +50,6 @@
 #include <err.h>
 #include <errno.h>
 #include <inttypes.h>
-#include <paths.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -285,14 +284,6 @@ main(int argc, char *argv[])
 	special = argv[0];
 	if (!special[0])
 		err(1, "empty file/special name");
-	cp = strrchr(special, '/');
-	if (cp == 0) {
-		/*
-		 * No path prefix; try prefixing _PATH_DEV.
-		 */
-		snprintf(device, sizeof(device), "%s%s", _PATH_DEV, special);
-		special = device;
-	}
 
 	if (is_file) {
 		/* bypass ufs_disk_fillout_blank */
@@ -313,21 +304,15 @@ main(int argc, char *argv[])
 	if (fstat(disk.d_fd, &st) < 0)
 		err(1, "%s", special);
 	if ((st.st_mode & S_IFMT) != S_IFCHR) {
-		warn("%s: not a character-special device", special);
 		is_file = 1;	/* assume it is a file */
 		dkname = special;
-		if (sectorsize == 0)
-			sectorsize = 512;
 		mediasize = st.st_size;
-		/* set fssize from the partition */
-	} else {
-	    if (sectorsize == 0)
-                sectorsize = 0;	/* back out on error for safety */
-#if 0
-            if (sectorsize && ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize) != -1)
-                getfssize(&fssize, special, mediasize / sectorsize, reserved);
-#endif
 	}
+        if (sectorsize == 0)
+                sectorsize = DEV_BSIZE;
+        /* TODO: set fssize from the partition */
+        if (fssize == 0)
+                getfssize(&fssize, special, mediasize / sectorsize, reserved);
 	if (sectorsize <= 0)
 		errx(1, "%s: no default sector size", special);
 	if (fsize <= 0)
@@ -482,7 +467,7 @@ expand_number_int(const char *buf, int *num)
 	rval = expand_number(buf, &num64);
 	if (rval < 0)
 		return (rval);
-	if (num64 > INT_MAX || num64 < INT_MIN) {
+	if (num64 > INT_MAX || (int64_t)num64 < INT_MIN) {
 		errno = ERANGE;
 		return (-1);
 	}

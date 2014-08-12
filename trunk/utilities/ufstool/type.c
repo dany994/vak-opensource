@@ -33,8 +33,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fstab.h>
-#include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,8 +43,6 @@
 
 #include "libufs.h"
 
-/* Internally, track the 'name' value, it's ours. */
-#define	MINE_NAME	0x01
 /* Track if its fd points to a writable device. */
 #define	MINE_WRITE	0x02
 
@@ -58,10 +54,6 @@ ufs_disk_close(struct uufsd *disk)
 	if (disk->d_inoblock != NULL) {
 		free(disk->d_inoblock);
 		disk->d_inoblock = NULL;
-	}
-	if (disk->d_mine & MINE_NAME) {
-		free((char *)(intptr_t)disk->d_name);
-		disk->d_name = NULL;
 	}
 	if (disk->d_sbcsum != NULL) {
 		free(disk->d_sbcsum);
@@ -86,59 +78,13 @@ ufs_disk_fillout(struct uufsd *disk, const char *name)
 int
 ufs_disk_fillout_blank(struct uufsd *disk, const char *name)
 {
-	struct stat st;
-	struct fstab *fs;
-	const char *oname;
-	char dev[MAXPATHLEN];
-	int fd, ret;
+	int fd;
 
 	ERROR(disk, NULL);
 
-	oname = name;
-again:	if ((ret = stat(name, &st)) < 0) {
-		if (*name != '/') {
-			snprintf(dev, sizeof(dev), "%s%s", _PATH_DEV, name);
-			name = dev;
-			goto again;
-		}
-		/*
-		 * The given object doesn't exist, but don't panic just yet -
-		 * it may be still mount point listed in /etc/fstab, but without
-		 * existing corresponding directory.
-		 */
-		name = oname;
-	}
-	if (ret >= 0 && S_ISREG(st.st_mode)) {
-		/* Possibly a disk image, give it a try.  */
-		;
-	} else if (ret >= 0 && S_ISCHR(st.st_mode)) {
-		/* This is what we need, do nothing. */
-		;
-	} else if ((fs = getfsfile(name)) != NULL) {
-		/*
-		 * The given mount point is listed in /etc/fstab.
-		 * It is possible that someone unmounted file system by hand
-		 * and different file system is mounted on this mount point,
-		 * but we still prefer /etc/fstab entry, because on the other
-		 * hand, there could be /etc/fstab entry for this mount
-		 * point, but file system is not mounted yet (eg. noauto) and
-		 * statfs(2) will point us at different file system.
-		 */
-		name = fs->fs_spec;
-	} else if (ret >= 0 && S_ISDIR(st.st_mode)) {
-		/*
-		 * The mount point is not listed in /etc/fstab, so it may be
-		 * file system mounted by hand.
-		 */
-		ERROR(disk, "could not find special device");
-		return (-1);
-	} else {
-		ERROR(disk, "could not find special device");
-		return (-1);
-	}
 	fd = open(name, O_RDONLY);
 	if (fd == -1) {
-		ERROR(disk, "could not open special device");
+		ERROR(disk, "could not open disk image");
 		return (-1);
 	}
 
@@ -153,17 +99,7 @@ again:	if ((ret = stat(name, &st)) < 0) {
 	disk->d_ufs = 0;
 	disk->d_error = NULL;
 	disk->d_sbcsum = NULL;
-
-	if (oname != name) {
-		name = strdup(name);
-		if (name == NULL) {
-			ERROR(disk, "could not allocate memory for disk name");
-			return (-1);
-		}
-		disk->d_mine |= MINE_NAME;
-	}
 	disk->d_name = name;
-
 	return (0);
 }
 
