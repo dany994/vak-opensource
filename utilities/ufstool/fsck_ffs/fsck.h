@@ -334,7 +334,7 @@ int	lfmode;			/* lost & found directory creation mode */
 ufs2_daddr_t n_blks;		/* number of blocks in use */
 ino_t n_files;			/* number of files in use */
 
-volatile sig_atomic_t	got_sigalarm;	/* received a SIGALRM */
+volatile int got_sigalarm;	/* received a SIGALRM */
 
 #define	clearinode(dp) \
 	if (sblock.fs_magic == FS_UFS1_MAGIC) { \
@@ -466,7 +466,7 @@ void		gjournal_check(const char *filesys);
 int		suj_check(const char *filesys);
 void		update_maps(struct cg *, struct cg*, int);
 
-#ifndef TAILQ_FIRST
+
 #define	TAILQ_FIRST(head)	((head)->tqh_first)
 
 #define	TAILQ_LAST(head, headname)					\
@@ -476,6 +476,12 @@ void		update_maps(struct cg *, struct cg*, int);
 
 #define	TAILQ_PREV(elm, headname, field)				\
 	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
+
+#undef	TAILQ_FOREACH
+#define	TAILQ_FOREACH(var, head, field)					\
+	for ((var) = TAILQ_FIRST((head));				\
+	    (var);							\
+	    (var) = TAILQ_NEXT((var), field))
 
 #define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
 	for ((var) = TAILQ_FIRST((head));				\
@@ -496,6 +502,5 @@ void		update_maps(struct cg *, struct cg*, int);
 	for ((var) = LIST_FIRST((head));				\
 	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
 	    (var) = (tvar))
-#endif
 
 #endif	/* !_FSCK_H_ */

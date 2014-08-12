@@ -27,11 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#if 0
-#ifndef lint
-static const char sccsid[] = "@(#)pass1.c	8.6 (Berkeley) 4/28/95";
-#endif /* not lint */
-#endif
 #include <sys/cdefs.h>
 
 #include <sys/param.h>
@@ -297,7 +292,7 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 		goto unknown;
 	}
 	if ((mode == IFBLK || mode == IFCHR) &&
-	    (dev_t)DIP(dp, di_rdev) == NODEV) {
+	    (dev_t)DIP(dp, di_rdev) == 0) {
 		if (debug)
 			printf("bad special-file rdev NODEV:");
 		goto unknown;
