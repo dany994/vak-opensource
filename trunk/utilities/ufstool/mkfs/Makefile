@@ -5,7 +5,7 @@
 
 PROG=	newfs
 DPADD=	${LIBUFS} ${LIBUTIL}
-LDADD=	-lufs #-lutil
+LDADD=	-lufs
 SRCS=	newfs.c mkfs.c geom_bsd_enc.c
 
 WARNS?=	3
