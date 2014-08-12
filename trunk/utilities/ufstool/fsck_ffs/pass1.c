@@ -493,3 +493,38 @@ pass1check(struct inodesc *idesc)
 	}
 	return (res);
 }
+
+/*
+ * Scan each entry in an ea block.
+ */
+int
+eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
+{
+#if 1
+	return (0);
+#else
+	struct bufarea *bp;
+	u_int dsize, n;
+	u_char *cp;
+	long blksiz;
+	char dbuf[DIRBLKSIZ];
+
+	printf("Inode %ju extsize %ju\n",
+	   (intmax_t)idesc->id_number, (intmax_t)dp->di_extsize);
+	if (dp->di_extsize == 0)
+		return 0;
+	if (dp->di_extsize <= sblock.fs_fsize)
+		blksiz = sblock.fs_fsize;
+	else
+		blksiz = sblock.fs_bsize;
+	printf("blksiz = %ju\n", (intmax_t)blksiz);
+	bp = getdatablk(dp->di_extb[0], blksiz, BT_EXTATTR);
+	cp = (u_char *)bp->b_un.b_buf;
+	for (n = 0; n < blksiz; n++) {
+		printf("%02x", cp[n]);
+		if ((n & 31) == 31)
+			printf("\n");
+	}
+	return (STOP);
+#endif
+}

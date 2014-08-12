@@ -31,7 +31,6 @@
 
 #include <sys/param.h>
 #include <sys/time.h>
-//#include <sys/sysctl.h>
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>
