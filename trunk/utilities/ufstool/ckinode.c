@@ -27,21 +27,14 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/sysctl.h>
-
-#include <err.h>
 #include <pwd.h>
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
 
-#include "dinode.h"
 #include "dir.h"
 #include "fs.h"
-
 #include "fsck.h"
 
 static ino_t startinum;

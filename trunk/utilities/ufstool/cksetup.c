@@ -27,24 +27,13 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/stat.h>
 #include <sys/file.h>
-#include <sys/sysctl.h>
-
-#include <ctype.h>
-#include <err.h>
 #include <errno.h>
-#include <limits.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "dinode.h"
 #include "fs.h"
-
-
 #include "fsck.h"
 
 struct bufarea asblk;

@@ -27,20 +27,12 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/sysctl.h>
-
-#include <err.h>
 #include <inttypes.h>
-#include <limits.h>
 #include <string.h>
 
-#include "dinode.h"
 #include "fs.h"
 #include "libufs.h"
-
 #include "fsck.h"
 
 static void check_maps(u_char *, u_char *, int, ufs2_daddr_t, const char *,

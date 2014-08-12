@@ -27,30 +27,13 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-
-#include <err.h>
-#include <errno.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <signal.h>
-#include <unistd.h>
 
-#include "dinode.h"
 #include "dir.h"
 #include "fs.h"
-
 #include "fsck.h"
 
 static void slowio_start(void);

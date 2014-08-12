@@ -51,23 +51,15 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/mount.h>
 #include <sys/stat.h>
-
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <strings.h>
-#include <err.h>
 #include <assert.h>
 
-#include "dinode.h"
 #include "fs.h"
 #include "libufs.h"
-
 #include "fsck.h"
 
 struct cgchain {

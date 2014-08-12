@@ -25,22 +25,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
-#include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
-
-#include <errno.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
-#include "dinode.h"
 #include "fs.h"
-
 #include "libufs.h"
 
 /* Track if its fd points to a writable device. */

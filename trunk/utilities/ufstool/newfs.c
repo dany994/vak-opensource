@@ -36,31 +36,21 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 /*
  * newfs: friendly front end to mkfs
  */
 #include <sys/param.h>
-#include <sys/stat.h>
 #include <sys/file.h>
-#include <sys/mount.h>
-
-#include <ctype.h>
-#include <err.h>
 #include <errno.h>
 #include <inttypes.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <unistd.h>
 
 #include "dir.h"
-#include "dinode.h"
 #include "fs.h"
-
+#include "libufs.h"
 #include "newfs.h"
 
 int	Eflag;			/* Erase previous disk contents */

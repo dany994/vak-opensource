@@ -27,28 +27,13 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/file.h>
-#include <sys/mount.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/sysctl.h>
-#include <sys/uio.h>
 #include <sys/time.h>
-
-#include <err.h>
-#include <errno.h>
-#include <grp.h>
 #include <stdint.h>
-#include <string.h>
-#include <time.h>
 #include <signal.h>
 
-#include "dinode.h"
 #include "fs.h"
-
 #include "fsck.h"
 
 static void usage(void);
@@ -59,7 +44,6 @@ int
 main(int argc, char *argv[])
 {
 	int ch;
-	struct rlimit rlimit;
 	struct itimerval itimerval;
 	int ret = 0;
 
@@ -146,14 +130,6 @@ main(int argc, char *argv[])
 	if (ckclean)
 		(void)signal(SIGQUIT, catchquit);
 
-	/*
-	 * Push up our allowed memory limit so we can cope
-	 * with huge file systems.
-	 */
-	if (getrlimit(RLIMIT_DATA, &rlimit) == 0) {
-		rlimit.rlim_cur = rlimit.rlim_max;
-		(void)setrlimit(RLIMIT_DATA, &rlimit);
-	}
 	while (argc-- > 0)
 		(void)checkfilesys(*argv++);
 

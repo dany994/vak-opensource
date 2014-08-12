@@ -40,15 +40,10 @@
  */
 
 #include <sys/param.h>
-
-#include <limits.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdint.h>
 
-#include "dinode.h"
 #include "fs.h"
-
 #include "debug.h"
 
 #ifdef FS_DEBUG

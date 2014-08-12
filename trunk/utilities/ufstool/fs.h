@@ -33,7 +33,6 @@
 #ifndef _UFS_FFS_FS_H_
 #define _UFS_FFS_FS_H_
 
-#include <sys/mount.h>
 #include "dinode.h"
 
 /*
