@@ -6,5 +6,7 @@ WARNS?=	2
 DPADD=	${LIBUFS}
 LDADD=	-lufs
 MAN=	dumpfs.8
+CFLAGS+= -I${.CURDIR}/.. -I${.CURDIR}/../libufs -DMAXBSIZE=8192 -Werror
+LDFLAGS+= -L${.CURDIR}/../libufs
 
 .include <bsd.prog.mk>

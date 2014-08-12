@@ -42,20 +42,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char copyright[] =
-"@(#) Copyright (c) 1983, 1992, 1993\n\
-	The Regents of the University of California.  All rights reserved.\n";
-#endif /* not lint */
-
-#ifndef lint
-#if 0
-static char sccsid[] = "@(#)dumpfs.c	8.5 (Berkeley) 4/29/95";
-#endif
-static const char rcsid[] =
-  "$FreeBSD$";
-#endif /* not lint */
-
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/disklabel.h>
@@ -73,6 +59,7 @@ static const char rcsid[] =
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 #define	afs	disk.d_fs
 #define	acg	disk.d_cg
@@ -88,7 +75,7 @@ static int	marshal(const char *);
 static void	pbits(void *, int);
 static void	pblklist(void *, int, off_t, int);
 static void	ufserr(const char *);
-static void	usage(void) __dead2;
+static void	usage(void);
 
 int
 main(int argc, char *argv[])
