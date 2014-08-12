@@ -469,11 +469,13 @@ void		update_maps(struct cg *, struct cg*, int);
 
 #define	TAILQ_FIRST(head)	((head)->tqh_first)
 
+#undef TAILQ_LAST
 #define	TAILQ_LAST(head, headname)					\
 	(*(((struct headname *)((head)->tqh_last))->tqh_last))
 
 #define	TAILQ_NEXT(elm, field) ((elm)->field.tqe_next)
 
+#undef TAILQ_PREV
 #define	TAILQ_PREV(elm, headname, field)				\
 	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
 
