@@ -67,7 +67,126 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <sys/queue.h>
+/*
+ * Copied from <sys/queue.h>.
+ */
+#define	TAILQ_HEAD(name, type)						\
+struct name {								\
+	struct type *tqh_first;	/* first element */			\
+	struct type **tqh_last;	/* addr of last element */		\
+}
+
+#define	TAILQ_ENTRY(type)						\
+struct {								\
+	struct type *tqe_next;	/* next element */			\
+	struct type **tqe_prev;	/* address of previous element */	\
+}
+
+#define	TAILQ_INIT(head) do {						\
+	(head)->tqh_first = NULL;					\
+	(head)->tqh_last = &(head)->tqh_first;				\
+} while (/*CONSTCOND*/0)
+
+#define	TAILQ_INSERT_HEAD(head, elm, field) do {			\
+	if (((elm)->field.tqe_next = (head)->tqh_first) != NULL)	\
+		(head)->tqh_first->field.tqe_prev =			\
+		    &(elm)->field.tqe_next;				\
+	else								\
+		(head)->tqh_last = &(elm)->field.tqe_next;		\
+	(head)->tqh_first = (elm);					\
+	(elm)->field.tqe_prev = &(head)->tqh_first;			\
+} while (/*CONSTCOND*/0)
+
+#define	TAILQ_INSERT_TAIL(head, elm, field) do {			\
+	(elm)->field.tqe_next = NULL;					\
+	(elm)->field.tqe_prev = (head)->tqh_last;			\
+	*(head)->tqh_last = (elm);					\
+	(head)->tqh_last = &(elm)->field.tqe_next;			\
+} while (/*CONSTCOND*/0)
+
+#define	TAILQ_REMOVE(head, elm, field) do {				\
+	if (((elm)->field.tqe_next) != NULL)				\
+		(elm)->field.tqe_next->field.tqe_prev = 		\
+		    (elm)->field.tqe_prev;				\
+	else								\
+		(head)->tqh_last = (elm)->field.tqe_prev;		\
+	*(elm)->field.tqe_prev = (elm)->field.tqe_next;			\
+} while (/*CONSTCOND*/0)
+
+#define	TAILQ_EMPTY(head)	((head)->tqh_first == NULL)
+#define	TAILQ_FIRST(head)	((head)->tqh_first)
+#define	TAILQ_NEXT(elm, field)	((elm)->field.tqe_next)
+
+#define	TAILQ_LAST(head, headname)					\
+	(*(((struct headname *)((head)->tqh_last))->tqh_last))
+
+#define	TAILQ_PREV(elm, headname, field)				\
+	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
+
+#define	TAILQ_FOREACH(var, head, field)					\
+	for ((var) = TAILQ_FIRST((head));				\
+	    (var);							\
+	    (var) = TAILQ_NEXT((var), field))
+
+#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TAILQ_FIRST((head));				\
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
+	    (var) = (tvar))
+
+#define	TAILQ_FOREACH_REVERSE(var, head, headname, field)		\
+	for ((var) = (*(((struct headname *)((head)->tqh_last))->tqh_last));	\
+		(var);							\
+		(var) = (*(((struct headname *)((var)->field.tqe_prev))->tqh_last)))
+
+#define	TAILQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
+	for ((var) = TAILQ_LAST((head), headname);			\
+	    (var) && ((tvar) = TAILQ_PREV((var), headname, field), 1);	\
+	    (var) = (tvar))
+
+#define	LIST_ENTRY(type)						\
+struct {								\
+	struct type *le_next;	/* next element */			\
+	struct type **le_prev;	/* address of previous next element */	\
+}
+
+/*
+ * List definitions.
+ */
+#define	LIST_HEAD(name, type)						\
+struct name {								\
+	struct type *lh_first;	/* first element */			\
+}
+
+#define	LIST_HEAD_INITIALIZER(head)					\
+	{ NULL }
+
+#define	LIST_FIRST(head)	((head)->lh_first)
+
+#define	LIST_NEXT(elm, field)	((elm)->field.le_next)
+
+#define	LIST_FOREACH(var, head, field)					\
+	for ((var) = ((head)->lh_first);				\
+		(var);							\
+		(var) = ((var)->field.le_next))
+
+#define	LIST_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = LIST_FIRST((head));				\
+	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
+	    (var) = (tvar))
+
+#define	LIST_INSERT_HEAD(head, elm, field) do {				\
+	if (((elm)->field.le_next = (head)->lh_first) != NULL)		\
+		(head)->lh_first->field.le_prev = &(elm)->field.le_next;\
+	(head)->lh_first = (elm);					\
+	(elm)->field.le_prev = &(head)->lh_first;			\
+} while (/*CONSTCOND*/0)
+
+#define	LIST_REMOVE(elm, field) do {					\
+	if ((elm)->field.le_next != NULL)				\
+		(elm)->field.le_next->field.le_prev = 			\
+		    (elm)->field.le_prev;				\
+	*(elm)->field.le_prev = (elm)->field.le_next;			\
+} while (/*CONSTCOND*/0)
 
 #define	MAXDUP		10	/* limit on dup blks (per inode) */
 #define	MAXBAD		10	/* limit on bad blks (per inode) */
@@ -464,44 +583,5 @@ int		setup(char *dev, int part_num);
 void		gjournal_check(const char *filesys);
 int		suj_check(const char *filesys);
 void		update_maps(struct cg *, struct cg*, int);
-
-
-#define	TAILQ_FIRST(head)	((head)->tqh_first)
-
-#undef TAILQ_LAST
-#define	TAILQ_LAST(head, headname)					\
-	(*(((struct headname *)((head)->tqh_last))->tqh_last))
-
-#define	TAILQ_NEXT(elm, field) ((elm)->field.tqe_next)
-
-#undef TAILQ_PREV
-#define	TAILQ_PREV(elm, headname, field)				\
-	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
-
-#undef	TAILQ_FOREACH
-#define	TAILQ_FOREACH(var, head, field)					\
-	for ((var) = TAILQ_FIRST((head));				\
-	    (var);							\
-	    (var) = TAILQ_NEXT((var), field))
-
-#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = TAILQ_FIRST((head));				\
-	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
-	    (var) = (tvar))
-
-#define	TAILQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
-	for ((var) = TAILQ_LAST((head), headname);			\
-	    (var) && ((tvar) = TAILQ_PREV((var), headname, field), 1);	\
-	    (var) = (tvar))
-
-
-#define	LIST_FIRST(head)	((head)->lh_first)
-
-#define	LIST_NEXT(elm, field)	((elm)->field.le_next)
-
-#define	LIST_FOREACH_SAFE(var, head, field, tvar)			\
-	for ((var) = LIST_FIRST((head));				\
-	    (var) && ((tvar) = LIST_NEXT((var), field), 1);		\
-	    (var) = (tvar))
 
 #endif	/* !_FSCK_H_ */

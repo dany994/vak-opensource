@@ -2,10 +2,10 @@
  * Copyright (c) 2000 Christoph Herrmann, Thomas-Henning von Kamptz
  * Copyright (c) 1980, 1989, 1993 The Regents of the University of California.
  * All rights reserved.
- * 
+ *
  * This code is derived from software contributed to Berkeley by
  * Christoph Herrmann and Thomas-Henning von Kamptz, Munich and Frankfurt.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -22,7 +22,7 @@
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -45,8 +45,8 @@
 /* ********************************************************** INCLUDES ***** */
 #include <sys/param.h>
 
-#include <ufs/ufs/dinode.h>
-#include <ufs/ffs/fs.h>
+#include "dinode.h"
+#include "fs.h"
 
 void dbg_open(const char *);
 void dbg_close(void);
