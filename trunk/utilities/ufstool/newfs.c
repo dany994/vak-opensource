@@ -58,7 +58,6 @@
 #include <syslog.h>
 #include <unistd.h>
 
-#include "disklabel.h"
 #include "dir.h"
 #include "dinode.h"
 #include "fs.h"
@@ -101,11 +100,8 @@ static u_char   bootarea[BBSIZE];
 static int	is_file;		/* work on a file, not a device */
 static char	*dkname;
 static char	*disktype;
-static int	unlabeled;
 
 static void getfssize(intmax_t *, const char *p, intmax_t, intmax_t);
-static struct disklabel *getdisklabel(char *s);
-static void rewritelabel(char *s, struct disklabel *lp);
 static void usage(void);
 static int expand_number_int(const char *buf, int *num);
 
@@ -114,9 +110,6 @@ ufs2_daddr_t part_ofs; /* partition offset in blocks, used with files */
 int
 main(int argc, char *argv[])
 {
-	struct partition *pp;
-	struct disklabel *lp;
-	struct partition oldpartition;
 	struct stat st;
 	char *cp, *special;
 	intmax_t reserved;
@@ -335,39 +328,6 @@ main(int argc, char *argv[])
                 getfssize(&fssize, special, mediasize / sectorsize, reserved);
 #endif
 	}
-	pp = NULL;
-	lp = getdisklabel(special);
-	if (lp != NULL) {
-		if (!is_file) /* already set for files */
-			part_name = special[strlen(special) - 1];
-		if ((part_name < 'a' || part_name - 'a' >= MAXPARTITIONS) &&
-				!isdigit(part_name))
-			errx(1, "%s: can't figure out file system partition",
-					special);
-		cp = &part_name;
-#if 0
-		if (isdigit(*cp))
-			pp = &lp->d_partitions[RAW_PART];
-		else
-#endif
-			pp = &lp->d_partitions[*cp - 'a'];
-		oldpartition = *pp;
-		if (pp->p_size == 0)
-			errx(1, "%s: `%c' partition is unavailable",
-			    special, *cp);
-		if (pp->p_fstype == FS_BOOT)
-			errx(1, "%s: `%c' partition overlaps boot program",
-			    special, *cp);
-		getfssize(&fssize, special, pp->p_size, reserved);
-		if (sectorsize == 0)
-			sectorsize = lp->d_secsize;
-		if (fsize == 0)
-			fsize = pp->p_fsize;
-		if (bsize == 0)
-			bsize = pp->p_frag * pp->p_fsize;
-		if (is_file)
-			part_ofs = pp->p_offset;
-	}
 	if (sectorsize <= 0)
 		errx(1, "%s: no default sector size", special);
 	if (fsize <= 0)
@@ -385,16 +345,8 @@ main(int argc, char *argv[])
 
 		sectorsize = DEV_BSIZE;
 		fssize *= secperblk;
-		if (pp != NULL)
-			pp->p_size *= secperblk;
 	}
-	mkfs(pp, special);
-	if (!unlabeled) {
-		if (realsectorsize != DEV_BSIZE)
-			pp->p_size /= realsectorsize / DEV_BSIZE;
-		if (!Nflag && bcmp(pp, &oldpartition, sizeof(oldpartition)))
-			rewritelabel(special, lp);
-	}
+	mkfs(special);
 	ufs_disk_close(&disk);
 	if (!jflag)
 		exit(0);
@@ -417,52 +369,6 @@ getfssize(intmax_t *fsz, const char *s, intmax_t disksize, intmax_t reserved)
 	else if (*fsz > available)
 		errx(1, "%s: maximum file system size is %jd",
 		    s, available);
-}
-
-struct disklabel *
-getdisklabel(char *s)
-{
-	static struct disklabel lab;
-	struct disklabel *lp;
-#if 0
-	if (is_file) {
-		if (read(disk.d_fd, bootarea, BBSIZE) != BBSIZE)
-			err(4, "cannot read bootarea");
-		if (bsd_disklabel_le_dec(
-		    bootarea + (0 /* labeloffset */ +
-				1 /* labelsoffset */ * sectorsize),
-		    &lab, MAXPARTITIONS))
-			errx(1, "no valid label found");
-
-		lp = &lab;
-		return &lab;
-	}
-	if (ioctl(disk.d_fd, DIOCGDINFO, (char *)&lab) != -1)
-		return (&lab);
-#endif
-	unlabeled++;
-	return (NULL);
-}
-
-void
-rewritelabel(char *s, struct disklabel *lp)
-{
-	if (unlabeled)
-		return;
-	lp->d_checksum = 0;
-	//lp->d_checksum = dkcksum(lp);
-#if 0
-	if (is_file) {
-		bsd_disklabel_le_enc(bootarea + 0 /* labeloffset */ +
-			1 /* labelsoffset */ * sectorsize, lp);
-		lseek(disk.d_fd, 0, SEEK_SET);
-		if (write(disk.d_fd, bootarea, BBSIZE) != BBSIZE)
-			errx(1, "cannot write label");
-		return;
-	}
-	if (ioctl(disk.d_fd, DIOCWDINFO, (char *)lp) == -1)
-		warn("ioctl (WDINFO): %s: can't rewrite disk label", s);
-#endif
 }
 
 static void
