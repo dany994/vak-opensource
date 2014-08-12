@@ -48,8 +48,6 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fstab.h>
-#include <paths.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,7 +64,6 @@
 static struct uufsd disk;
 
 static int	dumpfs(const char *);
-static int	dumpfsid(void);
 static int	dumpcg(void);
 static int	dumpfreespace(const char *, int);
 static void	dumpfreespacecg(int);
@@ -80,20 +77,17 @@ int
 main(int argc, char *argv[])
 {
 	const char *name;
-	int ch, dofreespace, domarshal, dolabel, eval;
+	int ch, dofreespace, domarshal, eval;
 
-	dofreespace = domarshal = dolabel = eval = 0;
+	dofreespace = domarshal = eval = 0;
 
-	while ((ch = getopt(argc, argv, "lfm")) != -1) {
+	while ((ch = getopt(argc, argv, "fm")) != -1) {
 		switch (ch) {
 		case 'f':
 			dofreespace++;
 			break;
 		case 'm':
 			domarshal = 1;
-			break;
-		case 'l':
-			dolabel = 1;
 			break;
 		case '?':
 		default:
@@ -120,21 +114,11 @@ main(int argc, char *argv[])
 			eval |= dumpfreespace(name, dofreespace);
 		else if (domarshal)
 			eval |= marshal(name);
-		else if (dolabel)
-			eval |= dumpfsid();
 		else
 			eval |= dumpfs(name);
 		ufs_disk_close(&disk);
 	}
 	exit(eval);
-}
-
-static int
-dumpfsid(void)
-{
-
-	printf("%sufsid/%08x%08x\n", _PATH_DEV, afs.fs_id[0], afs.fs_id[1]);
-	return 0;
 }
 
 static int
@@ -491,6 +475,6 @@ ufserr(const char *name)
 static void
 usage(void)
 {
-	(void)fprintf(stderr, "usage: dumpfs [-flm] filesys | device\n");
+	(void)fprintf(stderr, "usage: dumpfs [-fm] filesys\n");
 	exit(1);
 }

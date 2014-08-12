@@ -400,7 +400,6 @@ ufs2_daddr_t	allocblk(long frags);
 ino_t		allocdir(ino_t parent, ino_t request, int mode);
 ino_t		allocino(ino_t request, int type);
 void		blkerror(ino_t ino, const char *type, ufs2_daddr_t blk);
-char	       *blockcheck(char *name);
 int		blread(int fd, char *buf, ufs2_daddr_t blk, long size);
 void		bufinit(void);
 void		blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size);

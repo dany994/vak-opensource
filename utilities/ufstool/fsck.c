@@ -40,9 +40,7 @@
 
 #include <err.h>
 #include <errno.h>
-#include <fstab.h>
 #include <grp.h>
-#include <paths.h>
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
@@ -201,12 +199,6 @@ checkfilesys(char *filesys)
 	cdevname = filesys;
 	if (debug && ckclean)
 		pwarn("starting\n");
-	/*
-	 * Make best effort to get the disk name. Check first to see
-	 * if it is listed among the mounted file systems. Failing that
-	 * check to see if it is listed in /etc/fstab.
-	 */
-	filesys = blockcheck(filesys);
 
 	sblock_init();
 	if (ckclean && skipclean) {

@@ -48,7 +48,6 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -170,39 +169,6 @@ main(int argc, char **argv)
 	if (argc != 1)
 		usage();
 	device = *argv;
-
-	/*
-	 * Now we try to guess the (raw)device name.
-	 */
-	if (0 == strrchr(device, '/') && stat(device, &st) == -1) {
-		/*-
-		 * No path prefix was given, so try in this order:
-		 *     /dev/r%s
-		 *     /dev/%s
-		 *     /dev/vinum/r%s
-		 *     /dev/vinum/%s.
-		 *
-		 * FreeBSD now doesn't distinguish between raw and  block
-		 * devices any longer, but it should still work this way.
-		 */
-		len = strlen(device) + strlen(_PATH_DEV) + 2 + strlen("vinum/");
-		special = (char *)malloc(len);
-		if (special == NULL)
-			errx(1, "malloc failed");
-		snprintf(special, len, "%sr%s", _PATH_DEV, device);
-		if (stat(special, &st) == -1) {
-			snprintf(special, len, "%s%s", _PATH_DEV, device);
-			if (stat(special, &st) == -1) {
-				snprintf(special, len, "%svinum/r%s",
-				    _PATH_DEV, device);
-				if (stat(special, &st) == -1)
-					/* For now this is the 'last resort' */
-					snprintf(special, len, "%svinum/%s",
-					    _PATH_DEV, device);
-			}
-		}
-		device = special;
-	}
 
 	if (ufs_disk_fillout(&disk, device) == -1)
 		err(1, "ufs_disk_fillout(%s) failed: %s", device, disk.d_error);
