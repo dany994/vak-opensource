@@ -29,10 +29,8 @@
  *	@(#)ffs_subr.c	8.5 (Berkeley) 3/21/95
  */
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 
-#include "dinode.h"
 #include "fs.h"
 
 /*

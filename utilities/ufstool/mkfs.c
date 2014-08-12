@@ -36,29 +36,17 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/file.h>
 #include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <err.h>
 #include <grp.h>
-#include <limits.h>
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <time.h>
-#include <unistd.h>
 
-#include "dinode.h"
 #include "dir.h"
 #include "fs.h"
+#include "libufs.h"
 #include "newfs.h"
 
 /*

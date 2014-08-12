@@ -41,11 +41,6 @@
 
 /* ********************************************************** INCLUDES ***** */
 #include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
-
-#include <ctype.h>
-#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -53,10 +48,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "dinode.h"
 #include "fs.h"
 #include "libufs.h"
-
 #include "debug.h"
 
 /* *********************************************************** GLOBALS ***** */

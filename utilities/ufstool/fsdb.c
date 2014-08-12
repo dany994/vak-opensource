@@ -29,8 +29,6 @@
  */
 
 #include <sys/param.h>
-#include <ctype.h>
-#include <err.h>
 #include <grp.h>
 #include <histedit.h>
 #include <pwd.h>
@@ -38,10 +36,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "dinode.h"
 #include "dir.h"
 #include "fs.h"
-
 #include "fsdb.h"
 #include "fsck.h"
 

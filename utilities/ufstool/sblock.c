@@ -25,21 +25,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
-
 #include <errno.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
 
-#include "dinode.h"
 #include "fs.h"
-
 #include "libufs.h"
 
 static int superblocks[] = SBLOCKSEARCH;

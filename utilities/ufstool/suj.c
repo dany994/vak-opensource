@@ -24,29 +24,16 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
-
-#include <assert.h>
-#include <err.h>
 #include <setjmp.h>
 #include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <strings.h>
 #include <sysexits.h>
-#include <time.h>
 
-#include "dinode.h"
 #include "dir.h"
 #include "fs.h"
 #include "libufs.h"
-
 #include "fsck.h"
 
 #define	DOTDOT_OFFSET	DIRECTSIZ(1)

@@ -43,18 +43,13 @@
  */
 
 #include <sys/param.h>
-#include <sys/time.h>
-
-#include <err.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
 
-#include "dinode.h"
 #include "fs.h"
 #include "libufs.h"
 

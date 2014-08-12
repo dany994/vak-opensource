@@ -25,23 +25,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
-#include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
-
-
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "dinode.h"
 #include "fs.h"
-
 #include "libufs.h"
 
 ssize_t
@@ -136,20 +124,6 @@ bwrite(struct uufsd *disk, ufs2_daddr_t blockno, const void *data, size_t size)
 	return (cnt);
 }
 
-#ifdef __FreeBSD_kernel__
-
-static int
-berase_helper(struct uufsd *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
-{
-	off_t ioarg[2];
-
-	ioarg[0] = blockno * disk->d_bsize;
-	ioarg[1] = size;
-	return (ioctl(disk->d_fd, DIOCGDELETE, ioarg));
-}
-
-#else
-
 static int
 berase_helper(struct uufsd *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
 {
@@ -180,8 +154,6 @@ berase_helper(struct uufsd *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
 	free(zero_chunk);
 	return (rv);
 }
-
-#endif
 
 int
 berase(struct uufsd *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)

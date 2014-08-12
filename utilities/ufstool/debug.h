@@ -42,12 +42,6 @@
 
 #ifdef FS_DEBUG
 
-/* ********************************************************** INCLUDES ***** */
-#include <sys/param.h>
-
-#include "dinode.h"
-#include "fs.h"
-
 void dbg_open(const char *);
 void dbg_close(void);
 void dbg_dump_hex(struct fs *, const char *, unsigned char *);

@@ -29,10 +29,8 @@
  *	@(#)ffs_tables.c	8.1 (Berkeley) 6/11/93
  */
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 
-#include "dinode.h"
 #include "fs.h"
 
 /*

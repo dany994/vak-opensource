@@ -27,17 +27,11 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
-
-#include <err.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "dinode.h"
 #include "fs.h"
-
 #include "fsck.h"
 
 void
