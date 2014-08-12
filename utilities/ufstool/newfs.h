@@ -122,4 +122,4 @@ extern struct uufsd disk;	/* libufs disk structure */
  */
 extern ufs2_daddr_t part_ofs;	/* partition offset in blocks */
 
-void mkfs (struct partition *, char *);
+void mkfs (char *);

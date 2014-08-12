@@ -233,7 +233,7 @@ checkfilesys(char *filesys)
 		}
 	}
 
-	switch (setup(filesys)) {
+	switch (setup(filesys, 0)) {
 	case 0:
 		if (preen)
 			pfatal("CAN'T CHECK FILE SYSTEM.");

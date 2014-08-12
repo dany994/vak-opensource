@@ -41,7 +41,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "disklabel.h"
 #include "dinode.h"
 #include "fs.h"
 
@@ -53,8 +52,7 @@ struct bufarea asblk;
 #define POWEROF2(num)	(((num) & ((num) - 1)) == 0)
 
 static void badsb(int listerr, const char *s);
-static int calcsb(char *dev, int devfd, struct fs *fs);
-static struct disklabel *getdisklabel(char *s, int fd);
+static int calcsb(int part_num, int devfd, struct fs *fs);
 
 /*
  * Read in a superblock finding an alternate if necessary.
@@ -62,7 +60,7 @@ static struct disklabel *getdisklabel(char *s, int fd);
  * is already clean (ckclean and preen mode only).
  */
 int
-setup(char *dev)
+setup(char *dev, int part_num)
 {
 	long cg, asked, i, j;
 	long bmapsize;
@@ -76,9 +74,8 @@ setup(char *dev)
 		printf("Can't stat %s: %s\n", dev, strerror(errno));
 		return (0);
 	}
-	if ((statb.st_mode & S_IFMT) != S_IFCHR &&
-	    (statb.st_mode & S_IFMT) != S_IFBLK) {
-		pfatal("%s is not a disk device", dev);
+	if ((statb.st_mode & S_IFMT) != S_IFREG) {
+		pfatal("%s is not a regular file", dev);
 		if (reply("CONTINUE") == 0) {
 			return (0);
                 }
@@ -102,7 +99,7 @@ setup(char *dev)
 	 */
 	if (readsb(1) == 0) {
 		skipclean = 0;
-		if (bflag || preen || calcsb(dev, fsreadfd, &proto) == 0)
+		if (bflag || preen || calcsb(part_num, fsreadfd, &proto) == 0)
 			return(0);
 		if (reply("LOOK FOR ALTERNATE SUPERBLOCKS") == 0)
 			return (0);
@@ -361,8 +358,6 @@ badsb(int listerr, const char *s)
 void
 sblock_init(void)
 {
-	struct disklabel *lp;
-
 	fswritefd = -1;
 	fsmodified = 0;
 	lfdir = 0;
@@ -372,10 +367,7 @@ sblock_init(void)
 	asblk.b_un.b_buf = Malloc(SBLOCKSIZE);
 	if (sblk.b_un.b_buf == NULL || asblk.b_un.b_buf == NULL)
 		errx(EEXIT, "cannot allocate space for superblock");
-	if ((lp = getdisklabel(NULL, fsreadfd)))
-		real_dev_bsize = dev_bsize = secsize = lp->d_secsize;
-	else
-		dev_bsize = secsize = DEV_BSIZE;
+	dev_bsize = secsize = DEV_BSIZE;
 }
 
 /*
@@ -385,75 +377,57 @@ sblock_init(void)
  * their needed information is available!
  */
 static int
-calcsb(char *dev, int devfd, struct fs *fs)
+calcsb(int part_num, int devfd, struct fs *fs)
 {
-	struct disklabel *lp;
-	struct partition *pp;
-	char *cp;
 	int i, nspf;
+	struct stat statb;
+        unsigned disk_nsectors, disk_ntracks, disk_secpercyl;
+        unsigned part_size, part_fsize, part_frag, part_cpg;
 
-	cp = strchr(dev, '\0') - 1;
-	if (cp == (char *)-1 || ((*cp < 'a' || *cp > 'h') && !isdigit(*cp))) {
-		pfatal("%s: CANNOT FIGURE OUT FILE SYSTEM PARTITION\n", dev);
-		return (0);
-	}
-	lp = getdisklabel(dev, devfd);
-	if (isdigit(*cp))
-		pp = &lp->d_partitions[0];
-	else
-		pp = &lp->d_partitions[*cp - 'a'];
-	if (pp->p_fstype != FS_BSDFFS) {
-		pfatal("%s: NOT LABELED AS A BSD FILE SYSTEM\n", dev);
-		return (0);
-	}
-	if (pp->p_fsize == 0 || pp->p_frag == 0 ||
-	    pp->p_cpg == 0 || pp->p_size == 0) {
-		pfatal("%s: INCOMPLETE LABEL: type %u fsize %d, frag %d, cpg %d, size %d\n",
-		    dev, pp->p_fstype,
-		    pp->p_fsize, pp->p_frag, pp->p_cpg, pp->p_size);
-		return (0);
-	}
+        /* Get disk parameters. */
+	fstat(devfd, &statb);
+        disk_nsectors = statb.st_size / DEV_BSIZE;
+        disk_ntracks = 1;
+        disk_secpercyl = 2048;  /* 1 Mbyte per cylinder */
+
+	if (part_num == 0) {
+	        /* Use whole disk. */
+                part_size = disk_nsectors;
+	} else {
+	        /* Get a partition. */
+                part_size = 0; // TODO
+        }
+        part_fsize = DEV_BSIZE;
+        part_frag = 1;
+        part_cpg = 204800;  /* 100 Mbytes per group */
+
 	memset(fs, 0, sizeof(struct fs));
-	fs->fs_fsize = pp->p_fsize;
-	fs->fs_frag = pp->p_frag;
-	fs->fs_size = pp->p_size;
-	fs->fs_sblkno = roundup(
-		howmany(lp->d_bbsize + lp->d_sbsize, fs->fs_fsize),
-		fs->fs_frag);
-	nspf = fs->fs_fsize / lp->d_secsize;
+	fs->fs_fsize = part_fsize;
+	fs->fs_frag = part_frag;
+	fs->fs_size = part_size;
+	fs->fs_sblkno = 0;
+
+	nspf = fs->fs_fsize / DEV_BSIZE;
 	for (fs->fs_fsbtodb = 0, i = nspf; i > 1; i >>= 1)
 		fs->fs_fsbtodb++;
-	dev_bsize = lp->d_secsize;
+
+	dev_bsize = DEV_BSIZE;
 	if (fs->fs_magic == FS_UFS2_MAGIC) {
-		fs->fs_fpg = pp->p_cpg;
+	        /* Never used? */
+		fs->fs_fpg = part_cpg;
 		fs->fs_ncg = howmany(fs->fs_size, fs->fs_fpg);
 	} else /* if (fs->fs_magic == FS_UFS1_MAGIC) */ {
-		fs->fs_old_cpg = pp->p_cpg;
+		fs->fs_old_cpg = part_cpg;
 		fs->fs_old_cgmask = 0xffffffff;
-		for (i = lp->d_ntracks; i > 1; i >>= 1)
+		for (i = disk_ntracks; i > 1; i >>= 1)
 			fs->fs_old_cgmask <<= 1;
-		if (!POWEROF2(lp->d_ntracks))
+		if (!POWEROF2(disk_ntracks))
 			fs->fs_old_cgmask <<= 1;
-		fs->fs_old_cgoffset = roundup(howmany(lp->d_nsectors, nspf),
+		fs->fs_old_cgoffset = roundup(howmany(disk_nsectors, nspf),
 		    fs->fs_frag);
-		fs->fs_fpg = (fs->fs_old_cpg * lp->d_secpercyl) / nspf;
-		fs->fs_ncg = howmany(fs->fs_size / lp->d_secpercyl,
+		fs->fs_fpg = (fs->fs_old_cpg * disk_secpercyl) / nspf;
+		fs->fs_ncg = howmany(fs->fs_size / disk_secpercyl,
 		    fs->fs_old_cpg);
 	}
 	return (1);
-}
-
-static struct disklabel *
-getdisklabel(char *s, int fd)
-{
-	static struct disklabel lab;
-#if 0
-	if (ioctl(fd, DIOCGDINFO, (char *)&lab) < 0) {
-		if (s == NULL)
-			return ((struct disklabel *)NULL);
-		pwarn("ioctl (GCINFO): %s\n", strerror(errno));
-		errx(EEXIT, "%s: can't read disk label", s);
-	}
-#endif
-	return (&lab);
 }

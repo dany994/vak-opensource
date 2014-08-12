@@ -56,7 +56,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "disklabel.h"
 #include "dinode.h"
 #include "dir.h"
 #include "fs.h"
@@ -105,7 +104,7 @@ do_sbwrite(struct uufsd *disk)
 }
 
 void
-mkfs(struct partition *pp, char *fsys)
+mkfs(char *fsys)
 {
 	int fragsperinode, optimalfpg, origdensity, minfpg, lastminfpg;
 	long i, j, csfrags;
@@ -613,16 +612,6 @@ restart:
 			sblock.fs_cssize - i < sblock.fs_bsize ?
 			sblock.fs_cssize - i : sblock.fs_bsize,
 			((char *)fscs) + i);
-	/*
-	 * Update information about this partition in pack
-	 * label, to that it may be updated on disk.
-	 */
-	if (pp != NULL) {
-		pp->p_fstype = FS_BSDFFS;
-		pp->p_fsize = sblock.fs_fsize;
-		pp->p_frag = sblock.fs_frag;
-		pp->p_cpg = sblock.fs_fpg;
-	}
 }
 
 /*
