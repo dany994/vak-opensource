@@ -44,10 +44,6 @@ struct	dirtemplate dirhead = {
 	0, 12, DT_DIR, 1, ".",
 	0, DIRBLKSIZ - 12, DT_DIR, 2, ".."
 };
-struct	odirtemplate odirhead = {
-	0, 12, 1, ".",
-	0, DIRBLKSIZ - 12, 2, ".."
-};
 
 static int chgino(struct inodesc *);
 static int dircheck(struct inodesc *, struct direct *);
@@ -206,7 +202,7 @@ dircheck(struct inodesc *idesc, struct direct *dp)
 		goto bad;
 	if (dp->d_ino == 0)
 		return (1);
-	size = DIRSIZ(0, dp);
+	size = DIRSIZ(dp);
 	namlen = dp->d_namlen;
 	type = dp->d_type;
 	if (dp->d_reclen < size ||
@@ -323,9 +319,9 @@ mkentry(struct inodesc *idesc)
 	int newlen, oldlen;
 
 	newent.d_namlen = strlen(idesc->id_name);
-	newlen = DIRSIZ(0, &newent);
+	newlen = DIRSIZ(&newent);
 	if (dirp->d_ino != 0)
-		oldlen = DIRSIZ(0, dirp);
+		oldlen = DIRSIZ(dirp);
 	else
 		oldlen = 0;
 	if (dirp->d_reclen - oldlen < newlen)

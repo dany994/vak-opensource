@@ -59,9 +59,9 @@
  * with null bytes.  All names are guaranteed null terminated.
  * The maximum length of a name in a directory is MAXNAMLEN.
  *
- * The macro DIRSIZ(fmt, dp) gives the amount of space required to represent
+ * The macro DIRSIZ(dp) gives the amount of space required to represent
  * a directory entry.  Free space in a directory is represented by
- * entries which have dp->d_reclen > DIRSIZ(fmt, dp).  All DIRBLKSIZ bytes
+ * entries which have dp->d_reclen > DIRSIZ(dp).  All DIRBLKSIZ bytes
  * in a directory block are claimed by the directory entries.  This
  * usually results in the last entry in a directory having a large
  * dp->d_reclen.  When entries are deleted from a directory, the
@@ -112,15 +112,8 @@ struct	direct {
 #define	DIRECTSIZ(namlen)						\
 	(((size_t)&((struct direct *)0)->d_name +			\
 	  ((namlen)+1)*sizeof(((struct direct *)0)->d_name[0]) + 3) & ~3)
-#if (BYTE_ORDER == LITTLE_ENDIAN)
-#define DIRSIZ(oldfmt, dp) \
-    ((oldfmt) ? DIRECTSIZ((dp)->d_type) : DIRECTSIZ((dp)->d_namlen))
-#else
-#define DIRSIZ(oldfmt, dp) \
-    DIRECTSIZ((dp)->d_namlen)
-#endif
-#define OLDDIRFMT	1
-#define NEWDIRFMT	0
+
+#define DIRSIZ(dp) DIRECTSIZ((dp)->d_namlen)
 
 /*
  * Template for manipulating directories.  Should use struct direct's,
@@ -136,20 +129,6 @@ struct dirtemplate {
 	int16_t		dotdot_reclen;
 	u_int8_t	dotdot_type;
 	u_int8_t	dotdot_namlen;
-	char		dotdot_name[4];	/* ditto */
-};
-
-/*
- * This is the old format of directories, sanz type element.
- */
-struct odirtemplate {
-	u_int32_t	dot_ino;
-	int16_t		dot_reclen;
-	u_int16_t	dot_namlen;
-	char		dot_name[4];	/* must be multiple of 4 */
-	u_int32_t	dotdot_ino;
-	int16_t		dotdot_reclen;
-	u_int16_t	dotdot_namlen;
 	char		dotdot_name[4];	/* ditto */
 };
 #endif /* !_DIR_H_ */

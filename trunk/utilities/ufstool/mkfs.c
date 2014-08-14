@@ -371,8 +371,9 @@ restart:
 				break;
 			if (CGSIZE(&sblock) < (unsigned long)sblock.fs_bsize)
 				continue;
-			if (CGSIZE(&sblock) == (unsigned long)sblock.fs_bsize)
+			if (CGSIZE(&sblock) == (unsigned long)sblock.fs_bsize) {
 				break;
+                        }
 		}
 		sblock.fs_fpg -= sblock.fs_frag;
 		sblock.fs_ipg = roundup(howmany(sblock.fs_fpg, fragsperinode),
@@ -899,13 +900,13 @@ makedir(struct direct *protodir, int entries)
 	spcleft = DIRBLKSIZ;
 	memset(iobuf, 0, DIRBLKSIZ);
 	for (cp = iobuf, i = 0; i < entries - 1; i++) {
-		protodir[i].d_reclen = DIRSIZ(0, &protodir[i]);
+		protodir[i].d_reclen = DIRSIZ(&protodir[i]);
 		memmove(cp, &protodir[i], protodir[i].d_reclen);
 		cp += protodir[i].d_reclen;
 		spcleft -= protodir[i].d_reclen;
 	}
 	protodir[i].d_reclen = spcleft;
-	memmove(cp, &protodir[i], DIRSIZ(0, &protodir[i]));
+	memmove(cp, &protodir[i], DIRSIZ(&protodir[i]));
 	return (DIRBLKSIZ);
 }
 

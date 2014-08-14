@@ -48,6 +48,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef linux
+#   include <linux/fs.h>
+#endif
+
 #include "dir.h"
 #include "fs.h"
 #include "libufs.h"
@@ -56,7 +60,7 @@
 int	Eflag;			/* Erase previous disk contents */
 int	Lflag;			/* add a volume label */
 int	Nflag;			/* run without writing file system */
-int	Oflag = 2;		/* file system format (1 => UFS1, 2 => UFS2) */
+int	Oflag = 1;		/* file system format (1 => UFS1, 2 => UFS2) */
 int	Rflag;			/* regression test */
 int	Uflag;			/* enable soft updates for file system */
 int	jflag;			/* enable soft updates journaling for filesys */
@@ -86,9 +90,6 @@ struct uufsd disk;		/* libufs disk structure */
 
 static char	device[MAXPATHLEN];
 static u_char   bootarea[BBSIZE];
-static int	is_file;		/* work on a file, not a device */
-static char	*dkname;
-static char	*disktype;
 
 static void getfssize(intmax_t *, const char *p, intmax_t, intmax_t);
 static void usage(void);
@@ -103,12 +104,10 @@ main(int argc, char *argv[])
 	char *cp, *special;
 	intmax_t reserved;
 	int ch, i, rval;
-	char part_name;		/* partition name, default to full disk */
 
-	part_name = 'c';
 	reserved = 0;
 	while ((ch = getopt(argc, argv,
-	    "EJL:NO:RS:T:UXa:b:c:d:e:f:g:h:i:jk:lm:no:p:r:s:t")) != -1)
+	    "EJL:NO:RS:UXa:b:c:d:e:f:g:h:i:jk:lm:no:r:s:t")) != -1)
 		switch (ch) {
 		case 'E':
 			Eflag = 1;
@@ -144,9 +143,6 @@ main(int argc, char *argv[])
 			rval = expand_number_int(optarg, &sectorsize);
 			if (rval < 0 || sectorsize <= 0)
 				errx(1, "%s: bad sector size", optarg);
-			break;
-		case 'T':
-			disktype = optarg;
 			break;
 		case 'j':
 			jflag = 1;
@@ -246,11 +242,6 @@ main(int argc, char *argv[])
 			    *cp != '\0' || reserved < 0)
 				errx(1, "%s: bad reserved size", optarg);
 			break;
-		case 'p':
-			is_file = 1;
-			part_name = optarg[0];
-			break;
-
 		case 's':
 			errno = 0;
 			fssize = strtoimax(optarg, &cp, 0);
@@ -275,36 +266,52 @@ main(int argc, char *argv[])
 	if (!special[0])
 		err(1, "empty file/special name");
 
-	if (is_file) {
-		/* bypass ufs_disk_fillout_blank */
-		bzero( &disk, sizeof(disk));
-		disk.d_bsize = 1;
-		disk.d_name = special;
-		disk.d_fd = open(special, O_RDONLY);
-		if (disk.d_fd < 0 ||
-		    (!Nflag && ufs_disk_write(&disk) == -1))
-			errx(1, "%s: ", special);
-	} else if (ufs_disk_fillout_blank(&disk, special) == -1 ||
-	    (!Nflag && ufs_disk_write(&disk) == -1)) {
-		if (disk.d_error != NULL)
-			errx(1, "%s: %s", special, disk.d_error);
-		else
-			err(1, "%s", special);
-	}
-	if (fstat(disk.d_fd, &st) < 0)
-		err(1, "%s", special);
-	if ((st.st_mode & S_IFMT) != S_IFCHR) {
-		is_file = 1;	/* assume it is a file */
-		dkname = special;
-		mediasize = st.st_size;
-	}
         if (sectorsize == 0)
-                sectorsize = DEV_BSIZE;
+                sectorsize = bsize ? bsize : DEV_BSIZE;
+
+	if (stat(special, &st) < 0) {
+                /* File does not exist: need to create. */
+	        if (fssize == 0)
+			errx(1, "%s: file does not exist, use -s to specify size", special);
+		if (Nflag)
+			errx(1, "%s: file does not exist, cannot create with -N flag", special);
+		close(open(special, O_RDONLY | O_CREAT, 0664));
+		mediasize = fssize * sectorsize;
+        }
+
+        if (ufs_disk_fillout_blank(&disk, special) == -1 ||
+            (!Nflag && ufs_disk_write(&disk) == -1)) {
+                if (disk.d_error != NULL)
+                        errx(1, "%s: %s", special, disk.d_error);
+                else
+                        err(1, "%s", special);
+        }
+        if (fstat(disk.d_fd, &st) < 0)
+                err(1, "%s", special);
+
+        if (mediasize == 0) {
+                /* Query media size. */
+                if ((st.st_mode & S_IFMT) == S_IFREG) {
+                        /* Regular file. */
+                        mediasize = st.st_size;
+                } else {
+                        /* Assume device. */
+#ifdef DIOCGMEDIASIZE
+                        if (ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize) < 0)
+                                errx(1, "%s: cannot get media size", special);
+#else
+                        unsigned long long numbytes;
+                        if (ioctl(disk.d_fd, BLKGETSIZE64, &numbytes) < 0)
+                                errx(1, "%s: cannot get media size", special);
+                        mediasize = numbytes;
+#endif
+                }
+        }
+
         /* TODO: set fssize from the partition */
         if (fssize == 0)
                 getfssize(&fssize, special, mediasize / sectorsize, reserved);
-	if (sectorsize <= 0)
-		errx(1, "%s: no default sector size", special);
+
 	if (fsize <= 0)
 		fsize = MAX(DFL_FRAGSIZE, sectorsize);
 	if (bsize <= 0)
@@ -356,10 +363,9 @@ usage()
 	fprintf(stderr, "\t-L volume label to add to superblock\n");
 	fprintf(stderr,
 	    "\t-N do not create file system, just print out parameters\n");
-	fprintf(stderr, "\t-O file system format: 1 => UFS1, 2 => UFS2\n");
+	fprintf(stderr, "\t-O file system format: 1 => UFS1 (default), 2 => UFS2\n");
 	fprintf(stderr, "\t-R regression test, suppress random factors\n");
 	fprintf(stderr, "\t-S sector size\n");
-	fprintf(stderr, "\t-T disktype\n");
 	fprintf(stderr, "\t-U enable soft updates\n");
 	fprintf(stderr, "\t-a maximum contiguous blocks\n");
 	fprintf(stderr, "\t-b block size\n");
@@ -376,7 +382,6 @@ usage()
 	fprintf(stderr, "\t-n do not create .snap directory\n");
 	fprintf(stderr, "\t-m minimum free space %%\n");
 	fprintf(stderr, "\t-o optimization preference (`space' or `time')\n");
-	fprintf(stderr, "\t-p partition name (a..h)\n");
 	fprintf(stderr, "\t-r reserved sectors at the end of device\n");
 	fprintf(stderr, "\t-s file system size (sectors)\n");
 	fprintf(stderr, "\t-t enable TRIM\n");
