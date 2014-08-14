@@ -29,6 +29,7 @@
 
 #include <sys/param.h>
 #include <string.h>
+#include <err.h>
 
 #include "dir.h"
 #include "fs.h"

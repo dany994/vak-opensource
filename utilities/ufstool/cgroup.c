@@ -27,6 +27,7 @@
 
 #include <sys/param.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "fs.h"
 

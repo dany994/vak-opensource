@@ -30,8 +30,10 @@
 #include <sys/param.h>
 #include <sys/file.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <stdint.h>
 #include <signal.h>
+#include <err.h>
 
 #include "fs.h"
 #include "fsck.h"

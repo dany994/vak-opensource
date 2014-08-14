@@ -30,13 +30,14 @@
 #include <sys/param.h>
 #include <inttypes.h>
 #include <string.h>
+#include <err.h>
 
 #include "fs.h"
 #include "libufs.h"
 #include "fsck.h"
 
 static void check_maps(u_char *, u_char *, int, ufs2_daddr_t, const char *,
-			int *, int, int, int);
+			int *, int, int);
 static void clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end);
 
 void
@@ -315,7 +316,7 @@ pass5(void)
 			dirty(cgbp);
 		}
 		if (usedsoftdep || debug)
-			update_maps(cg, newcg, 0);
+			update_maps(cg, newcg);
 		if (memcmp(cg_inosused(newcg), cg_inosused(cg), mapsize) != 0 &&
 		    dofix(&idesc[1], "BLK(S) MISSING IN BIT MAPS")) {
 			memmove(cg_inosused(cg), cg_inosused(newcg),
@@ -341,8 +342,7 @@ pass5(void)
 void
 update_maps(
 	struct cg *oldcg,	/* cylinder group of claimed allocations */
-	struct cg *newcg,	/* cylinder group of determined allocations */
-	int usesysctl)		/* 1 => use sysctl interface to update maps */
+	struct cg *newcg)	/* cylinder group of determined allocations */
 {
 	int inomapsize, excessdirs;
 	struct fs *fs = &sblock;
@@ -356,14 +356,14 @@ update_maps(
 	if (excessdirs > 0)
 		check_maps(cg_inosused(newcg), cg_inosused(oldcg), inomapsize,
 		    oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "DIR", freedirs,
-		    0, excessdirs, usesysctl);
+		    0, excessdirs);
 	check_maps(cg_inosused(newcg), cg_inosused(oldcg), inomapsize,
 	    oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "FILE", freefiles,
-	    excessdirs, fs->fs_ipg, usesysctl);
+	    excessdirs, fs->fs_ipg);
 	check_maps(cg_blksfree(oldcg), cg_blksfree(newcg),
 	    howmany(fs->fs_fpg, CHAR_BIT),
 	    oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_fpg, "FRAG",
-	    freeblks, 0, fs->fs_fpg, usesysctl);
+	    freeblks, 0, fs->fs_fpg);
 }
 
 static void
@@ -375,8 +375,7 @@ check_maps(
 	const char *name,	/* name of resource found in maps */
 	int *opcode,	/* sysctl opcode to free resource */
 	int skip,	/* number of entries to skip before starting to free */
-	int limit,	/* limit on number of entries to free */
-	int usesysctl)	/* 1 => use sysctl interface to update maps */
+	int limit)	/* limit on number of entries to free */
 {
 #	define BUFSIZE 16
 	char buf[BUFSIZE];
@@ -384,10 +383,7 @@ check_maps(
 	ufs2_daddr_t n, astart, aend, ustart, uend;
 	void (*msg)(const char *fmt, ...);
 
-	if (usesysctl)
-		msg = pfatal;
-	else
-		msg = pwarn;
+	msg = pwarn;
 	astart = ustart = aend = uend = -1;
 	for (i = 0; i < mapsize; i++) {
 		j = *map1++;
@@ -447,16 +443,6 @@ check_maps(
 					    " MARKED USED\n",
 					    "UNALLOCATED", name, ustart,
 					    ustart + size - 1);
-				if (usesysctl != 0) {
-					cmd.value = ustart;
-					cmd.size = size;
-					if (sysctl(opcode, MIBSIZE, 0, 0,
-					    &cmd, sizeof cmd) == -1) {
-						snprintf(buf, BUFSIZE,
-						    "FREE %s", name);
-						rwerror(buf, cmd.value);
-					}
-				}
 				limit -= size;
 				if (limit <= 0)
 					return;
@@ -492,15 +478,6 @@ check_maps(
 				pwarn("UNALLOCATED %sS %" PRId64 "-%" PRId64
 				    " MARKED USED\n",
 				    name, ustart, ustart + size - 1);
-		}
-		if (usesysctl != 0) {
-			cmd.value = ustart;
-			cmd.size = size;
-			if (sysctl(opcode, MIBSIZE, 0, 0, &cmd,
-			    sizeof cmd) == -1) {
-				snprintf(buf, BUFSIZE, "FREE %s", name);
-				rwerror(buf, cmd.value);
-			}
 		}
 	}
 }

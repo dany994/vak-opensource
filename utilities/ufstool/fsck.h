@@ -67,6 +67,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifndef _SYS_QUEUE_H_
 /*
  * Copied from <sys/queue.h>.
  */
@@ -187,6 +188,8 @@ struct name {								\
 		    (elm)->field.le_prev;				\
 	*(elm)->field.le_prev = (elm)->field.le_next;			\
 } while (/*CONSTCOND*/0)
+
+#endif /* _SYS_QUEUE_H_ */
 
 #define	MAXDUP		10	/* limit on dup blks (per inode) */
 #define	MAXBAD		10	/* limit on bad blks (per inode) */
@@ -582,6 +585,6 @@ void		setinodebuf(ino_t);
 int		setup(char *dev, int part_num);
 void		gjournal_check(const char *filesys);
 int		suj_check(const char *filesys);
-void		update_maps(struct cg *, struct cg*, int);
+void		update_maps(struct cg *, struct cg*);
 
 #endif	/* !_FSCK_H_ */

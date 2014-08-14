@@ -30,6 +30,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <sysexits.h>
+#include <err.h>
+#include <time.h>
 
 #include "dir.h"
 #include "fs.h"

@@ -38,11 +38,14 @@
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
+#include <err.h>
 #include <grp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <time.h>
 
 #include "dir.h"
 #include "fs.h"

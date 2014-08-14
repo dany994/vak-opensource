@@ -28,9 +28,11 @@
  */
 
 #include <sys/param.h>
+#include <sys/time.h>
 #include <string.h>
 #include <stdint.h>
 #include <signal.h>
+#include <err.h>
 
 #include "dir.h"
 #include "fs.h"

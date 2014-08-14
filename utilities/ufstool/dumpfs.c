@@ -49,6 +49,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <err.h>
 
 #include "fs.h"
 #include "libufs.h"
