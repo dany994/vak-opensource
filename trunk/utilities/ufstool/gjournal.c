@@ -57,6 +57,7 @@
 #include <stdint.h>
 #include <strings.h>
 #include <assert.h>
+#include <err.h>
 
 #include "fs.h"
 #include "libufs.h"

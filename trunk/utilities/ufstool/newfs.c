@@ -41,7 +41,11 @@
  */
 #include <sys/param.h>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <err.h>
 #include <errno.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +54,8 @@
 
 #ifdef linux
 #   include <linux/fs.h>
+#else
+#   include <sys/disk.h>
 #endif
 
 #include "dir.h"
@@ -295,14 +301,22 @@ main(int argc, char *argv[])
                         mediasize = st.st_size;
                 } else {
                         /* Assume device. */
-#ifdef DIOCGMEDIASIZE
-                        if (ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize) < 0)
+#if defined(DKIOCGETBLOCKCOUNT)
+                        /* For Apple Darwin */
+                        unsigned long long numsectors;
+                        if (ioctl(disk.d_fd, DKIOCGETBLOCKCOUNT, &numsectors) < 0)
                                 errx(1, "%s: cannot get media size", special);
-#else
+                        mediasize = numsectors << 9;
+#elif defined(BLKGETSIZE64)
+                        /* For Linux. */
                         unsigned long long numbytes;
                         if (ioctl(disk.d_fd, BLKGETSIZE64, &numbytes) < 0)
                                 errx(1, "%s: cannot get media size", special);
                         mediasize = numbytes;
+#else
+                        /* For BSD. */
+                        if (ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize) < 0)
+                                errx(1, "%s: cannot get media size", special);
 #endif
                 }
         }

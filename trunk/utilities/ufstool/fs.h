@@ -33,6 +33,7 @@
 #ifndef _UFS_FFS_FS_H_
 #define _UFS_FFS_FS_H_
 
+#include <sys/types.h>
 #include "dinode.h"
 
 /*
@@ -108,8 +109,9 @@
  * Note that super blocks are always of size SBLOCKSIZE,
  * and that both SBLOCKSIZE and MAXBSIZE must be >= MINBSIZE.
  */
-#define MINBSIZE	4096
+#undef MAXBSIZE
 #define MAXBSIZE        8192
+#define MINBSIZE	4096
 
 /*
  * The path name on which the filesystem is mounted is maintained

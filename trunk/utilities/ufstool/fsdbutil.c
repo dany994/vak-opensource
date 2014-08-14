@@ -35,6 +35,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/ioctl.h>
+#include <err.h>
 
 #include "fs.h"
 #include "fsdb.h"

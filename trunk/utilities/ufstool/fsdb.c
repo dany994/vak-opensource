@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
+#include <err.h>
 
 #include "dir.h"
 #include "fs.h"

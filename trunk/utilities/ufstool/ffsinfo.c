@@ -41,6 +41,8 @@
 
 /* ********************************************************** INCLUDES ***** */
 #include <sys/param.h>
+#include <sys/stat.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>

@@ -42,6 +42,7 @@
 #include <sys/param.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "fs.h"
 #include "debug.h"
