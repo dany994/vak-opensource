@@ -272,7 +272,7 @@ pass2check(struct inodesc *idesc)
 	proto.d_type = DT_DIR;
 	proto.d_namlen = 1;
 	(void)strcpy(proto.d_name, ".");
-	entrysize = DIRSIZ(0, &proto);
+	entrysize = DIRSIZ(&proto);
 	if (dirp->d_ino != 0 && strcmp(dirp->d_name, "..") != 0) {
 		pfatal("CANNOT FIX, FIRST ENTRY IN DIRECTORY CONTAINS %s\n",
 			dirp->d_name);
@@ -303,9 +303,9 @@ chk1:
 	proto.d_type = DT_DIR;
 	proto.d_namlen = 2;
 	(void)strcpy(proto.d_name, "..");
-	entrysize = DIRSIZ(0, &proto);
+	entrysize = DIRSIZ(&proto);
 	if (idesc->id_entryno == 0) {
-		n = DIRSIZ(0, dirp);
+		n = DIRSIZ(dirp);
 		if (dirp->d_reclen < n + entrysize)
 			goto chk2;
 		proto.d_reclen = dirp->d_reclen - n;
