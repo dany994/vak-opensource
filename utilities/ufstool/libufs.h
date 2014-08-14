@@ -76,7 +76,6 @@ struct uufsd {
 static inline void
 ERROR(struct uufsd *u, const char *str)
 {
-
 #ifdef	_LIBUFS_DEBUGGING
 	if (str != NULL) {
 		fprintf(stderr, "libufs: %s", str);

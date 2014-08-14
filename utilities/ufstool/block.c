@@ -30,6 +30,8 @@
 #include <unistd.h>
 
 #include "fs.h"
+
+#define _LIBUFS
 #include "libufs.h"
 
 ssize_t

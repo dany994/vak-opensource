@@ -29,6 +29,8 @@
 #include <stdlib.h>
 
 #include "fs.h"
+
+#define _LIBUFS
 #include "libufs.h"
 
 /* Track if its fd points to a writable device. */

@@ -40,8 +40,6 @@
  *
  */
 
-#ifdef FS_DEBUG
-
 void dbg_open(const char *);
 void dbg_close(void);
 void dbg_dump_hex(struct fs *, const char *, unsigned char *);
@@ -109,8 +107,8 @@ extern int _dbg_lvl_;
 	fprintf(stderr, "~ ");                                                \
 	fprintf(stderr, (A), (B), (C), (D), (E));                             \
 	}
-#else /* not FS_DEBUG */
 
+#if 0
 #define DBG_OPEN(P)
 #define DBG_CLOSE
 #define DBG_DUMP_HEX(F,C,M)
@@ -133,5 +131,4 @@ extern int _dbg_lvl_;
 #define DBG_PRINT2(A,B,C)
 #define DBG_PRINT3(A,B,C,D)
 #define DBG_PRINT4(A,B,C,D,E)
-
-#endif /* FS_DEBUG */
+#endif

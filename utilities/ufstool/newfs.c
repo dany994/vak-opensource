@@ -89,7 +89,6 @@ u_char	*volumelabel = NULL;	/* volume label for filesystem */
 struct uufsd disk;		/* libufs disk structure */
 
 static char	device[MAXPATHLEN];
-static u_char   bootarea[BBSIZE];
 
 static void getfssize(intmax_t *, const char *p, intmax_t, intmax_t);
 static void usage(void);

@@ -53,9 +53,7 @@
 #include "debug.h"
 
 /* *********************************************************** GLOBALS ***** */
-#ifdef FS_DEBUG
 int	_dbg_lvl_ = (DL_INFO); /* DL_TRC */
-#endif /* FS_DEBUG */
 
 static struct uufsd disk;
 

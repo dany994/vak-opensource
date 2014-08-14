@@ -29,6 +29,8 @@
 #include <string.h>
 
 #include "fs.h"
+
+#define _LIBUFS
 #include "libufs.h"
 
 ufs2_daddr_t
