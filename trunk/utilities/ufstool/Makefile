@@ -13,9 +13,9 @@ OBJS_FSDB       = fsdb.o fsdbutil.o ckdir.o ckutil.o ckinode.o pass1.o \
                   pass1b.o pass2.o pass3.o pass4.o pass5.o cksetup.o \
                   ffs_subr.o ffs_tables.o libufs.a
 
-CFLAGS          = -O0 -g -Werror -D_LIBUFS -DMAXBSIZE=8192 -DBBSIZE=512 -DFS_DEBUG
-LDFLAGS         = -g
+CFLAGS          = -O1 -g -Werror
 #CFLAGS         += -D_LIBUFS_DEBUGGING
+LDFLAGS         = -g
 
 all:            $(PROGS)
 

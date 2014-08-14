@@ -109,6 +109,7 @@
  * and that both SBLOCKSIZE and MAXBSIZE must be >= MINBSIZE.
  */
 #define MINBSIZE	4096
+#define MAXBSIZE        8192
 
 /*
  * The path name on which the filesystem is mounted is maintained

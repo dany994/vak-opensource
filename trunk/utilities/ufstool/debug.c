@@ -46,8 +46,6 @@
 #include "fs.h"
 #include "debug.h"
 
-#ifdef FS_DEBUG
-
 static FILE		*dbg_log = NULL;
 static unsigned int	indent = 0;
 
@@ -828,5 +826,3 @@ dbg_dump_iblk(struct fs *sb, const char *comment, char *block, size_t length)
 
 	return;
 }
-
-#endif /* FS_DEBUG */
