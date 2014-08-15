@@ -30,6 +30,8 @@
 #ifndef	__LIBUFS_H__
 #define	__LIBUFS_H__
 
+#include "fs.h"
+
 /*
  * libufs structures.
  */

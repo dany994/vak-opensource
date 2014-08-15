@@ -51,7 +51,6 @@
 #include <time.h>
 #include <err.h>
 
-#include "fs.h"
 #include "libufs.h"
 
 #define	afs	disk.d_fs

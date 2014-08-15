@@ -59,7 +59,6 @@
 #include <assert.h>
 #include <err.h>
 
-#include "fs.h"
 #include "libufs.h"
 #include "fsck.h"
 
