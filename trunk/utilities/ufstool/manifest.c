@@ -27,7 +27,8 @@
 #include <unistd.h>
 #include <fts.h>
 #include <sys/stat.h>
-#include "bsdfs.h"
+
+#include "libufs.h"
 #include "manifest.h"
 
 /*
@@ -144,7 +145,7 @@ int manifest_scan (manifest_t *m, const char *dirname)
 {
     FTS *dir;
     FTSENT *node;
-    char *argv[2], *path, *target, buf[BSDFS_BSIZE];
+    char *argv[2], *path, *target, buf[MAXBSIZE];
     struct stat st;
     int prefix_len, mode, len;
 

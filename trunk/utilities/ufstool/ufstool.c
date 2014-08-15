@@ -22,16 +22,18 @@
  * this software.
  */
 #include <stdio.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/stat.h>
-#include <errno.h>
+#include <stdint.h>
+//#include <fcntl.h>
+//#include <unistd.h>
+//#include <time.h>
+//#include <sys/stat.h>
+//#include <errno.h>
 #include <getopt.h>
-#include <fts.h>
-#include "bsdfs.h"
+//#include <fts.h>
+
+#include "libufs.h"
 #include "manifest.h"
 
 int verbose;
@@ -43,11 +45,10 @@ int fix;
 int mount;
 int scan;
 unsigned kbytes;
-unsigned swap_kbytes;
 
 static const char *program_version =
-    "BSD 2.x file system utility, version 1.1\n"
-    "Copyright (C) 2011-2014 Serge Vakulenko";
+    "BSD 4.4 file system tool, version 0.0\n"
+    "Copyright (C) 2014 Serge Vakulenko";
 
 static const char *program_bug_address = "<serge@vak.ru>";
 
@@ -62,7 +63,6 @@ static struct option program_options[] = {
     { "mount",      no_argument,        0,  'm' },
     { "scan",       no_argument,        0,  'S' },
     { "new",        required_argument,  0,  'n' },
-    { "swap",       required_argument,  0,  's' },
     { "manifest",   required_argument,  0,  'M' },
     { 0 }
 };
@@ -80,7 +80,7 @@ static void print_help (char *progname)
     printf ("Usage:\n");
     printf ("  %s [--verbose] filesys.img\n", progname);
     printf ("  %s --check [--fix] filesys.img\n", progname);
-    printf ("  %s --new=kbytes [--swap=kbytes] [--manifest=file] filesys.img [dir]\n", progname);
+    printf ("  %s --new=kbytes [--manifest=file] filesys.img [dir]\n", progname);
     printf ("  %s --mount filesys.img dir\n", progname);
     printf ("  %s --add filesys.img files...\n", progname);
     printf ("  %s --extract filesys.img\n", progname);
@@ -91,7 +91,6 @@ static void print_help (char *progname)
     printf ("  -f, --fix           Fix bugs in filesystem.\n");
     printf ("  -n NUM, --new=NUM   Create new filesystem, size in kbytes.\n");
     printf ("                      Add files from specified directory (optional)\n");
-    printf ("  -s NUM, --swap=NUM  Size of swap area in kbytes.\n");
     printf ("  -M file, --manifest=file  List of files and attributes to create.\n");
     printf ("  -m, --mount         Mount the filesystem.\n");
     printf ("  -a, --add           Add files to filesystem.\n");
@@ -104,6 +103,7 @@ static void print_help (char *progname)
     printf ("Report bugs to \"%s\".\n", program_bug_address);
 }
 
+#if 0
 void print_inode (fs_inode_t *inode,
     char *dirname, char *filename, FILE *out)
 {
@@ -128,14 +128,14 @@ void print_inode (fs_inode_t *inode,
     fprintf (out, "\n");
 }
 
-void print_indirect_block (fs_t *fs, unsigned int bno, FILE *out)
+void print_indirect_block (struct uufsd *disk, unsigned int bno, FILE *out)
 {
     unsigned short nb;
     unsigned char data [BSDFS_BSIZE];
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (! fs_read_block (fs, bno, data)) {
+    if (! fs_read_block (disk, bno, data)) {
         fprintf (stderr, "read error at block %d\n", bno);
         return;
     }
@@ -146,39 +146,39 @@ void print_indirect_block (fs_t *fs, unsigned int bno, FILE *out)
     }
 }
 
-void print_double_indirect_block (fs_t *fs, unsigned int bno, FILE *out)
+void print_double_indirect_block (struct uufsd *disk, unsigned int bno, FILE *out)
 {
     unsigned short nb;
     unsigned char data [BSDFS_BSIZE];
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (! fs_read_block (fs, bno, data)) {
+    if (! fs_read_block (disk, bno, data)) {
         fprintf (stderr, "read error at block %d\n", bno);
         return;
     }
     for (i=0; i<BSDFS_BSIZE-2; i+=2) {
         nb = data [i+1] << 8 | data [i];
         if (nb)
-            print_indirect_block (fs, nb, out);
+            print_indirect_block (disk, nb, out);
     }
 }
 
-void print_triple_indirect_block (fs_t *fs, unsigned int bno, FILE *out)
+void print_triple_indirect_block (struct uufsd *disk, unsigned int bno, FILE *out)
 {
     unsigned short nb;
     unsigned char data [BSDFS_BSIZE];
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (! fs_read_block (fs, bno, data)) {
+    if (! fs_read_block (disk, bno, data)) {
         fprintf (stderr, "read error at block %d\n", bno);
         return;
     }
     for (i=0; i<BSDFS_BSIZE-2; i+=2) {
         nb = data [i+1] << 8 | data [i];
         if (nb)
-            print_indirect_block (fs, nb, out);
+            print_indirect_block (disk, nb, out);
     }
 }
 
@@ -297,7 +297,7 @@ void scanner (fs_inode_t *dir, fs_inode_t *inode,
 /*
  * Create a directory.
  */
-void add_directory (fs_t *fs, char *name, int mode, int owner, int group)
+void add_directory (struct uufsd *disk, char *name, int mode, int owner, int group)
 {
     fs_inode_t dir, parent;
     char buf [BSDFS_BSIZE], *p;
@@ -309,7 +309,7 @@ void add_directory (fs_t *fs, char *name, int mode, int owner, int group)
         *p = 0;
     else
         *buf = 0;
-    if (! fs_inode_lookup (fs, &parent, buf)) {
+    if (! fs_inode_lookup (disk, &parent, buf)) {
         fprintf (stderr, "%s: cannot open directory\n", buf);
         return;
     }
@@ -317,7 +317,7 @@ void add_directory (fs_t *fs, char *name, int mode, int owner, int group)
     /* Create directory. */
     mode &= 07777;
     mode |= INODE_MODE_FDIR;
-    int done = fs_inode_create (fs, &dir, name, mode);
+    int done = fs_inode_create (disk, &dir, name, mode);
     if (! done) {
         fprintf (stderr, "%s: directory inode create failed\n", name);
         return;
@@ -333,11 +333,11 @@ void add_directory (fs_t *fs, char *name, int mode, int owner, int group)
     /* Make parent link '..' */
     strcpy (buf, name);
     strcat (buf, "/..");
-    if (! fs_inode_link (fs, &dir, buf, parent.number)) {
+    if (! fs_inode_link (disk, &dir, buf, parent.number)) {
         fprintf (stderr, "%s: dotdot link failed\n", name);
         return;
     }
-    if (! fs_inode_get (fs, &parent, parent.number)) {
+    if (! fs_inode_get (disk, &parent, parent.number)) {
         fprintf (stderr, "inode %d: cannot open parent\n", parent.number);
         return;
     }
@@ -349,14 +349,14 @@ void add_directory (fs_t *fs, char *name, int mode, int owner, int group)
 /*
  * Create a device node.
  */
-void add_device (fs_t *fs, char *name, int mode, int owner, int group,
+void add_device (struct uufsd *disk, char *name, int mode, int owner, int group,
     int type, int majr, int minr)
 {
     fs_inode_t dev;
 
     mode &= 07777;
     mode |= (type == 'b') ? INODE_MODE_FBLK : INODE_MODE_FCHR;
-    if (! fs_inode_create (fs, &dev, name, mode)) {
+    if (! fs_inode_create (disk, &dev, name, mode)) {
         fprintf (stderr, "%s: device inode create failed\n", name);
         return;
     }
@@ -370,7 +370,7 @@ void add_device (fs_t *fs, char *name, int mode, int owner, int group,
 /*
  * Copy regular file to filesystem.
  */
-void add_file (fs_t *fs, const char *path, const char *dirname,
+void add_file (struct uufsd *disk, const char *path, const char *dirname,
     int mode, int owner, int group)
 {
     fs_file_t file;
@@ -401,7 +401,7 @@ void add_file (fs_t *fs, const char *path, const char *dirname,
         mode = st.st_mode;
     mode &= 07777;
     mode |= INODE_MODE_FREG;
-    if (! fs_file_create (fs, &file, path, mode)) {
+    if (! fs_file_create (disk, &file, path, mode)) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
     }
@@ -428,7 +428,7 @@ void add_file (fs_t *fs, const char *path, const char *dirname,
 /*
  * Create a symlink.
  */
-void add_symlink (fs_t *fs, const char *path, const char *link,
+void add_symlink (struct uufsd *disk, const char *path, const char *link,
     int mode, int owner, int group)
 {
     fs_file_t file;
@@ -436,7 +436,7 @@ void add_symlink (fs_t *fs, const char *path, const char *link,
 
     mode &= 07777;
     mode |= INODE_MODE_FLNK;
-    if (! fs_file_create (fs, &file, path, mode)) {
+    if (! fs_file_create (disk, &file, path, mode)) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
     }
@@ -455,12 +455,12 @@ void add_symlink (fs_t *fs, const char *path, const char *link,
 /*
  * Create a hard link.
  */
-void add_hardlink (fs_t *fs, const char *path, const char *link)
+void add_hardlink (struct uufsd *disk, const char *path, const char *link)
 {
     fs_inode_t source, target;
 
     /* Find source. */
-    if (! fs_inode_lookup (fs, &source, link)) {
+    if (! fs_inode_lookup (disk, &source, link)) {
         fprintf (stderr, "%s: link source not found\n", link);
         return;
     }
@@ -470,7 +470,7 @@ void add_hardlink (fs_t *fs, const char *path, const char *link)
     }
 
     /* Create target link. */
-    if (! fs_inode_link (fs, &target, path, source.number)) {
+    if (! fs_inode_link (disk, &target, path, source.number)) {
         fprintf (stderr, "%s: link failed\n", path);
         return;
     }
@@ -482,7 +482,7 @@ void add_hardlink (fs_t *fs, const char *path, const char *link)
  * Create a file/device/directory in the filesystem.
  * When name is ended by slash as "name/", directory is created.
  */
-void add_object (fs_t *fs, char *name)
+void add_object (struct uufsd *disk, char *name)
 {
     int majr, minr;
     char type;
@@ -494,7 +494,7 @@ void add_object (fs_t *fs, char *name)
     p = strrchr (name, '/');
     if (p && p[1] == 0) {
         *p = 0;
-        add_directory (fs, name, 0777, 0, 0);
+        add_directory (disk, name, 0777, 0, 0);
         return;
     }
     p = strrchr (name, '!');
@@ -507,17 +507,17 @@ void add_object (fs_t *fs, char *name)
             fprintf (stderr, "expected c<major>:<minor> or b<major>:<minor>\n");
             return;
         }
-        add_device (fs, name, 0666, 0, 0, type, majr, minr);
+        add_device (disk, name, 0666, 0, 0, type, majr, minr);
         return;
     }
-    add_file (fs, name, 0, -1, 0, 0);
+    add_file (disk, name, 0, -1, 0, 0);
 }
 
 /*
  * Add the contents from the specified directory.
  * Use the optional manifest file.
  */
-void add_contents (fs_t *fs, const char *dirname, const char *manifest)
+void add_contents (struct uufsd *disk, const char *dirname, const char *manifest)
 {
     manifest_t m;
     void *cursor;
@@ -547,47 +547,179 @@ void add_contents (fs_t *fs, const char *dirname, const char *manifest)
     {
         switch (filetype) {
         case 'd':
-            add_directory (fs, path, mode, owner, group);
+            add_directory (disk, path, mode, owner, group);
             ndirs++;
             break;
         case 'f':
-            add_file (fs, path, dirname, mode, owner, group);
+            add_file (disk, path, dirname, mode, owner, group);
             nfiles++;
             break;
         case 'l':
-            add_hardlink (fs, path, link);
+            add_hardlink (disk, path, link);
             nlinks++;
             break;
         case 's':
-            add_symlink (fs, path, link, mode, owner, group);
+            add_symlink (disk, path, link, mode, owner, group);
             nsymlinks++;
             break;
         case 'b':
-            add_device (fs, path, mode, owner, group, 'b', majr, minr);
+            add_device (disk, path, mode, owner, group, 'b', majr, minr);
             ndevs++;
             break;
         case 'c':
-            add_device (fs, path, mode, owner, group, 'c', majr, minr);
+            add_device (disk, path, mode, owner, group, 'c', majr, minr);
             ndevs++;
             break;
         }
     }
-    fs_sync (fs, 0);
-    fs_close (fs);
+    fs_sync (disk, 0);
+    ufs_disk_close (&disk);
     printf ("Installed %u directories, %u files, %u devices, %u links, %u symlinks\n",
         ndirs, nfiles, ndevs, nlinks, nsymlinks);
+}
+#endif
+
+/*
+ * Dump the superblock.
+ */
+void ufs_print(struct uufsd *disk, FILE *out)
+{
+    struct fs *sb = &disk->d_fs;
+    int j;
+
+    fprintf(out, "sblkno            int32_t          0x%08x\n",        sb->fs_sblkno);
+    fprintf(out, "cblkno            int32_t          0x%08x\n",        sb->fs_cblkno);
+    fprintf(out, "iblkno            int32_t          0x%08x\n",        sb->fs_iblkno);
+    fprintf(out, "dblkno            int32_t          0x%08x\n",        sb->fs_dblkno);
+
+    fprintf(out, "old_cgoffset      int32_t          0x%08x\n",        sb->fs_old_cgoffset);
+    fprintf(out, "old_cgmask        int32_t          0x%08x\n",        sb->fs_old_cgmask);
+    fprintf(out, "old_time          int32_t          %10u\n",          (unsigned int)sb->fs_old_time);
+    fprintf(out, "old_size          int32_t          0x%08x\n",        sb->fs_old_size);
+    fprintf(out, "old_dsize         int32_t          0x%08x\n",        sb->fs_old_dsize);
+    fprintf(out, "ncg               int32_t          0x%08x\n",        sb->fs_ncg);
+    fprintf(out, "bsize             int32_t          0x%08x\n",        sb->fs_bsize);
+    fprintf(out, "fsize             int32_t          0x%08x\n",        sb->fs_fsize);
+    fprintf(out, "frag              int32_t          0x%08x\n",        sb->fs_frag);
+
+    fprintf(out, "minfree           int32_t          0x%08x\n",        sb->fs_minfree);
+    fprintf(out, "old_rotdelay      int32_t          0x%08x\n",        sb->fs_old_rotdelay);
+    fprintf(out, "old_rps           int32_t          0x%08x\n",        sb->fs_old_rps);
+
+    fprintf(out, "bmask             int32_t          0x%08x\n",        sb->fs_bmask);
+    fprintf(out, "fmask             int32_t          0x%08x\n",        sb->fs_fmask);
+    fprintf(out, "bshift            int32_t          0x%08x\n",        sb->fs_bshift);
+    fprintf(out, "fshift            int32_t          0x%08x\n",        sb->fs_fshift);
+
+    fprintf(out, "maxcontig         int32_t          0x%08x\n",        sb->fs_maxcontig);
+    fprintf(out, "maxbpg            int32_t          0x%08x\n",        sb->fs_maxbpg);
+
+    fprintf(out, "fragshift         int32_t          0x%08x\n",        sb->fs_fragshift);
+    fprintf(out, "fsbtodb           int32_t          0x%08x\n",        sb->fs_fsbtodb);
+    fprintf(out, "sbsize            int32_t          0x%08x\n",        sb->fs_sbsize);
+    fprintf(out, "spare1            int32_t[2]       0x%08x 0x%08x\n", sb->fs_spare1[0], sb->fs_spare1[1]);
+    fprintf(out, "nindir            int32_t          0x%08x\n",        sb->fs_nindir);
+    fprintf(out, "inopb             int32_t          0x%08x\n",        sb->fs_inopb);
+    fprintf(out, "old_nspf          int32_t          0x%08x\n",        sb->fs_old_nspf);
+
+    fprintf(out, "optim             int32_t          0x%08x\n",        sb->fs_optim);
+
+    fprintf(out, "old_npsect        int32_t          0x%08x\n",        sb->fs_old_npsect);
+    fprintf(out, "old_interleave    int32_t          0x%08x\n",        sb->fs_old_interleave);
+    fprintf(out, "old_trackskew     int32_t          0x%08x\n",        sb->fs_old_trackskew);
+
+    fprintf(out, "id                int32_t[2]       0x%08x 0x%08x\n", sb->fs_id[0], sb->fs_id[1]);
+
+    fprintf(out, "old_csaddr        int32_t          0x%08x\n",        sb->fs_old_csaddr);
+    fprintf(out, "cssize            int32_t          0x%08x\n",        sb->fs_cssize);
+    fprintf(out, "cgsize            int32_t          0x%08x\n",        sb->fs_cgsize);
+
+    fprintf(out, "spare2            int32_t          0x%08x\n",        sb->fs_spare2);
+    fprintf(out, "old_nsect         int32_t          0x%08x\n",        sb->fs_old_nsect);
+    fprintf(out, "old_spc           int32_t          0x%08x\n",        sb->fs_old_spc);
+
+    fprintf(out, "old_ncyl          int32_t          0x%08x\n",        sb->fs_old_ncyl);
+
+    fprintf(out, "old_cpg           int32_t          0x%08x\n",        sb->fs_old_cpg);
+    fprintf(out, "ipg               int32_t          0x%08x\n",        sb->fs_ipg);
+    fprintf(out, "fpg               int32_t          0x%08x\n",        sb->fs_fpg);
+
+    //dbg_dump_csum("internal old_cstotal", &sb->fs_old_cstotal);
+
+    fprintf(out, "fmod              int8_t           0x%02x\n",        sb->fs_fmod);
+    fprintf(out, "clean             int8_t           0x%02x\n",        sb->fs_clean);
+    fprintf(out, "ronly             int8_t           0x%02x\n",        sb->fs_ronly);
+    fprintf(out, "old_flags         int8_t           0x%02x\n",        sb->fs_old_flags);
+    fprintf(out, "fsmnt             u_char[MAXMNTLEN] \"%s\"\n",       sb->fs_fsmnt);
+    fprintf(out, "volname           u_char[MAXVOLLEN] \"%s\"\n",       sb->fs_volname);
+    fprintf(out, "swuid             u_int64_t        0x%08x%08x\n",    ((unsigned*)&(sb->fs_swuid))[1],
+                                                                       ((unsigned*)&(sb->fs_swuid))[0]);
+
+    fprintf(out, "pad               int32_t          0x%08x\n",        sb->fs_pad);
+
+    fprintf(out, "cgrotor           int32_t          0x%08x\n",        sb->fs_cgrotor);
+    /*
+     * struct csum[MAXCSBUFS] - is only maintained in memory
+     */
+/*  fprintf(out, " int32_t\n", sb->*fs_maxcluster);*/
+    fprintf(out, "old_cpc           int32_t          0x%08x\n",        sb->fs_old_cpc);
+    /*
+     * int16_t fs_opostbl[16][8] - is dumped when used in dbg_dump_sptbl
+     */
+    fprintf(out, "maxbsize          int32_t          0x%08x\n",        sb->fs_maxbsize);
+    fprintf(out, "unrefs            int64_t          0x%08jx\n",       (uintmax_t)sb->fs_unrefs);
+    fprintf(out, "sblockloc         int64_t          0x%08x%08x\n",    ((unsigned*)&(sb->fs_sblockloc))[1],
+                                                                       ((unsigned*)&(sb->fs_sblockloc))[0]);
+
+    //dbg_dump_csum_total("internal cstotal", &sb->fs_cstotal);
+
+    fprintf(out, "time              ufs_time_t       %10u\n",          (unsigned)sb->fs_time);
+
+    fprintf(out, "size              int64_t          0x%08x%08x\n",    ((unsigned*)&(sb->fs_size))[1],
+                                                                       ((unsigned*)&(sb->fs_size))[0]);
+    fprintf(out, "dsize             int64_t          0x%08x%08x\n",    ((unsigned*)&(sb->fs_dsize))[1],
+                                                                       ((unsigned*)&(sb->fs_dsize))[0]);
+    fprintf(out, "csaddr            ufs2_daddr_t     0x%08x%08x\n",    ((unsigned*)&(sb->fs_csaddr))[1],
+                                                                       ((unsigned*)&(sb->fs_csaddr))[0]);
+    fprintf(out, "pendingblocks     int64_t          0x%08x%08x\n",    ((unsigned*)&(sb->fs_pendingblocks))[1],
+                                                                       ((unsigned*)&(sb->fs_pendingblocks))[0]);
+    fprintf(out, "pendinginodes     int32_t          0x%08x\n",        sb->fs_pendinginodes);
+
+    for (j = 0; j < FSMAXSNAP; j++) {
+        fprintf(out, "snapinum          int32_t[%2d]      0x%08x\n", j, sb->fs_snapinum[j]);
+        if (! sb->fs_snapinum[j]) { /* list is dense */
+            break;
+        }
+    }
+    fprintf(out, "avgfilesize       int32_t          0x%08x\n",        sb->fs_avgfilesize);
+    fprintf(out, "avgfpdir          int32_t          0x%08x\n",        sb->fs_avgfpdir);
+    fprintf(out, "save_cgsize       int32_t          0x%08x\n",        sb->fs_save_cgsize);
+    fprintf(out, "flags             int32_t          0x%08x\n",        sb->fs_flags);
+    fprintf(out, "contigsumsize     int32_t          0x%08x\n",        sb->fs_contigsumsize);
+    fprintf(out, "maxsymlinklen     int32_t          0x%08x\n",        sb->fs_maxsymlinklen);
+    fprintf(out, "old_inodefmt      int32_t          0x%08x\n",        sb->fs_old_inodefmt);
+    fprintf(out, "maxfilesize       u_int64_t        0x%08x%08x\n",    ((unsigned*)&(sb->fs_maxfilesize))[1],
+                                                                       ((unsigned*)&(sb->fs_maxfilesize))[0]);
+    fprintf(out, "qbmask            int64_t          0x%08x%08x\n",    ((unsigned*)&(sb->fs_qbmask))[1],
+                                                                       ((unsigned*)&(sb->fs_qbmask))[0]);
+    fprintf(out, "qfmask            int64_t          0x%08x%08x\n",    ((unsigned*)&(sb->fs_qfmask))[1],
+                                                                       ((unsigned*)&(sb->fs_qfmask))[0]);
+    fprintf(out, "state             int32_t          0x%08x\n",        sb->fs_state);
+    fprintf(out, "old_postblformat  int32_t          0x%08x\n",        sb->fs_old_postblformat);
+    fprintf(out, "old_nrpos         int32_t          0x%08x\n",        sb->fs_old_nrpos);
+    fprintf(out, "spare5            int32_t[2]       0x%08x 0x%08x\n", sb->fs_spare5[0], sb->fs_spare5[1]);
+    fprintf(out, "magic             int32_t          0x%08x\n",        sb->fs_magic);
 }
 
 int main (int argc, char **argv)
 {
     int i, key;
-    fs_t fs;
-    fs_inode_t inode;
+    struct uufsd disk;
     manifest_t m;
     const char *manifest = 0;
 
     for (;;) {
-        key = getopt_long (argc, argv, "vaxmSn:cfs:M:",
+        key = getopt_long (argc, argv, "vaxmSn:cfM:",
             program_options, 0);
         if (key == -1)
             break;
@@ -617,9 +749,6 @@ int main (int argc, char **argv)
         case 'S':
             ++scan;
             break;
-        case 's':
-            swap_kbytes = strtol (optarg, 0, 0);
-            break;
         case 'M':
             manifest = optarg;
             break;
@@ -646,13 +775,14 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
-        if (kbytes < BSDFS_BSIZE * 10 / 1024) {
-            /* Need at least 10 blocks. */
+        if (kbytes < 64) {
+            /* Need at least 16 blocks. */
             fprintf (stderr, "%s: too small\n", argv[i]);
             return -1;
         }
-
-        if (! fs_create (&fs, argv[i], kbytes, swap_kbytes)) {
+#if 0
+        //TODO
+        if (! fs_create (&disk, argv[i], kbytes)) {
             fprintf (stderr, "%s: cannot create filesystem\n", argv[i]);
             return -1;
         }
@@ -661,9 +791,10 @@ int main (int argc, char **argv)
         if (i == argc-2) {
             /* Add the contents from the specified directory.
              * Use the optional manifest file. */
-            add_contents (&fs, argv[i+1], manifest);
+            add_contents (&disk, argv[i+1], manifest);
         }
-        fs_close (&fs);
+        ufs_disk_close (&disk);
+#endif
         return 0;
     }
 
@@ -673,12 +804,15 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
-        if (! fs_open (&fs, argv[i], fix)) {
+#if 0
+        //TODO
+        if (! fs_open (&disk, argv[i], fix)) {
             fprintf (stderr, "%s: cannot open\n", argv[i]);
             return -1;
         }
-        fs_check (&fs);
-        fs_close (&fs);
+        fs_check (&disk);
+        ufs_disk_close (&disk);
+#endif
         return 0;
     }
 
@@ -701,7 +835,7 @@ int main (int argc, char **argv)
         print_help (argv[0]);
         return -1;
     }
-    if (! fs_open (&fs, argv[i], (add + mount != 0))) {
+    if (ufs_disk_fillout (&disk, argv[i]) < 0) {
         fprintf (stderr, "%s: cannot open\n", argv[i]);
         return -1;
     }
@@ -712,12 +846,15 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
-        if (! fs_inode_get (&fs, &inode, BSDFS_ROOT_INODE)) {
+#if 0
+        //TODO
+        if (! fs_inode_get (&disk, &inode, ROOTINO)) {
             fprintf (stderr, "%s: cannot get inode 1\n", argv[i]);
             return -1;
         }
         fs_directory_scan (&inode, "", extractor, (void*) stdout);
-        fs_close (&fs);
+        ufs_disk_close (&disk);
+#endif
         return 0;
     }
 
@@ -727,10 +864,13 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
+#if 0
+        //TODO
         while (++i < argc)
-            add_object (&fs, argv[i]);
-        fs_sync (&fs, 0);
-        fs_close (&fs);
+            add_object (&disk, argv[i]);
+        fs_sync (&disk, 0);
+        ufs_disk_close (&disk);
+#endif
         return 0;
     }
 
@@ -740,7 +880,7 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
-        return fs_mount(&fs, argv[i+1]);
+        return ufs_mount (&disk, argv[i+1]);
     }
 
     /* Print the structure of flesystem. */
@@ -748,13 +888,17 @@ int main (int argc, char **argv)
         print_help (argv[0]);
         return -1;
     }
-    fs_print (&fs, stdout);
+    ufs_print (&disk, stdout);
+#if 0
+    //TODO
     if (verbose) {
-        printf ("--------\n");
-        if (! fs_inode_get (&fs, &inode, BSDFS_ROOT_INODE)) {
+        fs_inode_t inode;
+
+        if (! fs_inode_get (&disk, &inode, ROOTINO)) {
             fprintf (stderr, "%s: cannot get inode 1\n", argv[i]);
             return -1;
         }
+        printf ("--------\n");
         printf ("/\n");
         if (verbose > 1) {
             /* Print a list of blocks. */
@@ -766,6 +910,7 @@ int main (int argc, char **argv)
         }
         fs_directory_scan (&inode, "", scanner, (void*) stdout);
     }
-    fs_close (&fs);
+#endif
+    ufs_disk_close (&disk);
     return 0;
 }

@@ -59,7 +59,6 @@
 #endif
 
 #include "dir.h"
-#include "fs.h"
 #include "libufs.h"
 #include "newfs.h"
 

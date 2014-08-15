@@ -30,8 +30,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "fs.h"
-
 #define _LIBUFS
 #include "libufs.h"
 

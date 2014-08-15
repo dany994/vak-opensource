@@ -34,7 +34,6 @@
 #include <time.h>
 
 #include "dir.h"
-#include "fs.h"
 #include "libufs.h"
 #include "fsck.h"
 

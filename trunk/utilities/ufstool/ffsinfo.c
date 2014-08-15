@@ -50,7 +50,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "fs.h"
 #include "libufs.h"
 #include "debug.h"
 
