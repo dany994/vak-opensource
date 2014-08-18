@@ -73,36 +73,34 @@
 /*
  * variables set up by front end.
  */
-extern int	Eflag;		/* Erase previous disk contents */
-extern int	Lflag;		/* add a volume label */
-extern int	Nflag;		/* run mkfs without writing file system */
-extern int	Oflag;		/* build UFS1 format file system */
-extern int	Rflag;		/* regression test */
-extern int	Uflag;		/* enable soft updates for file system */
-extern int	jflag;		/* enable soft updates journaling for filesys */
-extern int	Xflag;		/* exit in middle of newfs for testing */
-extern int	Jflag;		/* enable gjournal for file system */
-extern int	lflag;		/* enable multilabel MAC for file system */
-extern int	nflag;		/* do not create .snap directory */
-extern int	tflag;		/* enable TRIM */
-extern intmax_t	fssize;		/* file system size */
-extern off_t	mediasize;	/* device size */
-extern int	sectorsize;	/* bytes/sector */
-extern int	realsectorsize;	/* bytes/sector in hardware*/
-extern int	fsize;		/* fragment size */
-extern int	bsize;		/* block size */
-extern int	maxbsize;	/* maximum clustering */
-extern int	maxblkspercg;	/* maximum blocks per cylinder group */
-extern int	minfree;	/* free space threshold */
-extern int	metaspace;	/* space held for metadata blocks */
-extern int	opt;		/* optimization preference (space or time) */
-extern int	density;	/* number of bytes per inode */
-extern int	maxcontig;	/* max contiguous blocks to allocate */
-extern int	maxbpg;		/* maximum blocks per file in a cyl group */
-extern int	avgfilesize;	/* expected average file size */
-extern int	avgfilesperdir;	/* expected number of files per directory */
-extern u_char	*volumelabel;	/* volume label for filesystem */
-extern struct uufsd disk;	/* libufs disk structure */
+extern int	mkfs_Eflag;		/* Erase previous disk contents */
+extern int	mkfs_Lflag;		/* add a volume label */
+extern int	mkfs_Nflag;		/* run mkfs without writing file system */
+extern int	mkfs_Oflag;		/* build UFS1 format file system */
+extern int	mkfs_Rflag;		/* regression test */
+extern int	mkfs_Uflag;		/* enable soft updates for file system */
+extern int	mkfs_Xflag;		/* exit in middle of newfs for testing */
+extern int	mkfs_Jflag;		/* enable gjournal for file system */
+extern int	mkfs_lflag;		/* enable multilabel MAC for file system */
+extern int	mkfs_nflag;		/* do not create .snap directory */
+extern int	mkfs_tflag;		/* enable TRIM */
+extern intmax_t	mkfs_fssize;		/* file system size */
+extern off_t	mkfs_mediasize;	/* device size */
+extern int	mkfs_sectorsize;	/* bytes/sector */
+extern int	mkfs_realsectorsize;	/* bytes/sector in hardware*/
+extern int	mkfs_fsize;		/* fragment size */
+extern int	mkfs_bsize;		/* block size */
+extern int	mkfs_maxbsize;	/* maximum clustering */
+extern int	mkfs_maxblkspercg;	/* maximum blocks per cylinder group */
+extern int	mkfs_minfree;	/* free space threshold */
+extern int	mkfs_metaspace;	/* space held for metadata blocks */
+extern int	mkfs_opt;		/* optimization preference (space or time) */
+extern int	mkfs_density;	/* number of bytes per inode */
+extern int	mkfs_maxcontig;	/* max contiguous blocks to allocate */
+extern int	mkfs_maxbpg;		/* maximum blocks per file in a cyl group */
+extern int	mkfs_avgfilesize;	/* expected average file size */
+extern int	mkfs_avgfilesperdir;	/* expected number of files per directory */
+extern u_char	*mkfs_volumelabel;	/* volume label for filesystem */
 
 /*
  * To override a limitation in libufs, export the offset (in sectors) of the
@@ -118,6 +116,6 @@ extern struct uufsd disk;	/* libufs disk structure */
  * XXX This info really ought to go into the struct uufsd, at which point
  * we can remove the above hack.
  */
-extern ufs2_daddr_t part_ofs;	/* partition offset in blocks */
+extern ufs2_daddr_t mkfs_part_ofs;	/* partition offset in blocks */
 
-void mkfs (char *);
+void mkfs (struct uufsd *disk, const char *fsys);

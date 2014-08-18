@@ -1,5 +1,5 @@
 /*
- * Mount 2.xBSD filesystem via FUSE interface.
+ * Mount 4.4BSD filesystem via FUSE interface.
  *
  * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
  *
@@ -33,6 +33,7 @@
 
 #include "libufs.h"
 #include "dir.h"
+#include "ufstool.h"
 
 extern int verbose;
 

@@ -35,7 +35,7 @@
 
 #include "libufs.h"
 #include "manifest.h"
-#include "mount.h"
+#include "ufstool.h"
 
 int verbose;
 int extract;
@@ -781,21 +781,16 @@ int main (int argc, char **argv)
             fprintf (stderr, "%s: too small\n", argv[i]);
             return -1;
         }
+        ufs_create (&disk, argv[i], kbytes);
 #if 0
         //TODO
-        if (! fs_create (&disk, argv[i], kbytes)) {
-            fprintf (stderr, "%s: cannot create filesystem\n", argv[i]);
-            return -1;
-        }
-        printf ("Created filesystem %s - %u kbytes\n", argv[i], kbytes);
-
         if (i == argc-2) {
             /* Add the contents from the specified directory.
              * Use the optional manifest file. */
             add_contents (&disk, argv[i+1], manifest);
         }
-        ufs_disk_close (&disk);
 #endif
+        ufs_disk_close (&disk);
         return 0;
     }
 
