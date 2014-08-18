@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-//#include <fcntl.h>
+#include <fcntl.h>
 //#include <unistd.h>
 //#include <time.h>
 //#include <sys/stat.h>
@@ -34,18 +34,20 @@
 //#include <fts.h>
 
 #include "libufs.h"
+#include "newfs.h"
 #include "manifest.h"
 #include "ufstool.h"
 
 int verbose;
-int extract;
-int add;
-int newfs;
-int check;
-int fix;
-int mount;
-int scan;
-unsigned kbytes;
+static int extract;
+static int add;
+static int newfs;
+static int check;
+static int fix;
+static int mount;
+static int scan;
+static unsigned kbytes;
+static struct uufsd disk;
 
 static const char *program_version =
     "BSD 4.4 file system tool, version 0.0\n"
@@ -715,7 +717,6 @@ void ufs_print(struct uufsd *disk, FILE *out)
 int main (int argc, char **argv)
 {
     int i, key;
-    struct uufsd disk;
     manifest_t m;
     const char *manifest = 0;
 
@@ -781,7 +782,25 @@ int main (int argc, char **argv)
             fprintf (stderr, "%s: too small\n", argv[i]);
             return -1;
         }
-        ufs_create (&disk, argv[i], kbytes);
+        /* Set 4k block size, no fragments. */
+        mkfs_bsize = 4096;
+        mkfs_sectorsize = 512;
+        mkfs_realsectorsize = mkfs_bsize;
+        mkfs_fsize = mkfs_bsize;
+
+        /* Set size of filesystem. */
+        /* TODO: set fssize and part_ofs from the partition */
+        mkfs_mediasize = kbytes * 1024;
+        mkfs_fssize = mkfs_mediasize / mkfs_sectorsize;
+
+        /* Create the file. */
+        close(open(argv[i], O_RDONLY | O_CREAT | O_TRUNC, 0664));
+        if (ufs_disk_fillout_blank(&disk, argv[i]) == -1 ||
+            ufs_disk_write(&disk) == -1) {
+            fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
+            return -1;
+        }
+        mkfs(&disk, argv[i]);
 #if 0
         //TODO
         if (i == argc-2) {
