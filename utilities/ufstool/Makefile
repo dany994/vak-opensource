@@ -20,8 +20,8 @@ CFLAGS          = -O1 -g -Werror
 LDFLAGS         = -g
 
 # Fuse
-MOUNT_CFLAGS    = $(shell pkg-config fuse --cflags)
-LIBS            += $(shell pkg-config fuse --libs)
+MOUNT_CFLAGS    = $(shell pkg-config --cflags fuse)
+LIBS            += $(shell pkg-config --libs fuse)
 
 all:            $(PROGS)
 
