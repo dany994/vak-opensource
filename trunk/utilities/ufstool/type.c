@@ -27,6 +27,7 @@
 
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #define _LIBUFS
@@ -77,6 +78,7 @@ ufs_disk_fillout_blank(struct uufsd *disk, const char *name)
 		return (-1);
 	}
 
+        memset(disk, 0, sizeof(*disk));
 	disk->d_bsize = 1;
 	disk->d_ccg = 0;
 	disk->d_fd = fd;
