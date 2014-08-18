@@ -3,7 +3,7 @@
 PROGS           = ufstool ffsinfo newfs fsck fsdb dumpfs
 #PROGS           = ffsinfo newfs fsck fsdb dumpfs
 
-OBJS_UFSTOOL    = ufstool.o manifest.o mount.o libufs.a
+OBJS_UFSTOOL    = ufstool.o manifest.o mount.o create.o mkfs.o libufs.a
 OBJS_NEWFS      = newfs.o mkfs.o libufs.a
 OBJS_FFSINFO    = ffsinfo.o debug.o libufs.a
 OBJS_DUMPFS     = dumpfs.o libufs.a
