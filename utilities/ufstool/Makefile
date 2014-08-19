@@ -7,11 +7,11 @@ OBJS_UFSTOOL    = ufstool.o manifest.o mount.o mkfs.o libufs.a
 OBJS_NEWFS      = newfs.o mkfs.o libufs.a
 OBJS_FFSINFO    = ffsinfo.o debug.o libufs.a
 OBJS_DUMPFS     = dumpfs.o libufs.a
-OBJS_FSCK       = ckdir.o ckutil.o ckinode.o fsck.o pass1.o pass1b.o pass2.o \
-                  pass3.o pass4.o pass5.o cksetup.o suj.o gjournal.o \
-                  libufs.a
-OBJS_FSDB       = fsdb.o fsdbutil.o ckdir.o ckutil.o ckinode.o pass1.o \
-                  pass1b.o pass2.o pass3.o pass4.o pass5.o cksetup.o \
+OBJS_FSCK       = fsck.o check.o \
+                  pass1.o pass1b.o pass2.o pass3.o pass4.o pass5.o \
+                  suj.o gjournal.o libufs.a
+OBJS_FSDB       = fsdb.o fsdbutil.o check.o \
+                  pass1.o pass1b.o pass2.o pass3.o pass4.o pass5.o \
                   ffs_subr.o ffs_tables.o libufs.a
 OBJS_LIBUFS     = block.o cgroup.o inode.o sblock.o type.o ffs_subr.o ffs_tables.o
 
