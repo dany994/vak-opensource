@@ -64,9 +64,9 @@ fsdbutil.o: fsdbutil.c fs.h dinode.h fsdb.h fsck.h
 gjournal.o: gjournal.c libufs.h fs.h dinode.h fsck.h
 inode.o: inode.c libufs.h fs.h dinode.h
 mkfs.o: mkfs.c dir.h libufs.h fs.h dinode.h newfs.h
-mount.o: mount.c libufs.h fs.h dinode.h dir.h ufstool.h
+mount.o: mount.c libufs.h fs.h dinode.h dir.h
 newfs.o: newfs.c dir.h libufs.h fs.h dinode.h newfs.h
 sblock.o: sblock.c libufs.h fs.h dinode.h
 check_suj.o: check_suj.c dir.h libufs.h fs.h dinode.h fsck.h
 type.o: type.c libufs.h fs.h dinode.h
-ufstool.o: ufstool.c libufs.h fs.h dinode.h newfs.h manifest.h ufstool.h
+ufstool.o: ufstool.c libufs.h fs.h dinode.h newfs.h manifest.h

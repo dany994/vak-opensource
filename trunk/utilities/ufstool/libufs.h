@@ -176,7 +176,12 @@ void	ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
 /*
  * check.c
  */
-void ufs_check(struct uufsd *disk, const char *filesys, int verbose);
+void ufs_check(struct uufsd *disk, const char *filesys, int verbose, int fix);
+
+/*
+ * mount.c
+ */
+int ufs_mount(struct uufsd *disk, char *dirname);
 
 __END_DECLS
 

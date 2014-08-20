@@ -36,7 +36,6 @@
 #include "libufs.h"
 #include "newfs.h"
 #include "manifest.h"
-#include "ufstool.h"
 
 int verbose;
 static int extract;
@@ -824,7 +823,7 @@ int main (int argc, char **argv)
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
         }
-        ufs_check (&disk, argv[i], verbose);
+        ufs_check (&disk, argv[i], verbose, fix);
         ufs_disk_close (&disk);
         return 0;
     }

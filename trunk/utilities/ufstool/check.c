@@ -4306,7 +4306,7 @@ check_pass5(void)
 /*
  * Check the specified file system.
  */
-void ufs_check(struct uufsd *disk, const char *filesys, int verbose)
+void ufs_check(struct uufsd *disk, const char *filesys, int verbose, int fix)
 {
     ufs2_daddr_t n_ffree, n_bfree;
     struct dups *dp;
@@ -4324,6 +4324,11 @@ void ufs_check(struct uufsd *disk, const char *filesys, int verbose)
     errmsg[0] = '\0';
 
     check_filename = filesys;
+    if (fix)
+        check_yflag = 1;
+    else
+        check_nflag = 1;
+
     check_sblock_init();
     switch (check_setup(filesys, 0)) {
     case 0:
