@@ -4349,7 +4349,7 @@ clean:  check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
      */
     if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
         if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
-            if (suj_check(filesys) == 0) {
+            if (check_suj(filesys) == 0) {
                 printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
                 exit(0);
             }
