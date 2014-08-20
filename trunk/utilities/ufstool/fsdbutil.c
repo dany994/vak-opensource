@@ -231,9 +231,9 @@ printindir(ufs2_daddr_t blk, int level, char *bufp)
 	bp->b_un.b_buf = bufp;
 	initbarea(bp, BT_UNKNOWN);
 
-	getblk(bp, blk, sblock.fs_bsize);
+	check_getblk(bp, blk, sblock.fs_bsize);
     } else
-	bp = getdatablk(blk, sblock.fs_bsize, BT_UNKNOWN);
+	bp = check_getdatablk(blk, sblock.fs_bsize, BT_UNKNOWN);
 
     cpl = charsperline();
     for (i = charssofar = 0; i < NINDIR(&sblock); i++) {

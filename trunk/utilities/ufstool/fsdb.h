@@ -30,7 +30,6 @@
  * $FreeBSD$
  */
 
-extern int blread(int fd, char *buf, ufs2_daddr_t blk, long size);
 extern void rwerror(const char *mesg, ufs2_daddr_t blk);
 extern int reply(const char *question);
 

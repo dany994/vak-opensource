@@ -386,15 +386,10 @@ gjournal_check(const char *filesys)
 #if 0
 		if (got_siginfo) {
 			printf("%s: phase j: cyl group %d of %d (%d%%)\n",
-			    cdevname, cg, fs->fs_ncg, cg * 100 / fs->fs_ncg);
+			    check_filename, cg, fs->fs_ncg, cg * 100 / fs->fs_ncg);
 			got_siginfo = 0;
 		}
 #endif
-		if (got_sigalarm) {
-			setproctitle("%s pj %d%%", cdevname,
-			     cg * 100 / fs->fs_ncg);
-			got_sigalarm = 0;
-		}
 		cgc = getcg(cg);
 		cgp = &cgc->cgc_cg;
 		/* Are there any unreferenced inodes in this cylinder group? */
