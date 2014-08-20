@@ -3,14 +3,14 @@
 PROGS           = ufstool ffsinfo newfs fsck fsdb dumpfs
 #PROGS           = ffsinfo newfs fsck fsdb dumpfs
 
-OBJS_UFSTOOL    = ufstool.o manifest.o mount.o mkfs.o check.o check_suj.o libufs.a
-OBJS_NEWFS      = newfs.o mkfs.o libufs.a
+OBJS_UFSTOOL    = ufstool.o manifest.o mount.o libufs.a
+OBJS_NEWFS      = newfs.o libufs.a
 OBJS_FFSINFO    = ffsinfo.o debug.o libufs.a
 OBJS_DUMPFS     = dumpfs.o libufs.a
-OBJS_FSCK       = fsck.o check.o check_suj.o gjournal.o libufs.a
-OBJS_FSDB       = fsdb.o fsdbutil.o check.o check_suj.o \
-                  ffs_subr.o ffs_tables.o libufs.a
-OBJS_LIBUFS     = block.o cgroup.o inode.o sblock.o type.o ffs_subr.o ffs_tables.o
+OBJS_FSCK       = fsck.o gjournal.o libufs.a
+OBJS_FSDB       = fsdb.o fsdbutil.o ffs_subr.o ffs_tables.o libufs.a
+OBJS_LIBUFS     = block.o cgroup.o inode.o sblock.o type.o \
+                  ffs_subr.o ffs_tables.o mkfs.o check.o check_suj.o
 
 CFLAGS          = -O1 -g -Werror
 #CFLAGS         += -D_LIBUFS_DEBUGGING

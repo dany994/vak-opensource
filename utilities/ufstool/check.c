@@ -77,6 +77,24 @@ static int pass1check(struct inodesc *idesc);
 static int pass4check(struct inodesc *idesc);
 static int linkup(ino_t orphan, ino_t parentdir, char *name);
 
+/* Inode cache data structures. */
+static struct inoinfo **inphead, **inpsort;
+
+static long readcnt[BT_NUMBUFTYPES];
+static long totalreadcnt[BT_NUMBUFTYPES];
+static struct timespec readtime[BT_NUMBUFTYPES];
+static struct timespec totalreadtime[BT_NUMBUFTYPES];
+static struct bufarea *pdirbp;	/* current directory contents */
+static struct bufarea *pbp;	/* current inode block */
+
+static long numdirs, dirhash, listmax, inplast;
+static long countdirs;		/* number of directories we actually found */
+
+static long	dev_bsize;	/* computed value of DEV_BSIZE */
+static char	havesb;		/* superblock has been read */
+static char	*blockmap;	/* ptr to primary blk allocation map */
+static ino_t	lfdir;		/* lost & found directory inode number */
+
 /*
  * Calculate a prototype superblock based on information in the disk label.
  * When done the cgsblock macro can be calculated and the fs_ncg field
@@ -189,10 +207,10 @@ check_fatal(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    if (!preen) {
+    if (!check_preen) {
         (void)vfprintf(stdout, fmt, ap);
         va_end(ap);
-        if (usedsoftdep)
+        if (check_usedsoftdep)
             (void)fprintf(stdout,
                 "\nUNEXPECTED SOFT UPDATE INCONSISTENCY\n");
         /*
@@ -206,7 +224,7 @@ check_fatal(const char *fmt, ...)
     (void)vfprintf(stdout, fmt, ap);
     (void)fprintf(stdout,
         "\n%s: UNEXPECTED%sINCONSISTENCY; RUN fsck MANUALLY.\n",
-        check_filename, usedsoftdep ? " SOFT UPDATE " : " ");
+        check_filename, check_usedsoftdep ? " SOFT UPDATE " : " ");
     /*
      * Force foreground fsck to clean up inconsistency.
      */
@@ -223,7 +241,7 @@ check_warn(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    if (preen)
+    if (check_preen)
         (void)fprintf(stdout, "%s: ", check_filename);
     (void)vfprintf(stdout, fmt, ap);
     va_end(ap);
@@ -246,7 +264,7 @@ panic(const char *fmt, ...)
 static void
 rwerror(const char *mesg, ufs2_daddr_t blk)
 {
-    if (preen == 0)
+    if (check_preen == 0)
         printf("\n");
     check_fatal("CANNOT %s: %ld", mesg, (long)blk);
     if (check_reply("CONTINUE") == 0)
@@ -267,10 +285,10 @@ check_blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size)
     if (lseek(fd, offset, 0) < 0)
         rwerror("SEEK BLK", blk);
     else if (write(fd, buf, size) == size) {
-        fsmodified = 1;
+        check_fsmodified = 1;
         return;
     }
-    resolved = 0;
+    check_resolved = 0;
     rwerror("WRITE BLK", blk);
     if (lseek(fd, offset, 0) < 0)
         rwerror("SEEK BLK", blk);
@@ -292,7 +310,7 @@ flush(int fd, struct bufarea *bp)
     if (!bp->b_dirty)
         return;
     bp->b_dirty = 0;
-    if (fswritefd < 0) {
+    if (check_fswritefd < 0) {
         check_fatal("WRITING IN READ_ONLY MODE.\n");
         return;
     }
@@ -302,10 +320,10 @@ flush(int fd, struct bufarea *bp)
             (long long)bp->b_bno);
     bp->b_errs = 0;
     check_blwrite(fd, bp->b_un.b_buf, bp->b_bno, bp->b_size);
-    if (bp != &sblk)
+    if (bp != &check_sblk)
         return;
     for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
-        check_blwrite(fswritefd, (char *)sblock.fs_csp + i,
+        check_blwrite(check_fswritefd, (char *)sblock.fs_csp + i,
             fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
             sblock.fs_cssize - i < sblock.fs_bsize ?
             sblock.fs_cssize - i : sblock.fs_bsize);
@@ -318,29 +336,29 @@ check_finish(int markclean)
     struct bufarea *bp, *nbp;
     int ofsmodified, cnt;
 
-    if (debug && totalreads > 0)
+    if (check_debug && totalreads > 0)
         printf("cache with %d buffers missed %ld of %ld (%d%%)\n",
             numbufs, totaldiskreads, totalreads,
             (int)(totaldiskreads * 100 / totalreads));
-    if (fswritefd < 0) {
-        (void)close(fsreadfd);
+    if (check_fswritefd < 0) {
+        (void)close(check_fsreadfd);
         return;
     }
-    flush(fswritefd, &sblk);
+    flush(check_fswritefd, &check_sblk);
     if (havesb && sblock.fs_magic == FS_UFS2_MAGIC &&
-        sblk.b_bno != sblock.fs_sblockloc / dev_bsize &&
-        !preen && check_reply("UPDATE STANDARD SUPERBLOCK")) {
-        sblk.b_bno = sblock.fs_sblockloc / dev_bsize;
+        check_sblk.b_bno != sblock.fs_sblockloc / dev_bsize &&
+        !check_preen && check_reply("UPDATE STANDARD SUPERBLOCK")) {
+        check_sblk.b_bno = sblock.fs_sblockloc / dev_bsize;
         sbdirty();
-        flush(fswritefd, &sblk);
+        flush(check_fswritefd, &check_sblk);
     }
-    flush(fswritefd, &cgblk);
+    flush(check_fswritefd, &cgblk);
     free(cgblk.b_un.b_buf);
     cnt = 0;
     TAILQ_FOREACH_REVERSE_SAFE(bp, &bufhead, buflist, b_list, nbp) {
         TAILQ_REMOVE(&bufhead, bp, b_list);
         cnt++;
-        flush(fswritefd, bp);
+        flush(check_fswritefd, bp);
         free(bp->b_un.b_buf);
         free((char *)bp);
     }
@@ -349,7 +367,7 @@ check_finish(int markclean)
     for (cnt = 0; cnt < sblock.fs_ncg; cnt++) {
         if (cgbufs[cnt].b_un.b_cg == NULL)
             continue;
-        flush(fswritefd, &cgbufs[cnt]);
+        flush(check_fswritefd, &cgbufs[cnt]);
         free(cgbufs[cnt].b_un.b_cg);
     }
     free(cgbufs);
@@ -361,31 +379,31 @@ check_finish(int markclean)
             sblock.fs_pendinginodes = 0;
         }
         sbdirty();
-        ofsmodified = fsmodified;
-        flush(fswritefd, &sblk);
-        fsmodified = ofsmodified;
-        if (!preen) {
+        ofsmodified = check_fsmodified;
+        flush(check_fswritefd, &check_sblk);
+        check_fsmodified = ofsmodified;
+        if (!check_preen) {
             printf("\n***** FILE SYSTEM MARKED %s *****\n",
                 markclean ? "CLEAN" : "DIRTY");
             if (!markclean)
-                rerun = 1;
+                check_rerun = 1;
         }
-    } else if (!preen) {
+    } else if (!check_preen) {
         if (markclean) {
             printf("\n***** FILE SYSTEM IS CLEAN *****\n");
         } else {
             printf("\n***** FILE SYSTEM STILL DIRTY *****\n");
-            rerun = 1;
+            check_rerun = 1;
         }
     }
-    (void)close(fsreadfd);
-    (void)close(fswritefd);
+    (void)close(check_fsreadfd);
+    (void)close(check_fswritefd);
 }
 
 /*
  * Read in a superblock finding an alternate if necessary.
  * Return 1 if successful, 0 if unsuccessful, -1 if file system
- * is already clean (ckclean and preen mode only).
+ * is already clean (check_clean and preen mode only).
  */
 int
 check_setup(const char *dev, int part_num)
@@ -397,7 +415,7 @@ check_setup(const char *dev, int part_num)
     size_t size;
 
     havesb = 0;
-    fswritefd = -1;
+    check_fswritefd = -1;
     if (stat(dev, &statb) < 0) {
         printf("Can't stat %s: %s\n", dev, strerror(errno));
         return (0);
@@ -408,31 +426,31 @@ check_setup(const char *dev, int part_num)
             return (0);
         }
     }
-    if ((fsreadfd = open(dev, O_RDONLY)) < 0) {
+    if ((check_fsreadfd = open(dev, O_RDONLY)) < 0) {
         printf("Can't open %s: %s\n", dev, strerror(errno));
         return (0);
     }
-    if (preen == 0)
+    if (check_preen == 0)
         printf("** %s", dev);
-    if (nflag || (fswritefd = open(dev, O_WRONLY)) < 0) {
-        fswritefd = -1;
-        if (preen)
+    if (check_nflag || (check_fswritefd = open(dev, O_WRONLY)) < 0) {
+        check_fswritefd = -1;
+        if (check_preen)
             check_fatal("NO WRITE ACCESS");
         printf(" (NO WRITE)");
     }
-    if (preen == 0)
+    if (check_preen == 0)
         printf("\n");
     /*
      * Read in the superblock, looking for alternates if necessary
      */
     if (check_readsb(1) == 0) {
-        skipclean = 0;
-        if (bflag || preen || calcsb(part_num, fsreadfd, &proto) == 0)
+        check_skipclean = 0;
+        if (check_bflag || check_preen || calcsb(part_num, check_fsreadfd, &proto) == 0)
             return(0);
         if (check_reply("LOOK FOR ALTERNATE SUPERBLOCKS") == 0)
             return (0);
         for (cg = 0; cg < proto.fs_ncg; cg++) {
-            bflag = fsbtodb(&proto, cgsblock(&proto, cg));
+            check_bflag = fsbtodb(&proto, cgsblock(&proto, cg));
             if (check_readsb(0) != 0)
                 break;
         }
@@ -444,18 +462,19 @@ check_setup(const char *dev, int part_num)
                 "LOCATION OF AN ALTERNATE",
                 "SUPER-BLOCK TO SUPPLY NEEDED",
                 "INFORMATION; SEE fsck_ffs(8).");
-            bflag = 0;
+            check_bflag = 0;
             return(0);
         }
-        check_warn("USING ALTERNATE SUPERBLOCK AT %d\n", bflag);
-        bflag = 0;
+        check_warn("USING ALTERNATE SUPERBLOCK AT %d\n", check_bflag);
+        check_bflag = 0;
     }
-    if (skipclean && ckclean && sblock.fs_clean) {
+    if (check_skipclean && check_clean && sblock.fs_clean) {
         check_warn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
         return (-1);
     }
-    maxfsblock = sblock.fs_size;
-    maxino = sblock.fs_ncg * sblock.fs_ipg;
+    check_maxfsblock = sblock.fs_size;
+    check_maxino = sblock.fs_ncg * sblock.fs_ipg;
+
     /*
      * Check and potentially fix certain fields in the super block.
      */
@@ -481,9 +500,9 @@ check_setup(const char *dev, int part_num)
         check_fatal("from before 2002 with the command ``fsck -c 2''\n");
         exit(EEXIT);
     }
-    if (asblk.b_dirty && !bflag) {
+    if (asblk.b_dirty && !check_bflag) {
         memmove(&altsblock, &sblock, (size_t)sblock.fs_sbsize);
-        flush(fswritefd, &asblk);
+        flush(check_fswritefd, &asblk);
     }
     /*
      * read in the summary info.
@@ -498,8 +517,8 @@ check_setup(const char *dev, int part_num)
     for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
         size = sblock.fs_cssize - i < sblock.fs_bsize ?
             sblock.fs_cssize - i : sblock.fs_bsize;
-        readcnt[sblk.b_type]++;
-        if (check_blread(fsreadfd, (char *)sblock.fs_csp + i,
+        readcnt[check_sblk.b_type]++;
+        if (check_blread(check_fsreadfd, (char *)sblock.fs_csp + i,
             fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
             size) != 0 && !asked) {
             check_fatal("BAD SUMMARY INFORMATION");
@@ -513,16 +532,16 @@ check_setup(const char *dev, int part_num)
     /*
      * allocate and initialize the necessary maps
      */
-    bmapsize = roundup(howmany(maxfsblock, CHAR_BIT), sizeof(short));
+    bmapsize = roundup(howmany(check_maxfsblock, CHAR_BIT), sizeof(short));
     blockmap = Calloc((unsigned)bmapsize, sizeof (char));
     if (blockmap == NULL) {
         printf("cannot alloc %u bytes for blockmap\n",
             (unsigned)bmapsize);
         goto badsb;
     }
-    inostathead = Calloc((unsigned)(sblock.fs_ncg),
+    check_inostathead = Calloc((unsigned)(sblock.fs_ncg),
         sizeof(struct inostatlist));
-    if (inostathead == NULL) {
+    if (check_inostathead == NULL) {
         printf("cannot alloc %u bytes for inostathead\n",
             (unsigned)(sizeof(struct inostatlist) * (sblock.fs_ncg)));
         goto badsb;
@@ -542,9 +561,9 @@ check_setup(const char *dev, int part_num)
     }
     bufinit();
     if (sblock.fs_flags & FS_DOSOFTDEP)
-        usedsoftdep = 1;
+        check_usedsoftdep = 1;
     else
-        usedsoftdep = 0;
+        check_usedsoftdep = 0;
     return (1);
 
 badsb:
@@ -558,7 +577,7 @@ badsb(int listerr, const char *s)
 
     if (!listerr)
         return;
-    if (preen)
+    if (check_preen)
         printf("%s: ", check_filename);
     check_fatal("BAD SUPER BLOCK: %s\n", s);
 }
@@ -581,10 +600,10 @@ check_readsb(int listerr)
     ufs2_daddr_t super;
     int i;
 
-    if (bflag) {
-        super = bflag;
-        readcnt[sblk.b_type]++;
-        if ((check_blread(fsreadfd, (char *)&sblock, super, (long)SBLOCKSIZE)))
+    if (check_bflag) {
+        super = check_bflag;
+        readcnt[check_sblk.b_type]++;
+        if ((check_blread(check_fsreadfd, (char *)&sblock, super, (long)SBLOCKSIZE)))
             return (0);
         if (sblock.fs_magic == FS_BAD_MAGIC) {
             fprintf(stderr, BAD_MAGIC_MSG);
@@ -593,14 +612,14 @@ check_readsb(int listerr)
         if (sblock.fs_magic != FS_UFS1_MAGIC &&
             sblock.fs_magic != FS_UFS2_MAGIC) {
             fprintf(stderr, "%d is not a file system superblock\n",
-                bflag);
+                check_bflag);
             return (0);
         }
     } else {
         for (i = 0; sblock_try[i] != -1; i++) {
             super = sblock_try[i] / dev_bsize;
-            readcnt[sblk.b_type]++;
-            if ((check_blread(fsreadfd, (char *)&sblock, super,
+            readcnt[check_sblk.b_type]++;
+            if ((check_blread(check_fsreadfd, (char *)&sblock, super,
                 (long)SBLOCKSIZE)))
                 return (0);
             if (sblock.fs_magic == FS_BAD_MAGIC) {
@@ -627,9 +646,9 @@ check_readsb(int listerr)
      */
     super *= dev_bsize;
     dev_bsize = sblock.fs_fsize / fsbtodb(&sblock, 1);
-    sblk.b_bno = super / dev_bsize;
-    sblk.b_size = SBLOCKSIZE;
-    if (bflag)
+    check_sblk.b_bno = super / dev_bsize;
+    check_sblk.b_size = SBLOCKSIZE;
+    if (check_bflag)
         goto out;
     /*
      * Compare all fields that should not differ in alternate super block.
@@ -686,16 +705,16 @@ out:
 void
 check_sblock_init(void)
 {
-    fswritefd = -1;
-    fsmodified = 0;
+    check_fswritefd = -1;
+    check_fsmodified = 0;
     lfdir = 0;
-    initbarea(&sblk, BT_SUPERBLK);
+    initbarea(&check_sblk, BT_SUPERBLK);
     initbarea(&asblk, BT_SUPERBLK);
-    sblk.b_un.b_buf = Malloc(SBLOCKSIZE);
+    check_sblk.b_un.b_buf = Malloc(SBLOCKSIZE);
     asblk.b_un.b_buf = Malloc(SBLOCKSIZE);
-    if (sblk.b_un.b_buf == NULL || asblk.b_un.b_buf == NULL)
+    if (check_sblk.b_un.b_buf == NULL || asblk.b_un.b_buf == NULL)
         errx(EEXIT, "cannot allocate space for superblock");
-    dev_bsize = secsize = DEV_BSIZE;
+    dev_bsize = check_secsize = DEV_BSIZE;
 }
 
 static int
@@ -713,7 +732,7 @@ ftypeok(union dinode *dp)
         return (1);
 
     default:
-        if (debug)
+        if (check_debug)
             printf("bad file type 0%o\n", DIP(dp, di_mode));
         return (0);
     }
@@ -725,16 +744,16 @@ check_reply(const char *question)
     int persevere;
     char c;
 
-    if (preen)
+    if (check_preen)
         check_fatal("INTERNAL ERROR: GOT TO reply()");
     persevere = !strcmp(question, "CONTINUE");
     printf("\n");
-    if (!persevere && (nflag || fswritefd < 0)) {
+    if (!persevere && (check_nflag || check_fswritefd < 0)) {
         printf("%s? no\n\n", question);
-        resolved = 0;
+        check_resolved = 0;
         return (0);
     }
-    if (yflag || (persevere && nflag)) {
+    if (check_yflag || (persevere && check_nflag)) {
         printf("%s? yes\n\n", question);
         return (1);
     }
@@ -744,7 +763,7 @@ check_reply(const char *question)
         c = getc(stdin);
         while (c != '\n' && getc(stdin) != '\n') {
             if (feof(stdin)) {
-                resolved = 0;
+                check_resolved = 0;
                 return (0);
             }
         }
@@ -752,7 +771,7 @@ check_reply(const char *question)
     printf("\n");
     if (c == 'y' || c == 'Y')
         return (1);
-    resolved = 0;
+    check_resolved = 0;
     return (0);
 }
 
@@ -766,10 +785,10 @@ inoinfo(ino_t inum)
     struct inostatlist *ilp;
     int iloff;
 
-    if (inum > maxino)
+    if (inum > check_maxino)
         errx(EEXIT, "inoinfo: inumber %ju out of range",
             (uintmax_t)inum);
-    ilp = &inostathead[inum / sblock.fs_ipg];
+    ilp = &check_inostathead[inum / sblock.fs_ipg];
     iloff = inum % sblock.fs_ipg;
     if (iloff >= ilp->il_numalloced)
         return (&unallocated);
@@ -818,7 +837,7 @@ check_flushentry(void)
     cgbp = &cgbufs[flushtries++];
     if (cgbp->b_un.b_cg == NULL)
         return (0);
-    flush(fswritefd, cgbp);
+    flush(check_fswritefd, cgbp);
     free(cgbp->b_un.b_buf);
     cgbp->b_un.b_buf = NULL;
     return (1);
@@ -844,7 +863,7 @@ check_getdatablk(ufs2_daddr_t blkno, long size, int type)
     check_getblk(bp, blkno, size);
     /* fall through */
 foundit:
-    if (debug && bp->b_type != type)
+    if (check_debug && bp->b_type != type)
         printf("Buffer type changed from %s to %s\n",
             buftype[bp->b_type], buftype[type]);
     TAILQ_REMOVE(&bufhead, bp, b_list);
@@ -884,8 +903,8 @@ check_getblk(struct bufarea *bp, ufs2_daddr_t blk, long size)
     if (bp->b_bno == dblk) {
         totalreads++;
     } else {
-        flush(fswritefd, bp);
-        bp->b_errs = check_blread(fsreadfd, bp->b_un.b_buf, dblk, size);
+        flush(check_fswritefd, bp);
+        bp->b_errs = check_blread(check_fsreadfd, bp->b_un.b_buf, dblk, size);
         bp->b_bno = dblk;
         bp->b_size = size;
     }
@@ -925,7 +944,7 @@ check_stats(char *what)
 {
     int i;
 
-    if (debug == 0)
+    if (check_debug == 0)
         return;
     if (diskreads == 0) {
         printf("%s: no I/O\n\n", what);
@@ -948,7 +967,7 @@ check_finalstats(void)
 {
     int i;
 
-    if (debug == 0)
+    if (check_debug == 0)
         return;
     printf("Final I/O statistics\n");
     totaldiskreads += diskreads;
@@ -984,7 +1003,7 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
      * rwerror is used for all sorts of errors, not just true read/write
      * errors.  It should be refactored and fixed.
      */
-    if (surrender) {
+    if (check_surrender) {
         check_fatal("CANNOT READ_BLK: %ld", (long)blk);
         errx(EEXIT, "ABORTING DUE TO READ ERRORS");
     } else
@@ -995,12 +1014,12 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
     errs = 0;
     memset(buf, 0, (size_t)size);
     printf("THE FOLLOWING DISK SECTORS COULD NOT BE READ:");
-    for (cp = buf, i = 0; i < size; i += secsize, cp += secsize) {
-        if (read(fd, cp, (int)secsize) != secsize) {
-            (void)lseek(fd, offset + i + secsize, 0);
-            if (secsize != dev_bsize && dev_bsize != 1)
+    for (cp = buf, i = 0; i < size; i += check_secsize, cp += check_secsize) {
+        if (read(fd, cp, (int)check_secsize) != check_secsize) {
+            (void)lseek(fd, offset + i + check_secsize, 0);
+            if (check_secsize != dev_bsize && dev_bsize != 1)
                 printf(" %jd (%jd),",
-                    (intmax_t)(blk * dev_bsize + i) / secsize,
+                    (intmax_t)(blk * dev_bsize + i) / check_secsize,
                     (intmax_t)blk + i / dev_bsize);
             else
                 printf(" %jd,", (intmax_t)blk + i / dev_bsize);
@@ -1009,7 +1028,7 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
     }
     printf("\n");
     if (errs)
-        resolved = 0;
+        check_resolved = 0;
     return (errs);
 }
 
@@ -1083,7 +1102,7 @@ check_cgmagic(int cg, struct bufarea *cgbp)
     check_fatal("CYLINDER GROUP %d: BAD MAGIC NUMBER", cg);
     if (!check_reply("REBUILD CYLINDER GROUP")) {
         printf("YOU WILL NEED TO RERUN FSCK.\n");
-        rerun = 1;
+        check_rerun = 1;
         return (1);
     }
     /*
@@ -1140,7 +1159,7 @@ allocblk(long frags)
 
     if (frags <= 0 || frags > sblock.fs_frag)
         return (0);
-    for (i = 0; i < maxfsblock - sblock.fs_frag; i += sblock.fs_frag) {
+    for (i = 0; i < check_maxfsblock - sblock.fs_frag; i += sblock.fs_frag) {
         for (j = 0; j <= sblock.fs_frag - frags; j++) {
             if (testbmap(i + j))
                 continue;
@@ -1161,7 +1180,7 @@ allocblk(long frags)
                 setbmap(i + j + k);
                 clrbit(cg_blksfree(cgp), baseblk + k);
             }
-            n_blks += frags;
+            check_n_blks += frags;
             if (frags == sblock.fs_frag)
                 cgp->cg_cs.cs_nbfree--;
             else
@@ -1181,7 +1200,7 @@ check_findino(struct inodesc *idesc)
     if (dirp->d_ino == 0)
         return (KEEPON);
     if (strcmp(dirp->d_name, idesc->id_name) == 0 &&
-        dirp->d_ino >= ROOTINO && dirp->d_ino <= maxino) {
+        dirp->d_ino >= ROOTINO && dirp->d_ino <= check_maxino) {
         idesc->id_parent = dirp->d_ino;
         return (STOP|FOUND);
     }
@@ -1273,7 +1292,7 @@ void
 check_catchquit(int sig)
 {
     printf("returning to single-user after file system check\n");
-    returntosingle = 1;
+    check_returntosingle = 1;
     (void)signal(SIGQUIT, SIG_DFL);
 }
 
@@ -1286,7 +1305,7 @@ pinode(ino_t ino)
     time_t t;
 
     printf(" I=%lu ", (u_long)ino);
-    if (ino < ROOTINO || ino > maxino)
+    if (ino < ROOTINO || ino > check_maxino)
         return;
     dp = check_ginode(ino);
     printf(" OWNER=");
@@ -1295,7 +1314,7 @@ pinode(ino_t ino)
     else
         printf("%u ", (unsigned)DIP(dp, di_uid));
     printf("MODE=%o\n", DIP(dp, di_mode));
-    if (preen)
+    if (check_preen)
         printf("%s: ", check_filename);
     printf("SIZE=%ju ", (uintmax_t)DIP(dp, di_size));
     t = DIP(dp, di_mtime);
@@ -1313,7 +1332,7 @@ fileerror(ino_t cwd, ino_t ino, const char *errmesg)
     pinode(ino);
     printf("\n");
     getpathname(pathbuf, cwd, ino);
-    if (ino < ROOTINO || ino > maxino) {
+    if (ino < ROOTINO || ino > check_maxino) {
         check_fatal("NAME=%s\n", pathbuf);
         return;
     }
@@ -1346,7 +1365,7 @@ dofix(struct inodesc *idesc, const char *msg)
             direrror(idesc->id_number, msg);
         else
             check_warn("%s", msg);
-        if (preen) {
+        if (check_preen) {
             printf(" (SALVAGED)\n");
             idesc->id_fix = FIX;
             return (ALTERED);
@@ -1420,7 +1439,7 @@ dircheck(struct inodesc *idesc, struct direct *dp)
         goto bad;
     return (1);
 bad:
-    if (debug)
+    if (check_debug)
         printf("Bad dir: ino %d reclen %d namlen %d type %d name %s\n",
             dp->d_ino, dp->d_reclen, dp->d_namlen, dp->d_type,
             dp->d_name);
@@ -1496,12 +1515,12 @@ chkrange(ufs2_daddr_t blk, int cnt)
 {
     int c;
 
-    if (cnt <= 0 || blk <= 0 || blk > maxfsblock ||
-        cnt - 1 > maxfsblock - blk)
+    if (cnt <= 0 || blk <= 0 || blk > check_maxfsblock ||
+        cnt - 1 > check_maxfsblock - blk)
         return (1);
     if (cnt > sblock.fs_frag ||
         fragnum(&sblock, blk) + cnt > sblock.fs_frag) {
-        if (debug)
+        if (check_debug)
             printf("bad size: blk %ld, offset %i, size %d\n",
                 (long)blk, (int)fragnum(&sblock, blk), cnt);
         return (1);
@@ -1509,7 +1528,7 @@ chkrange(ufs2_daddr_t blk, int cnt)
     c = dtog(&sblock, blk);
     if (blk < cgdmin(&sblock, c)) {
         if ((blk + cnt) > cgsblock(&sblock, c)) {
-            if (debug) {
+            if (check_debug) {
                 printf("blk %ld < cgdmin %ld;",
                     (long)blk, (long)cgdmin(&sblock, c));
                 printf(" blk + cnt %ld > cgsbase %ld\n",
@@ -1520,7 +1539,7 @@ chkrange(ufs2_daddr_t blk, int cnt)
         }
     } else {
         if ((blk + cnt) > cgbase(&sblock, c+1)) {
-            if (debug)  {
+            if (check_debug)  {
                 printf("blk %ld >= cgdmin %ld;",
                     (long)blk, (long)cgdmin(&sblock, c));
                 printf(" blk + cnt %ld > sblock.fs_fpg %ld\n",
@@ -1612,14 +1631,14 @@ iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
                 continue;
             (void)sprintf(buf, "PARTIALLY TRUNCATED INODE I=%lu",
                 (u_long)idesc->id_number);
-            if (preen) {
+            if (check_preen) {
                 check_fatal("%s", buf);
             } else if (dofix(idesc, buf)) {
                 IBLK_SET(bp, i, 0);
                 dirty(bp);
             }
         }
-        flush(fswritefd, bp);
+        flush(check_fswritefd, bp);
     }
     for (i = 0; i < nif; i++) {
         if (ilevel == 0)
@@ -1648,7 +1667,7 @@ iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
                     isize = 0;
                     printf(
                         "YOU MUST RERUN FSCK AFTERWARDS\n");
-                    rerun = 1;
+                    check_rerun = 1;
                     check_inodirty();
                     bp->b_flags &= ~B_INUSE;
                     return(STOP);
@@ -1706,7 +1725,7 @@ check_inode(union dinode *dp, struct inodesc *idesc)
                         i * sblock.fs_bsize);
                     printf(
                         "YOU MUST RERUN FSCK AFTERWARDS\n");
-                    rerun = 1;
+                    check_rerun = 1;
                     check_inodirty();
 
                 }
@@ -1746,7 +1765,7 @@ check_inode(union dinode *dp, struct inodesc *idesc)
                     remsize = 0;
                     printf(
                         "YOU MUST RERUN FSCK AFTERWARDS\n");
-                    rerun = 1;
+                    check_rerun = 1;
                     check_inodirty();
                     break;
                 }
@@ -1765,7 +1784,7 @@ check_ginode(ino_t inumber)
 {
     ufs2_daddr_t iblk;
 
-    if (inumber < ROOTINO || inumber > maxino)
+    if (inumber < ROOTINO || inumber > check_maxino)
         errx(EEXIT, "bad inode number %ju to ginode",
             (uintmax_t)inumber);
     if (startinum == 0 ||
@@ -2006,10 +2025,10 @@ clri(struct inodesc *idesc, const char *type, int flag)
             (DIP(dp, di_mode) & IFMT) == IFDIR ? "DIR" : "FILE");
         pinode(idesc->id_number);
     }
-    if (preen || check_reply("CLEAR") == 1) {
-        if (preen)
+    if (check_preen || check_reply("CLEAR") == 1) {
+        if (check_preen)
             printf(" (CLEARED)\n");
-        n_files--;
+        check_n_files--;
         (void)check_inode(dp, idesc);
         inoinfo(idesc->id_number)->ino_state = USTATE;
         clearinode(dp);
@@ -2073,10 +2092,10 @@ allocino(ino_t request, int type)
         request = ROOTINO;
     else if (inoinfo(request)->ino_state != USTATE)
         return (0);
-    for (ino = request; ino < maxino; ino++)
+    for (ino = request; ino < check_maxino; ino++)
         if (inoinfo(ino)->ino_state == USTATE)
             break;
-    if (ino == maxino)
+    if (ino == check_maxino)
         return (0);
     cg = ino_to_cg(&sblock, ino);
     cgbp = check_cgget(cg);
@@ -2114,7 +2133,7 @@ allocino(ino_t request, int type)
     DIP_SET(dp, di_atimensec, 0);
     DIP_SET(dp, di_size, sblock.fs_fsize);
     DIP_SET(dp, di_blocks, btodb(sblock.fs_fsize));
-    n_files++;
+    check_n_files++;
     check_inodirty();
     inoinfo(ino)->ino_type = IFTODT(type);
     return (ino);
@@ -2138,7 +2157,7 @@ freeino(ino_t ino)
     clearinode(dp);
     check_inodirty();
     inoinfo(ino)->ino_state = USTATE;
-    n_files--;
+    check_n_files--;
 }
 
 /*
@@ -2180,7 +2199,7 @@ adjust(struct inodesc *idesc, int lcnt)
          * in preen mode, and are on a file system using soft updates,
          * then just toss any partially allocated files.
          */
-        if (resolved && preen && usedsoftdep) {
+        if (check_resolved && check_preen && check_usedsoftdep) {
             clri(idesc, "UNREF", 1);
             return;
         } else {
@@ -2190,9 +2209,9 @@ adjust(struct inodesc *idesc, int lcnt)
              * Hence, resolved should not be cleared when
              * linkup is answered no, but clri is answered yes.
              */
-            saveresolved = resolved;
+            saveresolved = check_resolved;
             if (linkup(idesc->id_number, (ino_t)0, NULL) == 0) {
-                resolved = saveresolved;
+                check_resolved = saveresolved;
                 clri(idesc, "UNREF", 0);
                 return;
             }
@@ -2209,15 +2228,15 @@ adjust(struct inodesc *idesc, int lcnt)
         pinode(idesc->id_number);
         printf(" COUNT %d SHOULD BE %d",
             DIP(dp, di_nlink), DIP(dp, di_nlink) - lcnt);
-        if (preen || usedsoftdep) {
+        if (check_preen || check_usedsoftdep) {
             if (lcnt < 0) {
                 printf("\n");
                 check_fatal("LINK COUNT INCREASING");
             }
-            if (preen)
+            if (check_preen)
                 printf(" (ADJUSTED)\n");
         }
-        if (preen || check_reply("ADJUST") == 1) {
+        if (check_preen || check_reply("ADJUST") == 1) {
             DIP_SET(dp, di_nlink, DIP(dp, di_nlink) - lcnt);
             check_inodirty();
         }
@@ -2289,7 +2308,7 @@ lftempname(char *bufp, ino_t ino)
     int namlen;
 
     cp = bufp + 2;
-    for (in = maxino; in > 0; in /= 10)
+    for (in = check_maxino; in > 0; in /= 10)
         cp++;
     *--cp = 0;
     namlen = cp - bufp;
@@ -2389,10 +2408,10 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
     lostdir = (DIP(dp, di_mode) & IFMT) == IFDIR;
     check_warn("UNREF %s ", lostdir ? "DIR" : "FILE");
     pinode(orphan);
-    if (preen && DIP(dp, di_size) == 0)
+    if (check_preen && DIP(dp, di_size) == 0)
         return (0);
 
-    if (preen)
+    if (check_preen)
         printf(" (RECONNECTED)\n");
     else
         if (check_reply("RECONNECT") == 0)
@@ -2408,17 +2427,17 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
             lfdir = idesc.id_parent;
         } else {
             check_warn("NO lost+found DIRECTORY");
-            if (preen || check_reply("CREATE")) {
+            if (check_preen || check_reply("CREATE")) {
                 lfdir = allocdir(ROOTINO, (ino_t)0, check_lfmode);
                 if (lfdir != 0) {
                     if (check_makeentry(ROOTINO, lfdir, lfname) != 0) {
                         numdirs++;
-                        if (preen)
+                        if (check_preen)
                             printf(" (CREATED)\n");
                     } else {
                         freedir(lfdir, ROOTINO);
                         lfdir = 0;
-                        if (preen)
+                        if (check_preen)
                             printf("\n");
                     }
                 }
@@ -2483,7 +2502,7 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
              */
             inoinfo(parentdir)->ino_linkcnt++;
         }
-        if (preen == 0)
+        if (check_preen == 0)
             printf("\n");
     }
     return (1);
@@ -2542,7 +2561,7 @@ expanddir(union dinode *dp, char *name)
         goto bad;
     memmove(bp->b_un.b_buf, &emptydir, sizeof emptydir);
     check_warn("NO SPACE LEFT IN %s", name);
-    if (preen)
+    if (check_preen)
         printf(" (EXPANDED)\n");
     else if (check_reply("EXPAND") == 0)
         goto bad;
@@ -2568,8 +2587,8 @@ check_makeentry(ino_t parent, ino_t ino, const char *name)
     struct inodesc idesc;
     char pathbuf[MAXPATHLEN + 1];
 
-    if (parent < ROOTINO || parent >= maxino ||
-        ino < ROOTINO || ino >= maxino)
+    if (parent < ROOTINO || parent >= check_maxino ||
+        ino < ROOTINO || ino >= check_maxino)
         return (0);
     memset(&idesc, 0, sizeof(struct inodesc));
     idesc.id_type = DATA;
@@ -2675,11 +2694,11 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
     if (DIP(dp, di_size) > kernmaxfilesize ||
         DIP(dp, di_size) > sblock.fs_maxfilesize ||
         (mode == IFDIR && DIP(dp, di_size) > MAXDIRSIZE)) {
-        if (debug)
+        if (check_debug)
             printf("bad size %ju:", (uintmax_t)DIP(dp, di_size));
         goto unknown;
     }
-    if (!preen && mode == IFMT && check_reply("HOLD BAD BLOCK") == 1) {
+    if (!check_preen && mode == IFMT && check_reply("HOLD BAD BLOCK") == 1) {
         dp = check_ginode(inumber);
         DIP_SET(dp, di_size, sblock.fs_fsize);
         DIP_SET(dp, di_mode, IFREG|0600);
@@ -2687,20 +2706,20 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
     }
     if ((mode == IFBLK || mode == IFCHR || mode == IFIFO ||
          mode == IFSOCK) && DIP(dp, di_size) != 0) {
-        if (debug)
+        if (check_debug)
             printf("bad special-file size %ju:",
                 (uintmax_t)DIP(dp, di_size));
         goto unknown;
     }
     if ((mode == IFBLK || mode == IFCHR) &&
         (dev_t)DIP(dp, di_rdev) == 0) {
-        if (debug)
+        if (check_debug)
             printf("bad special-file rdev NODEV:");
         goto unknown;
     }
     ndb = howmany(DIP(dp, di_size), sblock.fs_bsize);
     if (ndb < 0) {
-        if (debug)
+        if (check_debug)
             printf("bad size %ju ndb %ju:",
                 (uintmax_t)DIP(dp, di_size), (uintmax_t)ndb);
         goto unknown;
@@ -2729,7 +2748,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
     }
     for (j = ndb; ndb < NDADDR && j < NDADDR; j++)
         if (DIP(dp, di_db[j]) != 0) {
-            if (debug)
+            if (check_debug)
                 printf("bad direct addr[%d]: %ju\n", j,
                     (uintmax_t)DIP(dp, di_db[j]));
             goto unknown;
@@ -2738,14 +2757,14 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
         ndb /= NINDIR(&sblock);
     for (; j < NIADDR; j++)
         if (DIP(dp, di_ib[j]) != 0) {
-            if (debug)
+            if (check_debug)
                 printf("bad indirect addr: %ju\n",
                     (uintmax_t)DIP(dp, di_ib[j]));
             goto unknown;
         }
     if (ftypeok(dp) == 0)
         goto unknown;
-    n_files++;
+    check_n_files++;
     inoinfo(inumber)->ino_linkcnt = DIP(dp, di_nlink);
     if (mode == IFDIR) {
         if (DIP(dp, di_size) == 0)
@@ -2795,7 +2814,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
         check_warn("INCORRECT BLOCK COUNT I=%lu (%ju should be %ju)",
             (u_long)inumber, (uintmax_t)DIP(dp, di_blocks),
             (uintmax_t)idesc->id_entryno);
-        if (preen)
+        if (check_preen)
             printf(" (CORRECTED)\n");
         else if (check_reply("CORRECT") == 0)
             return (1);
@@ -2850,7 +2869,7 @@ check_pass1(void)
      */
     memset(&idesc, 0, sizeof(struct inodesc));
     idesc.id_func = pass1check;
-    n_files = n_blks = 0;
+    check_n_files = check_n_blks = 0;
     for (c = 0; c < sblock.fs_ncg; c++) {
         inumber = c * sblock.fs_ipg;
         setinodebuf(inumber);
@@ -2886,7 +2905,7 @@ check_pass1(void)
          * to find the inodes that are really in use, and then
          * read only those inodes in from disk.
          */
-        if ((preen || inoopt) && usedsoftdep && !rebuildcg) {
+        if ((check_preen || check_inoopt) && check_usedsoftdep && !rebuildcg) {
             cp = &cg_inosused(cgp)[(inosused - 1) / CHAR_BIT];
             for ( ; inosused > 0; inosused -= CHAR_BIT, cp--) {
                 if (*cp == 0)
@@ -2904,16 +2923,16 @@ check_pass1(void)
         /*
          * Allocate inoinfo structures for the allocated inodes.
          */
-        inostathead[c].il_numalloced = inosused;
+        check_inostathead[c].il_numalloced = inosused;
         if (inosused == 0) {
-            inostathead[c].il_stat = 0;
+            check_inostathead[c].il_stat = 0;
             continue;
         }
         info = Calloc((unsigned)inosused, sizeof(struct inostat));
         if (info == NULL)
             errx(EEXIT, "cannot alloc %u bytes for inoinfo",
                 (unsigned)(sizeof(struct inostat) * inosused));
-        inostathead[c].il_stat = info;
+        check_inostathead[c].il_stat = info;
         /*
          * Scan the allocated inodes.
          */
@@ -2939,7 +2958,7 @@ check_pass1(void)
          * fewer in use.
          */
         mininos = roundup(inosused + INOPB(&sblock), INOPB(&sblock));
-        if (inoopt && !preen && !rebuildcg &&
+        if (check_inoopt && !check_preen && !rebuildcg &&
             sblock.fs_magic == FS_UFS2_MAGIC &&
             cgp->cg_initediblk > 2 * INOPB(&sblock) &&
             mininos < cgp->cg_initediblk) {
@@ -2973,19 +2992,19 @@ check_pass1(void)
          */
         if (inumber == lastino)
             continue;
-        inostathead[c].il_numalloced = inosused;
+        check_inostathead[c].il_numalloced = inosused;
         if (inosused == 0) {
-            free(inostathead[c].il_stat);
-            inostathead[c].il_stat = 0;
+            free(check_inostathead[c].il_stat);
+            check_inostathead[c].il_stat = 0;
             continue;
         }
         info = Calloc((unsigned)inosused, sizeof(struct inostat));
         if (info == NULL)
             errx(EEXIT, "cannot alloc %u bytes for inoinfo",
                 (unsigned)(sizeof(struct inostat) * inosused));
-        memmove(info, inostathead[c].il_stat, inosused * sizeof(*info));
-        free(inostathead[c].il_stat);
-        inostathead[c].il_stat = info;
+        memmove(info, check_inostathead[c].il_stat, inosused * sizeof(*info));
+        free(check_inostathead[c].il_stat);
+        check_inostathead[c].il_stat = info;
     }
     freeinodebuf();
 }
@@ -3010,7 +3029,7 @@ pass1check(struct inodesc *idesc)
         if (badblk++ >= MAXBAD) {
             check_warn("EXCESSIVE BAD BLKS I=%lu",
                 (u_long)idesc->id_number);
-            if (preen)
+            if (check_preen)
                 printf(" (SKIPPING)\n");
             else if (check_reply("CONTINUE") == 0) {
                 check_finish(0);
@@ -3023,14 +3042,14 @@ pass1check(struct inodesc *idesc)
         if (anyout && chkrange(blkno, 1)) {
             res = SKIP;
         } else if (!testbmap(blkno)) {
-            n_blks++;
+            check_n_blks++;
             setbmap(blkno);
         } else {
             blkerror(idesc->id_number, "DUP", blkno);
             if (dupblk++ >= MAXDUP) {
                 check_warn("EXCESSIVE DUP BLKS I=%lu",
                     (u_long)idesc->id_number);
-                if (preen)
+                if (check_preen)
                     printf(" (SKIPPING)\n");
                 else if (check_reply("CONTINUE") == 0) {
                     check_finish(0);
@@ -3048,18 +3067,18 @@ pass1check(struct inodesc *idesc)
                 return (STOP);
             }
             new->dup = blkno;
-            if (muldup == 0) {
-                duplist = muldup = new;
+            if (check_muldup == 0) {
+                check_duplist = check_muldup = new;
                 new->next = 0;
             } else {
-                new->next = muldup->next;
-                muldup->next = new;
+                new->next = check_muldup->next;
+                check_muldup->next = new;
             }
-            for (dlp = duplist; dlp != muldup; dlp = dlp->next)
+            for (dlp = check_duplist; dlp != check_muldup; dlp = dlp->next)
                 if (dlp->dup == blkno)
                     break;
-            if (dlp == muldup && dlp->dup != blkno)
-                muldup = new;
+            if (dlp == check_muldup && dlp->dup != blkno)
+                check_muldup = new;
         }
         /*
          * count the number of blocks found in id_entryno
@@ -3091,10 +3110,10 @@ pass1bcheck(struct inodesc *idesc)
                 duphead->dup = blkno;
                 duphead = duphead->next;
             }
-            if (dlp == muldup)
+            if (dlp == check_muldup)
                 break;
         }
-        if (muldup == 0 || duphead == muldup->next)
+        if (check_muldup == 0 || duphead == check_muldup->next)
             return (STOP);
     }
     return (res);
@@ -3111,7 +3130,7 @@ check_pass1b(void)
     memset(&idesc, 0, sizeof(struct inodesc));
     idesc.id_type = ADDR;
     idesc.id_func = pass1bcheck;
-    duphead = duplist;
+    duphead = check_duplist;
     inumber = 0;
     for (c = 0; c < sblock.fs_ncg; c++) {
 #if 0
@@ -3199,7 +3218,7 @@ fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
         getpathname(oldname, inp->i_number, inp->i_number);
         check_warn("%s IS AN EXTRANEOUS HARD LINK TO DIRECTORY %s",
             newname, oldname);
-        if (preen) {
+        if (check_preen) {
             printf(" (REMOVED)\n");
             return (1);
         }
@@ -3213,14 +3232,14 @@ fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
     getpathname(newname, inp->i_number, inp->i_number);
     check_warn("%s IS AN EXTRANEOUS HARD LINK TO DIRECTORY %s", oldname,
         newname);
-    if (!preen && !check_reply("REMOVE"))
+    if (!check_preen && !check_reply("REMOVE"))
         return (0);
     memset(&dotdesc, 0, sizeof(struct inodesc));
     dotdesc.id_type = DATA;
     dotdesc.id_number = inp->i_parent; /* directory in which name appears */
     dotdesc.id_parent = inp->i_number; /* inode number in entry to delete */
     dotdesc.id_func = deleteentry;
-    if ((check_inode(check_ginode(dotdesc.id_number), &dotdesc) & FOUND) && preen)
+    if ((check_inode(check_ginode(dotdesc.id_number), &dotdesc) & FOUND) && check_preen)
         printf(" (REMOVED)\n");
     inp->i_parent = idesc->id_number;  /* reparent to correct directory */
     inoinfo(inp->i_number)->ino_linkcnt++; /* name gone, return reference */
@@ -3241,7 +3260,7 @@ pass2check(struct inodesc *idesc)
     /*
      * check for "."
      */
-    if (dirp->d_ino > maxino)
+    if (dirp->d_ino > check_maxino)
         goto chk2;
     if (idesc->id_entryno != 0)
         goto chk1;
@@ -3366,7 +3385,7 @@ chk2:
     }
     idesc->id_entryno++;
     n = 0;
-    if (dirp->d_ino > maxino) {
+    if (dirp->d_ino > check_maxino) {
         fileerror(idesc->id_number, dirp->d_ino, "I OUT OF RANGE");
         n = check_reply("REMOVE");
     } else if (((dirp->d_ino == WINO && dirp->d_type != DT_WHT) ||
@@ -3392,7 +3411,7 @@ again:
                 break;
             if (inoinfo(dirp->d_ino)->ino_state == FCLEAR)
                 errmsg = "DUP/BAD";
-            else if (!preen && !usedsoftdep)
+            else if (!check_preen && !check_usedsoftdep)
                 errmsg = "ZERO LENGTH DIRECTORY";
             else {
                 n = 1;
@@ -3560,7 +3579,7 @@ check_pass2(void)
             }
         } else if ((inp->i_isize & (DIRBLKSIZ - 1)) != 0) {
             getpathname(pathbuf, inp->i_number, inp->i_number);
-            if (usedsoftdep)
+            if (check_usedsoftdep)
                 check_fatal("%s %s: LENGTH %jd NOT MULTIPLE OF %d",
                     "DIRECTORY", pathbuf,
                     (intmax_t)inp->i_isize, DIRBLKSIZ);
@@ -3568,10 +3587,10 @@ check_pass2(void)
                 check_warn("%s %s: LENGTH %jd NOT MULTIPLE OF %d",
                     "DIRECTORY", pathbuf,
                     (intmax_t)inp->i_isize, DIRBLKSIZ);
-            if (preen)
+            if (check_preen)
                 printf(" (ADJUSTED)\n");
             inp->i_isize = roundup(inp->i_isize, DIRBLKSIZ);
-            if (preen || check_reply("ADJUST") == 1) {
+            if (check_preen || check_reply("ADJUST") == 1) {
                 dp = check_ginode(inp->i_number);
                 DIP_SET(dp, di_size,
                     roundup(inp->i_isize, DIRBLKSIZ));
@@ -3631,7 +3650,7 @@ check_pass2(void)
         getpathname(pathbuf, inp->i_parent, inp->i_parent);
         printf("SHOULD POINT TO I=%ju (%s)",
             (uintmax_t)inp->i_parent, pathbuf);
-        if (preen)
+        if (check_preen)
             printf(" (FIXED)\n");
         else if (check_reply("FIX") == 0)
             continue;
@@ -3680,7 +3699,7 @@ check_pass3(void)
          * them in DSTATE which will cause them to be pitched
          * in pass 4.
          */
-        if (preen && resolved && usedsoftdep && S_IS_DUNFOUND(state)) {
+        if (check_preen && check_resolved && check_usedsoftdep && S_IS_DUNFOUND(state)) {
             if (inp->i_dotdot >= ROOTINO)
                 inoinfo(inp->i_dotdot)->ino_linkcnt++;
             continue;
@@ -3750,7 +3769,7 @@ check_pass4(void)
         }
 #endif
         inumber = cg * sblock.fs_ipg;
-        for (i = 0; i < inostathead[cg].il_numalloced; i++, inumber++) {
+        for (i = 0; i < check_inostathead[cg].il_numalloced; i++, inumber++) {
             if (inumber < ROOTINO)
                 continue;
             idesc.id_number = inumber;
@@ -3811,18 +3830,18 @@ pass4check(struct inodesc *idesc)
         if (chkrange(blkno, 1)) {
             res = SKIP;
         } else if (testbmap(blkno)) {
-            for (dlp = duplist; dlp; dlp = dlp->next) {
+            for (dlp = check_duplist; dlp; dlp = dlp->next) {
                 if (dlp->dup != blkno)
                     continue;
-                dlp->dup = duplist->dup;
-                dlp = duplist;
-                duplist = duplist->next;
+                dlp->dup = check_duplist->dup;
+                dlp = check_duplist;
+                check_duplist = check_duplist->next;
                 free((char *)dlp);
                 break;
             }
             if (dlp == 0) {
                 clrbmap(blkno);
-                n_blks--;
+                check_n_blks--;
             }
         }
     }
@@ -3838,13 +3857,13 @@ static void
 clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end)
 {
 
-    if (debug)
+    if (check_debug)
         printf("Zero frags %jd to %jd\n", (intmax_t)start, (intmax_t)end);
-    if (Zflag)
-        blzero(fswritefd, fsbtodb(&sblock, start),
+    if (check_Zflag)
+        blzero(check_fswritefd, fsbtodb(&sblock, start),
             lfragtosize(&sblock, end - start + 1));
-    if (Eflag)
-        blerase(fswritefd, fsbtodb(&sblock, start),
+    if (check_Eflag)
+        blerase(check_fswritefd, fsbtodb(&sblock, start),
             lfragtosize(&sblock, end - start + 1));
 }
 
@@ -3855,7 +3874,6 @@ check_maps(
     int mapsize,                /* size of above two maps */
     ufs2_daddr_t startvalue,    /* resource value for first element in map */
     const char *name,           /* name of resource found in maps */
-    int *opcode,                /* sysctl opcode to free resource */
     int skip,                   /* number of entries to skip before starting to free */
     int limit)                  /* limit on number of entries to free */
 {
@@ -3916,11 +3934,11 @@ check_maps(
                 }
                 if (size > limit)
                     size = limit;
-                if (debug && size == 1)
+                if (check_debug && size == 1)
                     check_warn("%s %s %" PRId64
                         " MARKED USED\n",
                         "UNALLOCATED", name, ustart);
-                else if (debug)
+                else if (check_debug)
                     check_warn("%s %sS %" PRId64 "-%" PRId64
                         " MARKED USED\n",
                         "UNALLOCATED", name, ustart,
@@ -3951,7 +3969,7 @@ check_maps(
         }
         if (size > limit)
             size = limit;
-        if (debug) {
+        if (check_debug) {
             if (size == 1)
                 check_warn("UNALLOCATED %s %" PRId64
                     " MARKED USED\n",
@@ -3986,15 +4004,15 @@ update_maps(
     }
     if (excessdirs > 0)
         check_maps(cg_inosused(newcg), cg_inosused(oldcg), inomapsize,
-            oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "DIR", freedirs,
+            oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "DIR",
             0, excessdirs);
     check_maps(cg_inosused(newcg), cg_inosused(oldcg), inomapsize,
-        oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "FILE", freefiles,
+        oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_ipg, "FILE",
         excessdirs, fs->fs_ipg);
     check_maps(cg_blksfree(oldcg), cg_blksfree(newcg),
         howmany(fs->fs_fpg, CHAR_BIT),
         oldcg->cg_cgx * (ufs2_daddr_t)fs->fs_fpg, "FRAG",
-        freeblks, 0, fs->fs_fpg);
+        0, fs->fs_fpg);
 }
 
 void
@@ -4015,11 +4033,11 @@ check_pass5(void)
     inoinfo(WINO)->ino_state = USTATE;
     memset(newcg, 0, (size_t)fs->fs_cgsize);
     newcg->cg_niblk = fs->fs_ipg;
-    if (cvtlevel >= 3) {
+    if (check_cvtlevel >= 3) {
         if (fs->fs_maxcontig < 2 && fs->fs_contigsumsize > 0) {
-            if (preen)
+            if (check_preen)
                 check_warn("DELETING CLUSTERING MAPS\n");
-            if (preen || check_reply("DELETE CLUSTERING MAPS")) {
+            if (check_preen || check_reply("DELETE CLUSTERING MAPS")) {
                 fs->fs_contigsumsize = 0;
                 rewritecg = 1;
                 sbdirty();
@@ -4041,9 +4059,9 @@ check_pass5(void)
                 if (CGSIZE(fs) > (u_int)fs->fs_bsize) {
                     check_warn("CANNOT %s CLUSTER MAPS\n", doit);
                     fs->fs_contigsumsize = i;
-                } else if (preen ||
+                } else if (check_preen ||
                     check_reply("CREATE CLUSTER MAPS")) {
-                    if (preen)
+                    if (check_preen)
                         check_warn("%sING CLUSTER MAPS\n",
                             doit);
                     fs->fs_cgsize =
@@ -4154,7 +4172,7 @@ check_pass5(void)
         memset(&newcg->cg_frsum[0], 0, sizeof newcg->cg_frsum);
         memset(cg_inosused(newcg), 0, (size_t)(mapsize));
         j = fs->fs_ipg * c;
-        for (i = 0; i < inostathead[c].il_numalloced; j++, i++) {
+        for (i = 0; i < check_inostathead[c].il_numalloced; j++, i++) {
             switch (inoinfo(j)->ino_state) {
 
             case USTATE:
@@ -4193,7 +4211,7 @@ check_pass5(void)
             frags = 0;
             for (j = 0; j < fs->fs_frag; j++) {
                 if (testbmap(d + j)) {
-                    if ((Eflag || Zflag) && start != -1) {
+                    if ((check_Eflag || check_Zflag) && start != -1) {
                         clear_blocks(start, d + j - 1);
                         start = -1;
                     }
@@ -4215,7 +4233,7 @@ check_pass5(void)
                 ffs_fragacct(fs, blk, (int32_t*)newcg->cg_frsum, 1);
             }
         }
-        if ((Eflag || Zflag) && start != -1)
+        if ((check_Eflag || check_Zflag) && start != -1)
             clear_blocks(start, d - 1);
         if (fs->fs_contigsumsize > 0) {
             int32_t *sump = cg_clustersum(newcg);
@@ -4267,7 +4285,7 @@ check_pass5(void)
             memmove(cg, newcg, (size_t)basesize);
             dirty(cgbp);
         }
-        if (usedsoftdep || debug)
+        if (check_usedsoftdep || check_debug)
             update_maps(cg, newcg);
         if (memcmp(cg_inosused(newcg), cg_inosused(cg), mapsize) != 0 &&
             dofix(&idesc[1], "BLK(S) MISSING IN BIT MAPS")) {
@@ -4325,7 +4343,7 @@ clean:  check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
      * Determine if we can and should do journal recovery.
      */
     if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
-        if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && skipclean) {
+        if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
             if (suj_check(filesys) == 0) {
                 printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
                 exit(0);
@@ -4344,7 +4362,7 @@ clean:  check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
      * Cleared if any questions answered no. Used to decide if
      * the superblock should be marked clean.
      */
-    resolved = 1;
+    check_resolved = 1;
     /*
      * 1: scan inodes tallying blocks used
      */
@@ -4356,7 +4374,7 @@ clean:  check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
     /*
      * 1b: locate first references to duplicates, if any
      */
-    if (duplist) {
+    if (check_duplist) {
         printf("** Phase 1b - Rescan For More DUPS\n");
         check_pass1b();
         check_stats("Pass1b");
@@ -4395,14 +4413,14 @@ clean:  check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
      */
     n_ffree = sblock.fs_cstotal.cs_nffree;
     n_bfree = sblock.fs_cstotal.cs_nbfree;
-    files = maxino - ROOTINO - sblock.fs_cstotal.cs_nifree - n_files;
-    blks = n_blks +
+    files = check_maxino - ROOTINO - sblock.fs_cstotal.cs_nifree - check_n_files;
+    blks = check_n_blks +
         sblock.fs_ncg * (cgdmin(&sblock, 0) - cgsblock(&sblock, 0));
     blks += cgsblock(&sblock, 0) - cgbase(&sblock, 0);
     blks += howmany(sblock.fs_cssize, sblock.fs_fsize);
-    blks = maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
+    blks = check_maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
     check_warn("%ld files, %jd used, %ju free ",
-        (long)n_files, (intmax_t)n_blks,
+        (long)check_n_files, (intmax_t)check_n_blks,
         (uintmax_t)(n_ffree + sblock.fs_frag * n_bfree));
     printf("(%ju frags, %ju blocks, %.1f%% fragmentation)\n",
         (uintmax_t)n_ffree, (uintmax_t)n_bfree,
@@ -4412,45 +4430,45 @@ clean:  check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
             printf("%jd inodes missing\n", -files);
         if (blks < 0)
             printf("%jd blocks missing\n", -blks);
-        if (duplist != NULL) {
+        if (check_duplist != NULL) {
             printf("The following duplicate blocks remain:");
-            for (dp = duplist; dp; dp = dp->next)
+            for (dp = check_duplist; dp; dp = dp->next)
                 printf(" %jd,", (intmax_t)dp->dup);
             printf("\n");
         }
     }
-    duplist = (struct dups *)0;
-    muldup = (struct dups *)0;
+    check_duplist = (struct dups *)0;
+    check_muldup = (struct dups *)0;
     check_inocleanup();
-    if (fsmodified) {
+    if (check_fsmodified) {
         sblock.fs_time = time(NULL);
         sbdirty();
     }
-    if (cvtlevel && sblk.b_dirty) {
+    if (check_cvtlevel && check_sblk.b_dirty) {
         /*
          * Write out the duplicate super blocks
          */
         for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-            check_blwrite(fswritefd, (char *)&sblock,
+            check_blwrite(check_fswritefd, (char *)&sblock,
                 fsbtodb(&sblock, cgsblock(&sblock, cylno)),
                 SBLOCKSIZE);
     }
-    if (rerun)
-        resolved = 0;
+    if (check_rerun)
+        check_resolved = 0;
     check_finalstats();
 
     /*
      * Check to see if the file system is mounted read-write.
      */
-    check_finish(resolved);
+    check_finish(check_resolved);
 
     for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-        if (inostathead[cylno].il_stat != NULL)
-            free((char *)inostathead[cylno].il_stat);
-    free((char *)inostathead);
-    inostathead = NULL;
-    if (fsmodified)
+        if (check_inostathead[cylno].il_stat != NULL)
+            free((char *)check_inostathead[cylno].il_stat);
+    free((char *)check_inostathead);
+    check_inostathead = NULL;
+    if (check_fsmodified)
         printf("\n***** FILE SYSTEM WAS MODIFIED *****\n");
-    if (rerun)
+    if (check_rerun)
         printf("\n***** PLEASE RERUN FSCK *****\n");
 }
