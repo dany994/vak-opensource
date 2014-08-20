@@ -50,34 +50,34 @@ main(int argc, char *argv[])
 	int ret = 0;
 
 	sync();
-	skipclean = 1;
-	inoopt = 0;
+	check_skipclean = 1;
+	check_inoopt = 0;
 	while ((ch = getopt(argc, argv, "b:c:CdEfm:nprSyZ")) != -1) {
 		switch (ch) {
 		case 'b':
-			skipclean = 0;
-			bflag = argtoi('b', "number", optarg, 10);
-			printf("Alternate super block location: %d\n", bflag);
+			check_skipclean = 0;
+			check_bflag = argtoi('b', "number", optarg, 10);
+			printf("Alternate super block location: %d\n", check_bflag);
 			break;
 
 		case 'c':
-			skipclean = 0;
-			cvtlevel = argtoi('c', "conversion level", optarg, 10);
-			if (cvtlevel < 3)
+			check_skipclean = 0;
+			check_cvtlevel = argtoi('c', "conversion level", optarg, 10);
+			if (check_cvtlevel < 3)
 				errx(EEXIT, "cannot do level %d conversion",
-				    cvtlevel);
+				    check_cvtlevel);
 			break;
 
 		case 'd':
-			debug++;
+			check_debug++;
 			break;
 
 		case 'E':
-			Eflag++;
+			check_Eflag++;
 			break;
 
 		case 'f':
-			skipclean = 0;
+			check_skipclean = 0;
 			break;
 
 		case 'm':
@@ -88,33 +88,33 @@ main(int argc, char *argv[])
 			break;
 
 		case 'n':
-			nflag++;
-			yflag = 0;
+			check_nflag++;
+			check_yflag = 0;
 			break;
 
 		case 'p':
-			preen++;
+			check_preen++;
 			/*FALLTHROUGH*/
 
 		case 'C':
-			ckclean++;
+			check_clean++;
 			break;
 
 		case 'r':
-			inoopt++;
+			check_inoopt++;
 			break;
 
 		case 'S':
-			surrender = 1;
+			check_surrender = 1;
 			break;
 
 		case 'y':
-			yflag++;
-			nflag = 0;
+			check_yflag++;
+			check_nflag = 0;
 			break;
 
 		case 'Z':
-			Zflag++;
+			check_Zflag++;
 			break;
 
 		default:
@@ -129,13 +129,13 @@ main(int argc, char *argv[])
 
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
 		(void)signal(SIGINT, check_catch);
-	if (ckclean)
+	if (check_clean)
 		(void)signal(SIGQUIT, check_catchquit);
 
 	while (argc-- > 0)
 		(void)checkfilesys(*argv++);
 
-	if (returntosingle)
+	if (check_returntosingle)
 		ret = 2;
 	exit(ret);
 }
@@ -175,17 +175,17 @@ checkfilesys(char *filesys)
 	errmsg[0] = '\0';
 
 	check_filename = filesys;
-	if (debug && ckclean)
+	if (check_debug && check_clean)
 		check_warn("starting\n");
 
 	check_sblock_init();
-	if (ckclean && skipclean) {
+	if (check_clean && check_skipclean) {
 		/*
 		 * If file system is gjournaled, check it here.
 		 */
-		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || check_readsb(0) == 0)
+		if ((check_fsreadfd = open(filesys, O_RDONLY)) < 0 || check_readsb(0) == 0)
 			exit(3);	/* Cannot read superblock */
-		close(fsreadfd);
+		close(check_fsreadfd);
 		if ((sblock.fs_flags & FS_GJOURNAL) != 0) {
 			//printf("GJournaled file system detected on %s.\n",
 			//    filesys);
@@ -205,7 +205,7 @@ checkfilesys(char *filesys)
 
 	switch (check_setup(filesys, 0)) {
 	case 0:
-		if (preen)
+		if (check_preen)
 			check_fatal("CAN'T CHECK FILE SYSTEM.");
 		return (0);
 	case -1:
@@ -222,8 +222,8 @@ checkfilesys(char *filesys)
 	 * Determine if we can and should do journal recovery.
 	 */
 	if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
-		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && skipclean) {
-			if (preen || check_reply("USE JOURNAL")) {
+		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
+			if (check_preen || check_reply("USE JOURNAL")) {
 				if (suj_check(filesys) == 0) {
 					printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
 					exit(0);
@@ -243,11 +243,11 @@ checkfilesys(char *filesys)
 	 * Cleared if any questions answered no. Used to decide if
 	 * the superblock should be marked clean.
 	 */
-	resolved = 1;
+	check_resolved = 1;
 	/*
 	 * 1: scan inodes tallying blocks used
 	 */
-	if (preen == 0) {
+	if (check_preen == 0) {
 		printf("** Last Mounted on %s\n", sblock.fs_fsmnt);
 		printf("** Phase 1 - Check Blocks and Sizes\n");
 	}
@@ -257,12 +257,12 @@ checkfilesys(char *filesys)
 	/*
 	 * 1b: locate first references to duplicates, if any
 	 */
-	if (duplist) {
-		if (preen || usedsoftdep)
+	if (check_duplist) {
+		if (check_preen || check_usedsoftdep)
 			check_fatal("INTERNAL ERROR: dups with %s%s%s",
-			    preen ? "-p" : "",
-			    (preen && usedsoftdep) ? " and " : "",
-			    usedsoftdep ? "softupdates" : "");
+			    check_preen ? "-p" : "",
+			    (check_preen && check_usedsoftdep) ? " and " : "",
+			    check_usedsoftdep ? "softupdates" : "");
 		printf("** Phase 1b - Rescan For More DUPS\n");
 		check_pass1b();
 		check_stats("Pass1b");
@@ -271,7 +271,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 2: traverse directories from root to mark all connected directories
 	 */
-	if (preen == 0)
+	if (check_preen == 0)
 		printf("** Phase 2 - Check Pathnames\n");
 	check_pass2();
 	check_stats("Pass2");
@@ -279,7 +279,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 3: scan inodes looking for disconnected directories
 	 */
-	if (preen == 0)
+	if (check_preen == 0)
 		printf("** Phase 3 - Check Connectivity\n");
 	check_pass3();
 	check_stats("Pass3");
@@ -287,7 +287,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 4: scan inodes looking for disconnected files; check reference counts
 	 */
-	if (preen == 0)
+	if (check_preen == 0)
 		printf("** Phase 4 - Check Reference Counts\n");
 	check_pass4();
 	check_stats("Pass4");
@@ -295,7 +295,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 5: check and repair resource counts in cylinder groups
 	 */
-	if (preen == 0)
+	if (check_preen == 0)
 		printf("** Phase 5 - Check Cyl groups\n");
 	check_pass5();
 	check_stats("Pass5");
@@ -305,63 +305,63 @@ checkfilesys(char *filesys)
 	 */
 	n_ffree = sblock.fs_cstotal.cs_nffree;
 	n_bfree = sblock.fs_cstotal.cs_nbfree;
-	files = maxino - ROOTINO - sblock.fs_cstotal.cs_nifree - n_files;
-	blks = n_blks +
+	files = check_maxino - ROOTINO - sblock.fs_cstotal.cs_nifree - check_n_files;
+	blks = check_n_blks +
 	    sblock.fs_ncg * (cgdmin(&sblock, 0) - cgsblock(&sblock, 0));
 	blks += cgsblock(&sblock, 0) - cgbase(&sblock, 0);
 	blks += howmany(sblock.fs_cssize, sblock.fs_fsize);
-	blks = maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
+	blks = check_maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
 	check_warn("%ld files, %jd used, %ju free ",
-	    (long)n_files, (intmax_t)n_blks,
+	    (long)check_n_files, (intmax_t)check_n_blks,
 	    (uintmax_t)(n_ffree + sblock.fs_frag * n_bfree));
 	printf("(%ju frags, %ju blocks, %.1f%% fragmentation)\n",
 	    (uintmax_t)n_ffree, (uintmax_t)n_bfree,
 	    n_ffree * 100.0 / sblock.fs_dsize);
-	if (debug) {
+	if (check_debug) {
 		if (files < 0)
 			printf("%jd inodes missing\n", -files);
 		if (blks < 0)
 			printf("%jd blocks missing\n", -blks);
-		if (duplist != NULL) {
+		if (check_duplist != NULL) {
 			printf("The following duplicate blocks remain:");
-			for (dp = duplist; dp; dp = dp->next)
+			for (dp = check_duplist; dp; dp = dp->next)
 				printf(" %jd,", (intmax_t)dp->dup);
 			printf("\n");
 		}
 	}
-	duplist = (struct dups *)0;
-	muldup = (struct dups *)0;
+	check_duplist = (struct dups *)0;
+	check_muldup = (struct dups *)0;
 	check_inocleanup();
-	if (fsmodified) {
+	if (check_fsmodified) {
 		sblock.fs_time = time(NULL);
 		sbdirty();
 	}
-	if (cvtlevel && sblk.b_dirty) {
+	if (check_cvtlevel && check_sblk.b_dirty) {
 		/*
 		 * Write out the duplicate super blocks
 		 */
 		for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-			check_blwrite(fswritefd, (char *)&sblock,
+			check_blwrite(check_fswritefd, (char *)&sblock,
 			    fsbtodb(&sblock, cgsblock(&sblock, cylno)),
 			    SBLOCKSIZE);
 	}
-	if (rerun)
-		resolved = 0;
+	if (check_rerun)
+		check_resolved = 0;
 	check_finalstats();
 
 	/*
 	 * Check to see if the file system is mounted read-write.
 	 */
-	check_finish(resolved);
+	check_finish(check_resolved);
 
 	for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-		if (inostathead[cylno].il_stat != NULL)
-			free((char *)inostathead[cylno].il_stat);
-	free((char *)inostathead);
-	inostathead = NULL;
-	if (fsmodified && !preen)
+		if (check_inostathead[cylno].il_stat != NULL)
+			free((char *)check_inostathead[cylno].il_stat);
+	free((char *)check_inostathead);
+	check_inostathead = NULL;
+	if (check_fsmodified && !check_preen)
 		printf("\n***** FILE SYSTEM WAS MODIFIED *****\n");
-	if (rerun)
+	if (check_rerun)
 		printf("\n***** PLEASE RERUN FSCK *****\n");
 	return (0);
 }

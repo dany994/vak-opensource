@@ -59,7 +59,6 @@ usage(void)
 	exit(1);
 }
 
-int returntosingle;
 char nflag;
 
 /*
@@ -82,7 +81,7 @@ main(int argc, char *argv[])
 			 */
 			break;
 		case 'd':
-			debug++;
+			check_debug++;
 			break;
 		case 'r':
 			nflag++; /* "no" in fsck, readonly for us */
@@ -236,7 +235,7 @@ cmdloop(void)
     el_source(elptr, NULL);
 
     while ((elline = el_gets(elptr, &scratch)) != NULL && scratch != 0) {
-	if (debug)
+	if (check_debug)
 	    printf("command `%s'\n", elline);
 
 	history(hist, &he, H_ENTER, elline);
@@ -290,9 +289,9 @@ union dinode *curinode;
 ino_t curinum, ocurrent;
 
 #define GETINUM(ac,inum)    inum = strtoul(argv[ac], &cp, 0); \
-    if (inum < ROOTINO || inum > maxino || cp == argv[ac] || *cp != '\0' ) { \
+    if (inum < ROOTINO || inum > check_maxino || cp == argv[ac] || *cp != '\0' ) { \
 	printf("inode %ju out of range; range is [%ju,%ju]\n",		\
-	    (uintmax_t)inum, (uintmax_t)ROOTINO, (uintmax_t)maxino);	\
+	    (uintmax_t)inum, (uintmax_t)ROOTINO, (uintmax_t)check_maxino);	\
 	return 1; \
     }
 
@@ -619,7 +618,7 @@ find_indirblks32(uint32_t blk, int ind_level, uint32_t *wantedblk)
     uint32_t idblk[MAXNINDIR];
     int i;
 
-    check_blread(fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
+    check_blread(check_fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
     if (ind_level <= 0) {
 	if (find_blks32(idblk, sblock.fs_bsize / sizeof(uint32_t), wantedblk))
 	    return 1;
@@ -661,7 +660,7 @@ find_indirblks64(uint64_t blk, int ind_level, uint64_t *wantedblk)
     uint64_t idblk[MAXNINDIR];
     int i;
 
-    check_blread(fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
+    check_blread(check_fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
     if (ind_level <= 0) {
 	if (find_blks64(idblk, sblock.fs_bsize / sizeof(uint64_t), wantedblk))
 	    return 1;

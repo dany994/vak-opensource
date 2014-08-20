@@ -252,7 +252,7 @@ struct inostat {
 struct inostatlist {
 	long	il_numalloced;	/* number of inodes allocated in this cg */
 	struct inostat *il_stat;/* inostat info for this cylinder group */
-} *inostathead;
+};
 
 /*
  * buffer cache structure.
@@ -317,18 +317,8 @@ struct bufarea {
 	"Directory Contents",		\
 	"User Data" }
 
-long readcnt[BT_NUMBUFTYPES];
-long totalreadcnt[BT_NUMBUFTYPES];
-struct timespec readtime[BT_NUMBUFTYPES];
-struct timespec totalreadtime[BT_NUMBUFTYPES];
-struct timespec startprog;
-
-struct bufarea sblk;		/* file system superblock */
-struct bufarea *pdirbp;		/* current directory contents */
-struct bufarea *pbp;		/* current inode block */
-
 #define	dirty(bp) do { \
-	if (fswritefd < 0) \
+	if (check_fswritefd < 0) \
 		check_fatal("SETTING DIRTY FLAG IN READ_ONLY MODE\n"); \
 	else \
 		(bp)->b_dirty = 1; \
@@ -340,8 +330,8 @@ struct bufarea *pbp;		/* current inode block */
 	(bp)->b_type = type; \
 } while (0)
 
-#define	sbdirty()	dirty(&sblk)
-#define	sblock		(*sblk.b_un.b_fs)
+#define	sbdirty()	dirty(&check_sblk)
+#define	sblock		(*check_sblk.b_un.b_fs)
 
 enum fixstate {DONTKNOW, NOFIX, FIX, IGNORE};
 
@@ -392,8 +382,6 @@ struct dups {
 	struct dups *next;
 	ufs2_daddr_t dup;
 };
-struct dups *duplist;		/* head of dup list */
-struct dups *muldup;		/* end of unique duplicate dup block numbers */
 
 /*
  * Inode cache data structures.
@@ -406,66 +394,7 @@ struct inoinfo {
 	size_t	i_isize;		/* size of inode */
 	u_int	i_numblks;		/* size of block array in bytes */
 	ufs2_daddr_t i_blks[1];		/* actually longer */
-} **inphead, **inpsort;
-long numdirs, dirhash, listmax, inplast;
-long countdirs;			/* number of directories we actually found */
-
-#define MIBSIZE	3		/* size of fsck sysctl MIBs */
-int	adjrefcnt[MIBSIZE];	/* MIB command to adjust inode reference cnt */
-int	adjblkcnt[MIBSIZE];	/* MIB command to adjust inode block count */
-int	adjndir[MIBSIZE];	/* MIB command to adjust number of directories */
-int	adjnbfree[MIBSIZE];	/* MIB command to adjust number of free blocks */
-int	adjnifree[MIBSIZE];	/* MIB command to adjust number of free inodes */
-int	adjnffree[MIBSIZE];	/* MIB command to adjust number of free frags */
-int	adjnumclusters[MIBSIZE];	/* MIB command to adjust number of free clusters */
-int	freefiles[MIBSIZE];	/* MIB command to free a set of files */
-int	freedirs[MIBSIZE];	/* MIB command to free a set of directories */
-int	freeblks[MIBSIZE];	/* MIB command to free a set of data blocks */
-struct	fsck_cmd cmd;		/* sysctl file system update commands */
-char	snapname[BUFSIZ];	/* when doing snapshots, the name of the file */
-long	dev_bsize;		/* computed value of DEV_BSIZE */
-long	secsize;		/* actual disk sector size */
-u_int	real_dev_bsize;		/* actual disk sector size, not overriden */
-char	nflag;			/* assume a no response */
-char	yflag;			/* assume a yes response */
-int	bflag;			/* location of alternate super block */
-int	debug;			/* output debugging info */
-int	Eflag;			/* delete empty data blocks */
-int	Zflag;			/* zero empty data blocks */
-int	inoopt;			/* trim out unused inodes */
-char	ckclean;		/* only do work if not cleanly unmounted */
-int	cvtlevel;		/* convert to newer file system format */
-int	bkgrdsumadj;		/* whether the kernel have ability to adjust superblock summary */
-char	usedsoftdep;		/* just fix soft dependency inconsistencies */
-char	preen;			/* just fix normal inconsistencies */
-char	rerun;			/* rerun fsck. Only used in non-preen mode */
-int	returntosingle;		/* 1 => return to single user mode on exit */
-char	resolved;		/* cleared if unresolved changes => not clean */
-char	havesb;			/* superblock has been read */
-char	skipclean;		/* skip clean file systems if preening */
-int	fsmodified;		/* 1 => write done to file system */
-int	fsreadfd;		/* file descriptor for reading file system */
-int	fswritefd;		/* file descriptor for writing file system */
-int	surrender;		/* Give up if reads fail */
-
-ufs2_daddr_t maxfsblock;	/* number of blocks in the file system */
-char	*blockmap;		/* ptr to primary blk allocation map */
-ino_t	maxino;			/* number of inodes in file system */
-
-ino_t	lfdir;			/* lost & found directory inode number */
-int	check_lfmode;		/* lost & found directory creation mode */
-
-ufs2_daddr_t n_blks;		/* number of blocks in use */
-ino_t n_files;			/* number of files in use */
-
-#define	clearinode(dp) \
-	if (sblock.fs_magic == FS_UFS1_MAGIC) { \
-		(dp)->dp1 = ufs1_zino; \
-	} else { \
-		(dp)->dp2 = ufs2_zino; \
-	}
-struct	ufs1_dinode ufs1_zino;
-struct	ufs2_dinode ufs2_zino;
+};
 
 #define	setbmap(blkno)	setbit(blockmap, blkno)
 #define	testbmap(blkno)	isset(blockmap, blkno)
@@ -513,7 +442,47 @@ void		check_pass3(void);
 void		check_pass4(void);
 void		check_pass5(void);
 
-const char *check_filename;	/* name of device being checked */
+const char      *check_filename;        /* name of device being checked */
+struct inostatlist *check_inostathead;
+struct bufarea  check_sblk;             /* file system superblock */
+struct dups     *check_duplist;         /* head of dup list */
+struct dups     *check_muldup;          /* end of unique duplicate dup block numbers */
+int             check_debug;            /* output debugging info */
+char            check_preen;		/* just fix normal inconsistencies */
+u_int           check_real_dev_bsize;   /* actual disk sector size, not overriden */
+long            check_secsize;		/* actual disk sector size */
+int             check_lfmode;		/* lost & found directory creation mode */
+ino_t           check_maxino;		/* number of inodes in file system */
+int             check_fsreadfd;		/* file descriptor for reading file system */
+int             check_fswritefd;	/* file descriptor for writing file system */
+char            check_rerun;		/* rerun fsck. Only used in non-preen mode */
+int             check_fsmodified;	/* 1 => write done to file system */
+char            check_clean;		/* only do work if not cleanly unmounted */
+char            check_skipclean;	/* skip clean file systems if preening */
+int             check_inoopt;		/* trim out unused inodes */
+int             check_bflag;		/* location of alternate super block */
+int             check_cvtlevel;		/* convert to newer file system format */
+int             check_Eflag;		/* delete empty data blocks */
+char            check_nflag;		/* assume a no response */
+char            check_yflag;		/* assume a yes response */
+int             check_surrender;	/* Give up if reads fail */
+int             check_Zflag;		/* zero empty data blocks */
+int             check_returntosingle;	/* 1 => return to single user mode on exit */
+char            check_resolved;		/* cleared if unresolved changes => not clean */
+char            check_usedsoftdep;	/* just fix soft dependency inconsistencies */
+ino_t           check_n_files;		/* number of files in use */
+ufs2_daddr_t    check_n_blks;		/* number of blocks in use */
+ufs2_daddr_t    check_maxfsblock;	/* number of blocks in the file system */
+
+struct	ufs1_dinode ufs1_zino;
+struct	ufs2_dinode ufs2_zino;
+
+#define	clearinode(dp) \
+	if (sblock.fs_magic == FS_UFS1_MAGIC) { \
+		(dp)->dp1 = ufs1_zino; \
+	} else { \
+		(dp)->dp2 = ufs2_zino; \
+	}
 
 /*
  * Wrapper for malloc() that flushes the cylinder group cache to try
