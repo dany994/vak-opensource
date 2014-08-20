@@ -194,7 +194,7 @@ checkfilesys(char *filesys)
 				exit(0);
 			}
 			if ((sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
-				gjournal_check(filesys);
+				check_gjournal(filesys);
 				exit(0);
 			} else {
 				check_fatal(
@@ -224,7 +224,7 @@ checkfilesys(char *filesys)
 	if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
 		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
 			if (check_preen || check_reply("USE JOURNAL")) {
-				if (suj_check(filesys) == 0) {
+				if (check_suj(filesys) == 0) {
 					printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
 					exit(0);
 				}

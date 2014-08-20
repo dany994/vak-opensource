@@ -362,7 +362,7 @@ clear_inode(struct ufs2_dinode *dino)
 }
 
 void
-gjournal_check(const char *filesys)
+check_gjournal(const char *filesys)
 {
 	struct ufs2_dinode *dino;
 	void *p;

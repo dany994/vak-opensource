@@ -435,6 +435,8 @@ void            check_inocleanup(void);
 int             check_flushentry(void);
 int             check_inode(union dinode *dp, struct inodesc *idesc);
 int             check_changeino(ino_t dir, const char *name, ino_t newnum);
+void            check_gjournal(const char *filesys);
+int             check_suj(const char *filesys);
 void		check_pass1(void);
 void		check_pass1b(void);
 void		check_pass2(void);

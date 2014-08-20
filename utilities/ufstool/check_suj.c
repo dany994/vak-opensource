@@ -2647,7 +2647,7 @@ suj_find(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
  * Orchestrate the verification of a filesystem via the softupdates journal.
  */
 int
-suj_check(const char *filesys)
+check_suj(const char *filesys)
 {
 	union dinode *jip;
 	union dinode *ip;
