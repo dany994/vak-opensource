@@ -147,7 +147,6 @@ mkfs(struct uufsd *disk, const char *fsys)
 	 * Our blocks == sector size, and the version of UFS we are using is
 	 * specified by Oflag.
 	 */
-        memset(disk, 0, sizeof(*disk));
 	disk->d_bsize = mkfs_sectorsize;
 	disk->d_ufs = mkfs_Oflag;
 	if (mkfs_Rflag) {

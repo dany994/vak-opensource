@@ -33,7 +33,6 @@
 
 #include "libufs.h"
 #include "dir.h"
-#include "ufstool.h"
 
 extern int verbose;
 
