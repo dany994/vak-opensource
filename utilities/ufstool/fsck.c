@@ -81,10 +81,10 @@ main(int argc, char *argv[])
 			break;
 
 		case 'm':
-			lfmode = argtoi('m', "mode", optarg, 8);
-			if (lfmode &~ 07777)
-				errx(EEXIT, "bad mode to -m: %o", lfmode);
-			printf("** lost+found creation mode %o\n", lfmode);
+			check_lfmode = argtoi('m', "mode", optarg, 8);
+			if (check_lfmode &~ 07777)
+				errx(EEXIT, "bad mode to -m: %o", check_lfmode);
+			printf("** lost+found creation mode %o\n", check_lfmode);
 			break;
 
 		case 'n':
@@ -128,9 +128,9 @@ main(int argc, char *argv[])
 		usage();
 
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
-		(void)signal(SIGINT, catch);
+		(void)signal(SIGINT, check_catch);
 	if (ckclean)
-		(void)signal(SIGQUIT, catchquit);
+		(void)signal(SIGQUIT, check_catchquit);
 
 	while (argc-- > 0)
 		(void)checkfilesys(*argv++);
@@ -174,43 +174,43 @@ checkfilesys(char *filesys)
 	iovlen = 0;
 	errmsg[0] = '\0';
 
-	cdevname = filesys;
+	check_filename = filesys;
 	if (debug && ckclean)
-		pwarn("starting\n");
+		check_warn("starting\n");
 
-	sblock_init();
+	check_sblock_init();
 	if (ckclean && skipclean) {
 		/*
 		 * If file system is gjournaled, check it here.
 		 */
-		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || readsb(0) == 0)
+		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || check_readsb(0) == 0)
 			exit(3);	/* Cannot read superblock */
 		close(fsreadfd);
 		if ((sblock.fs_flags & FS_GJOURNAL) != 0) {
 			//printf("GJournaled file system detected on %s.\n",
 			//    filesys);
 			if (sblock.fs_clean == 1) {
-				pwarn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
+				check_warn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
 				exit(0);
 			}
 			if ((sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
 				gjournal_check(filesys);
 				exit(0);
 			} else {
-				pfatal(
+				check_fatal(
 			    "UNEXPECTED INCONSISTENCY, CANNOT RUN FAST FSCK\n");
 			}
 		}
 	}
 
-	switch (setup(filesys, 0)) {
+	switch (check_setup(filesys, 0)) {
 	case 0:
 		if (preen)
-			pfatal("CAN'T CHECK FILE SYSTEM.");
+			check_fatal("CAN'T CHECK FILE SYSTEM.");
 		return (0);
 	case -1:
 	clean:
-		pwarn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
+		check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
 		    sblock.fs_frag * sblock.fs_cstotal.cs_nbfree));
 		printf("(%jd frags, %jd blocks, %.1f%% fragmentation)\n",
 		    (intmax_t)sblock.fs_cstotal.cs_nffree,
@@ -223,7 +223,7 @@ checkfilesys(char *filesys)
 	 */
 	if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
 		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && skipclean) {
-			if (preen || reply("USE JOURNAL")) {
+			if (preen || check_reply("USE JOURNAL")) {
 				if (suj_check(filesys) == 0) {
 					printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
 					exit(0);
@@ -251,21 +251,21 @@ checkfilesys(char *filesys)
 		printf("** Last Mounted on %s\n", sblock.fs_fsmnt);
 		printf("** Phase 1 - Check Blocks and Sizes\n");
 	}
-	pass1();
-	IOstats("Pass1");
+	check_pass1();
+	check_stats("Pass1");
 
 	/*
 	 * 1b: locate first references to duplicates, if any
 	 */
 	if (duplist) {
 		if (preen || usedsoftdep)
-			pfatal("INTERNAL ERROR: dups with %s%s%s",
+			check_fatal("INTERNAL ERROR: dups with %s%s%s",
 			    preen ? "-p" : "",
 			    (preen && usedsoftdep) ? " and " : "",
 			    usedsoftdep ? "softupdates" : "");
 		printf("** Phase 1b - Rescan For More DUPS\n");
-		pass1b();
-		IOstats("Pass1b");
+		check_pass1b();
+		check_stats("Pass1b");
 	}
 
 	/*
@@ -273,32 +273,32 @@ checkfilesys(char *filesys)
 	 */
 	if (preen == 0)
 		printf("** Phase 2 - Check Pathnames\n");
-	pass2();
-	IOstats("Pass2");
+	check_pass2();
+	check_stats("Pass2");
 
 	/*
 	 * 3: scan inodes looking for disconnected directories
 	 */
 	if (preen == 0)
 		printf("** Phase 3 - Check Connectivity\n");
-	pass3();
-	IOstats("Pass3");
+	check_pass3();
+	check_stats("Pass3");
 
 	/*
 	 * 4: scan inodes looking for disconnected files; check reference counts
 	 */
 	if (preen == 0)
 		printf("** Phase 4 - Check Reference Counts\n");
-	pass4();
-	IOstats("Pass4");
+	check_pass4();
+	check_stats("Pass4");
 
 	/*
 	 * 5: check and repair resource counts in cylinder groups
 	 */
 	if (preen == 0)
 		printf("** Phase 5 - Check Cyl groups\n");
-	pass5();
-	IOstats("Pass5");
+	check_pass5();
+	check_stats("Pass5");
 
 	/*
 	 * print out summary statistics
@@ -311,7 +311,7 @@ checkfilesys(char *filesys)
 	blks += cgsblock(&sblock, 0) - cgbase(&sblock, 0);
 	blks += howmany(sblock.fs_cssize, sblock.fs_fsize);
 	blks = maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
-	pwarn("%ld files, %jd used, %ju free ",
+	check_warn("%ld files, %jd used, %ju free ",
 	    (long)n_files, (intmax_t)n_blks,
 	    (uintmax_t)(n_ffree + sblock.fs_frag * n_bfree));
 	printf("(%ju frags, %ju blocks, %.1f%% fragmentation)\n",
@@ -331,7 +331,7 @@ checkfilesys(char *filesys)
 	}
 	duplist = (struct dups *)0;
 	muldup = (struct dups *)0;
-	inocleanup();
+	check_inocleanup();
 	if (fsmodified) {
 		sblock.fs_time = time(NULL);
 		sbdirty();
@@ -341,18 +341,18 @@ checkfilesys(char *filesys)
 		 * Write out the duplicate super blocks
 		 */
 		for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-			blwrite(fswritefd, (char *)&sblock,
+			check_blwrite(fswritefd, (char *)&sblock,
 			    fsbtodb(&sblock, cgsblock(&sblock, cylno)),
 			    SBLOCKSIZE);
 	}
 	if (rerun)
 		resolved = 0;
-	finalIOstats();
+	check_finalstats();
 
 	/*
 	 * Check to see if the file system is mounted read-write.
 	 */
-	ckfini(resolved);
+	check_finish(resolved);
 
 	for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
 		if (inostathead[cylno].il_stat != NULL)

@@ -173,6 +173,11 @@ int	ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
 int	ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
 void	ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
 
+/*
+ * check.c
+ */
+void ufs_check(struct uufsd *disk, const char *filesys, int verbose);
+
 __END_DECLS
 
 #endif	/* __LIBUFS_H__ */

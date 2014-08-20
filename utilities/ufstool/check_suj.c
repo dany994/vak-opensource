@@ -161,7 +161,7 @@ err_suj(const char *fmt, ...)
 	va_list ap;
 
 	if (preen)
-		(void)fprintf(stdout, "%s: ", cdevname);
+		(void)fprintf(stdout, "%s: ", check_filename);
 
 	va_start(ap, fmt);
 	(void)vfprintf(stdout, fmt, ap);
@@ -2665,14 +2665,14 @@ suj_check(const char *filesys)
 	 */
 	retval = setjmp(jmpbuf);
 	if (retval != 0) {
-		pwarn("UNEXPECTED SU+J INCONSISTENCY\n");
+		check_warn("UNEXPECTED SU+J INCONSISTENCY\n");
 		TAILQ_FOREACH_SAFE(seg, &allsegs, ss_next, segn) {
 			TAILQ_REMOVE(&allsegs, seg, ss_next);
 				free(seg->ss_blk);
 				free(seg);
 		}
-		if (reply("FALLBACK TO FULL FSCK") == 0) {
-			ckfini(0);
+		if (check_reply("FALLBACK TO FULL FSCK") == 0) {
+			check_finish(0);
 			exit(EEXIT);
 		} else
 			return (-1);
@@ -2712,7 +2712,7 @@ suj_check(const char *filesys)
 	suj_read();
 	jblocks_destroy(suj_jblocks);
 	suj_jblocks = NULL;
-	if (preen || reply("RECOVER")) {
+	if (preen || check_reply("RECOVER")) {
 		printf("** Building recovery table.\n");
 		suj_prune();
 		suj_build();
@@ -2725,7 +2725,7 @@ suj_check(const char *filesys)
 		cg_apply(cg_adj_blk);
 		cg_apply(cg_check_ino);
 	}
-	if (preen == 0 && (jrecs > 0 || jbytes > 0) && reply("WRITE CHANGES") == 0)
+	if (preen == 0 && (jrecs > 0 || jbytes > 0) && check_reply("WRITE CHANGES") == 0)
 		return (0);
 	/*
 	 * To remain idempotent with partial truncations the free bitmaps

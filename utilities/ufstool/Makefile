@@ -3,15 +3,12 @@
 PROGS           = ufstool ffsinfo newfs fsck fsdb dumpfs
 #PROGS           = ffsinfo newfs fsck fsdb dumpfs
 
-OBJS_UFSTOOL    = ufstool.o manifest.o mount.o mkfs.o libufs.a
+OBJS_UFSTOOL    = ufstool.o manifest.o mount.o mkfs.o check.o check_suj.o libufs.a
 OBJS_NEWFS      = newfs.o mkfs.o libufs.a
 OBJS_FFSINFO    = ffsinfo.o debug.o libufs.a
 OBJS_DUMPFS     = dumpfs.o libufs.a
-OBJS_FSCK       = fsck.o check.o \
-                  pass1.o pass1b.o pass2.o pass3.o pass4.o pass5.o \
-                  suj.o gjournal.o libufs.a
-OBJS_FSDB       = fsdb.o fsdbutil.o check.o \
-                  pass1.o pass1b.o pass2.o pass3.o pass4.o pass5.o \
+OBJS_FSCK       = fsck.o check.o check_suj.o gjournal.o libufs.a
+OBJS_FSDB       = fsdb.o fsdbutil.o check.o check_suj.o \
                   ffs_subr.o ffs_tables.o libufs.a
 OBJS_LIBUFS     = block.o cgroup.o inode.o sblock.o type.o ffs_subr.o ffs_tables.o
 
@@ -52,3 +49,24 @@ mount.o:        mount.c libufs.h fs.h
 
 clean:
 		rm -f *.o *.a $(PROGS)
+###
+block.o: block.c libufs.h fs.h dinode.h
+cgroup.o: cgroup.c libufs.h fs.h dinode.h
+check.o: check.c dir.h fs.h dinode.h fsck.h
+debug.o: debug.c fs.h dinode.h debug.h
+dumpfs.o: dumpfs.c libufs.h fs.h dinode.h
+ffsinfo.o: ffsinfo.c libufs.h fs.h dinode.h debug.h
+ffs_subr.o: ffs_subr.c fs.h dinode.h
+ffs_tables.o: ffs_tables.c fs.h dinode.h
+fsck.o: fsck.c fs.h dinode.h fsck.h
+fsdb.o: fsdb.c dir.h fs.h dinode.h fsdb.h fsck.h
+fsdbutil.o: fsdbutil.c fs.h dinode.h fsdb.h fsck.h
+gjournal.o: gjournal.c libufs.h fs.h dinode.h fsck.h
+inode.o: inode.c libufs.h fs.h dinode.h
+mkfs.o: mkfs.c dir.h libufs.h fs.h dinode.h newfs.h
+mount.o: mount.c libufs.h fs.h dinode.h dir.h ufstool.h
+newfs.o: newfs.c dir.h libufs.h fs.h dinode.h newfs.h
+sblock.o: sblock.c libufs.h fs.h dinode.h
+check_suj.o: check_suj.c dir.h libufs.h fs.h dinode.h fsck.h
+type.o: type.c libufs.h fs.h dinode.h
+ufstool.o: ufstool.c libufs.h fs.h dinode.h newfs.h manifest.h ufstool.h

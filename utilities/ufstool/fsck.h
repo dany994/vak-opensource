@@ -225,6 +225,7 @@ struct inostat {
 	char	ino_type;	/* type of inode */
 	short	ino_linkcnt;	/* number of links not found */
 };
+
 /*
  * Inode states.
  */
@@ -243,6 +244,7 @@ struct inostat {
 #define	S_IS_DVALID(state)	(((state) & ~0x3) == DSTATE)
 #define	INO_IS_DUNFOUND(ino)	S_IS_DUNFOUND(inoinfo(ino)->ino_state)
 #define	INO_IS_DVALID(ino)	S_IS_DVALID(inoinfo(ino)->ino_state)
+
 /*
  * Inode state information is contained on per cylinder group lists
  * which are described by the following structure.
@@ -314,6 +316,7 @@ struct bufarea {
 	"Inode Block",			\
 	"Directory Contents",		\
 	"User Data" }
+
 long readcnt[BT_NUMBUFTYPES];
 long totalreadcnt[BT_NUMBUFTYPES];
 struct timespec readtime[BT_NUMBUFTYPES];
@@ -326,7 +329,7 @@ struct bufarea *pbp;		/* current inode block */
 
 #define	dirty(bp) do { \
 	if (fswritefd < 0) \
-		pfatal("SETTING DIRTY FLAG IN READ_ONLY MODE\n"); \
+		check_fatal("SETTING DIRTY FLAG IN READ_ONLY MODE\n"); \
 	else \
 		(bp)->b_dirty = 1; \
 } while (0)
@@ -358,6 +361,7 @@ struct inodesc {
 	char *id_name;		/* for DATA nodes, name to find or enter */
 	char id_type;		/* type of descriptor, DATA or ADDR */
 };
+
 /* file types */
 #define	DATA	1	/* a directory */
 #define	SNAP	2	/* a snapshot */
@@ -419,7 +423,6 @@ int	freedirs[MIBSIZE];	/* MIB command to free a set of directories */
 int	freeblks[MIBSIZE];	/* MIB command to free a set of data blocks */
 struct	fsck_cmd cmd;		/* sysctl file system update commands */
 char	snapname[BUFSIZ];	/* when doing snapshots, the name of the file */
-char	*cdevname;		/* name of device being checked */
 long	dev_bsize;		/* computed value of DEV_BSIZE */
 long	secsize;		/* actual disk sector size */
 u_int	real_dev_bsize;		/* actual disk sector size, not overriden */
@@ -450,13 +453,10 @@ char	*blockmap;		/* ptr to primary blk allocation map */
 ino_t	maxino;			/* number of inodes in file system */
 
 ino_t	lfdir;			/* lost & found directory inode number */
-const char *lfname;		/* lost & found directory name */
-int	lfmode;			/* lost & found directory creation mode */
+int	check_lfmode;		/* lost & found directory creation mode */
 
 ufs2_daddr_t n_blks;		/* number of blocks in use */
 ino_t n_files;			/* number of files in use */
-
-volatile int got_sigalarm;	/* received a SIGALRM */
 
 #define	clearinode(dp) \
 	if (sblock.fs_magic == FS_UFS1_MAGIC) { \
@@ -479,7 +479,42 @@ struct	ufs2_dinode ufs2_zino;
 
 #define	EEXIT	8		/* Standard error exit. */
 
-int flushentry(void);
+#undef btodb
+#define btodb(bytes) ((unsigned)(bytes) >> 9)
+
+int		check_setup(const char *dev, int part_num);
+void            check_finish(int markclean);
+void            check_fatal(const char *fmt, ...);
+void            check_warn(const char *fmt, ...);
+void		check_catch(int);
+void		check_catchquit(int);
+void		check_sblock_init(void);
+int		check_readsb(int listerr);
+union dinode   *check_ginode(ino_t inumber);
+int             check_findino(struct inodesc *idesc);
+struct bufarea *check_cgget(int cg);
+struct bufarea *check_getdatablk(ufs2_daddr_t blkno, long size, int type);
+void            check_getblk(struct bufarea *bp, ufs2_daddr_t blk, long size);
+int             check_blread(int fd, char *buf, ufs2_daddr_t blk, long size);
+void            check_blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size);
+void            check_inodirty(void);
+void            check_stats(char *what);
+void            check_finalstats(void);
+int             check_reply(const char *question);
+int             check_makeentry(ino_t parent, ino_t ino, const char *name);
+void            check_inocleanup(void);
+int             check_flushentry(void);
+int             check_inode(union dinode *dp, struct inodesc *idesc);
+int             check_changeino(ino_t dir, const char *name, ino_t newnum);
+void		check_pass1(void);
+void		check_pass1b(void);
+void		check_pass2(void);
+void		check_pass3(void);
+void		check_pass4(void);
+void		check_pass5(void);
+
+const char *check_filename;	/* name of device being checked */
+
 /*
  * Wrapper for malloc() that flushes the cylinder group cache to try
  * to get space.
@@ -490,7 +525,7 @@ Malloc(int size)
 	void *retval;
 
 	while ((retval = malloc(size)) == NULL)
-		if (flushentry() == 0)
+		if (check_flushentry() == 0)
 			break;
 	return (retval);
 }
@@ -505,86 +540,9 @@ Calloc(int cnt, int size)
 	void *retval;
 
 	while ((retval = calloc(cnt, size)) == NULL)
-		if (flushentry() == 0)
+		if (check_flushentry() == 0)
 			break;
 	return (retval);
 }
-
-struct fstab;
-
-#undef btodb
-#define btodb(bytes) ((unsigned)(bytes) >> 9)
-
-#define setproctitle(fmt, ...) /*empty*/
-
-void		adjust(struct inodesc *, int lcnt);
-ufs2_daddr_t	allocblk(long frags);
-ino_t		allocdir(ino_t parent, ino_t request, int mode);
-ino_t		allocino(ino_t request, int type);
-void		blkerror(ino_t ino, const char *type, ufs2_daddr_t blk);
-int		blread(int fd, char *buf, ufs2_daddr_t blk, long size);
-void		bufinit(void);
-void		blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size);
-void		blerase(int fd, ufs2_daddr_t blk, long size);
-void		blzero(int fd, ufs2_daddr_t blk, long size);
-void		cacheino(union dinode *dp, ino_t inumber);
-void		catch(int);
-void		catchquit(int);
-int		changeino(ino_t dir, const char *name, ino_t newnum);
-int		check_cgmagic(int cg, struct bufarea *cgbp);
-int		chkrange(ufs2_daddr_t blk, int cnt);
-void		ckfini(int markclean);
-int		ckinode(union dinode *dp, struct inodesc *);
-void		clri(struct inodesc *, const char *type, int flag);
-int		clearentry(struct inodesc *);
-void		direrror(ino_t ino, const char *errmesg);
-int		dirscan(struct inodesc *);
-int		dofix(struct inodesc *, const char *msg);
-int		eascan(struct inodesc *, struct ufs2_dinode *dp);
-void		fileerror(ino_t cwd, ino_t ino, const char *errmesg);
-void		finalIOstats(void);
-int		findino(struct inodesc *);
-int		findname(struct inodesc *);
-void		flush(int fd, struct bufarea *bp);
-void		freeblk(ufs2_daddr_t blkno, long frags);
-void		freeino(ino_t ino);
-void		freeinodebuf(void);
-int		ftypeok(union dinode *dp);
-void		getblk(struct bufarea *bp, ufs2_daddr_t blk, long size);
-struct bufarea *cgget(int cg);
-struct bufarea *getdatablk(ufs2_daddr_t blkno, long size, int type);
-struct inoinfo *getinoinfo(ino_t inumber);
-union dinode   *getnextinode(ino_t inumber, int rebuildcg);
-void		getpathname(char *namebuf, ino_t curdir, ino_t ino);
-union dinode   *ginode(ino_t inumber);
-void		alarmhandler(int sig);
-void		inocleanup(void);
-void		inodirty(void);
-struct inostat *inoinfo(ino_t inum);
-void		IOstats(char *what);
-int		linkup(ino_t orphan, ino_t parentdir, char *name);
-int		makeentry(ino_t parent, ino_t ino, const char *name);
-void		panic(const char *fmt, ...);
-void		pass1(void);
-void		pass1b(void);
-int		pass1check(struct inodesc *);
-void		pass2(void);
-void		pass3(void);
-void		pass4(void);
-int		pass4check(struct inodesc *);
-void		pass5(void);
-void		pfatal(const char *fmt, ...);
-void		pinode(ino_t ino);
-void		propagate(void);
-void		pwarn(const char *fmt, ...);
-int		readsb(int listerr);
-int		reply(const char *question);
-void		rwerror(const char *mesg, ufs2_daddr_t blk);
-void		sblock_init(void);
-void		setinodebuf(ino_t);
-int		setup(char *dev, int part_num);
-void		gjournal_check(const char *filesys);
-int		suj_check(const char *filesys);
-void		update_maps(struct cg *, struct cg*);
 
 #endif	/* !_FSCK_H_ */
