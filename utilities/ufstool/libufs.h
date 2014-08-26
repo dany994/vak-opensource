@@ -30,6 +30,7 @@
 #ifndef	__LIBUFS_H__
 #define	__LIBUFS_H__
 
+#include <stdio.h>
 #include "fs.h"
 
 /*
@@ -142,6 +143,8 @@ int cgread(struct uufsd *);
 int cgread1(struct uufsd *, int);
 int cgwrite(struct uufsd *);
 int cgwrite1(struct uufsd *, int);
+void ufs_print_cg(struct cg *cgr, FILE *out);
+
 
 /*
  * inode.c
@@ -154,6 +157,7 @@ int putino(struct uufsd *);
  */
 int sbread(struct uufsd *);
 int sbwrite(struct uufsd *, int);
+void ufs_print(struct uufsd *disk, FILE *out);
 
 /*
  * type.c

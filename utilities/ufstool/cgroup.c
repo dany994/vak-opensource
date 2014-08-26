@@ -24,10 +24,11 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include <sys/param.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define _LIBUFS
 #include "libufs.h"
@@ -206,4 +207,47 @@ cgwrite1(struct uufsd *disk, int c)
 		return (-1);
 	}
 	return (0);
+}
+
+/*
+ * Dump a cylinder group.
+ */
+void
+ufs_print_cg(struct cg *cgr, FILE *out)
+{
+    int j;
+
+    fprintf(out, "                     Magic number: %#x\n", cgr->cg_magic);
+    fprintf(out, "                Last time written: %s", ctime((const time_t*)&cgr->cg_old_time));
+    fprintf(out, "             Cylinder group index: %d\n", cgr->cg_cgx);
+    fprintf(out, "              Number of cylinders: %d\n", cgr->cg_old_ncyl);
+    fprintf(out, "          Number of inode sectors: %d\n", cgr->cg_old_niblk);
+    fprintf(out, "           Number of data sectors: %d\n", cgr->cg_ndblk);
+    fprintf(out, "                 Number of blocks: %d\n", cgr->cg_nclusterblks);
+
+    /* Cylinder summary information */
+    fprintf(out, "            Number of directories: %d\n", cgr->cg_cs.cs_ndir);
+    fprintf(out, "            Number of free blocks: %d\n", cgr->cg_cs.cs_nbfree);
+    fprintf(out, "            Number of free inodes: %d\n", cgr->cg_cs.cs_nifree);
+    fprintf(out, "             Number of free frags: %d\n", cgr->cg_cs.cs_nffree);
+
+    fprintf(out, "Rotational pos of last used block: %d\n", cgr->cg_rotor);
+    fprintf(out, " Rotational pos of last used frag: %d\n", cgr->cg_frotor);
+    fprintf(out, "Rotational pos of last used inode: %d\n", cgr->cg_irotor);
+
+    /* Counts of available frags */
+    fprintf(out, "        Counts of available frags:");
+    for (j = 0; j < MAXFRAG; j++) {
+        if (j)
+            fprintf(out, ",");
+        fprintf(out, " %d", cgr->cg_frsum[j]);
+    }
+    fprintf(out, "\n");
+    fprintf(out, "   Offset of block totals per cyl: %d bytes\n", cgr->cg_old_btotoff);
+    fprintf(out, "   Offset of free block positions: %d bytes\n", cgr->cg_old_boff);
+    fprintf(out, "         Offset of used inode map: %d bytes\n", cgr->cg_iusedoff);
+    fprintf(out, "         Offset of free block map: %d bytes\n", cgr->cg_freeoff);
+    fprintf(out, "   Offset of next available space: %d bytes\n", cgr->cg_nextfreeoff);
+    fprintf(out, " Offset of counts of avail blocks: %d bytes\n", cgr->cg_clustersumoff);
+    fprintf(out, "         Offset of free block map: %d bytes\n", cgr->cg_clusteroff);
 }
