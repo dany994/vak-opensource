@@ -26,9 +26,11 @@
  */
 
 #include <sys/param.h>
+#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define _LIBUFS
 #include "libufs.h"
@@ -154,4 +156,98 @@ sbwrite(struct uufsd *disk, int all)
 			}
 	}
 	return (0);
+}
+
+/*
+ * Dump the superblock.
+ */
+void ufs_print(struct uufsd *disk, FILE *out)
+{
+    struct fs *sb = &disk->d_fs;
+    struct cg *cg = &disk->d_cg;
+    int cylno;
+
+    fprintf(out, "           Address of super-block: %d\n", sb->fs_sblkno);
+    fprintf(out, "              Offset of cyl-block: %d\n", sb->fs_cblkno);
+    fprintf(out, "           Offset of inode-blocks: %d\n", sb->fs_iblkno);
+    fprintf(out, "    Offset of first data after cg: %d\n", sb->fs_dblkno);
+
+    fprintf(out, "Cylinder group offset in cylinder: %d\n", sb->fs_old_cgoffset);
+    fprintf(out, "              Cylinder group mask: %#x\n", sb->fs_old_cgmask);
+    fprintf(out, "                Last time written: %s", ctime((const time_t*)&sb->fs_old_time));
+    fprintf(out, "           Total number of blocks: %d\n", sb->fs_old_size);
+    fprintf(out, "            Number of data blocks: %d\n", sb->fs_old_dsize);
+    fprintf(out, "        Number of cylinder groups: %d\n", sb->fs_ncg);
+    fprintf(out, "             Size of basic blocks: %d bytes\n", sb->fs_bsize);
+    fprintf(out, "              Size of frag blocks: %d bytes\n", sb->fs_fsize);
+    fprintf(out, "       Number of frags in a block: %d\n", sb->fs_frag);
+
+    fprintf(out, "         Minimum %% of free blocks: %d%%\n", sb->fs_minfree);
+    fprintf(out, "     Optimal delay for next block: %d msec\n", sb->fs_old_rotdelay);
+    fprintf(out, "            Disk revolution speed: %d rotations per second\n", sb->fs_old_rps);
+
+    fprintf(out, "           Mask for block offsets: %#x\n", sb->fs_bmask);     /* ``blkoff'' calc */
+    fprintf(out, "            Mask for frag offsets: %#x\n", sb->fs_fmask);     /* ``fragoff'' calc */
+    fprintf(out, "   Shift for logical block number: %d\n", sb->fs_bshift);     /* ``lblkno'' calc */
+    fprintf(out, "        Shift for number of frags: %d\n", sb->fs_fshift);     /* ``numfrags'' calc  */
+
+    fprintf(out, "  Max number of contiguous blocks: %d\n", sb->fs_maxcontig);
+    fprintf(out, "    Max blocks per cylinder group: %d\n", sb->fs_maxbpg);
+
+    fprintf(out, "              Block to frag shift: %d\n", sb->fs_fragshift);
+    fprintf(out, "Filesys block to data block shift: %d\n", sb->fs_fsbtodb);
+    fprintf(out, "       Actual size of super block: %d bytes\n", sb->fs_sbsize);
+    fprintf(out, "    Number of indirects per block: %d\n", sb->fs_nindir);
+    fprintf(out, "       Number of inodes per block: %d\n", sb->fs_inopb);
+    fprintf(out, "   Number of sectors per fragment: %d\n", sb->fs_old_nspf);
+
+    fprintf(out, "          Optimization preference: %d (%s)\n", sb->fs_optim,
+        sb->fs_optim == FS_OPTTIME ? "time" : "space");
+
+    fprintf(out, "      Number of sectors per track: %d\n", sb->fs_old_npsect); /* including spares */
+    fprintf(out, "       Hardware sector interleave: %d\n", sb->fs_old_interleave);
+    fprintf(out, "        Sector #0 skew, per track: %d\n", sb->fs_old_trackskew);
+
+    fprintf(out, "  Block addr of cyl group summary: %d\n", sb->fs_old_csaddr);
+    fprintf(out, "   Size of cyl group summary area: %d bytes\n", sb->fs_cssize);
+    fprintf(out, "              Cylinder group size: %d\n", sb->fs_cgsize);
+
+    fprintf(out, "                Sectors per track: %d\n", sb->fs_old_nsect);
+    fprintf(out, "             Sectors per cylinder: %d\n", sb->fs_old_spc);
+    fprintf(out, "        Total number of cylinders: %d\n", sb->fs_old_ncyl);
+    fprintf(out, "              Cylinders per group: %d\n", sb->fs_old_cpg);
+    fprintf(out, "                 Inodes per group: %d\n", sb->fs_ipg);
+    fprintf(out, "                 Blocks per group: %d frags\n", sb->fs_fpg);
+
+    fprintf(out, "      Total number of directories: %d\n", sb->fs_old_cstotal.cs_ndir);
+    fprintf(out, "      Total number of free blocks: %d\n", sb->fs_old_cstotal.cs_nbfree);
+    fprintf(out, "      Total number of free inodes: %d\n", sb->fs_old_cstotal.cs_nifree);
+    fprintf(out, "       Total number of free frags: %d\n", sb->fs_old_cstotal.cs_nffree);
+
+    fprintf(out, "                  Name mounted on: '%s'\n", sb->fs_fsmnt);
+
+    fprintf(out, "    Seek speed, cyls per rotation: %d\n", sb->fs_old_cpc);
+
+    fprintf(out, "      Size of block summary array: %d\n", sb->fs_contigsumsize);
+    fprintf(out, "            Max length of symlink: %d\n", sb->fs_maxsymlinklen);
+    fprintf(out, "         Format of on-disk inodes: %d (%s)\n", sb->fs_old_inodefmt,
+        sb->fs_old_inodefmt == FS_42INODEFMT ? "4.2bsd" :
+        sb->fs_old_inodefmt == FS_44INODEFMT ? "4.4bsd" : "unknown");
+
+    fprintf(out, "                Maximum file size: %llu bytes\n", (unsigned long long) sb->fs_maxfilesize);
+    fprintf(out, "                Block offset mask: %#018llx\n", (unsigned long long) sb->fs_qbmask);
+    fprintf(out, "                 Frag offset mask: %#018llx\n", (unsigned long long) sb->fs_qfmask);
+
+    fprintf(out, "   Number of rotational positions: %d\n", sb->fs_old_nrpos);
+    fprintf(out, "                     Magic number: %#x\n", sb->fs_magic);
+
+    /* Read and print all the cylinder groups. */
+    for (cylno = 0; cylno < sb->fs_ncg; cylno++) {
+        if (bread(disk, fsbtodb(sb, cgtod(sb, cylno)), (void*)cg, (size_t)sb->fs_cgsize) == -1) {
+            fprintf (stderr, "Cannot read cylinder group %d\n", cylno);
+            exit(-1);
+        }
+        fprintf(out, "-------- Cylinder group #%d --------\n", cylno);
+        ufs_print_cg(cg, out);
+    }
 }
