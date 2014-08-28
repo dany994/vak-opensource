@@ -252,7 +252,7 @@ cg_lookup(int cgx)
     sc->sc_cgp = (struct cg *)sc->sc_cgbuf;
     sc->sc_cgx = cgx;
     LIST_INSERT_HEAD(hd, sc, sc_next);
-    if (bread(disk, fsbtodb(fs, cgtod(fs, sc->sc_cgx)), sc->sc_cgbuf,
+    if (ufs_block_read(disk, fsbtodb(fs, cgtod(fs, sc->sc_cgx)), sc->sc_cgbuf,
         fs->fs_bsize) == -1)
         err_suj("Unable to read cylinder group %d\n", sc->sc_cgx);
 
@@ -356,7 +356,7 @@ dblk_read(ufs2_daddr_t blk, int size)
             free(dblk->db_buf);
         dblk->db_buf = errmalloc(size);
         dblk->db_size = size;
-        if (bread(disk, fsbtodb(fs, blk), dblk->db_buf, size) == -1)
+        if (ufs_block_read(disk, fsbtodb(fs, blk), dblk->db_buf, size) == -1)
             err_suj("Failed to read data block %jd\n", blk);
     }
     return (dblk->db_buf);
@@ -381,7 +381,7 @@ dblk_write(void)
         LIST_FOREACH(dblk, &dbhash[i], db_next) {
             if (dblk->db_dirty == 0 || dblk->db_size == 0)
                 continue;
-            if (bwrite(disk, fsbtodb(fs, dblk->db_blk),
+            if (ufs_block_write(disk, fsbtodb(fs, dblk->db_blk),
                 dblk->db_buf, dblk->db_size) == -1)
                 err_suj("Unable to write block %jd\n",
                     dblk->db_blk);
@@ -415,7 +415,7 @@ ino_read(ino_t ino)
     iblk->ib_buf = errmalloc(fs->fs_bsize);
     iblk->ib_blk = blk;
     LIST_INSERT_HEAD(hd, iblk, ib_next);
-    if (bread(disk, fsbtodb(fs, blk), iblk->ib_buf, fs->fs_bsize) == -1)
+    if (ufs_block_read(disk, fsbtodb(fs, blk), iblk->ib_buf, fs->fs_bsize) == -1)
         err_suj("Failed to read inode block %jd\n", blk);
 found:
     sc->sc_lastiblk = iblk;
@@ -458,7 +458,7 @@ iblk_write(struct ino_blk *iblk)
 
     if (iblk->ib_dirty == 0)
         return;
-    if (bwrite(disk, fsbtodb(fs, iblk->ib_blk), iblk->ib_buf,
+    if (ufs_block_write(disk, fsbtodb(fs, iblk->ib_blk), iblk->ib_buf,
         fs->fs_bsize) == -1)
         err_suj("Failed to write inode block %jd\n", iblk->ib_blk);
 }
@@ -1866,7 +1866,7 @@ cg_write(struct suj_cg *sc)
      * before writing the block.
      */
     fs->fs_cs(fs, sc->sc_cgx) = cgp->cg_cs;
-    if (bwrite(disk, fsbtodb(fs, cgtod(fs, sc->sc_cgx)), sc->sc_cgbuf,
+    if (ufs_block_write(disk, fsbtodb(fs, cgtod(fs, sc->sc_cgx)), sc->sc_cgbuf,
         fs->fs_bsize) == -1)
         err_suj("Unable to write cylinder group %d\n", sc->sc_cgx);
 }
@@ -2545,7 +2545,7 @@ restart:
         /*
          * Read 1MB at a time and scan for records within this block.
          */
-        if (bread(disk, blk, &block, size) == -1) {
+        if (ufs_block_read(disk, blk, &block, size) == -1) {
             err_suj("Error reading journal block %jd\n",
                 (intmax_t)blk);
         }
@@ -2626,7 +2626,7 @@ suj_find(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
     if (sujino)
         return;
     bytes = lfragtosize(fs, frags);
-    if (bread(disk, fsbtodb(fs, blk), block, bytes) <= 0)
+    if (ufs_block_read(disk, fsbtodb(fs, blk), block, bytes) <= 0)
         err_suj("Failed to read ROOTINO directory block %jd\n", blk);
     for (off = 0; off < bytes; off += dp->d_reclen) {
         dp = (struct direct *)&block[off];

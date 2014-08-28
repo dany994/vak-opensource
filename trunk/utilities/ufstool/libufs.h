@@ -67,7 +67,30 @@ typedef struct {
 #define d_fs    d_sbunion.d_fs
 #define d_sb    d_sbunion.d_sb
 #define d_cg    d_cgunion.d_cg
+    off_t seek;
 } ufs_t;
+
+/*
+ * Userland inode.
+ */
+typedef struct {
+    ufs_t           *disk;
+    unsigned        number;
+    int             dirty;              /* save needed */
+
+    u_int16_t       mode;               /* file type and access mode */
+    int16_t         nlink;              /* directory entries */
+    u_int32_t       uid;                /* owner */
+    u_int32_t       gid;                /* group */
+    u_int64_t       size;               /* size */
+    int32_t         blocks;             /* blocks actually held */
+    ufs1_daddr_t    daddr [NDADDR];     /* direct device addresses constituting file */
+    ufs1_daddr_t    iaddr [NIADDR];     /* indirect device addresses */
+    u_int32_t       flags;              /* user defined flags */
+    int32_t         atime;              /* time last accessed */
+    int32_t         mtime;              /* time last modified */
+    int32_t         ctime;              /* time created */
+} ufs_inode_t;
 
 /*
  * libufs macros (internal, non-exported).
@@ -129,9 +152,9 @@ __BEGIN_DECLS
 /*
  * block.c
  */
-ssize_t bread(ufs_t *, ufs2_daddr_t, void *, size_t);
-ssize_t bwrite(ufs_t *, ufs2_daddr_t, const void *, size_t);
-int berase(ufs_t *, ufs2_daddr_t, ufs2_daddr_t);
+ssize_t ufs_block_read(ufs_t *, ufs2_daddr_t, void *, size_t);
+ssize_t ufs_block_write(ufs_t *, ufs2_daddr_t, const void *, size_t);
+int ufs_block_erase(ufs_t *, ufs2_daddr_t, ufs2_daddr_t);
 
 /*
  * cgroup.c
@@ -165,7 +188,7 @@ void ufs_print(ufs_t *disk, FILE *out);
 int ufs_disk_close(ufs_t *);
 int ufs_disk_fillout(ufs_t *, const char *);
 int ufs_disk_fillout_blank(ufs_t *, const char *);
-int ufs_disk_write(ufs_t *);
+int ufs_disk_reopen_writable(ufs_t *);
 
 /*
  * ffs_subr.c

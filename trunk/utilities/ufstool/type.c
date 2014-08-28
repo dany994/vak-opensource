@@ -95,7 +95,7 @@ ufs_disk_fillout_blank(ufs_t *disk, const char *name)
 }
 
 int
-ufs_disk_write(ufs_t *disk)
+ufs_disk_reopen_writable(ufs_t *disk)
 {
     ERROR(disk, NULL);
 

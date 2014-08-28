@@ -52,7 +52,7 @@ sbread(ufs_t *disk)
     superblock = superblocks[0];
 
     for (sb = 0; (superblock = superblocks[sb]) != -1; sb++) {
-        if (bread(disk, superblock, disk->d_sb, SBLOCKSIZE) == -1) {
+        if (ufs_block_read(disk, superblock, disk->d_sb, SBLOCKSIZE) == -1) {
             ERROR(disk, "non-existent or truncated superblock");
             return (-1);
         }
@@ -96,7 +96,7 @@ sbread(ufs_t *disk)
         size = fs->fs_bsize;
         if (i + fs->fs_frag > blks)
             size = (blks - i) * fs->fs_fsize;
-        if (bread(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
+        if (ufs_block_read(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
             == -1) {
             ERROR(disk, "Failed to read sb summary information");
             free(fs->fs_csp);
@@ -127,7 +127,7 @@ sbwrite(ufs_t *disk, int all)
         disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
     }
 
-    if (bwrite(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
+    if (ufs_block_write(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
         ERROR(disk, "failed to write superblock");
         return (-1);
     }
@@ -140,7 +140,7 @@ sbwrite(ufs_t *disk, int all)
         size = fs->fs_bsize;
         if (i + fs->fs_frag > blks)
             size = (blks - i) * fs->fs_fsize;
-        if (bwrite(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
+        if (ufs_block_write(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
             == -1) {
             ERROR(disk, "Failed to write sb summary information");
             return (-1);
@@ -149,7 +149,7 @@ sbwrite(ufs_t *disk, int all)
     }
     if (all) {
         for (i = 0; i < fs->fs_ncg; i++)
-            if (bwrite(disk, fsbtodb(fs, cgsblock(fs, i)),
+            if (ufs_block_write(disk, fsbtodb(fs, cgsblock(fs, i)),
                 fs, SBLOCKSIZE) == -1) {
                 ERROR(disk, "failed to update a superblock");
                 return (-1);
@@ -243,7 +243,7 @@ void ufs_print(ufs_t *disk, FILE *out)
 
     /* Read and print all the cylinder groups. */
     for (cylno = 0; cylno < sb->fs_ncg; cylno++) {
-        if (bread(disk, fsbtodb(sb, cgtod(sb, cylno)), (void*)cg, (size_t)sb->fs_cgsize) == -1) {
+        if (ufs_block_read(disk, fsbtodb(sb, cgtod(sb, cylno)), (void*)cg, (size_t)sb->fs_cgsize) == -1) {
             fprintf (stderr, "Cannot read cylinder group %d\n", cylno);
             exit(-1);
         }
