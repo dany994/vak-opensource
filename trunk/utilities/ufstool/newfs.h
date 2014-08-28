@@ -113,9 +113,9 @@ extern u_char	*mkfs_volumelabel;	/* volume label for filesystem */
  * rewrite. As a consequence, the internal version of bwrite() adds the
  * partition offset itself when calling the underlying function, pwrite().
  *
- * XXX This info really ought to go into the struct uufsd, at which point
+ * XXX This info really ought to go into the ufs_t, at which point
  * we can remove the above hack.
  */
 extern ufs2_daddr_t mkfs_part_ofs;	/* partition offset in blocks */
 
-void mkfs (struct uufsd *disk, const char *fsys);
+void mkfs (ufs_t *disk, const char *fsys);

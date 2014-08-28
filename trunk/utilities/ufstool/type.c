@@ -34,83 +34,83 @@
 #include "libufs.h"
 
 /* Track if its fd points to a writable device. */
-#define	MINE_WRITE	0x02
+#define MINE_WRITE  0x02
 
 int
-ufs_disk_close(struct uufsd *disk)
+ufs_disk_close(ufs_t *disk)
 {
-	ERROR(disk, NULL);
-	close(disk->d_fd);
-	if (disk->d_inoblock != NULL) {
-		free(disk->d_inoblock);
-		disk->d_inoblock = NULL;
-	}
-	if (disk->d_sbcsum != NULL) {
-		free(disk->d_sbcsum);
-		disk->d_sbcsum = NULL;
-	}
-	return (0);
+    ERROR(disk, NULL);
+    close(disk->d_fd);
+    if (disk->d_inoblock != NULL) {
+        free(disk->d_inoblock);
+        disk->d_inoblock = NULL;
+    }
+    if (disk->d_sbcsum != NULL) {
+        free(disk->d_sbcsum);
+        disk->d_sbcsum = NULL;
+    }
+    return (0);
 }
 
 int
-ufs_disk_fillout(struct uufsd *disk, const char *name)
+ufs_disk_fillout(ufs_t *disk, const char *name)
 {
-	if (ufs_disk_fillout_blank(disk, name) == -1) {
-		return (-1);
-	}
-	if (sbread(disk) == -1) {
-		ERROR(disk, "could not read superblock to fill out disk");
-		return (-1);
-	}
-	return (0);
+    if (ufs_disk_fillout_blank(disk, name) == -1) {
+        return (-1);
+    }
+    if (sbread(disk) == -1) {
+        ERROR(disk, "could not read superblock to fill out disk");
+        return (-1);
+    }
+    return (0);
 }
 
 int
-ufs_disk_fillout_blank(struct uufsd *disk, const char *name)
+ufs_disk_fillout_blank(ufs_t *disk, const char *name)
 {
-	int fd;
+    int fd;
 
-	ERROR(disk, NULL);
+    ERROR(disk, NULL);
 
-	fd = open(name, O_RDONLY);
-	if (fd == -1) {
-		ERROR(disk, "could not open disk image");
-		return (-1);
-	}
+    fd = open(name, O_RDONLY);
+    if (fd == -1) {
+        ERROR(disk, "could not open disk image");
+        return (-1);
+    }
 
-        memset(disk, 0, sizeof(*disk));
-	disk->d_bsize = 1;
-	disk->d_ccg = 0;
-	disk->d_fd = fd;
-	disk->d_inoblock = NULL;
-	disk->d_inomin = 0;
-	disk->d_inomax = 0;
-	disk->d_lcg = 0;
-	disk->d_mine = 0;
-	disk->d_ufs = 0;
-	disk->d_error = NULL;
-	disk->d_sbcsum = NULL;
-	disk->d_name = name;
-	return (0);
+    memset(disk, 0, sizeof(*disk));
+    disk->d_bsize = 1;
+    disk->d_ccg = 0;
+    disk->d_fd = fd;
+    disk->d_inoblock = NULL;
+    disk->d_inomin = 0;
+    disk->d_inomax = 0;
+    disk->d_lcg = 0;
+    disk->d_mine = 0;
+    disk->d_ufs = 0;
+    disk->d_error = NULL;
+    disk->d_sbcsum = NULL;
+    disk->d_name = name;
+    return (0);
 }
 
 int
-ufs_disk_write(struct uufsd *disk)
+ufs_disk_write(ufs_t *disk)
 {
-	ERROR(disk, NULL);
+    ERROR(disk, NULL);
 
-	if (disk->d_mine & MINE_WRITE)
-		return (0);
+    if (disk->d_mine & MINE_WRITE)
+        return (0);
 
-	close(disk->d_fd);
+    close(disk->d_fd);
 
-	disk->d_fd = open(disk->d_name, O_RDWR);
-	if (disk->d_fd < 0) {
-		ERROR(disk, "failed to open disk for writing");
-		return (-1);
-	}
+    disk->d_fd = open(disk->d_name, O_RDWR);
+    if (disk->d_fd < 0) {
+        ERROR(disk, "failed to open disk for writing");
+        return (-1);
+    }
 
-	disk->d_mine |= MINE_WRITE;
+    disk->d_mine |= MINE_WRITE;
 
-	return (0);
+    return (0);
 }

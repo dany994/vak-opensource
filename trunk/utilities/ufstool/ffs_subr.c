@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)ffs_subr.c	8.5 (Berkeley) 3/21/95
+ *  @(#)ffs_subr.c  8.5 (Berkeley) 3/21/95
  */
 
 #include <sys/param.h>
@@ -39,33 +39,33 @@
  */
 void
 ffs_fragacct(fs, fragmap, fraglist, cnt)
-	struct fs *fs;
-	int fragmap;
-	int32_t fraglist[];
-	int cnt;
+    struct fs *fs;
+    int fragmap;
+    int32_t fraglist[];
+    int cnt;
 {
-	int inblk;
-	int field, subfield;
-	int siz, pos;
+    int inblk;
+    int field, subfield;
+    int siz, pos;
 
-	inblk = (int)(fragtbl[fs->fs_frag][fragmap]) << 1;
-	fragmap <<= 1;
-	for (siz = 1; siz < fs->fs_frag; siz++) {
-		if ((inblk & (1 << (siz + (fs->fs_frag % NBBY)))) == 0)
-			continue;
-		field = around[siz];
-		subfield = inside[siz];
-		for (pos = siz; pos <= fs->fs_frag; pos++) {
-			if ((fragmap & field) == subfield) {
-				fraglist[siz] += cnt;
-				pos += siz;
-				field <<= siz;
-				subfield <<= siz;
-			}
-			field <<= 1;
-			subfield <<= 1;
-		}
-	}
+    inblk = (int)(fragtbl[fs->fs_frag][fragmap]) << 1;
+    fragmap <<= 1;
+    for (siz = 1; siz < fs->fs_frag; siz++) {
+        if ((inblk & (1 << (siz + (fs->fs_frag % NBBY)))) == 0)
+            continue;
+        field = around[siz];
+        subfield = inside[siz];
+        for (pos = siz; pos <= fs->fs_frag; pos++) {
+            if ((fragmap & field) == subfield) {
+                fraglist[siz] += cnt;
+                pos += siz;
+                field <<= siz;
+                subfield <<= siz;
+            }
+            field <<= 1;
+            subfield <<= 1;
+        }
+    }
 }
 
 /*
@@ -75,28 +75,28 @@ ffs_fragacct(fs, fragmap, fraglist, cnt)
  */
 int
 ffs_isblock(fs, cp, h)
-	struct fs *fs;
-	unsigned char *cp;
-	ufs1_daddr_t h;
+    struct fs *fs;
+    unsigned char *cp;
+    ufs1_daddr_t h;
 {
-	unsigned char mask;
+    unsigned char mask;
 
-	switch ((int)fs->fs_frag) {
-	case 8:
-		return (cp[h] == 0xff);
-	case 4:
-		mask = 0x0f << ((h & 0x1) << 2);
-		return ((cp[h >> 1] & mask) == mask);
-	case 2:
-		mask = 0x03 << ((h & 0x3) << 1);
-		return ((cp[h >> 2] & mask) == mask);
-	case 1:
-		mask = 0x01 << (h & 0x7);
-		return ((cp[h >> 3] & mask) == mask);
-	default:
-		break;
-	}
-	return (0);
+    switch ((int)fs->fs_frag) {
+    case 8:
+        return (cp[h] == 0xff);
+    case 4:
+        mask = 0x0f << ((h & 0x1) << 2);
+        return ((cp[h >> 1] & mask) == mask);
+    case 2:
+        mask = 0x03 << ((h & 0x3) << 1);
+        return ((cp[h >> 2] & mask) == mask);
+    case 1:
+        mask = 0x01 << (h & 0x7);
+        return ((cp[h >> 3] & mask) == mask);
+    default:
+        break;
+    }
+    return (0);
 }
 
 /*
@@ -104,24 +104,24 @@ ffs_isblock(fs, cp, h)
  */
 int
 ffs_isfreeblock(fs, cp, h)
-	struct fs *fs;
-	u_char *cp;
-	ufs1_daddr_t h;
+    struct fs *fs;
+    u_char *cp;
+    ufs1_daddr_t h;
 {
 
-	switch ((int)fs->fs_frag) {
-	case 8:
-		return (cp[h] == 0);
-	case 4:
-		return ((cp[h >> 1] & (0x0f << ((h & 0x1) << 2))) == 0);
-	case 2:
-		return ((cp[h >> 2] & (0x03 << ((h & 0x3) << 1))) == 0);
-	case 1:
-		return ((cp[h >> 3] & (0x01 << (h & 0x7))) == 0);
-	default:
-		break;
-	}
-	return (0);
+    switch ((int)fs->fs_frag) {
+    case 8:
+        return (cp[h] == 0);
+    case 4:
+        return ((cp[h >> 1] & (0x0f << ((h & 0x1) << 2))) == 0);
+    case 2:
+        return ((cp[h >> 2] & (0x03 << ((h & 0x3) << 1))) == 0);
+    case 1:
+        return ((cp[h >> 3] & (0x01 << (h & 0x7))) == 0);
+    default:
+        break;
+    }
+    return (0);
 }
 
 /*
@@ -129,27 +129,27 @@ ffs_isfreeblock(fs, cp, h)
  */
 void
 ffs_clrblock(fs, cp, h)
-	struct fs *fs;
-	u_char *cp;
-	ufs1_daddr_t h;
+    struct fs *fs;
+    u_char *cp;
+    ufs1_daddr_t h;
 {
 
-	switch ((int)fs->fs_frag) {
-	case 8:
-		cp[h] = 0;
-		return;
-	case 4:
-		cp[h >> 1] &= ~(0x0f << ((h & 0x1) << 2));
-		return;
-	case 2:
-		cp[h >> 2] &= ~(0x03 << ((h & 0x3) << 1));
-		return;
-	case 1:
-		cp[h >> 3] &= ~(0x01 << (h & 0x7));
-		return;
-	default:
-		break;
-	}
+    switch ((int)fs->fs_frag) {
+    case 8:
+        cp[h] = 0;
+        return;
+    case 4:
+        cp[h >> 1] &= ~(0x0f << ((h & 0x1) << 2));
+        return;
+    case 2:
+        cp[h >> 2] &= ~(0x03 << ((h & 0x3) << 1));
+        return;
+    case 1:
+        cp[h >> 3] &= ~(0x01 << (h & 0x7));
+        return;
+    default:
+        break;
+    }
 }
 
 /*
@@ -157,28 +157,28 @@ ffs_clrblock(fs, cp, h)
  */
 void
 ffs_setblock(fs, cp, h)
-	struct fs *fs;
-	unsigned char *cp;
-	ufs1_daddr_t h;
+    struct fs *fs;
+    unsigned char *cp;
+    ufs1_daddr_t h;
 {
 
-	switch ((int)fs->fs_frag) {
+    switch ((int)fs->fs_frag) {
 
-	case 8:
-		cp[h] = 0xff;
-		return;
-	case 4:
-		cp[h >> 1] |= (0x0f << ((h & 0x1) << 2));
-		return;
-	case 2:
-		cp[h >> 2] |= (0x03 << ((h & 0x3) << 1));
-		return;
-	case 1:
-		cp[h >> 3] |= (0x01 << (h & 0x7));
-		return;
-	default:
-		break;
-	}
+    case 8:
+        cp[h] = 0xff;
+        return;
+    case 4:
+        cp[h >> 1] |= (0x0f << ((h & 0x1) << 2));
+        return;
+    case 2:
+        cp[h >> 2] |= (0x03 << ((h & 0x3) << 1));
+        return;
+    case 1:
+        cp[h >> 3] |= (0x01 << (h & 0x7));
+        return;
+    default:
+        break;
+    }
 }
 
 /*
@@ -188,87 +188,87 @@ ffs_setblock(fs, cp, h)
  */
 void
 ffs_clusteracct(fs, cgp, blkno, cnt)
-	struct fs *fs;
-	struct cg *cgp;
-	ufs1_daddr_t blkno;
-	int cnt;
+    struct fs *fs;
+    struct cg *cgp;
+    ufs1_daddr_t blkno;
+    int cnt;
 {
-	int32_t *sump;
-	int32_t *lp;
-	u_char *freemapp, *mapp;
-	int i, start, end, forw, back, map, bit;
+    int32_t *sump;
+    int32_t *lp;
+    u_char *freemapp, *mapp;
+    int i, start, end, forw, back, map, bit;
 
-	if (fs->fs_contigsumsize <= 0)
-		return;
-	freemapp = cg_clustersfree(cgp);
-	sump = cg_clustersum(cgp);
-	/*
-	 * Allocate or clear the actual block.
-	 */
-	if (cnt > 0)
-		setbit(freemapp, blkno);
-	else
-		clrbit(freemapp, blkno);
-	/*
-	 * Find the size of the cluster going forward.
-	 */
-	start = blkno + 1;
-	end = start + fs->fs_contigsumsize;
-	if (end >= cgp->cg_nclusterblks)
-		end = cgp->cg_nclusterblks;
-	mapp = &freemapp[start / NBBY];
-	map = *mapp++;
-	bit = 1 << (start % NBBY);
-	for (i = start; i < end; i++) {
-		if ((map & bit) == 0)
-			break;
-		if ((i & (NBBY - 1)) != (NBBY - 1)) {
-			bit <<= 1;
-		} else {
-			map = *mapp++;
-			bit = 1;
-		}
-	}
-	forw = i - start;
-	/*
-	 * Find the size of the cluster going backward.
-	 */
-	start = blkno - 1;
-	end = start - fs->fs_contigsumsize;
-	if (end < 0)
-		end = -1;
-	mapp = &freemapp[start / NBBY];
-	map = *mapp--;
-	bit = 1 << (start % NBBY);
-	for (i = start; i > end; i--) {
-		if ((map & bit) == 0)
-			break;
-		if ((i & (NBBY - 1)) != 0) {
-			bit >>= 1;
-		} else {
-			map = *mapp--;
-			bit = 1 << (NBBY - 1);
-		}
-	}
-	back = start - i;
-	/*
-	 * Account for old cluster and the possibly new forward and
-	 * back clusters.
-	 */
-	i = back + forw + 1;
-	if (i > fs->fs_contigsumsize)
-		i = fs->fs_contigsumsize;
-	sump[i] += cnt;
-	if (back > 0)
-		sump[back] -= cnt;
-	if (forw > 0)
-		sump[forw] -= cnt;
-	/*
-	 * Update cluster summary information.
-	 */
-	lp = &sump[fs->fs_contigsumsize];
-	for (i = fs->fs_contigsumsize; i > 0; i--)
-		if (*lp-- > 0)
-			break;
-	fs->fs_maxcluster[cgp->cg_cgx] = i;
+    if (fs->fs_contigsumsize <= 0)
+        return;
+    freemapp = cg_clustersfree(cgp);
+    sump = cg_clustersum(cgp);
+    /*
+     * Allocate or clear the actual block.
+     */
+    if (cnt > 0)
+        setbit(freemapp, blkno);
+    else
+        clrbit(freemapp, blkno);
+    /*
+     * Find the size of the cluster going forward.
+     */
+    start = blkno + 1;
+    end = start + fs->fs_contigsumsize;
+    if (end >= cgp->cg_nclusterblks)
+        end = cgp->cg_nclusterblks;
+    mapp = &freemapp[start / NBBY];
+    map = *mapp++;
+    bit = 1 << (start % NBBY);
+    for (i = start; i < end; i++) {
+        if ((map & bit) == 0)
+            break;
+        if ((i & (NBBY - 1)) != (NBBY - 1)) {
+            bit <<= 1;
+        } else {
+            map = *mapp++;
+            bit = 1;
+        }
+    }
+    forw = i - start;
+    /*
+     * Find the size of the cluster going backward.
+     */
+    start = blkno - 1;
+    end = start - fs->fs_contigsumsize;
+    if (end < 0)
+        end = -1;
+    mapp = &freemapp[start / NBBY];
+    map = *mapp--;
+    bit = 1 << (start % NBBY);
+    for (i = start; i > end; i--) {
+        if ((map & bit) == 0)
+            break;
+        if ((i & (NBBY - 1)) != 0) {
+            bit >>= 1;
+        } else {
+            map = *mapp--;
+            bit = 1 << (NBBY - 1);
+        }
+    }
+    back = start - i;
+    /*
+     * Account for old cluster and the possibly new forward and
+     * back clusters.
+     */
+    i = back + forw + 1;
+    if (i > fs->fs_contigsumsize)
+        i = fs->fs_contigsumsize;
+    sump[i] += cnt;
+    if (back > 0)
+        sump[back] -= cnt;
+    if (forw > 0)
+        sump[forw] -= cnt;
+    /*
+     * Update cluster summary information.
+     */
+    lp = &sump[fs->fs_contigsumsize];
+    for (i = fs->fs_contigsumsize; i > 0; i--)
+        if (*lp-- > 0)
+            break;
+    fs->fs_maxcluster[cgp->cg_cgx] = i;
 }

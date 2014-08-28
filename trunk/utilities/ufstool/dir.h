@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
  * All or some portions of this file are derived from material licensed
  * to the University of California by American Telephone and Telegraph
@@ -31,20 +31,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)dir.h	8.2 (Berkeley) 1/21/94
+ *  @(#)dir.h   8.2 (Berkeley) 1/21/94
  * $FreeBSD$
  */
 
 #ifndef _UFS_UFS_DIR_H_
-#define	_UFS_UFS_DIR_H_
+#define _UFS_UFS_DIR_H_
 
 /*
  * Theoretically, directories can be more than 2Gb in length, however, in
  * practice this seems unlikely. So, we define the type doff_t as a 32-bit
  * quantity to keep down the cost of doing lookup on a 32-bit machine.
  */
-#define	doff_t		int32_t
-#define MAXDIRSIZE	(0x7fffffff)
+#define doff_t      int32_t
+#define MAXDIRSIZE  (0x7fffffff)
 
 /*
  * A directory consists of some number of blocks of DIRBLKSIZ
@@ -71,35 +71,35 @@
  * Entries other than the first in a directory do not normally have
  * dp->d_ino set to 0.
  */
-#define DIRBLKSIZ	DEV_BSIZE
-#define	MAXNAMLEN	255
+#define DIRBLKSIZ   DEV_BSIZE
+#define MAXNAMLEN   255
 
-struct	direct {
-	u_int32_t d_ino;		/* inode number of entry */
-	u_int16_t d_reclen;		/* length of this record */
-	u_int8_t  d_type; 		/* file type, see below */
-	u_int8_t  d_namlen;		/* length of string in d_name */
-	char	  d_name[MAXNAMLEN + 1];/* name with length <= MAXNAMLEN */
+struct  direct {
+    u_int32_t d_ino;                /* inode number of entry */
+    u_int16_t d_reclen;             /* length of this record */
+    u_int8_t  d_type;               /* file type, see below */
+    u_int8_t  d_namlen;             /* length of string in d_name */
+    char      d_name[MAXNAMLEN + 1];/* name with length <= MAXNAMLEN */
 };
 
 /*
  * File types
  */
-#define	DT_UNKNOWN	 0
-#define	DT_FIFO		 1
-#define	DT_CHR		 2
-#define	DT_DIR		 4
-#define	DT_BLK		 6
-#define	DT_REG		 8
-#define	DT_LNK		10
-#define	DT_SOCK		12
-#define	DT_WHT		14
+#define DT_UNKNOWN   0
+#define DT_FIFO      1
+#define DT_CHR       2
+#define DT_DIR       4
+#define DT_BLK       6
+#define DT_REG       8
+#define DT_LNK      10
+#define DT_SOCK     12
+#define DT_WHT      14
 
 /*
  * Convert between stat structure types and directory types.
  */
-#define	IFTODT(mode)	(((mode) & 0170000) >> 12)
-#define	DTTOIF(dirtype)	((dirtype) << 12)
+#define IFTODT(mode)    (((mode) & 0170000) >> 12)
+#define DTTOIF(dirtype) ((dirtype) << 12)
 
 /*
  * The DIRSIZ macro gives the minimum record length which will hold
@@ -109,9 +109,9 @@ struct	direct {
  *
  *
  */
-#define	DIRECTSIZ(namlen)						\
-	(((size_t)&((struct direct *)0)->d_name +			\
-	  ((namlen)+1)*sizeof(((struct direct *)0)->d_name[0]) + 3) & ~3)
+#define DIRECTSIZ(namlen)                       \
+    (((size_t)&((struct direct *)0)->d_name +           \
+      ((namlen)+1)*sizeof(((struct direct *)0)->d_name[0]) + 3) & ~3)
 
 #define DIRSIZ(dp) DIRECTSIZ((dp)->d_namlen)
 
@@ -120,15 +120,15 @@ struct	direct {
  * but the name field is MAXNAMLEN - 1, and this just won't do.
  */
 struct dirtemplate {
-	u_int32_t	dot_ino;
-	int16_t		dot_reclen;
-	u_int8_t	dot_type;
-	u_int8_t	dot_namlen;
-	char		dot_name[4];	/* must be multiple of 4 */
-	u_int32_t	dotdot_ino;
-	int16_t		dotdot_reclen;
-	u_int8_t	dotdot_type;
-	u_int8_t	dotdot_namlen;
-	char		dotdot_name[4];	/* ditto */
+    u_int32_t   dot_ino;
+    int16_t     dot_reclen;
+    u_int8_t    dot_type;
+    u_int8_t    dot_namlen;
+    char        dot_name[4];    /* must be multiple of 4 */
+    u_int32_t   dotdot_ino;
+    int16_t     dotdot_reclen;
+    u_int8_t    dotdot_type;
+    u_int8_t    dotdot_namlen;
+    char        dotdot_name[4]; /* ditto */
 };
 #endif /* !_DIR_H_ */

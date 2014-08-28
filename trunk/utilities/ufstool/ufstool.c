@@ -46,7 +46,7 @@ static int fix;
 static int mount;
 static int scan;
 static unsigned kbytes;
-static struct uufsd disk;
+static ufs_t disk;
 
 static const char *program_version =
     "BSD 4.4 file system tool, version 0.0\n"
@@ -130,7 +130,7 @@ void print_inode (fs_inode_t *inode,
     fprintf (out, "\n");
 }
 
-void print_indirect_block (struct uufsd *disk, unsigned int bno, FILE *out)
+void print_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
     unsigned short nb;
     unsigned char data [BSDFS_BSIZE];
@@ -148,7 +148,7 @@ void print_indirect_block (struct uufsd *disk, unsigned int bno, FILE *out)
     }
 }
 
-void print_double_indirect_block (struct uufsd *disk, unsigned int bno, FILE *out)
+void print_double_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
     unsigned short nb;
     unsigned char data [BSDFS_BSIZE];
@@ -166,7 +166,7 @@ void print_double_indirect_block (struct uufsd *disk, unsigned int bno, FILE *ou
     }
 }
 
-void print_triple_indirect_block (struct uufsd *disk, unsigned int bno, FILE *out)
+void print_triple_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
     unsigned short nb;
     unsigned char data [BSDFS_BSIZE];
@@ -299,7 +299,7 @@ void scanner (fs_inode_t *dir, fs_inode_t *inode,
 /*
  * Create a directory.
  */
-void add_directory (struct uufsd *disk, char *name, int mode, int owner, int group)
+void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
 {
     fs_inode_t dir, parent;
     char buf [BSDFS_BSIZE], *p;
@@ -351,7 +351,7 @@ void add_directory (struct uufsd *disk, char *name, int mode, int owner, int gro
 /*
  * Create a device node.
  */
-void add_device (struct uufsd *disk, char *name, int mode, int owner, int group,
+void add_device (ufs_t *disk, char *name, int mode, int owner, int group,
     int type, int majr, int minr)
 {
     fs_inode_t dev;
@@ -372,7 +372,7 @@ void add_device (struct uufsd *disk, char *name, int mode, int owner, int group,
 /*
  * Copy regular file to filesystem.
  */
-void add_file (struct uufsd *disk, const char *path, const char *dirname,
+void add_file (ufs_t *disk, const char *path, const char *dirname,
     int mode, int owner, int group)
 {
     fs_file_t file;
@@ -430,7 +430,7 @@ void add_file (struct uufsd *disk, const char *path, const char *dirname,
 /*
  * Create a symlink.
  */
-void add_symlink (struct uufsd *disk, const char *path, const char *link,
+void add_symlink (ufs_t *disk, const char *path, const char *link,
     int mode, int owner, int group)
 {
     fs_file_t file;
@@ -457,7 +457,7 @@ void add_symlink (struct uufsd *disk, const char *path, const char *link,
 /*
  * Create a hard link.
  */
-void add_hardlink (struct uufsd *disk, const char *path, const char *link)
+void add_hardlink (ufs_t *disk, const char *path, const char *link)
 {
     fs_inode_t source, target;
 
@@ -484,7 +484,7 @@ void add_hardlink (struct uufsd *disk, const char *path, const char *link)
  * Create a file/device/directory in the filesystem.
  * When name is ended by slash as "name/", directory is created.
  */
-void add_object (struct uufsd *disk, char *name)
+void add_object (ufs_t *disk, char *name)
 {
     int majr, minr;
     char type;
@@ -519,7 +519,7 @@ void add_object (struct uufsd *disk, char *name)
  * Add the contents from the specified directory.
  * Use the optional manifest file.
  */
-void add_contents (struct uufsd *disk, const char *dirname, const char *manifest)
+void add_contents (ufs_t *disk, const char *dirname, const char *manifest)
 {
     manifest_t m;
     void *cursor;
