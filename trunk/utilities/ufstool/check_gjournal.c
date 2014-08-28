@@ -294,8 +294,8 @@ freeindir(ufs2_daddr_t blk, int level)
     ufs2_daddr_t *blks;
     int i;
 
-    if (ufs_block_read(disk, fsbtodb(fs, blk), (void *)&sblks, (size_t)fs->fs_bsize) == -1)
-        err(1, "ufs_block_read: %s", disk->d_error);
+    if (ufs_sector_read(disk, fsbtodb(fs, blk), (void *)&sblks, (size_t)fs->fs_bsize) == -1)
+        err(1, "ufs_sector_read: %s", disk->d_error);
     blks = (ufs2_daddr_t *)&sblks;
     for (i = 0; i < NINDIR(fs); i++) {
         if (blks[i] == 0)

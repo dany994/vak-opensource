@@ -191,12 +191,12 @@ main(int argc, char **argv)
 
         /* get the cylinder summary into the memory ... */
         for (i = 0; i < sblock.fs_cssize; i += sblock.fs_bsize) {
-            if (ufs_block_read(&disk, fsbtodb(&sblock,
+            if (ufs_sector_read(&disk, fsbtodb(&sblock,
                 sblock.fs_csaddr + numfrags(&sblock, i)),
                 (void *)(((char *)fscs)+i),
                 (size_t)(sblock.fs_cssize-i < sblock.fs_bsize ?
                 sblock.fs_cssize - i : sblock.fs_bsize)) == -1)
-                err(1, "ufs_block_read: %s", disk.d_error);
+                err(1, "ufs_sector_read: %s", disk.d_error);
         }
 
         dbg_csp = fscs;
@@ -216,10 +216,10 @@ main(int argc, char **argv)
             snprintf(dbg_line, sizeof(dbg_line), "cgr %d", cylno);
             if (cfg_lv & 0x002) {
                 /* dump the superblock copies */
-                if (ufs_block_read(&disk, fsbtodb(&sblock,
+                if (ufs_sector_read(&disk, fsbtodb(&sblock,
                     cgsblock(&sblock, cylno)),
                     (void *)&osblock, SBLOCKSIZE) == -1)
-                    err(1, "ufs_block_read: %s", disk.d_error);
+                    err(1, "ufs_sector_read: %s", disk.d_error);
                 DBG_DUMP_FS(&osblock, dbg_line);
             }
 
@@ -227,10 +227,10 @@ main(int argc, char **argv)
              * Read the cylinder group and dump whatever was
              * requested.
              */
-            if (ufs_block_read(&disk, fsbtodb(&sblock,
+            if (ufs_sector_read(&disk, fsbtodb(&sblock,
                 cgtod(&sblock, cylno)), (void *)&acg,
                 (size_t)sblock.fs_cgsize) == -1)
-                err(1, "ufs_block_read: %s", disk.d_error);
+                err(1, "ufs_sector_read: %s", disk.d_error);
 
             if (cfg_lv & 0x008)
                 DBG_DUMP_CG(&sblock, dbg_line, &acg);
@@ -323,9 +323,9 @@ dump_whole_ufs1_inode(ino_t inode, int level)
         /*
          * Dump single indirect block.
          */
-        if (ufs_block_read(&disk, fsbtodb(&sblock, ino->di_ib[0]), (void *)&i1blk,
+        if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[0]), (void *)&i1blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_block_read: %s", disk.d_error);
+            err(1, "ufs_sector_read: %s", disk.d_error);
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 0",
             (unsigned)inode);
@@ -339,9 +339,9 @@ dump_whole_ufs1_inode(ino_t inode, int level)
         /*
          * Dump double indirect blocks.
          */
-        if (ufs_block_read(&disk, fsbtodb(&sblock, ino->di_ib[1]), (void *)&i2blk,
+        if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[1]), (void *)&i2blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_block_read: %s", disk.d_error);
+            err(1, "ufs_sector_read: %s", disk.d_error);
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 1",
             (unsigned)inode);
@@ -353,9 +353,9 @@ dump_whole_ufs1_inode(ino_t inode, int level)
             sizeof(ufs1_daddr_t))) && (rb>0)); ind2ctr++) {
             ind2ptr=&((ufs1_daddr_t *)(void *)&i2blk)[ind2ctr];
 
-            if (ufs_block_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
+            if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_block_read: %s", disk.d_error);
+                err(1, "ufs_sector_read: %s", disk.d_error);
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 1->%d", (unsigned)inode, ind2ctr);
@@ -370,9 +370,9 @@ dump_whole_ufs1_inode(ino_t inode, int level)
         /*
          * Dump triple indirect blocks.
          */
-        if (ufs_block_read(&disk, fsbtodb(&sblock, ino->di_ib[2]), (void *)&i3blk,
+        if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[2]), (void *)&i3blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_block_read: %s", disk.d_error);
+            err(1, "ufs_sector_read: %s", disk.d_error);
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 2",
             (unsigned)inode);
@@ -387,9 +387,9 @@ dump_whole_ufs1_inode(ino_t inode, int level)
             sizeof(ufs1_daddr_t)))&&(rb>0)); ind3ctr++) {
             ind3ptr=&((ufs1_daddr_t *)(void *)&i3blk)[ind3ctr];
 
-            if (ufs_block_read(&disk, fsbtodb(&sblock, *ind3ptr), (void *)&i2blk,
+            if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind3ptr), (void *)&i2blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_block_read: %s", disk.d_error);
+                err(1, "ufs_sector_read: %s", disk.d_error);
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 2->%d", (unsigned)inode, ind3ctr);
@@ -402,10 +402,10 @@ dump_whole_ufs1_inode(ino_t inode, int level)
                 sizeof(ufs1_daddr_t)))&&(rb>0)); ind2ctr++) {
                 ind2ptr=&((ufs1_daddr_t *)(void *)&i2blk)
                     [ind2ctr];
-                if (ufs_block_read(&disk, fsbtodb(&sblock, *ind2ptr),
+                if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr),
                     (void *)&i1blk, (size_t)sblock.fs_bsize)
                     == -1) {
-                    err(1, "ufs_block_read: %s", disk.d_error);
+                    err(1, "ufs_sector_read: %s", disk.d_error);
                 }
                 snprintf(comment, sizeof(comment),
                     "Inode 0x%08x: indirect 2->%d->%d", (unsigned)inode,
@@ -473,9 +473,9 @@ dump_whole_ufs2_inode(ino_t inode, int level)
         /*
          * Dump single indirect block.
          */
-        if (ufs_block_read(&disk, fsbtodb(&sblock, ino->di_ib[0]), (void *)&i1blk,
+        if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[0]), (void *)&i1blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_block_read: %s", disk.d_error);
+            err(1, "ufs_sector_read: %s", disk.d_error);
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 0", (unsigned)inode);
         DBG_DUMP_IBLK(&sblock, comment, i1blk, (size_t)rb);
@@ -485,9 +485,9 @@ dump_whole_ufs2_inode(ino_t inode, int level)
         /*
          * Dump double indirect blocks.
          */
-        if (ufs_block_read(&disk, fsbtodb(&sblock, ino->di_ib[1]), (void *)&i2blk,
+        if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[1]), (void *)&i2blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_block_read: %s", disk.d_error);
+            err(1, "ufs_sector_read: %s", disk.d_error);
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 1", (unsigned)inode);
         DBG_DUMP_IBLK(&sblock,
@@ -498,9 +498,9 @@ dump_whole_ufs2_inode(ino_t inode, int level)
             sizeof(ufs2_daddr_t))) && (rb>0)); ind2ctr++) {
             ind2ptr = &((ufs2_daddr_t *)(void *)&i2blk)[ind2ctr];
 
-            if (ufs_block_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
+            if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_block_read: %s", disk.d_error);
+                err(1, "ufs_sector_read: %s", disk.d_error);
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 1->%d", (unsigned)inode, ind2ctr);
@@ -512,9 +512,9 @@ dump_whole_ufs2_inode(ino_t inode, int level)
         /*
          * Dump triple indirect blocks.
          */
-        if (ufs_block_read(&disk, fsbtodb(&sblock, ino->di_ib[2]), (void *)&i3blk,
+        if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[2]), (void *)&i3blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_block_read: %s", disk.d_error);
+            err(1, "ufs_sector_read: %s", disk.d_error);
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 2", (unsigned)inode);
 #define SQUARE(a) ((a)*(a))
@@ -528,9 +528,9 @@ dump_whole_ufs2_inode(ino_t inode, int level)
             sizeof(ufs2_daddr_t))) && (rb > 0)); ind3ctr++) {
             ind3ptr = &((ufs2_daddr_t *)(void *)&i3blk)[ind3ctr];
 
-            if (ufs_block_read(&disk, fsbtodb(&sblock, *ind3ptr), (void *)&i2blk,
+            if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind3ptr), (void *)&i2blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_block_read: %s", disk.d_error);
+                err(1, "ufs_sector_read: %s", disk.d_error);
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 2->%d", (unsigned)inode, ind3ctr);
@@ -542,9 +542,9 @@ dump_whole_ufs2_inode(ino_t inode, int level)
             for (ind2ctr = 0; ((ind2ctr < howmany(sblock.fs_bsize,
                 sizeof(ufs2_daddr_t))) && (rb > 0)); ind2ctr++) {
                 ind2ptr = &((ufs2_daddr_t *)(void *)&i2blk) [ind2ctr];
-                if (ufs_block_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
+                if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
                     (size_t)sblock.fs_bsize) == -1) {
-                    err(1, "ufs_block_read: %s", disk.d_error);
+                    err(1, "ufs_sector_read: %s", disk.d_error);
                 }
                 snprintf(comment, sizeof(comment),
                     "Inode 0x%08x: indirect 2->%d->%d", (unsigned)inode,

@@ -52,7 +52,7 @@ sbread(ufs_t *disk)
     superblock = superblocks[0];
 
     for (sb = 0; (superblock = superblocks[sb]) != -1; sb++) {
-        if (ufs_block_read(disk, superblock, disk->d_sb, SBLOCKSIZE) == -1) {
+        if (ufs_sector_read(disk, superblock, disk->d_sb, SBLOCKSIZE) == -1) {
             ERROR(disk, "non-existent or truncated superblock");
             return (-1);
         }
@@ -96,7 +96,7 @@ sbread(ufs_t *disk)
         size = fs->fs_bsize;
         if (i + fs->fs_frag > blks)
             size = (blks - i) * fs->fs_fsize;
-        if (ufs_block_read(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
+        if (ufs_sector_read(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
             == -1) {
             ERROR(disk, "Failed to read sb summary information");
             free(fs->fs_csp);
@@ -127,7 +127,7 @@ sbwrite(ufs_t *disk, int all)
         disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
     }
 
-    if (ufs_block_write(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
+    if (ufs_sector_write(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
         ERROR(disk, "failed to write superblock");
         return (-1);
     }
@@ -140,7 +140,7 @@ sbwrite(ufs_t *disk, int all)
         size = fs->fs_bsize;
         if (i + fs->fs_frag > blks)
             size = (blks - i) * fs->fs_fsize;
-        if (ufs_block_write(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
+        if (ufs_sector_write(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
             == -1) {
             ERROR(disk, "Failed to write sb summary information");
             return (-1);
@@ -149,7 +149,7 @@ sbwrite(ufs_t *disk, int all)
     }
     if (all) {
         for (i = 0; i < fs->fs_ncg; i++)
-            if (ufs_block_write(disk, fsbtodb(fs, cgsblock(fs, i)),
+            if (ufs_sector_write(disk, fsbtodb(fs, cgsblock(fs, i)),
                 fs, SBLOCKSIZE) == -1) {
                 ERROR(disk, "failed to update a superblock");
                 return (-1);
@@ -166,6 +166,7 @@ void ufs_print(ufs_t *disk, FILE *out)
     struct fs *sb = &disk->d_fs;
     struct cg *cg = &disk->d_cg;
     int cylno;
+    time_t t;
 
     fprintf(out, "           Address of super-block: %d\n", sb->fs_sblkno);
     fprintf(out, "              Offset of cyl-block: %d\n", sb->fs_cblkno);
@@ -174,7 +175,8 @@ void ufs_print(ufs_t *disk, FILE *out)
 
     fprintf(out, "Cylinder group offset in cylinder: %d\n", sb->fs_old_cgoffset);
     fprintf(out, "              Cylinder group mask: %#x\n", sb->fs_old_cgmask);
-    fprintf(out, "                Last time written: %s", ctime((const time_t*)&sb->fs_old_time));
+    t = sb->fs_old_time;
+    fprintf(out, "                Last time written: %s", ctime(&t));
     fprintf(out, "           Total number of blocks: %d\n", sb->fs_old_size);
     fprintf(out, "            Number of data blocks: %d\n", sb->fs_old_dsize);
     fprintf(out, "        Number of cylinder groups: %d\n", sb->fs_ncg);
@@ -195,7 +197,7 @@ void ufs_print(ufs_t *disk, FILE *out)
     fprintf(out, "    Max blocks per cylinder group: %d\n", sb->fs_maxbpg);
 
     fprintf(out, "              Block to frag shift: %d\n", sb->fs_fragshift);
-    fprintf(out, "Filesys block to data block shift: %d\n", sb->fs_fsbtodb);
+    fprintf(out, "Filesys frag to disk sector shift: %d\n", sb->fs_fsbtodb);
     fprintf(out, "       Actual size of super block: %d bytes\n", sb->fs_sbsize);
     fprintf(out, "    Number of indirects per block: %d\n", sb->fs_nindir);
     fprintf(out, "       Number of inodes per block: %d\n", sb->fs_inopb);
@@ -243,7 +245,7 @@ void ufs_print(ufs_t *disk, FILE *out)
 
     /* Read and print all the cylinder groups. */
     for (cylno = 0; cylno < sb->fs_ncg; cylno++) {
-        if (ufs_block_read(disk, fsbtodb(sb, cgtod(sb, cylno)), (void*)cg, (size_t)sb->fs_cgsize) == -1) {
+        if (ufs_sector_read(disk, fsbtodb(sb, cgtod(sb, cylno)), (void*)cg, (size_t)sb->fs_cgsize) == -1) {
             fprintf (stderr, "Cannot read cylinder group %d\n", cylno);
             exit(-1);
         }

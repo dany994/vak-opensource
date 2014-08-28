@@ -59,7 +59,7 @@ getino(ufs_t *disk, void **dino, ino_t inode, int *mode)
         disk->d_inoblock = inoblock;
     }
     if (inode < min || inode >= max) {
-        ufs_block_read(disk, fsbtodb(fs, ino_to_fsba(fs, inode)), inoblock, fs->fs_bsize);
+        ufs_sector_read(disk, fsbtodb(fs, ino_to_fsba(fs, inode)), inoblock, fs->fs_bsize);
         disk->d_inomin = min = inode - (inode % INOPB(fs));
         disk->d_inomax = max = min + INOPB(fs);
     }
@@ -91,7 +91,7 @@ putino(ufs_t *disk)
         ERROR(disk, "No inode block allocated");
         return (-1);
     }
-    if (ufs_block_write(disk, fsbtodb(fs, ino_to_fsba(&disk->d_fs, disk->d_inomin)),
+    if (ufs_sector_write(disk, fsbtodb(fs, ino_to_fsba(&disk->d_fs, disk->d_inomin)),
         disk->d_inoblock, disk->d_fs.fs_bsize) <= 0)
         return (-1);
     return (0);
@@ -250,7 +250,7 @@ print_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (ufs_block_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
@@ -271,7 +271,7 @@ print_double_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (ufs_block_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
@@ -292,7 +292,7 @@ print_triple_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (ufs_block_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
