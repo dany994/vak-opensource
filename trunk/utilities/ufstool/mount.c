@@ -57,12 +57,12 @@ static void printlog(const char *format, ...)
     }
 }
 
+#if 0
 static dev_t make_rdev(unsigned raw)
 {
     return makedev (raw >> 8, raw & 0xff);
 }
 
-#if 0
 /*
  * Copy data to struct stat.
  */

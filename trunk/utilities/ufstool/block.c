@@ -125,15 +125,15 @@ ufs_block_erase(ufs_t *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
 }
 
 int
-ufs_seek (ufs_t *disk, unsigned long offset)
+ufs_seek (ufs_t *disk, off_t offset)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
 
 /*  printf ("seek %ld, block %ld\n", offset, offset / bsize);*/
     if (lseek (disk->d_fd, offset, 0) < 0) {
         if (verbose)
-            printf ("error seeking %ld, block %ld\n",
-                offset, offset / bsize);
+            printf ("error seeking %lld, block %d\n",
+                offset, (int) (offset / bsize));
         return -1;
     }
     disk->seek = offset;
@@ -147,7 +147,7 @@ ufs_read8 (ufs_t *disk, unsigned char *val)
 
     if (read (disk->d_fd, val, 1) != 1) {
         if (verbose)
-            printf ("error read8, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+            printf ("error read8, seek %lld block %d\n", disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
     return 0;
@@ -161,7 +161,7 @@ ufs_read16 (ufs_t *disk, unsigned short *val)
 
     if (read (disk->d_fd, data, 2) != 2) {
         if (verbose)
-            printf ("error read16, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+            printf ("error read16, seek %lld block %d\n", disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
     *val = data[1] << 8 | data[0];
@@ -176,7 +176,7 @@ ufs_read32 (ufs_t *disk, unsigned *val)
 
     if (read (disk->d_fd, data, 4) != 4) {
         if (verbose)
-            printf ("error read32, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+            printf ("error read32, seek %lld block %d\n", disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
     *val = (unsigned long) data[0] | (unsigned long) data[1] << 8 |
@@ -192,7 +192,7 @@ ufs_read64 (ufs_t *disk, unsigned long long *val)
 
     if (read (disk->d_fd, data, 8) != 8) {
         if (verbose)
-            printf ("error read32, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+            printf ("error read32, seek %lld block %d\n", disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
     *val = (unsigned long) data[0] | (unsigned long) data[1] << 8 |

@@ -155,6 +155,14 @@ __BEGIN_DECLS
 ssize_t ufs_block_read(ufs_t *, ufs2_daddr_t, void *, size_t);
 ssize_t ufs_block_write(ufs_t *, ufs2_daddr_t, const void *, size_t);
 int ufs_block_erase(ufs_t *, ufs2_daddr_t, ufs2_daddr_t);
+int ufs_seek (ufs_t *disk, off_t offset);
+int ufs_read8 (ufs_t *disk, u_int8_t *val);
+int ufs_read16 (ufs_t *disk, u_int16_t *val);
+int ufs_read32 (ufs_t *disk, u_int32_t *val);
+int ufs_read64 (ufs_t *disk, u_int64_t *val);
+int ufs_write8 (ufs_t *disk, u_int8_t val);
+int ufs_write16 (ufs_t *disk, u_int16_t val);
+int ufs_write32 (ufs_t *disk, u_int32_t val);
 
 /*
  * cgroup.c
@@ -174,6 +182,10 @@ void ufs_print_cg(struct cg *cgr, FILE *out);
  */
 int getino(ufs_t *, void **, ino_t, int *);
 int putino(ufs_t *);
+int ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum);
+void ufs_inode_print (ufs_inode_t *inode, FILE *out);
+void ufs_inode_print_path (ufs_inode_t *inode, const char *dirname, const char *filename, FILE *out);
+void ufs_inode_print_blocks (ufs_inode_t *inode, FILE *out);
 
 /*
  * sblock.c
