@@ -105,6 +105,32 @@ static void print_help (char *progname)
     printf ("Report bugs to \"%s\".\n", program_bug_address);
 }
 
+void scanner (ufs_inode_t *dir, ufs_inode_t *inode,
+    const char *dirname, const char *filename, void *arg)
+{
+    FILE *out = arg;
+    char *path;
+
+    ufs_inode_print_path (inode, dirname, filename, out);
+
+    if (verbose > 1) {
+        /* Print a list of blocks. */
+        ufs_inode_print_blocks (inode, out);
+        if (verbose > 2) {
+            ufs_inode_print (inode, out);
+            printf ("--------\n");
+        }
+    }
+    if ((inode->mode & IFMT) == IFDIR && inode->number != ROOTINO) {
+        /* Scan subdirectory. */
+        path = alloca (strlen (dirname) + strlen (filename) + 2);
+        strcpy (path, dirname);
+        strcat (path, "/");
+        strcat (path, filename);
+        ufs_directory_scan (inode, path, scanner, arg);
+    }
+}
+
 #if 0
 void extract_inode (fs_inode_t *inode, char *path)
 {
@@ -163,33 +189,6 @@ void extractor (fs_inode_t *dir, fs_inode_t *inode,
         fs_directory_scan (inode, path, extractor, arg);
     } else {
         extract_inode (inode, relpath);
-    }
-}
-
-void scanner (fs_inode_t *dir, fs_inode_t *inode,
-    char *dirname, char *filename, void *arg)
-{
-    FILE *out = arg;
-    char *path;
-
-    ufs_inode_print_path (inode, dirname, filename, out);
-
-    if (verbose > 1) {
-        /* Print a list of blocks. */
-        ufs_inode_print_blocks (inode, out);
-        if (verbose > 2) {
-            fs_inode_print (inode, out);
-            printf ("--------\n");
-        }
-    }
-    if ((inode->mode & INODE_MODE_FMT) == INODE_MODE_FDIR &&
-        inode->number != BSDFS_ROOT_INODE) {
-        /* Scan subdirectory. */
-        path = alloca (strlen (dirname) + strlen (filename) + 2);
-        strcpy (path, dirname);
-        strcat (path, "/");
-        strcat (path, filename);
-        fs_directory_scan (inode, path, scanner, arg);
     }
 }
 
@@ -683,10 +682,7 @@ int main (int argc, char **argv)
                 printf ("--------\n");
             }
         }
-#if 0
-        //TODO
         ufs_directory_scan (&inode, "", scanner, (void*) stdout);
-#endif
     }
     ufs_disk_close (&disk);
     return 0;
