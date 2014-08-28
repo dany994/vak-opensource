@@ -196,18 +196,18 @@ printstat(const char *cp, ino_t inum, union dinode *dp)
 static int
 charsperline(void)
 {
-	int columns;
-	char *cp;
-	struct winsize ws;
+    int columns;
+    char *cp;
+    struct winsize ws;
 
-	columns = 0;
-	if (ioctl(0, TIOCGWINSZ, &ws) != -1)
-		columns = ws.ws_col;
-	if (columns == 0 && (cp = getenv("COLUMNS")))
-		columns = atoi(cp);
-	if (columns == 0)
-		columns = 80;	/* last resort */
-	return (columns);
+    columns = 0;
+    if (ioctl(0, TIOCGWINSZ, &ws) != -1)
+            columns = ws.ws_col;
+    if (columns == 0 && (cp = getenv("COLUMNS")))
+            columns = atoi(cp);
+    if (columns == 0)
+            columns = 80;	/* last resort */
+    return (columns);
 }
 
 

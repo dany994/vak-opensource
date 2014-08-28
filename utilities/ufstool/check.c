@@ -4306,7 +4306,7 @@ check_pass5(void)
 /*
  * Check the specified file system.
  */
-void ufs_check(struct uufsd *disk, const char *filesys, int verbose, int fix)
+void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
 {
     ufs2_daddr_t n_ffree, n_bfree;
     struct dups *dp;

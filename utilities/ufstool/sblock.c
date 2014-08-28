@@ -38,130 +38,130 @@
 static int superblocks[] = SBLOCKSEARCH;
 
 int
-sbread(struct uufsd *disk)
+sbread(ufs_t *disk)
 {
-	u_int8_t block[MAXBSIZE];
-	struct fs *fs;
-	int sb, superblock;
-	int i, size, blks;
-	u_int8_t *space;
+    u_int8_t block[MAXBSIZE];
+    struct fs *fs;
+    int sb, superblock;
+    int i, size, blks;
+    u_int8_t *space;
 
-	ERROR(disk, NULL);
+    ERROR(disk, NULL);
 
-	fs = &disk->d_fs;
-	superblock = superblocks[0];
+    fs = &disk->d_fs;
+    superblock = superblocks[0];
 
-	for (sb = 0; (superblock = superblocks[sb]) != -1; sb++) {
-		if (bread(disk, superblock, disk->d_sb, SBLOCKSIZE) == -1) {
-			ERROR(disk, "non-existent or truncated superblock");
-			return (-1);
-		}
-		if (fs->fs_magic == FS_UFS1_MAGIC)
-			disk->d_ufs = 1;
-		if (fs->fs_magic == FS_UFS2_MAGIC &&
-		    fs->fs_sblockloc == superblock)
-			disk->d_ufs = 2;
-		if (fs->fs_bsize <= MAXBSIZE &&
-		    (size_t)fs->fs_bsize >= sizeof(*fs)) {
-			if (disk->d_ufs)
-				break;
-		}
-		disk->d_ufs = 0;
-	}
-	if (superblock == -1 || disk->d_ufs == 0) {
-		/*
-		 * Other error cases will result in errno being set, here we
-		 * must set it to indicate no superblock could be found with
-		 * which to associate this disk/filesystem.
-		 */
-		ERROR(disk, "no usable known superblock found");
-		errno = ENOENT;
-		return (-1);
-	}
-	disk->d_bsize = fs->fs_fsize / fsbtodb(fs, 1);
-	disk->d_sblock = superblock / disk->d_bsize;
-	/*
-	 * Read in the superblock summary information.
-	 */
-	size = fs->fs_cssize;
-	blks = howmany(size, fs->fs_fsize);
-	size += fs->fs_ncg * sizeof(int32_t);
-	space = malloc(size);
-	if (space == NULL) {
-		ERROR(disk, "failed to allocate space for summary information");
-		return (-1);
-	}
-	fs->fs_csp = (struct csum *)space;
-	for (i = 0; i < blks; i += fs->fs_frag) {
-		size = fs->fs_bsize;
-		if (i + fs->fs_frag > blks)
-			size = (blks - i) * fs->fs_fsize;
-		if (bread(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
-		    == -1) {
-			ERROR(disk, "Failed to read sb summary information");
-			free(fs->fs_csp);
-			return (-1);
-		}
-		bcopy(block, space, size);
-		space += size;
-	}
-	fs->fs_maxcluster = (int32_t *)space;
-	disk->d_sbcsum = fs->fs_csp;
+    for (sb = 0; (superblock = superblocks[sb]) != -1; sb++) {
+        if (bread(disk, superblock, disk->d_sb, SBLOCKSIZE) == -1) {
+            ERROR(disk, "non-existent or truncated superblock");
+            return (-1);
+        }
+        if (fs->fs_magic == FS_UFS1_MAGIC)
+            disk->d_ufs = 1;
+        if (fs->fs_magic == FS_UFS2_MAGIC &&
+            fs->fs_sblockloc == superblock)
+            disk->d_ufs = 2;
+        if (fs->fs_bsize <= MAXBSIZE &&
+            (size_t)fs->fs_bsize >= sizeof(*fs)) {
+            if (disk->d_ufs)
+                break;
+        }
+        disk->d_ufs = 0;
+    }
+    if (superblock == -1 || disk->d_ufs == 0) {
+        /*
+         * Other error cases will result in errno being set, here we
+         * must set it to indicate no superblock could be found with
+         * which to associate this disk/filesystem.
+         */
+        ERROR(disk, "no usable known superblock found");
+        errno = ENOENT;
+        return (-1);
+    }
+    disk->d_bsize = fs->fs_fsize / fsbtodb(fs, 1);
+    disk->d_sblock = superblock / disk->d_bsize;
+    /*
+     * Read in the superblock summary information.
+     */
+    size = fs->fs_cssize;
+    blks = howmany(size, fs->fs_fsize);
+    size += fs->fs_ncg * sizeof(int32_t);
+    space = malloc(size);
+    if (space == NULL) {
+        ERROR(disk, "failed to allocate space for summary information");
+        return (-1);
+    }
+    fs->fs_csp = (struct csum *)space;
+    for (i = 0; i < blks; i += fs->fs_frag) {
+        size = fs->fs_bsize;
+        if (i + fs->fs_frag > blks)
+            size = (blks - i) * fs->fs_fsize;
+        if (bread(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
+            == -1) {
+            ERROR(disk, "Failed to read sb summary information");
+            free(fs->fs_csp);
+            return (-1);
+        }
+        bcopy(block, space, size);
+        space += size;
+    }
+    fs->fs_maxcluster = (int32_t *)space;
+    disk->d_sbcsum = fs->fs_csp;
 
-	return (0);
+    return (0);
 }
 
 int
-sbwrite(struct uufsd *disk, int all)
+sbwrite(ufs_t *disk, int all)
 {
-	struct fs *fs;
-	int blks, size;
-	u_int8_t *space;
-	unsigned i;
+    struct fs *fs;
+    int blks, size;
+    u_int8_t *space;
+    unsigned i;
 
-	ERROR(disk, NULL);
+    ERROR(disk, NULL);
 
-	fs = &disk->d_fs;
+    fs = &disk->d_fs;
 
-	if (!disk->d_sblock) {
-		disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
-	}
+    if (!disk->d_sblock) {
+        disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
+    }
 
-	if (bwrite(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
-		ERROR(disk, "failed to write superblock");
-		return (-1);
-	}
-	/*
-	 * Write superblock summary information.
-	 */
-	blks = howmany(fs->fs_cssize, fs->fs_fsize);
-	space = (u_int8_t *)disk->d_sbcsum;
-	for (i = 0; i < blks; i += fs->fs_frag) {
-		size = fs->fs_bsize;
-		if (i + fs->fs_frag > blks)
-			size = (blks - i) * fs->fs_fsize;
-		if (bwrite(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
-		    == -1) {
-			ERROR(disk, "Failed to write sb summary information");
-			return (-1);
-		}
-		space += size;
-	}
-	if (all) {
-		for (i = 0; i < fs->fs_ncg; i++)
-			if (bwrite(disk, fsbtodb(fs, cgsblock(fs, i)),
-			    fs, SBLOCKSIZE) == -1) {
-				ERROR(disk, "failed to update a superblock");
-				return (-1);
-			}
-	}
-	return (0);
+    if (bwrite(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
+        ERROR(disk, "failed to write superblock");
+        return (-1);
+    }
+    /*
+     * Write superblock summary information.
+     */
+    blks = howmany(fs->fs_cssize, fs->fs_fsize);
+    space = (u_int8_t *)disk->d_sbcsum;
+    for (i = 0; i < blks; i += fs->fs_frag) {
+        size = fs->fs_bsize;
+        if (i + fs->fs_frag > blks)
+            size = (blks - i) * fs->fs_fsize;
+        if (bwrite(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
+            == -1) {
+            ERROR(disk, "Failed to write sb summary information");
+            return (-1);
+        }
+        space += size;
+    }
+    if (all) {
+        for (i = 0; i < fs->fs_ncg; i++)
+            if (bwrite(disk, fsbtodb(fs, cgsblock(fs, i)),
+                fs, SBLOCKSIZE) == -1) {
+                ERROR(disk, "failed to update a superblock");
+                return (-1);
+            }
+    }
+    return (0);
 }
 
 /*
  * Dump the superblock.
  */
-void ufs_print(struct uufsd *disk, FILE *out)
+void ufs_print(ufs_t *disk, FILE *out)
 {
     struct fs *sb = &disk->d_fs;
     struct cg *cg = &disk->d_cg;
@@ -202,7 +202,7 @@ void ufs_print(struct uufsd *disk, FILE *out)
     fprintf(out, "   Number of sectors per fragment: %d\n", sb->fs_old_nspf);
 
     fprintf(out, "          Optimization preference: %d (%s)\n", sb->fs_optim,
-        sb->fs_optim == FS_OPTTIME ? "time" : "space");
+    sb->fs_optim == FS_OPTTIME ? "time" : "space");
 
     fprintf(out, "      Number of sectors per track: %d\n", sb->fs_old_npsect); /* including spares */
     fprintf(out, "       Hardware sector interleave: %d\n", sb->fs_old_interleave);
@@ -231,8 +231,8 @@ void ufs_print(struct uufsd *disk, FILE *out)
     fprintf(out, "      Size of block summary array: %d\n", sb->fs_contigsumsize);
     fprintf(out, "            Max length of symlink: %d\n", sb->fs_maxsymlinklen);
     fprintf(out, "         Format of on-disk inodes: %d (%s)\n", sb->fs_old_inodefmt,
-        sb->fs_old_inodefmt == FS_42INODEFMT ? "4.2bsd" :
-        sb->fs_old_inodefmt == FS_44INODEFMT ? "4.4bsd" : "unknown");
+    sb->fs_old_inodefmt == FS_42INODEFMT ? "4.2bsd" :
+    sb->fs_old_inodefmt == FS_44INODEFMT ? "4.4bsd" : "unknown");
 
     fprintf(out, "                Maximum file size: %llu bytes\n", (unsigned long long) sb->fs_maxfilesize);
     fprintf(out, "                Block offset mask: %#018llx\n", (unsigned long long) sb->fs_qbmask);

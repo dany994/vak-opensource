@@ -31,65 +31,65 @@
 #include "libufs.h"
 
 int
-getino(struct uufsd *disk, void **dino, ino_t inode, int *mode)
+getino(ufs_t *disk, void **dino, ino_t inode, int *mode)
 {
-	ino_t min, max;
-	caddr_t inoblock;
-	struct ufs1_dinode *dp1;
-	struct ufs2_dinode *dp2;
-	struct fs *fs;
+    ino_t min, max;
+    caddr_t inoblock;
+    struct ufs1_dinode *dp1;
+    struct ufs2_dinode *dp2;
+    struct fs *fs;
 
-	ERROR(disk, NULL);
+    ERROR(disk, NULL);
 
-	fs = &disk->d_fs;
-	inoblock = disk->d_inoblock;
-	min = disk->d_inomin;
-	max = disk->d_inomax;
+    fs = &disk->d_fs;
+    inoblock = disk->d_inoblock;
+    min = disk->d_inomin;
+    max = disk->d_inomax;
 
-	if (inoblock == NULL) {
-		inoblock = malloc(fs->fs_bsize);
-		if (inoblock == NULL) {
-			ERROR(disk, "unable to allocate inode block");
-			return (-1);
-		}
-		disk->d_inoblock = inoblock;
-	}
-	if (inode >= min && inode < max)
-		goto gotit;
-	bread(disk, fsbtodb(fs, ino_to_fsba(fs, inode)), inoblock,
-	    fs->fs_bsize);
-	disk->d_inomin = min = inode - (inode % INOPB(fs));
-	disk->d_inomax = max = min + INOPB(fs);
-gotit:	switch (disk->d_ufs) {
-	case 1:
-		dp1 = &((struct ufs1_dinode *)inoblock)[inode - min];
-		*mode = dp1->di_mode & IFMT;
-		*dino = dp1;
-		return (0);
-	case 2:
-		dp2 = &((struct ufs2_dinode *)inoblock)[inode - min];
-		*mode = dp2->di_mode & IFMT;
-		*dino = dp2;
-		return (0);
-	default:
-		break;
-	}
-	ERROR(disk, "unknown UFS filesystem type");
-	return (-1);
+    if (inoblock == NULL) {
+        inoblock = malloc(fs->fs_bsize);
+        if (inoblock == NULL) {
+            ERROR(disk, "unable to allocate inode block");
+            return (-1);
+        }
+        disk->d_inoblock = inoblock;
+    }
+    if (inode < min || inode >= max) {
+        bread(disk, fsbtodb(fs, ino_to_fsba(fs, inode)), inoblock,
+        fs->fs_bsize);
+        disk->d_inomin = min = inode - (inode % INOPB(fs));
+        disk->d_inomax = max = min + INOPB(fs);
+    }
+    switch (disk->d_ufs) {
+    case 1:
+        dp1 = &((struct ufs1_dinode *)inoblock)[inode - min];
+        *mode = dp1->di_mode & IFMT;
+        *dino = dp1;
+        return (0);
+    case 2:
+        dp2 = &((struct ufs2_dinode *)inoblock)[inode - min];
+        *mode = dp2->di_mode & IFMT;
+        *dino = dp2;
+        return (0);
+    default:
+        break;
+    }
+    ERROR(disk, "unknown UFS filesystem type");
+    return (-1);
 }
 
 int
-putino(struct uufsd *disk)
+putino(ufs_t *disk)
 {
-	struct fs *fs;
+    struct fs *fs;
 
-	fs = &disk->d_fs;
-	if (disk->d_inoblock == NULL) {
-		ERROR(disk, "No inode block allocated");
-		return (-1);
-	}
-	if (bwrite(disk, fsbtodb(fs, ino_to_fsba(&disk->d_fs, disk->d_inomin)),
-	    disk->d_inoblock, disk->d_fs.fs_bsize) <= 0)
-		return (-1);
-	return (0);
+    fs = &disk->d_fs;
+    if (disk->d_inoblock == NULL) {
+        ERROR(disk, "No inode block allocated");
+        return (-1);
+    }
+    if (bwrite(disk, fsbtodb(fs, ino_to_fsba(&disk->d_fs, disk->d_inomin)),
+        disk->d_inoblock, disk->d_fs.fs_bsize) <= 0)
+        return (-1);
+    return (0);
 }

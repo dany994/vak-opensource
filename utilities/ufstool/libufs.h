@@ -27,8 +27,8 @@
  * $FreeBSD$
  */
 
-#ifndef	__LIBUFS_H__
-#define	__LIBUFS_H__
+#ifndef __LIBUFS_H__
+#define __LIBUFS_H__
 
 #include <stdio.h>
 #include "fs.h"
@@ -40,57 +40,57 @@
 /*
  * userland ufs disk.
  */
-struct uufsd {
-	const char *d_name;	/* disk name */
-	int d_ufs;		/* decimal UFS version */
-	int d_fd;		/* raw device file descriptor */
-	long d_bsize;		/* device bsize */
-	ufs2_daddr_t d_sblock;	/* superblock location */
-	struct csum *d_sbcsum;	/* Superblock summary info */
-	caddr_t d_inoblock;	/* inode block */
-	ino_t d_inomin;		/* low inode */
-	ino_t d_inomax;		/* high inode */
-	union {
-		struct fs d_fs;	/* filesystem information */
-		char d_sb[MAXBSIZE];
-				/* superblock as buffer */
-	} d_sbunion;
-	union {
-		struct cg d_cg;	/* cylinder group */
-		char d_buf[MAXBSIZE];
-				/* cylinder group storage */
-	} d_cgunion;
-	int d_ccg;		/* current cylinder group */
-	int d_lcg;		/* last cylinder group (in d_cg) */
-	const char *d_error;	/* human readable disk error */
-	int d_mine;		/* internal flags */
-#define	d_fs	d_sbunion.d_fs
-#define	d_sb	d_sbunion.d_sb
-#define	d_cg	d_cgunion.d_cg
-};
+typedef struct {
+    const char *d_name;     /* disk name */
+    int d_ufs;              /* decimal UFS version */
+    int d_fd;               /* raw device file descriptor */
+    long d_bsize;           /* device bsize */
+    ufs2_daddr_t d_sblock;  /* superblock location */
+    struct csum *d_sbcsum;  /* Superblock summary info */
+    caddr_t d_inoblock;     /* inode block */
+    ino_t d_inomin;         /* low inode */
+    ino_t d_inomax;         /* high inode */
+    union {
+        struct fs d_fs;     /* filesystem information */
+        char d_sb[MAXBSIZE];
+                            /* superblock as buffer */
+    } d_sbunion;
+    union {
+        struct cg d_cg;     /* cylinder group */
+        char d_buf[MAXBSIZE];
+                            /* cylinder group storage */
+    } d_cgunion;
+    int d_ccg;              /* current cylinder group */
+    int d_lcg;              /* last cylinder group (in d_cg) */
+    const char *d_error;    /* human readable disk error */
+    int d_mine;             /* internal flags */
+#define d_fs    d_sbunion.d_fs
+#define d_sb    d_sbunion.d_sb
+#define d_cg    d_cgunion.d_cg
+} ufs_t;
 
 /*
  * libufs macros (internal, non-exported).
  */
-#ifdef	_LIBUFS
+#ifdef  _LIBUFS
 /*
  * Trace steps through libufs, to be used at entry and erroneous return.
  */
 static inline void
-ERROR(struct uufsd *u, const char *str)
+ERROR(ufs_t *u, const char *str)
 {
-#ifdef	_LIBUFS_DEBUGGING
-	if (str != NULL) {
-		fprintf(stderr, "libufs: %s", str);
-		if (errno != 0)
-			fprintf(stderr, ": %s", strerror(errno));
-		fprintf(stderr, "\n");
-	}
+#ifdef  _LIBUFS_DEBUGGING
+    if (str != NULL) {
+        fprintf(stderr, "libufs: %s", str);
+        if (errno != 0)
+            fprintf(stderr, ": %s", strerror(errno));
+        fprintf(stderr, "\n");
+    }
 #endif
-	if (u != NULL)
-		u->d_error = str;
+    if (u != NULL)
+        u->d_error = str;
 }
-#endif	/* _LIBUFS */
+#endif  /* _LIBUFS */
 
 #undef btodb
 #define btodb(bytes) ((unsigned)(bytes) >> 9)
@@ -129,64 +129,64 @@ __BEGIN_DECLS
 /*
  * block.c
  */
-ssize_t bread(struct uufsd *, ufs2_daddr_t, void *, size_t);
-ssize_t bwrite(struct uufsd *, ufs2_daddr_t, const void *, size_t);
-int berase(struct uufsd *, ufs2_daddr_t, ufs2_daddr_t);
+ssize_t bread(ufs_t *, ufs2_daddr_t, void *, size_t);
+ssize_t bwrite(ufs_t *, ufs2_daddr_t, const void *, size_t);
+int berase(ufs_t *, ufs2_daddr_t, ufs2_daddr_t);
 
 /*
  * cgroup.c
  */
-ufs2_daddr_t cgballoc(struct uufsd *);
-int cgbfree(struct uufsd *, ufs2_daddr_t, long);
-ino_t cgialloc(struct uufsd *);
-int cgread(struct uufsd *);
-int cgread1(struct uufsd *, int);
-int cgwrite(struct uufsd *);
-int cgwrite1(struct uufsd *, int);
+ufs2_daddr_t cgballoc(ufs_t *);
+int cgbfree(ufs_t *, ufs2_daddr_t, long);
+ino_t cgialloc(ufs_t *);
+int cgread(ufs_t *);
+int cgread1(ufs_t *, int);
+int cgwrite(ufs_t *);
+int cgwrite1(ufs_t *, int);
 void ufs_print_cg(struct cg *cgr, FILE *out);
 
 
 /*
  * inode.c
  */
-int getino(struct uufsd *, void **, ino_t, int *);
-int putino(struct uufsd *);
+int getino(ufs_t *, void **, ino_t, int *);
+int putino(ufs_t *);
 
 /*
  * sblock.c
  */
-int sbread(struct uufsd *);
-int sbwrite(struct uufsd *, int);
-void ufs_print(struct uufsd *disk, FILE *out);
+int sbread(ufs_t *);
+int sbwrite(ufs_t *, int);
+void ufs_print(ufs_t *disk, FILE *out);
 
 /*
  * type.c
  */
-int ufs_disk_close(struct uufsd *);
-int ufs_disk_fillout(struct uufsd *, const char *);
-int ufs_disk_fillout_blank(struct uufsd *, const char *);
-int ufs_disk_write(struct uufsd *);
+int ufs_disk_close(ufs_t *);
+int ufs_disk_fillout(ufs_t *, const char *);
+int ufs_disk_fillout_blank(ufs_t *, const char *);
+int ufs_disk_write(ufs_t *);
 
 /*
  * ffs_subr.c
  */
-void	ffs_clrblock(struct fs *, u_char *, ufs1_daddr_t);
-void	ffs_clusteracct(struct fs *, struct cg *, ufs1_daddr_t, int);
-void	ffs_fragacct(struct fs *, int, int32_t [], int);
-int	ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
-int	ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
-void	ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
+void ffs_clrblock(struct fs *, u_char *, ufs1_daddr_t);
+void ffs_clusteracct(struct fs *, struct cg *, ufs1_daddr_t, int);
+void ffs_fragacct(struct fs *, int, int32_t [], int);
+int ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
+int ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
+void ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
 
 /*
  * check.c
  */
-void ufs_check(struct uufsd *disk, const char *filesys, int verbose, int fix);
+void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix);
 
 /*
  * mount.c
  */
-int ufs_mount(struct uufsd *disk, char *dirname);
+int ufs_mount(ufs_t *disk, char *dirname);
 
 __END_DECLS
 
-#endif	/* __LIBUFS_H__ */
+#endif  /* __LIBUFS_H__ */

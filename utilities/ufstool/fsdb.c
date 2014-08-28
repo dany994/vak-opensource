@@ -70,48 +70,48 @@ char nflag;
 int
 main(int argc, char *argv[])
 {
-	int ch, rval;
-	char *fsys = NULL;
+    int ch, rval;
+    char *fsys = NULL;
 
-	while (-1 != (ch = getopt(argc, argv, "fdr"))) {
-		switch (ch) {
-		case 'f':
-			/* The -f option is left for historical
-			 * reasons and has no meaning.
-			 */
-			break;
-		case 'd':
-			check_debug++;
-			break;
-		case 'r':
-			nflag++; /* "no" in fsck, readonly for us */
-			break;
-		default:
-			usage();
-		}
-	}
-	argc -= optind;
-	argv += optind;
-	if (argc != 1)
-		usage();
-	else
-		fsys = argv[0];
+    while (-1 != (ch = getopt(argc, argv, "fdr"))) {
+        switch (ch) {
+        case 'f':
+            /* The -f option is left for historical
+             * reasons and has no meaning.
+             */
+            break;
+        case 'd':
+            check_debug++;
+            break;
+        case 'r':
+            nflag++; /* "no" in fsck, readonly for us */
+            break;
+        default:
+            usage();
+        }
+    }
+    argc -= optind;
+    argv += optind;
+    if (argc != 1)
+        usage();
+    else
+        fsys = argv[0];
 
-	check_sblock_init();
-	if (!check_setup(fsys, 0))
-		errx(1, "cannot set up file system `%s'", fsys);
-	printf("%s file system `%s'\nLast Mounted on %s\n",
-	       nflag? "Examining": "Editing", fsys, sblock.fs_fsmnt);
-	rval = cmdloop();
-	if (!nflag) {
-		sblock.fs_clean = 0;	/* mark it dirty */
-		sbdirty();
-		check_finish(0);
-		printf("*** FILE SYSTEM MARKED DIRTY\n");
-		printf("*** BE SURE TO RUN FSCK TO CLEAN UP ANY DAMAGE\n");
-		printf("*** IF IT WAS MOUNTED, RE-MOUNT WITH -u -o reload\n");
-	}
-	exit(rval);
+    check_sblock_init();
+    if (!check_setup(fsys, 0))
+        errx(1, "cannot set up file system `%s'", fsys);
+    printf("%s file system `%s'\nLast Mounted on %s\n",
+        nflag? "Examining": "Editing", fsys, sblock.fs_fsmnt);
+    rval = cmdloop();
+    if (!nflag) {
+        sblock.fs_clean = 0;	/* mark it dirty */
+        sbdirty();
+        check_finish(0);
+        printf("*** FILE SYSTEM MARKED DIRTY\n");
+        printf("*** BE SURE TO RUN FSCK TO CLEAN UP ANY DAMAGE\n");
+        printf("*** IF IT WAS MOUNTED, RE-MOUNT WITH -u -o reload\n");
+    }
+    exit(rval);
 }
 
 #define CMDFUNC(func) int func(int argc, char *argv[])
@@ -147,41 +147,41 @@ CMDFUNC(chinum);			/* Change inode # of dirent */
 CMDFUNC(chname);			/* Change dirname of dirent */
 
 struct cmdtable cmds[] = {
-	{ "help", "Print out help", 1, 1, FL_RO, helpfn },
-	{ "?", "Print out help", 1, 1, FL_RO, helpfn },
-	{ "inode", "Set active inode to INUM", 2, 2, FL_RO, focus },
-	{ "clri", "Clear inode INUM", 2, 2, FL_WR, zapi },
-	{ "lookup", "Set active inode by looking up NAME", 2, 2, FL_RO | FL_ST, focusname },
-	{ "cd", "Set active inode by looking up NAME", 2, 2, FL_RO | FL_ST, focusname },
-	{ "back", "Go to previous active inode", 1, 1, FL_RO, back },
-	{ "active", "Print active inode", 1, 1, FL_RO, active },
-	{ "print", "Print active inode", 1, 1, FL_RO, active },
-	{ "blocks", "Print block numbers of active inode", 1, 1, FL_RO, blocks },
-	{ "uplink", "Increment link count", 1, 1, FL_WR, uplink },
-	{ "downlink", "Decrement link count", 1, 1, FL_WR, downlink },
-	{ "linkcount", "Set link count to COUNT", 2, 2, FL_WR, linkcount },
-	{ "findblk", "Find inode owning disk block(s)", 2, 33, FL_RO, findblk},
-	{ "ls", "List current inode as directory", 1, 1, FL_RO, ls },
-	{ "rm", "Remove NAME from current inode directory", 2, 2, FL_WR | FL_ST, rm },
-	{ "del", "Remove NAME from current inode directory", 2, 2, FL_WR | FL_ST, rm },
-	{ "ln", "Hardlink INO into current inode directory as NAME", 3, 3, FL_WR | FL_ST, ln },
-	{ "chinum", "Change dir entry number INDEX to INUM", 3, 3, FL_WR, chinum },
-	{ "chname", "Change dir entry number INDEX to NAME", 3, 3, FL_WR | FL_ST, chname },
-	{ "chtype", "Change type of current inode to TYPE", 2, 2, FL_WR, newtype },
-	{ "chmod", "Change mode of current inode to MODE", 2, 2, FL_WR, chmode },
-	{ "chlen", "Change length of current inode to LENGTH", 2, 2, FL_WR, chlen },
-	{ "chown", "Change owner of current inode to OWNER", 2, 2, FL_WR, chowner },
-	{ "chgrp", "Change group of current inode to GROUP", 2, 2, FL_WR, chgroup },
-	{ "chflags", "Change flags of current inode to FLAGS", 2, 2, FL_WR, chaflags },
-	{ "chgen", "Change generation number of current inode to GEN", 2, 2, FL_WR, chgen },
-	{ "btime", "Change btime of current inode to BTIME", 2, 2, FL_WR, chbtime },
-	{ "mtime", "Change mtime of current inode to MTIME", 2, 2, FL_WR, chmtime },
-	{ "ctime", "Change ctime of current inode to CTIME", 2, 2, FL_WR, chctime },
-	{ "atime", "Change atime of current inode to ATIME", 2, 2, FL_WR, chatime },
-	{ "quit", "Exit", 1, 1, FL_RO, quit },
-	{ "q", "Exit", 1, 1, FL_RO, quit },
-	{ "exit", "Exit", 1, 1, FL_RO, quit },
-	{ NULL, 0, 0, 0, 0, NULL },
+    { "help", "Print out help", 1, 1, FL_RO, helpfn },
+    { "?", "Print out help", 1, 1, FL_RO, helpfn },
+    { "inode", "Set active inode to INUM", 2, 2, FL_RO, focus },
+    { "clri", "Clear inode INUM", 2, 2, FL_WR, zapi },
+    { "lookup", "Set active inode by looking up NAME", 2, 2, FL_RO | FL_ST, focusname },
+    { "cd", "Set active inode by looking up NAME", 2, 2, FL_RO | FL_ST, focusname },
+    { "back", "Go to previous active inode", 1, 1, FL_RO, back },
+    { "active", "Print active inode", 1, 1, FL_RO, active },
+    { "print", "Print active inode", 1, 1, FL_RO, active },
+    { "blocks", "Print block numbers of active inode", 1, 1, FL_RO, blocks },
+    { "uplink", "Increment link count", 1, 1, FL_WR, uplink },
+    { "downlink", "Decrement link count", 1, 1, FL_WR, downlink },
+    { "linkcount", "Set link count to COUNT", 2, 2, FL_WR, linkcount },
+    { "findblk", "Find inode owning disk block(s)", 2, 33, FL_RO, findblk},
+    { "ls", "List current inode as directory", 1, 1, FL_RO, ls },
+    { "rm", "Remove NAME from current inode directory", 2, 2, FL_WR | FL_ST, rm },
+    { "del", "Remove NAME from current inode directory", 2, 2, FL_WR | FL_ST, rm },
+    { "ln", "Hardlink INO into current inode directory as NAME", 3, 3, FL_WR | FL_ST, ln },
+    { "chinum", "Change dir entry number INDEX to INUM", 3, 3, FL_WR, chinum },
+    { "chname", "Change dir entry number INDEX to NAME", 3, 3, FL_WR | FL_ST, chname },
+    { "chtype", "Change type of current inode to TYPE", 2, 2, FL_WR, newtype },
+    { "chmod", "Change mode of current inode to MODE", 2, 2, FL_WR, chmode },
+    { "chlen", "Change length of current inode to LENGTH", 2, 2, FL_WR, chlen },
+    { "chown", "Change owner of current inode to OWNER", 2, 2, FL_WR, chowner },
+    { "chgrp", "Change group of current inode to GROUP", 2, 2, FL_WR, chgroup },
+    { "chflags", "Change flags of current inode to FLAGS", 2, 2, FL_WR, chaflags },
+    { "chgen", "Change generation number of current inode to GEN", 2, 2, FL_WR, chgen },
+    { "btime", "Change btime of current inode to BTIME", 2, 2, FL_WR, chbtime },
+    { "mtime", "Change mtime of current inode to MTIME", 2, 2, FL_WR, chmtime },
+    { "ctime", "Change ctime of current inode to CTIME", 2, 2, FL_WR, chctime },
+    { "atime", "Change atime of current inode to ATIME", 2, 2, FL_WR, chatime },
+    { "quit", "Exit", 1, 1, FL_RO, quit },
+    { "q", "Exit", 1, 1, FL_RO, quit },
+    { "exit", "Exit", 1, 1, FL_RO, quit },
+    { NULL, 0, 0, 0, 0, NULL },
 };
 
 int
@@ -397,13 +397,13 @@ int slot;
 int
 scannames(struct inodesc *idesc)
 {
-	struct direct *dirp = idesc->id_dirp;
+    struct direct *dirp = idesc->id_dirp;
 
-	printf("slot %d off %d ino %d reclen %d: %s, `%.*s'\n",
-	       slot++, diroff, dirp->d_ino, dirp->d_reclen,
-	       typename[dirp->d_type], dirp->d_namlen, dirp->d_name);
-	diroff += dirp->d_reclen;
-	return (KEEPON);
+    printf("slot %d off %d ino %d reclen %d: %s, `%.*s'\n",
+           slot++, diroff, dirp->d_ino, dirp->d_reclen,
+           typename[dirp->d_type], dirp->d_namlen, dirp->d_name);
+    diroff += dirp->d_reclen;
+    return (KEEPON);
 }
 
 CMDFUNCSTART(ls)
@@ -587,7 +587,6 @@ compare_blk64(uint64_t *wantedblk, uint64_t curblk)
 static int
 founddatablk(uint64_t blk)
 {
-
     printf("%llu: data block of inode %ju\n",
 	(unsigned long long)fsbtodb(&sblock, blk), (uintmax_t)curinum);
     findblk_numtofind--;
@@ -773,13 +772,13 @@ long slotcount, desired;
 int
 chinumfunc(struct inodesc *idesc)
 {
-	struct direct *dirp = idesc->id_dirp;
+    struct direct *dirp = idesc->id_dirp;
 
-	if (slotcount++ == desired) {
-	    dirp->d_ino = idesc->id_parent;
-	    return STOP|ALTERED|FOUND;
-	}
-	return KEEPON;
+    if (slotcount++ == desired) {
+        dirp->d_ino = idesc->id_parent;
+        return STOP|ALTERED|FOUND;
+    }
+    return KEEPON;
 }
 
 CMDFUNCSTART(chinum)
@@ -816,20 +815,20 @@ CMDFUNCSTART(chinum)
 int
 chnamefunc(struct inodesc *idesc)
 {
-	struct direct *dirp = idesc->id_dirp;
-	struct direct testdir;
+    struct direct *dirp = idesc->id_dirp;
+    struct direct testdir;
 
-	if (slotcount++ == desired) {
-	    /* will name fit? */
-	    testdir.d_namlen = strlen(idesc->id_name);
-	    if (DIRSIZ(&testdir) <= dirp->d_reclen) {
-		dirp->d_namlen = testdir.d_namlen;
-		strcpy(dirp->d_name, idesc->id_name);
-		return STOP|ALTERED|FOUND;
-	    } else
-		return STOP|FOUND;	/* won't fit, so give up */
-	}
-	return KEEPON;
+    if (slotcount++ == desired) {
+        /* will name fit? */
+        testdir.d_namlen = strlen(idesc->id_name);
+        if (DIRSIZ(&testdir) <= dirp->d_reclen) {
+            dirp->d_namlen = testdir.d_namlen;
+            strcpy(dirp->d_name, idesc->id_name);
+            return STOP|ALTERED|FOUND;
+        } else
+            return STOP|FOUND;	/* won't fit, so give up */
+    }
+    return KEEPON;
 }
 
 CMDFUNCSTART(chname)

@@ -116,7 +116,7 @@ int op_getattr(const char *path, struct stat *statbuf)
 {
     printlog("--- op_getattr(path=\"%s\", statbuf=%p)\n", path, statbuf);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
 
     if (! fs_inode_lookup (disk, &inode, path)) {
@@ -157,7 +157,7 @@ int op_open(const char *path, struct fuse_file_info *fi)
     printlog("--- op_open(path=\"%s\", fi=%p) flags=%#x \n",
         path, fi, fi->flags);
 #if 0
-    struct uufsd *fs = fuse_get_context()->private_data;
+    ufs_t *fs = fuse_get_context()->private_data;
     int write_flag = (fi->flags & O_ACCMODE) != O_RDONLY;
 
     if (! fs_file_open (disk, &file, path, write_flag)) {
@@ -186,7 +186,7 @@ int op_create(const char *path, mode_t mode, struct fuse_file_info *fi)
     printlog("--- op_create(path=\"%s\", mode=0%03o, fi=%p)\n",
         path, mode, fi);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
 
     file.inode.mode = 0;
     if (! fs_file_create (disk, &file, path, mode & 07777)) {
@@ -273,7 +273,7 @@ int op_truncate(const char *path, off_t newsize)
 {
     printlog("--- op_truncate(path=\"%s\", newsize=%lld)\n", path, newsize);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_file_t f;
 
     if (! fs_file_open (disk, &f, path, 1)) {
@@ -323,7 +323,7 @@ int op_unlink(const char *path)
 {
     printlog("--- op_unlink(path=\"%s\")\n", path);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
 
     /* Get the file type. */
@@ -353,7 +353,7 @@ int op_rmdir(const char *path)
 {
     printlog("--- op_rmdir(path=\"%s\")\n", path);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode, parent;
     char buf [BSDFS_BSIZE], *p;
 
@@ -415,7 +415,7 @@ int op_mkdir(const char *path, mode_t mode)
 {
     printlog("--- op_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t dir, parent;
     char buf [BSDFS_BSIZE], *p;
 
@@ -469,7 +469,7 @@ int op_link(const char *path, const char *newpath)
 {
     printlog("--- op_link(path=\"%s\", newpath=\"%s\")\n", path, newpath);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t source, target;
 
     /* Find source. */
@@ -501,7 +501,7 @@ int op_rename(const char *path, const char *newpath)
 {
     printlog("--- op_rename(path=\"%s\", newpath=\"%s\")\n", path, newpath);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t source, target;
 
     /* Find source and increase the link count. */
@@ -536,7 +536,7 @@ int op_mknod(const char *path, mode_t mode, dev_t dev)
     printlog("--- op_mknod(path=\"%s\", mode=0%3o, dev=%lld)\n",
         path, mode, dev);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
 
     /* Check if the file already exists. */
@@ -581,7 +581,7 @@ int op_readlink(const char *path, char *link, size_t size)
     printlog("--- op_readlink(path=\"%s\", link=\"%s\", size=%d)\n",
         path, link, size);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
 
     /* Open the file. */
@@ -612,7 +612,7 @@ int op_symlink(const char *path, const char *newpath)
 {
     printlog("--- op_symlink(path=\"%s\", newpath=\"%s\")\n", path, newpath);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
     int len, mode;
 
@@ -652,7 +652,7 @@ int op_chmod(const char *path, mode_t mode)
 {
     printlog("--- op_chmod(path=\"%s\", mode=0%03o)\n", path, mode);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
 
     /* Open the file. */
@@ -677,7 +677,7 @@ int op_chown(const char *path, uid_t uid, gid_t gid)
 {
     printlog("--- op_chown(path=\"%s\", uid=%d, gid=%d)\n", path, uid, gid);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
 
     /* Open the file. */
@@ -702,7 +702,7 @@ int op_utime(const char *path, struct utimbuf *ubuf)
 {
     printlog("--- op_utime(path=\"%s\", ubuf=%p)\n", path, ubuf);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t inode;
 
     /* Open the file. */
@@ -782,7 +782,7 @@ int op_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
     printlog("--- op_readdir(path=\"%s\", buf=%p, filler=%p, offset=%lld, fi=%p)\n",
         path, buf, filler, offset, fi);
 #if 0
-    struct uufsd *disk = fuse_get_context()->private_data;
+    ufs_t *disk = fuse_get_context()->private_data;
     fs_inode_t dir;
     char name [BSDFS_BSIZE - 12];
     struct {
@@ -885,7 +885,7 @@ static struct fuse_operations mount_ops = {
     .write      = op_write,
 };
 
-int ufs_mount(struct uufsd *disk, char *dirname)
+int ufs_mount(ufs_t *disk, char *dirname)
 {
     char *av[8];
     int ret, ac;
