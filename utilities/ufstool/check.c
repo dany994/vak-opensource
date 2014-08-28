@@ -251,17 +251,6 @@ check_warn(const char *fmt, ...)
  * Stub for routines from kernel.
  */
 static void
-panic(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    check_fatal("INTERNAL INCONSISTENCY:");
-    (void)vfprintf(stdout, fmt, ap);
-    va_end(ap);
-    exit(EEXIT);
-}
-
-static void
 rwerror(const char *mesg, ufs2_daddr_t blk)
 {
     if (check_preen == 0)
@@ -1035,11 +1024,11 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
 static void
 blerase(int fd, ufs2_daddr_t blk, long size)
 {
-    off_t ioarg[2];
-
     if (fd < 0)
         return;
+
 #ifdef DIOCGDELETE
+    off_t ioarg[2];
     ioarg[0] = blk * dev_bsize;
     ioarg[1] = size;
     ioctl(fd, DIOCGDELETE, ioarg);
@@ -2625,10 +2614,9 @@ static int
 eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
 {
     struct bufarea *bp;
-    u_int dsize, n;
+    u_int n;
     u_char *cp;
     long blksiz;
-    char dbuf[DIRBLKSIZ];
 
     printf("Inode %ju extsize %ju\n",
        (intmax_t)idesc->id_number, (intmax_t)dp->di_extsize);
@@ -3174,7 +3162,6 @@ deleteentry(struct inodesc *idesc)
 static int
 fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
 {
-    char *cp;
     struct inodesc dotdesc;
     char oldname[MAXPATHLEN + 1];
     char newname[MAXPATHLEN + 1];
@@ -3250,7 +3237,6 @@ static int
 pass2check(struct inodesc *idesc)
 {
     struct direct *dirp = idesc->id_dirp;
-    char dirname[MAXPATHLEN + 1];
     struct inoinfo *inp;
     int n, entrysize, ret = 0;
     union dinode *dp;
@@ -3878,7 +3864,6 @@ check_maps(
     int limit)                  /* limit on number of entries to free */
 {
 #define BUFSIZE 16
-    char buf[BUFSIZE];
     long i, j, k, l, m, size;
     ufs2_daddr_t n, astart, aend, ustart, uend;
     void (*msg)(const char *fmt, ...);
@@ -4310,14 +4295,11 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
 {
     ufs2_daddr_t n_ffree, n_bfree;
     struct dups *dp;
-    struct stat snapdir;
-    struct group *grp;
     struct iovec *iov;
     char errmsg[255];
     int iovlen;
     int cylno;
     intmax_t blks, files;
-    size_t size;
 
     iov = NULL;
     iovlen = 0;
@@ -4335,7 +4317,7 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
         check_fatal("CAN'T CHECK FILE SYSTEM.");
         return;
     case -1:
-clean:  check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
+        check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
             sblock.fs_frag * sblock.fs_cstotal.cs_nbfree));
         printf("(%jd frags, %jd blocks, %.1f%% fragmentation)\n",
             (intmax_t)sblock.fs_cstotal.cs_nffree,

@@ -13,7 +13,7 @@ OBJS_LIBUFS     = block.o cgroup.o inode.o sblock.o type.o \
                   ffs_subr.o ffs_tables.o mkfs.o \
                     check.o check_suj.o check_gjournal.o
 
-CFLAGS          = -O1 -g -Werror
+CFLAGS          = -O1 -g -Wall -Werror
 #CFLAGS         += -D_LIBUFS_DEBUGGING
 LDFLAGS         = -g
 

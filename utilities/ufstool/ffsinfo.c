@@ -100,18 +100,16 @@ int
 main(int argc, char **argv)
 {
     DBG_FUNC("main")
-    char    *device, *special;
+    char *device;
     int ch;
-    size_t  len;
-    struct stat st;
     struct csum *dbg_csp;
     int dbg_csc;
-    char    dbg_line[80];
+    char dbg_line[80];
     int cylno,i;
     int cfg_cg, cfg_in, cfg_lv;
     int cg_start, cg_stop;
-    ino_t   in;
-    char    *out_file;
+    ino_t in;
+    char *out_file;
 
     DBG_ENTER;
 

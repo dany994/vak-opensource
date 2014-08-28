@@ -46,7 +46,6 @@ int
 main(int argc, char *argv[])
 {
     int ch;
-    struct itimerval itimerval;
     int ret = 0;
 
     sync();
@@ -161,14 +160,11 @@ checkfilesys(char *filesys)
 {
     ufs2_daddr_t n_ffree, n_bfree;
     struct dups *dp;
-    struct stat snapdir;
-    struct group *grp;
     struct iovec *iov;
     char errmsg[255];
     int iovlen;
     int cylno;
     intmax_t blks, files;
-    size_t size;
 
     iov = NULL;
     iovlen = 0;
@@ -209,7 +205,6 @@ checkfilesys(char *filesys)
             check_fatal("CAN'T CHECK FILE SYSTEM.");
         return (0);
     case -1:
-    clean:
         check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
             sblock.fs_frag * sblock.fs_cstotal.cs_nbfree));
         printf("(%jd frags, %jd blocks, %.1f%% fragmentation)\n",

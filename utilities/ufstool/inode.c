@@ -100,9 +100,8 @@ putino(ufs_t *disk)
 int
 ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 {
-    unsigned bno;
+    unsigned bno, i;
     off_t offset;
-    int i, reserved;
     u_int32_t freelink, gen;
     int32_t atimensec, mtimensec, ctimensec;
 
@@ -127,35 +126,35 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 
     if (ufs_read16 (disk, &inode->mode) < 0)
         return -1;
-    if (ufs_read16 (disk, &inode->nlink) < 0)
+    if (ufs_read16 (disk, (u_int16_t*) &inode->nlink) < 0)
         return -1;
     if (ufs_read32 (disk, &freelink) < 0)
         return -1;
     if (ufs_read64 (disk, &inode->size) < 0)
         return -1;
-    if (ufs_read32 (disk, &inode->atime) < 0)
+    if (ufs_read32 (disk, (u_int32_t*) &inode->atime) < 0)
         return -1;
-    if (ufs_read32 (disk, &atimensec) < 0)
+    if (ufs_read32 (disk, (u_int32_t*) &atimensec) < 0)
         return -1;
-    if (ufs_read32 (disk, &inode->mtime) < 0)
+    if (ufs_read32 (disk, (u_int32_t*) &inode->mtime) < 0)
         return -1;
-    if (ufs_read32 (disk, &mtimensec) < 0)
+    if (ufs_read32 (disk, (u_int32_t*) &mtimensec) < 0)
         return -1;
-    if (ufs_read32 (disk, &inode->ctime) < 0)
+    if (ufs_read32 (disk, (u_int32_t*) &inode->ctime) < 0)
         return -1;
-    if (ufs_read32 (disk, &ctimensec) < 0)
+    if (ufs_read32 (disk, (u_int32_t*) &ctimensec) < 0)
         return -1;
     for (i=0; i<NDADDR; ++i) {
-        if (ufs_read32 (disk, &inode->daddr[i]) < 0)
+        if (ufs_read32 (disk, (u_int32_t*) &inode->daddr[i]) < 0)
             return -1;
     }
     for (i=0; i<NIADDR; ++i) {
-        if (ufs_read32 (disk, &inode->iaddr[i]) < 0)
+        if (ufs_read32 (disk, (u_int32_t*) &inode->iaddr[i]) < 0)
             return -1;
     }
     if (ufs_read32 (disk, &inode->flags) < 0)
         return -1;
-    if (ufs_read32 (disk, &inode->blocks) < 0)
+    if (ufs_read32 (disk, (u_int32_t*) &inode->blocks) < 0)
         return -1;
     if (ufs_read32 (disk, &gen) < 0)
         return -1;
@@ -218,7 +217,7 @@ ufs_inode_print (ufs_inode_t *inode, FILE *out)
 
 void
 ufs_inode_print_path (ufs_inode_t *inode,
-    char *dirname, char *filename, FILE *out)
+    const char *dirname, const char *filename, FILE *out)
 {
     fprintf (out, "%s/%s", dirname, filename);
     switch (inode->mode & IFMT) {
