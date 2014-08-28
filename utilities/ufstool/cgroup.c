@@ -149,7 +149,7 @@ gotit:
             dp2->di_gen = random() / 2 + 1;
             dp2++;
         }
-        if (ufs_block_write(disk, ino_to_fsba(fs,
+        if (ufs_sector_write(disk, ino_to_fsba(fs,
             cgp->cg_cgx * fs->fs_ipg + cgp->cg_initediblk),
             block, fs->fs_bsize)) {
             return (0);
@@ -183,7 +183,7 @@ cgread1(ufs_t *disk, int c)
     if ((unsigned)c >= fs->fs_ncg) {
         return (0);
     }
-    if (ufs_block_read(disk, fsbtodb(fs, cgtod(fs, c)), disk->d_cgunion.d_buf,
+    if (ufs_sector_read(disk, fsbtodb(fs, cgtod(fs, c)), disk->d_cgunion.d_buf,
         fs->fs_bsize) == -1) {
         ERROR(disk, "unable to read cylinder group");
         return (-1);
@@ -204,7 +204,7 @@ cgwrite1(ufs_t *disk, int c)
     struct fs *fs;
 
     fs = &disk->d_fs;
-    if (ufs_block_write(disk, fsbtodb(fs, cgtod(fs, c)),
+    if (ufs_sector_write(disk, fsbtodb(fs, cgtod(fs, c)),
         disk->d_cgunion.d_buf, fs->fs_bsize) == -1) {
         ERROR(disk, "unable to write cylinder group");
         return (-1);

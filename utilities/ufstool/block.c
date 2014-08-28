@@ -35,13 +35,13 @@
 int verbose;
 
 ssize_t
-ufs_block_read(ufs_t *disk, ufs2_daddr_t blockno, void *data, size_t size)
+ufs_sector_read(ufs_t *disk, ufs2_daddr_t sectno, void *data, size_t size)
 {
     ssize_t cnt;
 
     ERROR(disk, NULL);
 
-    cnt = pread(disk->d_fd, data, size, (off_t)(blockno * disk->d_bsize));
+    cnt = pread(disk->d_fd, data, size, (off_t)(sectno * disk->d_bsize));
     if (cnt == -1) {
         ERROR(disk, "read error from block device");
         goto fail;
@@ -61,7 +61,7 @@ fail:
 }
 
 ssize_t
-ufs_block_write(ufs_t *disk, ufs2_daddr_t blockno, const void *data, size_t size)
+ufs_sector_write(ufs_t *disk, ufs2_daddr_t sectno, const void *data, size_t size)
 {
     ssize_t cnt;
     int rv;
@@ -74,7 +74,7 @@ ufs_block_write(ufs_t *disk, ufs2_daddr_t blockno, const void *data, size_t size
         return (-1);
     }
 
-    cnt = pwrite(disk->d_fd, data, size, (off_t)(blockno * disk->d_bsize));
+    cnt = pwrite(disk->d_fd, data, size, (off_t)(sectno * disk->d_bsize));
     if (cnt == -1) {
         ERROR(disk, "write error to block device");
         return (-1);
@@ -87,7 +87,7 @@ ufs_block_write(ufs_t *disk, ufs2_daddr_t blockno, const void *data, size_t size
 }
 
 int
-ufs_block_erase(ufs_t *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
+ufs_sector_erase(ufs_t *disk, ufs2_daddr_t sectno, ufs2_daddr_t size)
 {
     char *zero_chunk;
     off_t offset, zero_chunk_size, pwrite_size;
@@ -100,7 +100,7 @@ ufs_block_erase(ufs_t *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
         return(rv);
     }
 
-    offset = blockno * disk->d_bsize;
+    offset = sectno * disk->d_bsize;
     zero_chunk_size = 65536 * disk->d_bsize;
     zero_chunk = calloc(1, zero_chunk_size);
     if (zero_chunk == NULL) {

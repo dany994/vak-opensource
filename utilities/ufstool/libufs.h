@@ -44,7 +44,7 @@ typedef struct {
     const char *d_name;     /* disk name */
     int d_ufs;              /* decimal UFS version */
     int d_fd;               /* raw device file descriptor */
-    long d_bsize;           /* device bsize */
+    long d_bsize;           /* disk sector size in bytes */
     ufs2_daddr_t d_sblock;  /* superblock location */
     struct csum *d_sbcsum;  /* Superblock summary info */
     caddr_t d_inoblock;     /* inode block */
@@ -152,9 +152,9 @@ __BEGIN_DECLS
 /*
  * block.c
  */
-ssize_t ufs_block_read(ufs_t *, ufs2_daddr_t, void *, size_t);
-ssize_t ufs_block_write(ufs_t *, ufs2_daddr_t, const void *, size_t);
-int ufs_block_erase(ufs_t *, ufs2_daddr_t, ufs2_daddr_t);
+ssize_t ufs_sector_read(ufs_t *, ufs2_daddr_t, void *, size_t);
+ssize_t ufs_sector_write(ufs_t *, ufs2_daddr_t, const void *, size_t);
+int ufs_sector_erase(ufs_t *, ufs2_daddr_t, ufs2_daddr_t);
 int ufs_seek (ufs_t *disk, off_t offset);
 int ufs_read8 (ufs_t *disk, u_int8_t *val);
 int ufs_read16 (ufs_t *disk, u_int16_t *val);

@@ -524,25 +524,25 @@ restart:
         printf("Erasing sectors [%jd...%jd]\n",
             (intmax_t) (sblock.fs_sblockloc / disk->d_bsize),
             (intmax_t) fsbtodb(&sblock, sblock.fs_size) - 1);
-        ufs_block_erase(disk, sblock.fs_sblockloc / disk->d_bsize,
+        ufs_sector_erase(disk, sblock.fs_sblockloc / disk->d_bsize,
             sblock.fs_size * sblock.fs_fsize - sblock.fs_sblockloc);
     }
     /*
      * Wipe out old UFS1 superblock(s) if necessary.
      */
     if (!mkfs_Nflag && mkfs_Oflag != 1) {
-        i = ufs_block_read(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_bsize, chdummy, SBLOCKSIZE);
+        i = ufs_sector_read(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_bsize, chdummy, SBLOCKSIZE);
         if (i == -1)
             err(1, "can't read old UFS1 superblock: %s", disk->d_error);
 
         if (fsdummy.fs_magic == FS_UFS1_MAGIC) {
             fsdummy.fs_magic = 0;
-            ufs_block_write(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_bsize,
+            ufs_sector_write(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_bsize,
                 chdummy, SBLOCKSIZE);
             for (cg = 0; cg < fsdummy.fs_ncg; cg++) {
                 if (fsbtodb(&fsdummy, cgsblock(&fsdummy, cg)) > mkfs_fssize)
                     break;
-                ufs_block_write(disk, mkfs_part_ofs + fsbtodb(&fsdummy,
+                ufs_sector_write(disk, mkfs_part_ofs + fsbtodb(&fsdummy,
                   cgsblock(&fsdummy, cg)), chdummy, SBLOCKSIZE);
             }
         }
@@ -952,7 +952,7 @@ alloc(ufs_t *disk, int size, int mode)
     int i, blkno, frag;
     uint d;
 
-    ufs_block_read(disk, mkfs_part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
+    ufs_sector_read(disk, mkfs_part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
         sblock.fs_cgsize);
     if (acg.cg_magic != CG_MAGIC) {
         printf("cg 0: bad magic number\n");
@@ -1003,7 +1003,7 @@ iput(ufs_t *disk, union dinode *ip, ino_t ino)
 {
     ufs2_daddr_t d;
 
-    ufs_block_read(disk, mkfs_part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
+    ufs_sector_read(disk, mkfs_part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
         sblock.fs_cgsize);
     if (acg.cg_magic != CG_MAGIC) {
         printf("cg 0: bad magic number\n");
@@ -1021,7 +1021,7 @@ iput(ufs_t *disk, union dinode *ip, ino_t ino)
         exit(32);
     }
     d = fsbtodb(&sblock, ino_to_fsba(&sblock, ino));
-    ufs_block_read(disk, mkfs_part_ofs + d, (char *)iobuf, sblock.fs_bsize);
+    ufs_sector_read(disk, mkfs_part_ofs + d, (char *)iobuf, sblock.fs_bsize);
     if (sblock.fs_magic == FS_UFS1_MAGIC)
         ((struct ufs1_dinode *)iobuf)[ino_to_fsbo(&sblock, ino)] =
             ip->dp1;
@@ -1039,7 +1039,7 @@ wtfs(ufs_t *disk, ufs2_daddr_t bno, int size, char *bf)
 {
     if (mkfs_Nflag)
         return;
-    if (ufs_block_write(disk, mkfs_part_ofs + bno, bf, size) < 0)
+    if (ufs_sector_write(disk, mkfs_part_ofs + bno, bf, size) < 0)
         err(36, "wtfs: %d bytes at sector %jd", size, (intmax_t)bno);
 }
 
