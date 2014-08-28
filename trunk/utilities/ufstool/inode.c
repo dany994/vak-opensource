@@ -31,6 +31,7 @@
 
 #define _LIBUFS
 #include "libufs.h"
+#include "dir.h"
 
 extern int verbose;
 
@@ -325,4 +326,277 @@ ufs_inode_print_blocks (ufs_inode_t *inode, FILE *out)
     if (inode->iaddr[2] != 0)
         print_triple_indirect_block (inode->disk, inode->iaddr[2], out);
     fprintf (out, "\n");
+}
+
+void ufs_directory_scan (ufs_inode_t *dir, const char *dirname,
+    ufs_directory_scanner_t scanner, void *arg)
+{
+    ufs_inode_t file;
+    unsigned long offset;
+    unsigned char name [MAXBSIZE - 12];
+    struct direct dirent;
+
+    /* Variable record per file */
+    for (offset = 0; offset < dir->size; offset += dirent.d_reclen) {
+        if (ufs_inode_read (dir, offset, (unsigned char*) &dirent, 8) < 0) {
+            fprintf (stderr, "%s: read error at offset %ld\n",
+                dirname[0] ? dirname : "/", offset);
+            return;
+        }
+        if (dirent.d_ino == 0)
+            continue;
+//printf ("scan offset %lu: ino=%u, reclen=%u, type=%u, namlen=%u\n", offset, dirent.d_ino, dirent.d_reclen, dirent.d_type, dirent.d_namlen);
+        if (ufs_inode_read (dir, offset+8, name, (dirent.d_namlen + 4) / 4 * 4) < 0) {
+            fprintf (stderr, "%s: name read error at offset %ld\n",
+                dirname[0] ? dirname : "/", offset);
+            return;
+        }
+//printf ("scan offset %lu: name='%s'\n", offset, name);
+
+        if ((name[0]=='.' && name[1]==0) ||
+            (name[0]=='.' && name[1]=='.' && name[2]==0))
+            continue;
+
+        if (ufs_inode_get (dir->disk, &file, dirent.d_ino) < 0) {
+            fprintf (stderr, "cannot scan inode %d\n", dirent.d_ino);
+            continue;
+        }
+        scanner (dir, &file, dirname, (char*) name, arg);
+    }
+}
+
+/*
+ * Return the physical block number on a device given the
+ * inode and the logical block number in a file.
+ */
+static unsigned
+map_block (ufs_inode_t *inode, unsigned lbn)
+{
+    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    unsigned block [MAXBSIZE / 4];
+    unsigned int nb, i, j, sh;
+    unsigned nshift = ffs(NINDIR(&inode->disk->d_fs)) - 1;
+    unsigned nmask = NINDIR(&inode->disk->d_fs) - 1;
+
+    /*
+     * Blocks 0..NDADDR-1 are direct blocks.
+     */
+    if (lbn < NDADDR) {
+        /* small file algorithm */
+        return inode->daddr [lbn];
+    }
+
+    /*
+     * Addresses NIADDR..NIADDR+2
+     * have single, double, triple indirect blocks.
+     * The first step is to determine
+     * how many levels of indirection.
+     */
+    sh = 0;
+    nb = 1;
+    lbn -= NDADDR;
+    for (j=NIADDR; ; j--) {
+        if (j == 0)
+            return 0;
+        sh += nshift;
+        nb <<= nshift;
+        if (lbn < nb)
+            break;
+        lbn -= nb;
+    }
+
+    /*
+     * Fetch the first indirect block.
+     */
+    nb = inode->iaddr [NIADDR-j];
+    if (nb == 0)
+        return 0;
+
+    /*
+     * Fetch through the indirect blocks.
+     */
+    for(; j <= 3; j++) {
+        if (ufs_sector_read (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+            return 0;
+
+        sh -= nshift;
+        i = (lbn >> sh) & nmask;
+        nb = block [i];
+        if (nb == 0)
+            return 0;
+    }
+    return nb;
+}
+
+/*
+ * Bmap defines the structure of file system storage
+ * by returning the physical block number on a device given the
+ * inode and the logical block number in a file.
+ */
+static unsigned
+map_block_write (ufs_inode_t *inode, unsigned lbn)
+{
+    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    unsigned block [MAXBSIZE / 4];
+    unsigned int nb, newb, sh, i, j;
+    unsigned nshift = ffs(NINDIR(&inode->disk->d_fs)) - 1;
+    unsigned nmask = NINDIR(&inode->disk->d_fs) - 1;
+
+    /*
+     * Blocks 0..NDADDR-1 are direct blocks.
+     */
+    if (lbn < NDADDR) {
+        /* small file algorithm */
+        nb = inode->daddr [lbn];
+        if (nb != 0) {
+            if (verbose)
+                printf ("map logical block %d to physical %d\n", lbn, nb);
+            return nb;
+        }
+
+        /* allocate new block */
+        if (ufs_block_alloc (inode->disk, &nb) < 0)
+            return 0;
+        inode->daddr[lbn] = nb;
+        inode->dirty = 1;
+        return nb;
+    }
+
+    /*
+     * Addresses NIADDR..NIADDR+2
+     * have single, double, triple indirect blocks.
+     * The first step is to determine
+     * how many levels of indirection.
+     */
+    sh = 0;
+    nb = 1;
+    lbn -= NDADDR;
+    for (j=NIADDR; ; j--) {
+        if (j == 0)
+            return 0;
+        sh += nshift;
+        nb <<= nshift;
+        if (lbn < nb)
+            break;
+        lbn -= nb;
+    }
+
+    /*
+     * Fetch the first indirect block.
+     */
+    nb = inode->iaddr [NIADDR-j];
+    if (nb == 0) {
+        if (ufs_block_alloc (inode->disk, &nb) < 0)
+            return 0;
+        if (verbose)
+            printf ("inode %d: allocate new block %d\n", inode->number, nb);
+        memset (block, 0, bsize);
+        if (ufs_sector_write (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+            return 0;
+        inode->iaddr [NIADDR-j] = nb;
+        inode->dirty = 1;
+    }
+
+    /*
+     * Fetch through the indirect blocks
+     */
+    for(; j <= 3; j++) {
+        if (ufs_sector_read (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+            return 0;
+
+        sh -= nshift;
+        i = (lbn >> sh) & nmask;
+        if (block [i] != 0)
+            nb = block [i];
+        else {
+            /* Allocate new block. */
+            if (ufs_block_alloc (inode->disk, &newb) < 0)
+                return 0;
+            if (verbose)
+                printf ("inode %d: allocate new block %d\n", inode->number, newb);
+            block[i] = newb;
+            if (ufs_sector_write (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+                return 0;
+            memset (block, 0, bsize);
+            if (ufs_sector_write (inode->disk, newb, (unsigned char*) block, bsize) < 0)
+                return 0;
+            nb = newb;
+        }
+    }
+    return nb;
+}
+
+int
+ufs_inode_read (ufs_inode_t *inode, unsigned long offset,
+    unsigned char *data, unsigned long bytes)
+{
+    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    unsigned char block [MAXBSIZE];
+    unsigned long n;
+    unsigned int bn, inblock_offset;
+
+    if (bytes + offset > inode->size)
+        return -1;
+    while (bytes != 0) {
+        inblock_offset = offset % bsize;
+        n = bsize - inblock_offset;
+        if (n > bytes)
+            n = bytes;
+
+        bn = map_block (inode, offset / bsize);
+        if (bn == 0)
+            return -1;
+
+        if (ufs_sector_read (inode->disk, bn, block, bsize) < 0)
+            return -1;
+        memcpy (data, block + inblock_offset, n);
+        data += n;
+        offset += n;
+        bytes -= n;
+    }
+    return 0;
+}
+
+int ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
+    unsigned char *data, unsigned long bytes)
+{
+    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    unsigned char block [MAXBSIZE];
+    unsigned long n;
+    unsigned int bn, inblock_offset;
+
+    inode->mtime = time(NULL);
+    while (bytes != 0) {
+        inblock_offset = offset % bsize;
+        n = bsize - inblock_offset;
+        if (n > bytes)
+            n = bytes;
+
+        bn = map_block_write (inode, offset / bsize);
+        if (bn == 0)
+            return -1;
+        if (inode->size < offset + n) {
+            /* Increase file size. */
+            inode->size = offset + n;
+            inode->dirty = 1;
+        }
+        if (verbose)
+            printf ("inode %d offset %ld: write %ld bytes to block %d\n",
+                inode->number, offset, n, bn);
+
+        if (n == bsize) {
+            if (ufs_sector_write (inode->disk, bn, data, bsize) < 0)
+                return -1;
+        } else {
+            if (ufs_sector_read (inode->disk, bn, block, bsize) < 0)
+                return -1;
+            memcpy (block + inblock_offset, data, n);
+            if (ufs_sector_write (inode->disk, bn, block, bsize) < 0)
+                return -1;
+        }
+        data += n;
+        offset += n;
+        bytes -= n;
+    }
+    return 0;
 }

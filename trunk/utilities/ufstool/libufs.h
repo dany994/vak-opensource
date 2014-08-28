@@ -92,6 +92,9 @@ typedef struct {
     int32_t         ctime;              /* time created */
 } ufs_inode_t;
 
+typedef void (*ufs_directory_scanner_t) (ufs_inode_t *dir,
+    ufs_inode_t *file, const char *dirname, const char *filename, void *arg);
+
 /*
  * libufs macros (internal, non-exported).
  */
@@ -163,6 +166,7 @@ int ufs_read64 (ufs_t *disk, u_int64_t *val);
 int ufs_write8 (ufs_t *disk, u_int8_t val);
 int ufs_write16 (ufs_t *disk, u_int16_t val);
 int ufs_write32 (ufs_t *disk, u_int32_t val);
+int ufs_block_alloc (ufs_t *fs, unsigned int *bno);
 
 /*
  * cgroup.c
@@ -186,6 +190,12 @@ int ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum);
 void ufs_inode_print (ufs_inode_t *inode, FILE *out);
 void ufs_inode_print_path (ufs_inode_t *inode, const char *dirname, const char *filename, FILE *out);
 void ufs_inode_print_blocks (ufs_inode_t *inode, FILE *out);
+int ufs_inode_read (ufs_inode_t *inode, unsigned long offset,
+    unsigned char *data, unsigned long bytes);
+int ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
+    unsigned char *data, unsigned long bytes);
+void ufs_directory_scan (ufs_inode_t *inode, const char *dirname,
+    ufs_directory_scanner_t scanner, void *arg);
 
 /*
  * sblock.c

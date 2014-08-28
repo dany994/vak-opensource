@@ -235,3 +235,36 @@ ufs_write32 (ufs_t *disk, unsigned val)
         return -1;
     return 0;
 }
+
+/*
+ * Get a block from free list.
+ */
+int
+ufs_block_alloc (ufs_t *fs, unsigned int *bno)
+{
+#if 0
+    int i;
+    unsigned buf [MAXBSIZE / 4];
+again:
+    if (fs->nfree == 0)
+        return -1;
+    fs->nfree--;
+    --fs->tfree;            /* Count total free blocks. */
+    *bno = fs->free [fs->nfree];
+    if (verbose)
+        printf ("allocate new block %d from slot %d\n", *bno, fs->nfree);
+    fs->free [fs->nfree] = 0;
+    fs->dirty = 1;
+    if (fs->nfree <= 0) {
+        if (! fs_read_block (fs, *bno, (unsigned char*) buf))
+            return -1;
+        fs->nfree = buf[0];
+        for (i=0; i<NICFREE; i++)
+            fs->free[i] = buf[i+1];
+    }
+    if (*bno == 0)
+        goto again;
+    return 0;
+#endif
+    return -1;
+}
