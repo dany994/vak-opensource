@@ -121,7 +121,7 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 
     offset = (bno * (off_t) disk->d_bsize) +
         (inum % INOPB(&disk->d_fs) * (off_t) sizeof(struct ufs1_dinode));
-//printf("--- bno=%u, offset=%llu \n", bno, (unsigned long long) offset);
+//printf("--- bno=%u, offset=%llu, d_bsize=%lu \n", bno, (unsigned long long) offset, disk->d_bsize);
     if (ufs_seek (disk, offset) < 0)
         return -1;
 
@@ -245,8 +245,9 @@ static void
 print_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
+    unsigned inodes_per_block = INOPB(&disk->d_fs);
     unsigned nb;
-    unsigned char data [MAXBSIZE];
+    int32_t data [MAXBSIZE/4];
     int i;
 
     fprintf (out, " [%d]", bno);
@@ -254,8 +255,8 @@ print_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
-    for (i=0; i<bsize-2; i+=2) {
-        nb = data [i+1] << 8 | data [i];
+    for (i=0; i<inodes_per_block; i++) {
+        nb = data [i];
         if (nb)
             fprintf (out, " %d", nb);
     }
@@ -265,8 +266,9 @@ static void
 print_double_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
+    unsigned inodes_per_block = INOPB(&disk->d_fs);
     unsigned nb;
-    unsigned char data [MAXBSIZE];
+    int32_t data [MAXBSIZE/4];
     int i;
 
     fprintf (out, " [%d]", bno);
@@ -274,8 +276,8 @@ print_double_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
-    for (i=0; i<bsize-2; i+=2) {
-        nb = data [i+1] << 8 | data [i];
+    for (i=0; i<inodes_per_block; i++) {
+        nb = data [i];
         if (nb)
             print_indirect_block (disk, nb, out);
     }
@@ -285,8 +287,9 @@ static void
 print_triple_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
-    unsigned short nb;
-    unsigned char data [MAXBSIZE];
+    unsigned inodes_per_block = INOPB(&disk->d_fs);
+    unsigned nb;
+    int32_t data [MAXBSIZE/4];
     int i;
 
     fprintf (out, " [%d]", bno);
@@ -294,8 +297,8 @@ print_triple_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
-    for (i=0; i<bsize-2; i+=2) {
-        nb = data [i+1] << 8 | data [i];
+    for (i=0; i<inodes_per_block; i++) {
+        nb = data [i];
         if (nb)
             print_indirect_block (disk, nb, out);
     }
@@ -316,14 +319,11 @@ ufs_inode_print_blocks (ufs_inode_t *inode, FILE *out)
             continue;
         fprintf (out, " %d", inode->daddr[i]);
     }
-#if 0
-    //TODO
     if (inode->iaddr[0] != 0)
         print_indirect_block (inode->disk, inode->iaddr[0], out);
     if (inode->iaddr[1] != 0)
         print_double_indirect_block (inode->disk, inode->iaddr[1], out);
     if (inode->iaddr[2] != 0)
         print_triple_indirect_block (inode->disk, inode->iaddr[2], out);
-#endif
     fprintf (out, "\n");
 }
