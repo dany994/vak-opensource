@@ -32,29 +32,16 @@
 #define _LIBUFS
 #include "libufs.h"
 
+int verbose;
+
 ssize_t
-bread(ufs_t *disk, ufs2_daddr_t blockno, void *data, size_t size)
+ufs_block_read(ufs_t *disk, ufs2_daddr_t blockno, void *data, size_t size)
 {
-    void *p2;
     ssize_t cnt;
 
     ERROR(disk, NULL);
 
-    p2 = data;
-    /*
-     * XXX: various disk controllers require alignment of our buffer
-     * XXX: which is stricter than struct alignment.
-     * XXX: Bounce the buffer if not 64 byte aligned.
-     * XXX: this can be removed if/when the kernel is fixed
-     */
-    if (((intptr_t)data) & 0x3f) {
-        p2 = malloc(size);
-        if (p2 == NULL) {
-            ERROR(disk, "allocate bounce buffer");
-            goto fail;
-        }
-    }
-    cnt = pread(disk->d_fd, p2, size, (off_t)(blockno * disk->d_bsize));
+    cnt = pread(disk->d_fd, data, size, (off_t)(blockno * disk->d_bsize));
     if (cnt == -1) {
         ERROR(disk, "read error from block device");
         goto fail;
@@ -67,51 +54,27 @@ bread(ufs_t *disk, ufs2_daddr_t blockno, void *data, size_t size)
         ERROR(disk, "short read or read error from block device");
         goto fail;
     }
-    if (p2 != data) {
-        memcpy(data, p2, size);
-        free(p2);
-    }
     return (cnt);
-fail:   memset(data, 0, size);
-    if (p2 != data) {
-        free(p2);
-    }
+fail:
+    memset(data, 0, size);
     return (-1);
 }
 
 ssize_t
-bwrite(ufs_t *disk, ufs2_daddr_t blockno, const void *data, size_t size)
+ufs_block_write(ufs_t *disk, ufs2_daddr_t blockno, const void *data, size_t size)
 {
     ssize_t cnt;
     int rv;
-    void *p2 = NULL;
 
     ERROR(disk, NULL);
 
-    rv = ufs_disk_write(disk);
+    rv = ufs_disk_reopen_writable(disk);
     if (rv == -1) {
         ERROR(disk, "failed to open disk for writing");
         return (-1);
     }
 
-    /*
-     * XXX: various disk controllers require alignment of our buffer
-     * XXX: which is stricter than struct alignment.
-     * XXX: Bounce the buffer if not 64 byte aligned.
-     * XXX: this can be removed if/when the kernel is fixed
-     */
-    if (((intptr_t)data) & 0x3f) {
-        p2 = malloc(size);
-        if (p2 == NULL) {
-            ERROR(disk, "allocate bounce buffer");
-            return (-1);
-        }
-        memcpy(p2, data, size);
-        data = p2;
-    }
     cnt = pwrite(disk->d_fd, data, size, (off_t)(blockno * disk->d_bsize));
-    if (p2 != NULL)
-        free(p2);
     if (cnt == -1) {
         ERROR(disk, "write error to block device");
         return (-1);
@@ -120,16 +83,22 @@ bwrite(ufs_t *disk, ufs2_daddr_t blockno, const void *data, size_t size)
         ERROR(disk, "short write to block device");
         return (-1);
     }
-
     return (cnt);
 }
 
-static int
-berase_helper(ufs_t *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
+int
+ufs_block_erase(ufs_t *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
 {
     char *zero_chunk;
     off_t offset, zero_chunk_size, pwrite_size;
     int rv;
+
+    ERROR(disk, NULL);
+    rv = ufs_disk_reopen_writable(disk);
+    if (rv == -1) {
+        ERROR(disk, "failed to open disk for writing");
+        return(rv);
+    }
 
     offset = blockno * disk->d_bsize;
     zero_chunk_size = 65536 * disk->d_bsize;
@@ -156,15 +125,113 @@ berase_helper(ufs_t *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
 }
 
 int
-berase(ufs_t *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
+ufs_seek (ufs_t *disk, unsigned long offset)
 {
-    int rv;
+    unsigned bsize = disk->d_fs.fs_bsize;
 
-    ERROR(disk, NULL);
-    rv = ufs_disk_write(disk);
-    if (rv == -1) {
-        ERROR(disk, "failed to open disk for writing");
-        return(rv);
+/*  printf ("seek %ld, block %ld\n", offset, offset / bsize);*/
+    if (lseek (disk->d_fd, offset, 0) < 0) {
+        if (verbose)
+            printf ("error seeking %ld, block %ld\n",
+                offset, offset / bsize);
+        return -1;
     }
-    return (berase_helper(disk, blockno, size));
+    disk->seek = offset;
+    return 0;
+}
+
+int
+ufs_read8 (ufs_t *disk, unsigned char *val)
+{
+    unsigned bsize = disk->d_fs.fs_bsize;
+
+    if (read (disk->d_fd, val, 1) != 1) {
+        if (verbose)
+            printf ("error read8, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+        return -1;
+    }
+    return 0;
+}
+
+int
+ufs_read16 (ufs_t *disk, unsigned short *val)
+{
+    unsigned bsize = disk->d_fs.fs_bsize;
+    unsigned char data [2];
+
+    if (read (disk->d_fd, data, 2) != 2) {
+        if (verbose)
+            printf ("error read16, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+        return -1;
+    }
+    *val = data[1] << 8 | data[0];
+    return 0;
+}
+
+int
+ufs_read32 (ufs_t *disk, unsigned *val)
+{
+    unsigned bsize = disk->d_fs.fs_bsize;
+    unsigned char data [4];
+
+    if (read (disk->d_fd, data, 4) != 4) {
+        if (verbose)
+            printf ("error read32, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+        return -1;
+    }
+    *val = (unsigned long) data[0] | (unsigned long) data[1] << 8 |
+        data[2] << 16 | data[3] << 24;
+    return 0;
+}
+
+int
+ufs_read64 (ufs_t *disk, unsigned long long *val)
+{
+    unsigned bsize = disk->d_fs.fs_bsize;
+    unsigned char data [8];
+
+    if (read (disk->d_fd, data, 8) != 8) {
+        if (verbose)
+            printf ("error read32, seek %ld block %ld\n", disk->seek, disk->seek / bsize);
+        return -1;
+    }
+    *val = (unsigned long) data[0] | (unsigned long) data[1] << 8 |
+        data[2] << 16 | data[3] << 24 | (unsigned long long)data[4] << 32 |
+        (unsigned long long)data[5] << 40 | (unsigned long long)data[6] << 48 |
+        (unsigned long long)data[7] << 56;
+    return 0;
+}
+
+int
+ufs_write8 (ufs_t *disk, unsigned char val)
+{
+    if (write (disk->d_fd, &val, 1) != 1)
+        return -1;
+    return 0;
+}
+
+int
+ufs_write16 (ufs_t *disk, unsigned short val)
+{
+    unsigned char data [2];
+
+    data[0] = val;
+    data[1] = val >> 8;
+    if (write (disk->d_fd, data, 2) != 2)
+        return -1;
+    return 0;
+}
+
+int
+ufs_write32 (ufs_t *disk, unsigned val)
+{
+    unsigned char data [4];
+
+    data[0] = val;
+    data[1] = val >> 8;
+    data[2] = val >> 16;
+    data[3] = val >> 24;
+    if (write (disk->d_fd, data, 4) != 4)
+        return -1;
+    return 0;
 }

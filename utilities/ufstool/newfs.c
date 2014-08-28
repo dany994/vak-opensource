@@ -376,7 +376,7 @@ main(int argc, char *argv[])
     }
 
     if (ufs_disk_fillout_blank(&disk, special) == -1 ||
-        (!mkfs_Nflag && ufs_disk_write(&disk) == -1)) {
+        (!mkfs_Nflag && ufs_disk_reopen_writable(&disk) == -1)) {
         if (disk.d_error != NULL)
             errx(1, "%s: %s", special, disk.d_error);
         else

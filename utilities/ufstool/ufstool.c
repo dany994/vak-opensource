@@ -106,109 +106,6 @@ static void print_help (char *progname)
 }
 
 #if 0
-void print_inode (fs_inode_t *inode,
-    char *dirname, char *filename, FILE *out)
-{
-    fprintf (out, "%s/%s", dirname, filename);
-    switch (inode->mode & INODE_MODE_FMT) {
-    case INODE_MODE_FDIR:
-        if (filename[0] != 0)
-            fprintf (out, "/");
-        break;
-    case INODE_MODE_FCHR:
-        fprintf (out, " - char %d %d",
-            inode->addr[1] >> 8, inode->addr[1] & 0xff);
-        break;
-    case INODE_MODE_FBLK:
-        fprintf (out, " - block %d %d",
-            inode->addr[1] >> 8, inode->addr[1] & 0xff);
-        break;
-    default:
-        fprintf (out, " - %lu bytes", inode->size);
-        break;
-    }
-    fprintf (out, "\n");
-}
-
-void print_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
-{
-    unsigned short nb;
-    unsigned char data [BSDFS_BSIZE];
-    int i;
-
-    fprintf (out, " [%d]", bno);
-    if (! fs_read_block (disk, bno, data)) {
-        fprintf (stderr, "read error at block %d\n", bno);
-        return;
-    }
-    for (i=0; i<BSDFS_BSIZE-2; i+=2) {
-        nb = data [i+1] << 8 | data [i];
-        if (nb)
-            fprintf (out, " %d", nb);
-    }
-}
-
-void print_double_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
-{
-    unsigned short nb;
-    unsigned char data [BSDFS_BSIZE];
-    int i;
-
-    fprintf (out, " [%d]", bno);
-    if (! fs_read_block (disk, bno, data)) {
-        fprintf (stderr, "read error at block %d\n", bno);
-        return;
-    }
-    for (i=0; i<BSDFS_BSIZE-2; i+=2) {
-        nb = data [i+1] << 8 | data [i];
-        if (nb)
-            print_indirect_block (disk, nb, out);
-    }
-}
-
-void print_triple_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
-{
-    unsigned short nb;
-    unsigned char data [BSDFS_BSIZE];
-    int i;
-
-    fprintf (out, " [%d]", bno);
-    if (! fs_read_block (disk, bno, data)) {
-        fprintf (stderr, "read error at block %d\n", bno);
-        return;
-    }
-    for (i=0; i<BSDFS_BSIZE-2; i+=2) {
-        nb = data [i+1] << 8 | data [i];
-        if (nb)
-            print_indirect_block (disk, nb, out);
-    }
-}
-
-void print_inode_blocks (fs_inode_t *inode, FILE *out)
-{
-    int i;
-
-    if ((inode->mode & INODE_MODE_FMT) == INODE_MODE_FCHR ||
-        (inode->mode & INODE_MODE_FMT) == INODE_MODE_FBLK)
-        return;
-
-    fprintf (out, "    ");
-    for (i=0; i<NDADDR; ++i) {
-        if (inode->addr[i] == 0)
-            continue;
-        fprintf (out, " %d", inode->addr[i]);
-    }
-    if (inode->addr[NDADDR] != 0)
-        print_indirect_block (inode->fs, inode->addr[NDADDR], out);
-    if (inode->addr[NDADDR+1] != 0)
-        print_double_indirect_block (inode->fs,
-            inode->addr[NDADDR+1], out);
-    if (inode->addr[NDADDR+2] != 0)
-        print_triple_indirect_block (inode->fs,
-            inode->addr[NDADDR+2], out);
-    fprintf (out, "\n");
-}
-
 void extract_inode (fs_inode_t *inode, char *path)
 {
     int fd, n, mode;
@@ -226,7 +123,7 @@ void extract_inode (fs_inode_t *inode, char *path)
         n = inode->size - offset;
         if (n > BSDFS_BSIZE)
             n = BSDFS_BSIZE;
-        if (! fs_inode_read (inode, offset, data, n)) {
+        if (fs_inode_read (inode, offset, data, n) < 0) {
             fprintf (stderr, "%s: read error at offset %ld\n",
                 path, offset);
             break;
@@ -246,7 +143,7 @@ void extractor (fs_inode_t *dir, fs_inode_t *inode,
     char *path, *relpath;
 
     if (verbose)
-        print_inode (inode, dirname, filename, out);
+        ufs_inode_print_path (inode, dirname, filename, out);
 
     if ((inode->mode & INODE_MODE_FMT) != INODE_MODE_FDIR &&
         (inode->mode & INODE_MODE_FMT) != INODE_MODE_FREG)
@@ -275,11 +172,11 @@ void scanner (fs_inode_t *dir, fs_inode_t *inode,
     FILE *out = arg;
     char *path;
 
-    print_inode (inode, dirname, filename, out);
+    ufs_inode_print_path (inode, dirname, filename, out);
 
     if (verbose > 1) {
         /* Print a list of blocks. */
-        print_inode_blocks (inode, out);
+        ufs_inode_print_blocks (inode, out);
         if (verbose > 2) {
             fs_inode_print (inode, out);
             printf ("--------\n");
@@ -311,7 +208,7 @@ void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
         *p = 0;
     else
         *buf = 0;
-    if (! fs_inode_lookup (disk, &parent, buf)) {
+    if (fs_inode_lookup (disk, &parent, buf) < 0) {
         fprintf (stderr, "%s: cannot open directory\n", buf);
         return;
     }
@@ -335,11 +232,11 @@ void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
     /* Make parent link '..' */
     strcpy (buf, name);
     strcat (buf, "/..");
-    if (! fs_inode_link (disk, &dir, buf, parent.number)) {
+    if (fs_inode_link (disk, &dir, buf, parent.number) < 0) {
         fprintf (stderr, "%s: dotdot link failed\n", name);
         return;
     }
-    if (! fs_inode_get (disk, &parent, parent.number)) {
+    if (fs_inode_get (disk, &parent, parent.number) < 0) {
         fprintf (stderr, "inode %d: cannot open parent\n", parent.number);
         return;
     }
@@ -358,7 +255,7 @@ void add_device (ufs_t *disk, char *name, int mode, int owner, int group,
 
     mode &= 07777;
     mode |= (type == 'b') ? INODE_MODE_FBLK : INODE_MODE_FCHR;
-    if (! fs_inode_create (disk, &dev, name, mode)) {
+    if (fs_inode_create (disk, &dev, name, mode) < 0) {
         fprintf (stderr, "%s: device inode create failed\n", name);
         return;
     }
@@ -403,7 +300,7 @@ void add_file (ufs_t *disk, const char *path, const char *dirname,
         mode = st.st_mode;
     mode &= 07777;
     mode |= INODE_MODE_FREG;
-    if (! fs_file_create (disk, &file, path, mode)) {
+    if (fs_file_create (disk, &file, path, mode) < 0) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
     }
@@ -414,7 +311,7 @@ void add_file (ufs_t *disk, const char *path, const char *dirname,
             perror (accpath);
         if (len <= 0)
             break;
-        if (! fs_file_write (&file, data, len)) {
+        if (fs_file_write (&file, data, len) < 0) {
             fprintf (stderr, "%s: write error\n", path);
             break;
         }
@@ -438,12 +335,12 @@ void add_symlink (ufs_t *disk, const char *path, const char *link,
 
     mode &= 07777;
     mode |= INODE_MODE_FLNK;
-    if (! fs_file_create (disk, &file, path, mode)) {
+    if (fs_file_create (disk, &file, path, mode) < 0) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
     }
     len = strlen (link);
-    if (! fs_file_write (&file, (unsigned char*) link, len)) {
+    if (fs_file_write (&file, (unsigned char*) link, len) < 0) {
         fprintf (stderr, "%s: write error\n", path);
         return;
     }
@@ -462,7 +359,7 @@ void add_hardlink (ufs_t *disk, const char *path, const char *link)
     fs_inode_t source, target;
 
     /* Find source. */
-    if (! fs_inode_lookup (disk, &source, link)) {
+    if (fs_inode_lookup (disk, &source, link) < 0) {
         fprintf (stderr, "%s: link source not found\n", link);
         return;
     }
@@ -472,7 +369,7 @@ void add_hardlink (ufs_t *disk, const char *path, const char *link)
     }
 
     /* Create target link. */
-    if (! fs_inode_link (disk, &target, path, source.number)) {
+    if (fs_inode_link (disk, &target, path, source.number) < 0) {
         fprintf (stderr, "%s: link failed\n", path);
         return;
     }
@@ -663,7 +560,7 @@ int main (int argc, char **argv)
         /* Create the file. */
         close(open(argv[i], O_RDONLY | O_CREAT | O_TRUNC, 0664));
         if (ufs_disk_fillout_blank(&disk, argv[i]) == -1 ||
-            ufs_disk_write(&disk) == -1) {
+            ufs_disk_reopen_writable(&disk) == -1) {
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
         }
@@ -687,7 +584,7 @@ int main (int argc, char **argv)
             return -1;
         }
         if (ufs_disk_fillout_blank(&disk, argv[i]) == -1 ||
-            (fix && ufs_disk_write(&disk) == -1)) {
+            (fix && ufs_disk_reopen_writable(&disk) == -1)) {
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
         }
@@ -728,7 +625,7 @@ int main (int argc, char **argv)
         }
 #if 0
         //TODO
-        if (! fs_inode_get (&disk, &inode, ROOTINO)) {
+        if (fs_inode_get (&disk, &inode, ROOTINO) < 0) {
             fprintf (stderr, "%s: cannot get inode 1\n", argv[i]);
             return -1;
         }
@@ -769,12 +666,10 @@ int main (int argc, char **argv)
         return -1;
     }
     ufs_print (&disk, stdout);
-#if 0
-    //TODO
     if (verbose) {
-        fs_inode_t inode;
+        ufs_inode_t inode;
 
-        if (! fs_inode_get (&disk, &inode, ROOTINO)) {
+        if (ufs_inode_get (&disk, &inode, ROOTINO) < 0) {
             fprintf (stderr, "%s: cannot get inode 1\n", argv[i]);
             return -1;
         }
@@ -782,15 +677,17 @@ int main (int argc, char **argv)
         printf ("/\n");
         if (verbose > 1) {
             /* Print a list of blocks. */
-            print_inode_blocks (&inode, stdout);
+            ufs_inode_print_blocks (&inode, stdout);
             if (verbose > 2) {
-                fs_inode_print (&inode, stdout);
+                ufs_inode_print (&inode, stdout);
                 printf ("--------\n");
             }
         }
-        fs_directory_scan (&inode, "", scanner, (void*) stdout);
-    }
+#if 0
+        //TODO
+        ufs_directory_scan (&inode, "", scanner, (void*) stdout);
 #endif
+    }
     ufs_disk_close (&disk);
     return 0;
 }

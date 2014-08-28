@@ -292,7 +292,7 @@ struct fs {
     int32_t  fs_fsbtodb;        /* fsbtodb and dbtofsb shift constant */
     int32_t  fs_sbsize;         /* actual size of super block */
     int32_t  fs_spare1[2];      /* old fs_csmask */
-                    /* old fs_csshift */
+                                /* old fs_csshift */
     int32_t  fs_nindir;         /* value of NINDIR */
     u_int32_t fs_inopb;         /* value of INOPB */
     int32_t  fs_old_nspf;       /* value of NSPF */
