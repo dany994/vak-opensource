@@ -241,7 +241,6 @@ checkfilesys(char *filesys)
         printf("** Phase 1 - Check Blocks and Sizes\n");
     }
     check_pass1();
-    check_stats("Pass1");
 
     /*
      * 1b: locate first references to duplicates, if any
@@ -254,7 +253,6 @@ checkfilesys(char *filesys)
                 check_usedsoftdep ? "softupdates" : "");
         printf("** Phase 1b - Rescan For More DUPS\n");
         check_pass1b();
-        check_stats("Pass1b");
     }
 
     /*
@@ -263,7 +261,6 @@ checkfilesys(char *filesys)
     if (check_preen == 0)
         printf("** Phase 2 - Check Pathnames\n");
     check_pass2();
-    check_stats("Pass2");
 
     /*
      * 3: scan inodes looking for disconnected directories
@@ -271,7 +268,6 @@ checkfilesys(char *filesys)
     if (check_preen == 0)
         printf("** Phase 3 - Check Connectivity\n");
     check_pass3();
-    check_stats("Pass3");
 
     /*
      * 4: scan inodes looking for disconnected files; check reference counts
@@ -279,7 +275,6 @@ checkfilesys(char *filesys)
     if (check_preen == 0)
         printf("** Phase 4 - Check Reference Counts\n");
     check_pass4();
-    check_stats("Pass4");
 
     /*
      * 5: check and repair resource counts in cylinder groups
@@ -287,7 +282,6 @@ checkfilesys(char *filesys)
     if (check_preen == 0)
         printf("** Phase 5 - Check Cyl groups\n");
     check_pass5();
-    check_stats("Pass5");
 
     /*
      * print out summary statistics
@@ -336,7 +330,6 @@ checkfilesys(char *filesys)
     }
     if (check_rerun)
         check_resolved = 0;
-    check_finalstats();
 
     /*
      * Check to see if the file system is mounted read-write.

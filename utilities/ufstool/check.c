@@ -51,7 +51,6 @@ static struct bufarea asblk;
 #define altsblock       (*asblk.b_un.b_fs)
 #define POWEROF2(num)   (((num) & ((num) - 1)) == 0)
 
-static long diskreads, totaldiskreads, totalreads;  /* Disk cache statistics */
 static struct bufarea cgblk;                        /* backup buffer for cylinder group blocks */
 static TAILQ_HEAD(buflist, bufarea) bufhead;        /* head of buffer cache list */
 static int numbufs;                                 /* size of buffer cache */
@@ -80,10 +79,6 @@ static int linkup(ino_t orphan, ino_t parentdir, char *name);
 /* Inode cache data structures. */
 static struct inoinfo **inphead, **inpsort;
 
-static long readcnt[BT_NUMBUFTYPES];
-static long totalreadcnt[BT_NUMBUFTYPES];
-static struct timespec readtime[BT_NUMBUFTYPES];
-static struct timespec totalreadtime[BT_NUMBUFTYPES];
 static struct bufarea *pdirbp;	/* current directory contents */
 static struct bufarea *pbp;	/* current inode block */
 
@@ -190,11 +185,6 @@ bufinit(void)
         initbarea(bp, BT_UNKNOWN);
     }
     numbufs = i;    /* save number of buffers */
-    for (i = 0; i < BT_NUMBUFTYPES; i++) {
-        readtime[i].tv_sec = totalreadtime[i].tv_sec = 0;
-        readtime[i].tv_nsec = totalreadtime[i].tv_nsec = 0;
-        readcnt[i] = totalreadcnt[i] = 0;
-    }
 }
 
 /*
@@ -325,10 +315,6 @@ check_finish(int markclean)
     struct bufarea *bp, *nbp;
     int ofsmodified, cnt;
 
-    if (check_debug && totalreads > 0)
-        printf("cache with %d buffers missed %ld of %ld (%d%%)\n",
-            numbufs, totaldiskreads, totalreads,
-            (int)(totaldiskreads * 100 / totalreads));
     if (check_fswritefd < 0) {
         (void)close(check_fsreadfd);
         return;
@@ -506,7 +492,6 @@ check_setup(const char *dev, int part_num)
     for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
         size = sblock.fs_cssize - i < sblock.fs_bsize ?
             sblock.fs_cssize - i : sblock.fs_bsize;
-        readcnt[check_sblk.b_type]++;
         if (check_blread(check_fsreadfd, (char *)sblock.fs_csp + i,
             fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
             size) != 0 && !asked) {
@@ -591,7 +576,6 @@ check_readsb(int listerr)
 
     if (check_bflag) {
         super = check_bflag;
-        readcnt[check_sblk.b_type]++;
         if ((check_blread(check_fsreadfd, (char *)&sblock, super, (long)SBLOCKSIZE)))
             return (0);
         if (sblock.fs_magic == FS_BAD_MAGIC) {
@@ -607,7 +591,6 @@ check_readsb(int listerr)
     } else {
         for (i = 0; sblock_try[i] != -1; i++) {
             super = sblock_try[i] / dev_bsize;
-            readcnt[check_sblk.b_type]++;
             if ((check_blread(check_fsreadfd, (char *)&sblock, super,
                 (long)SBLOCKSIZE)))
                 return (0);
@@ -889,85 +872,12 @@ check_getblk(struct bufarea *bp, ufs2_daddr_t blk, long size)
     ufs2_daddr_t dblk;
 
     dblk = fsbtodb(&sblock, blk);
-    if (bp->b_bno == dblk) {
-        totalreads++;
-    } else {
+    if (bp->b_bno != dblk) {
         flush(check_fswritefd, bp);
         bp->b_errs = check_blread(check_fsreadfd, bp->b_un.b_buf, dblk, size);
         bp->b_bno = dblk;
         bp->b_size = size;
     }
-}
-
-static void
-printIOstats(void)
-{
-    long long msec, totalmsec;
-    int i;
-
-    printf("buffer reads by type:\n");
-    for (totalmsec = 0, i = 0; i < BT_NUMBUFTYPES; i++)
-        totalmsec += readtime[i].tv_sec * 1000 +
-            readtime[i].tv_nsec / 1000000;
-    if (totalmsec == 0)
-        totalmsec = 1;
-    for (i = 0; i < BT_NUMBUFTYPES; i++) {
-        if (readcnt[i] == 0)
-            continue;
-        msec =
-            readtime[i].tv_sec * 1000 + readtime[i].tv_nsec / 1000000;
-        printf("%21s:%8ld %2ld.%ld%% %4jd.%03ld sec %2lld.%lld%%\n",
-            buftype[i], readcnt[i], readcnt[i] * 100 / diskreads,
-            (readcnt[i] * 1000 / diskreads) % 10,
-            (intmax_t)readtime[i].tv_sec, readtime[i].tv_nsec / 1000000,
-            msec * 100 / totalmsec, (msec * 1000 / totalmsec) % 10);
-    }
-    printf("\n");
-}
-
-/*
- * Print out I/O statistics.
- */
-void
-check_stats(char *what)
-{
-    int i;
-
-    if (check_debug == 0)
-        return;
-    if (diskreads == 0) {
-        printf("%s: no I/O\n\n", what);
-        return;
-    }
-    printf("%s: I/O statistics\n", what);
-    printIOstats();
-    totaldiskreads += diskreads;
-    diskreads = 0;
-    for (i = 0; i < BT_NUMBUFTYPES; i++) {
-        timespecadd(&totalreadtime[i], &readtime[i]);
-        totalreadcnt[i] += readcnt[i];
-        readtime[i].tv_sec = readtime[i].tv_nsec = 0;
-        readcnt[i] = 0;
-    }
-}
-
-void
-check_finalstats(void)
-{
-    int i;
-
-    if (check_debug == 0)
-        return;
-    printf("Final I/O statistics\n");
-    totaldiskreads += diskreads;
-    diskreads = totaldiskreads;
-    for (i = 0; i < BT_NUMBUFTYPES; i++) {
-        timespecadd(&totalreadtime[i], &readtime[i]);
-        totalreadcnt[i] += readcnt[i];
-        readtime[i] = totalreadtime[i];
-        readcnt[i] = totalreadcnt[i];
-    }
-    printIOstats();
 }
 
 int
@@ -979,8 +889,6 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
 
     offset = blk;
     offset *= dev_bsize;
-    totalreads++;
-    diskreads++;
     if (lseek(fd, offset, 0) < 0)
         rwerror("SEEK BLK", blk);
     else if (read(fd, buf, (int)size) == size) {
@@ -2700,7 +2608,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
         goto unknown;
     }
     if ((mode == IFBLK || mode == IFCHR) &&
-        (dev_t)DIP(dp, di_rdev) == 0) {
+        (dev_t)DIP(dp, di_rdev) == (dev_t)-1) {
         if (check_debug)
             printf("bad special-file rdev NODEV:");
         goto unknown;
@@ -4349,7 +4257,6 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     printf("** Last Mounted on %s\n", sblock.fs_fsmnt);
     printf("** Phase 1 - Check Blocks and Sizes\n");
     check_pass1();
-    check_stats("Pass1");
 
     /*
      * 1b: locate first references to duplicates, if any
@@ -4357,7 +4264,6 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     if (check_duplist) {
         printf("** Phase 1b - Rescan For More DUPS\n");
         check_pass1b();
-        check_stats("Pass1b");
     }
 
     /*
@@ -4365,28 +4271,24 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
      */
     printf("** Phase 2 - Check Pathnames\n");
     check_pass2();
-    check_stats("Pass2");
 
     /*
      * 3: scan inodes looking for disconnected directories
      */
     printf("** Phase 3 - Check Connectivity\n");
     check_pass3();
-    check_stats("Pass3");
 
     /*
      * 4: scan inodes looking for disconnected files; check reference counts
      */
     printf("** Phase 4 - Check Reference Counts\n");
     check_pass4();
-    check_stats("Pass4");
 
     /*
      * 5: check and repair resource counts in cylinder groups
      */
     printf("** Phase 5 - Check Cyl groups\n");
     check_pass5();
-    check_stats("Pass5");
 
     /*
      * print out summary statistics
@@ -4435,7 +4337,6 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     }
     if (check_rerun)
         check_resolved = 0;
-    check_finalstats();
 
     /*
      * Check to see if the file system is mounted read-write.

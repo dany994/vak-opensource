@@ -596,6 +596,7 @@ int main (int argc, char **argv)
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
         }
+        check_debug = verbose;
         ufs_check (&disk, argv[i], verbose, fix);
         ufs_disk_close (&disk);
         return 0;
