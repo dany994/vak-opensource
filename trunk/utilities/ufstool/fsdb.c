@@ -429,8 +429,8 @@ static int wantedblksize;
 CMDFUNCSTART(findblk)
 {
     ino_t inum, inosused;
-    uint32_t *wantedblk32;
-    uint64_t *wantedblk64;
+    uint32_t *wantedblk32 = 0;
+    uint64_t *wantedblk64 = 0;
     struct bufarea *cgbp;
     struct cg *cgp;
     int c, i, is_ufs2;
