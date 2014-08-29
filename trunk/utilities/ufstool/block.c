@@ -246,6 +246,7 @@ ufs_write32 (ufs_t *disk, unsigned val)
 int
 ufs_block_alloc (ufs_t *fs, unsigned int *bno)
 {
+    //TODO
 #if 0
     int i;
     unsigned buf [MAXBSIZE / 4];

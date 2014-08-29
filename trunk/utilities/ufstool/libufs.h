@@ -227,6 +227,8 @@ void ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
  */
 void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix);
 
+int check_debug;                /* output debugging info */
+
 /*
  * mount.c
  */
