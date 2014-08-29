@@ -197,8 +197,8 @@ opendisk(void)
     disk = malloc(sizeof(*disk));
     if (disk == NULL)
         err(1, "malloc(%zu)", sizeof(*disk));
-    if (ufs_disk_fillout(disk, devnam) == -1) {
-        err(1, "ufs_disk_fillout(%s) failed: %s", devnam,
+    if (ufs_disk_open(disk, devnam) == -1) {
+        err(1, "ufs_disk_open(%s) failed: %s", devnam,
             disk->d_error);
     }
     fs = &disk->d_fs;

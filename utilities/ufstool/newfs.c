@@ -375,7 +375,7 @@ main(int argc, char *argv[])
         mkfs_mediasize = mkfs_fssize * mkfs_sectorsize;
     }
 
-    if (ufs_disk_fillout_blank(&disk, special) == -1 ||
+    if (ufs_disk_open_blank(&disk, special) == -1 ||
         (!mkfs_Nflag && ufs_disk_reopen_writable(&disk) == -1)) {
         if (disk.d_error != NULL)
             errx(1, "%s: %s", special, disk.d_error);

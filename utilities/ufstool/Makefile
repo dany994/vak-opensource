@@ -7,11 +7,10 @@ OBJS_UFSTOOL    = ufstool.o manifest.o mount.o libufs.a
 OBJS_NEWFS      = newfs.o libufs.a
 OBJS_FFSINFO    = ffsinfo.o debug.o libufs.a
 OBJS_DUMPFS     = dumpfs.o libufs.a
-OBJS_FSCK       = fsck.o libufs.a
-OBJS_FSDB       = fsdb.o fsdbutil.o ffs_subr.o ffs_tables.o libufs.a
-OBJS_LIBUFS     = block.o cgroup.o inode.o sblock.o type.o \
-                  ffs_subr.o ffs_tables.o mkfs.o \
-                    check.o check_suj.o check_gjournal.o
+OBJS_FSCK       = fsck.o check_gjournal.o libufs.a
+OBJS_FSDB       = fsdb.o fsdbutil.o libufs.a
+OBJS_LIBUFS     = block.o cgroup.o disk.o inode.o sblock.o \
+                  ffs_subr.o mkfs.o check.o check_suj.o
 
 CFLAGS          = -O1 -g -Wall -Werror
 #CFLAGS         += -D_LIBUFS_DEBUGGING
@@ -58,7 +57,6 @@ debug.o: debug.c fs.h dinode.h debug.h
 dumpfs.o: dumpfs.c libufs.h fs.h dinode.h
 ffsinfo.o: ffsinfo.c libufs.h fs.h dinode.h debug.h
 ffs_subr.o: ffs_subr.c fs.h dinode.h
-ffs_tables.o: ffs_tables.c fs.h dinode.h
 fsck.o: fsck.c fs.h dinode.h fsck.h
 fsdb.o: fsdb.c dir.h fs.h dinode.h fsdb.h fsck.h
 fsdbutil.o: fsdbutil.c fs.h dinode.h fsdb.h fsck.h

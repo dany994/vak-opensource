@@ -160,8 +160,8 @@ main(int argc, char **argv)
         usage();
     device = *argv;
 
-    if (ufs_disk_fillout(&disk, device) == -1)
-        err(1, "ufs_disk_fillout(%s) failed: %s", device, disk.d_error);
+    if (ufs_disk_open(&disk, device) == -1)
+        err(1, "ufs_disk_open(%s) failed: %s", device, disk.d_error);
 
     DBG_OPEN(out_file); /* already here we need a superblock */
 
