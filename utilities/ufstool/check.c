@@ -4295,15 +4295,8 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
 {
     ufs2_daddr_t n_ffree, n_bfree;
     struct dups *dp;
-    struct iovec *iov;
-    char errmsg[255];
-    int iovlen;
     int cylno;
     intmax_t blks, files;
-
-    iov = NULL;
-    iovlen = 0;
-    errmsg[0] = '\0';
 
     check_filename = filesys;
     if (fix)

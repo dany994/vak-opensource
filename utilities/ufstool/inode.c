@@ -115,13 +115,13 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
     inode->number = inum;
 
     /* Inodes are numbered starting from 1. */
-    bno = fsbtodb(&disk->d_fs, ino_to_fsba(&disk->d_fs, disk->d_inomin));
+    bno = fsbtodb(&disk->d_fs, ino_to_fsba(&disk->d_fs, inum));
     if (inum == 0 || bno >= disk->d_fs.fs_old_size)
         return -1;
 
     offset = (bno * (off_t) disk->d_bsize) +
-        (inum % INOPB(&disk->d_fs) * (off_t) sizeof(struct ufs1_dinode));
-//printf("--- bno=%u, offset=%llu, d_bsize=%lu \n", bno, (unsigned long long) offset, disk->d_bsize);
+        (ino_to_fsbo(&disk->d_fs, inum) * sizeof(struct ufs1_dinode));
+//printf("--- %s(inum = %u) bno=%u, offset=%llu, d_bsize=%lu \n", __func__, inum, bno, (unsigned long long) offset, disk->d_bsize);
     if (ufs_seek (disk, offset) < 0)
         return -1;
 
@@ -228,11 +228,11 @@ ufs_inode_print_path (ufs_inode_t *inode,
         break;
     case IFCHR:
         fprintf (out, " - char %d %d",
-            inode->daddr[0] >> 16, inode->daddr[0] & 0xffff);
+            inode->daddr[0] >> 8, inode->daddr[0] & 0xff);
         break;
     case IFBLK:
         fprintf (out, " - block %d %d",
-            inode->daddr[0] >> 16, inode->daddr[0] & 0xffff);
+            inode->daddr[0] >> 8, inode->daddr[0] & 0xff);
         break;
     default:
         fprintf (out, " - %llu bytes", (unsigned long long)inode->size);
@@ -345,13 +345,13 @@ void ufs_directory_scan (ufs_inode_t *dir, const char *dirname,
         }
         if (dirent.d_ino == 0)
             continue;
-//printf ("scan offset %lu: ino=%u, reclen=%u, type=%u, namlen=%u\n", offset, dirent.d_ino, dirent.d_reclen, dirent.d_type, dirent.d_namlen);
+//printf ("--- scan offset %lu: ino=%u, reclen=%u, type=%u, namlen=%u\n", offset, dirent.d_ino, dirent.d_reclen, dirent.d_type, dirent.d_namlen);
         if (ufs_inode_read (dir, offset+8, name, (dirent.d_namlen + 4) / 4 * 4) < 0) {
             fprintf (stderr, "%s: name read error at offset %ld\n",
                 dirname[0] ? dirname : "/", offset);
             return;
         }
-//printf ("scan offset %lu: name='%s'\n", offset, name);
+//printf ("--- scan offset %lu: name='%s'\n", offset, name);
 
         if ((name[0]=='.' && name[1]==0) ||
             (name[0]=='.' && name[1]=='.' && name[2]==0))
@@ -543,7 +543,9 @@ ufs_inode_read (ufs_inode_t *inode, unsigned long offset,
         if (n > bytes)
             n = bytes;
 
+//printf ("--- %s: offset %lu -> block %lu, inblock_offset=%u, n=%lu \n", __func__, offset, offset / bsize, inblock_offset, n);
         bn = map_block (inode, offset / bsize);
+//printf ("---     map_block returned bn=%u \n", bn);
         if (bn == 0)
             return -1;
 

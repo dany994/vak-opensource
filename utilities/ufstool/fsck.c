@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include <signal.h>
 #include <err.h>
+#include <time.h>
 
 #include "fs.h"
 #include "fsck.h"
@@ -160,15 +161,8 @@ checkfilesys(char *filesys)
 {
     ufs2_daddr_t n_ffree, n_bfree;
     struct dups *dp;
-    struct iovec *iov;
-    char errmsg[255];
-    int iovlen;
     int cylno;
     intmax_t blks, files;
-
-    iov = NULL;
-    iovlen = 0;
-    errmsg[0] = '\0';
 
     check_filename = filesys;
     if (check_debug && check_clean)

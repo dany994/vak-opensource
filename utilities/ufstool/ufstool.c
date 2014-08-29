@@ -28,8 +28,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 //#include <time.h>
-//#include <sys/stat.h>
-//#include <errno.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include <getopt.h>
 //#include <fts.h>
 
@@ -105,7 +105,8 @@ static void print_help (char *progname)
     printf ("Report bugs to \"%s\".\n", program_bug_address);
 }
 
-void scanner (ufs_inode_t *dir, ufs_inode_t *inode,
+static void
+scan_print (ufs_inode_t *dir, ufs_inode_t *inode,
     const char *dirname, const char *filename, void *arg)
 {
     FILE *out = arg;
@@ -127,16 +128,17 @@ void scanner (ufs_inode_t *dir, ufs_inode_t *inode,
         strcpy (path, dirname);
         strcat (path, "/");
         strcat (path, filename);
-        ufs_directory_scan (inode, path, scanner, arg);
+        ufs_directory_scan (inode, path, scan_print, arg);
     }
 }
 
-#if 0
-void extract_inode (fs_inode_t *inode, char *path)
+static void
+extract_inode (ufs_inode_t *inode, char *path)
 {
+    unsigned bsize = inode->disk->d_fs.fs_bsize;
     int fd, n, mode;
     unsigned long offset;
-    unsigned char data [BSDFS_BSIZE];
+    unsigned char data [MAXBSIZE];
 
     /* Allow read/write for user. */
     mode = (inode->mode & 0777) | 0600;
@@ -145,11 +147,11 @@ void extract_inode (fs_inode_t *inode, char *path)
         perror (path);
         return;
     }
-    for (offset = 0; offset < inode->size; offset += BSDFS_BSIZE) {
+    for (offset = 0; offset < inode->size; offset += bsize) {
         n = inode->size - offset;
-        if (n > BSDFS_BSIZE)
-            n = BSDFS_BSIZE;
-        if (fs_inode_read (inode, offset, data, n) < 0) {
+        if (n > bsize)
+            n = bsize;
+        if (ufs_inode_read (inode, offset, data, n) < 0) {
             fprintf (stderr, "%s: read error at offset %ld\n",
                 path, offset);
             break;
@@ -162,8 +164,9 @@ void extract_inode (fs_inode_t *inode, char *path)
     close (fd);
 }
 
-void extractor (fs_inode_t *dir, fs_inode_t *inode,
-    char *dirname, char *filename, void *arg)
+static void
+scan_extract (ufs_inode_t *dir, ufs_inode_t *inode,
+    const char *dirname, const char *filename, void *arg)
 {
     FILE *out = arg;
     char *path, *relpath;
@@ -171,8 +174,8 @@ void extractor (fs_inode_t *dir, fs_inode_t *inode,
     if (verbose)
         ufs_inode_print_path (inode, dirname, filename, out);
 
-    if ((inode->mode & INODE_MODE_FMT) != INODE_MODE_FDIR &&
-        (inode->mode & INODE_MODE_FMT) != INODE_MODE_FREG)
+    if ((inode->mode & IFMT) != IFDIR &&
+        (inode->mode & IFMT) != IFREG)
         return;
 
     path = alloca (strlen (dirname) + strlen (filename) + 2);
@@ -182,23 +185,24 @@ void extractor (fs_inode_t *dir, fs_inode_t *inode,
     for (relpath=path; *relpath == '/'; relpath++)
         continue;
 
-    if ((inode->mode & INODE_MODE_FMT) == INODE_MODE_FDIR) {
+    if ((inode->mode & IFMT) == IFDIR) {
         if (mkdir (relpath, 0775) < 0 && errno != EEXIST)
             perror (relpath);
         /* Scan subdirectory. */
-        fs_directory_scan (inode, path, extractor, arg);
+        ufs_directory_scan (inode, path, scan_extract, arg);
     } else {
         extract_inode (inode, relpath);
     }
 }
 
+#if 0
 /*
  * Create a directory.
  */
 void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
 {
-    fs_inode_t dir, parent;
-    char buf [BSDFS_BSIZE], *p;
+    ufs_inode_t dir, parent;
+    char buf [MAXBSIZE], *p;
 
     /* Open parent directory. */
     strcpy (buf, name);
@@ -207,15 +211,15 @@ void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
         *p = 0;
     else
         *buf = 0;
-    if (fs_inode_lookup (disk, &parent, buf) < 0) {
+    if (ufs_inode_lookup (disk, &parent, buf) < 0) {
         fprintf (stderr, "%s: cannot open directory\n", buf);
         return;
     }
 
     /* Create directory. */
     mode &= 07777;
-    mode |= INODE_MODE_FDIR;
-    int done = fs_inode_create (disk, &dir, name, mode);
+    mode |= IFDIR;
+    int done = ufs_inode_create (disk, &dir, name, mode);
     if (! done) {
         fprintf (stderr, "%s: directory inode create failed\n", name);
         return;
@@ -226,21 +230,21 @@ void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
     }
     dir.uid = owner;
     dir.gid = group;
-    fs_inode_save (&dir, 1);
+    ufs_inode_save (&dir, 1);
 
     /* Make parent link '..' */
     strcpy (buf, name);
     strcat (buf, "/..");
-    if (fs_inode_link (disk, &dir, buf, parent.number) < 0) {
+    if (ufs_inode_link (disk, &dir, buf, parent.number) < 0) {
         fprintf (stderr, "%s: dotdot link failed\n", name);
         return;
     }
-    if (fs_inode_get (disk, &parent, parent.number) < 0) {
+    if (ufs_inode_get (disk, &parent, parent.number) < 0) {
         fprintf (stderr, "inode %d: cannot open parent\n", parent.number);
         return;
     }
     ++parent.nlink;
-    fs_inode_save (&parent, 1);
+    ufs_inode_save (&parent, 1);
 /*printf ("*** inode %d: increment link counter to %d\n", parent.number, parent.nlink);*/
 }
 
@@ -250,11 +254,11 @@ void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
 void add_device (ufs_t *disk, char *name, int mode, int owner, int group,
     int type, int majr, int minr)
 {
-    fs_inode_t dev;
+    ufs_inode_t dev;
 
     mode &= 07777;
-    mode |= (type == 'b') ? INODE_MODE_FBLK : INODE_MODE_FCHR;
-    if (fs_inode_create (disk, &dev, name, mode) < 0) {
+    mode |= (type == 'b') ? IFBLK : IFCHR;
+    if (ufs_inode_create (disk, &dev, name, mode) < 0) {
         fprintf (stderr, "%s: device inode create failed\n", name);
         return;
     }
@@ -262,7 +266,7 @@ void add_device (ufs_t *disk, char *name, int mode, int owner, int group,
     dev.uid = owner;
     dev.gid = group;
     time (&dev.mtime);
-    fs_inode_save (&dev, 1);
+    ufs_inode_save (&dev, 1);
 }
 
 /*
@@ -273,8 +277,8 @@ void add_file (ufs_t *disk, const char *path, const char *dirname,
 {
     fs_file_t file;
     FILE *fd;
-    char accpath [BSDFS_BSIZE];
-    unsigned char data [BSDFS_BSIZE];
+    char accpath [MAXBSIZE];
+    unsigned char data [MAXBSIZE];
     struct stat st;
     int len;
 
@@ -298,7 +302,7 @@ void add_file (ufs_t *disk, const char *path, const char *dirname,
     if (mode == -1)
         mode = st.st_mode;
     mode &= 07777;
-    mode |= INODE_MODE_FREG;
+    mode |= IFREG;
     if (fs_file_create (disk, &file, path, mode) < 0) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
@@ -333,7 +337,7 @@ void add_symlink (ufs_t *disk, const char *path, const char *link,
     int len;
 
     mode &= 07777;
-    mode |= INODE_MODE_FLNK;
+    mode |= IFLNK;
     if (fs_file_create (disk, &file, path, mode) < 0) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
@@ -355,33 +359,37 @@ void add_symlink (ufs_t *disk, const char *path, const char *link,
  */
 void add_hardlink (ufs_t *disk, const char *path, const char *link)
 {
-    fs_inode_t source, target;
+    ufs_inode_t source, target;
 
     /* Find source. */
-    if (fs_inode_lookup (disk, &source, link) < 0) {
+    if (ufs_inode_lookup (disk, &source, link) < 0) {
         fprintf (stderr, "%s: link source not found\n", link);
         return;
     }
-    if ((source.mode & INODE_MODE_FMT) == INODE_MODE_FDIR) {
+    if ((source.mode & IFMT) == IFDIR) {
         fprintf (stderr, "%s: cannot link directories\n", link);
         return;
     }
 
     /* Create target link. */
-    if (fs_inode_link (disk, &target, path, source.number) < 0) {
+    if (ufs_inode_link (disk, &target, path, source.number) < 0) {
         fprintf (stderr, "%s: link failed\n", path);
         return;
     }
     source.nlink++;
-    fs_inode_save (&source, 1);
+    ufs_inode_save (&source, 1);
 }
+#endif
 
 /*
  * Create a file/device/directory in the filesystem.
  * When name is ended by slash as "name/", directory is created.
  */
-void add_object (ufs_t *disk, char *name)
+static void
+add_object (ufs_t *disk, char *name)
 {
+    //TODO
+#if 0
     int majr, minr;
     char type;
     char *p;
@@ -409,14 +417,18 @@ void add_object (ufs_t *disk, char *name)
         return;
     }
     add_file (disk, name, 0, -1, 0, 0);
+#endif
 }
 
 /*
  * Add the contents from the specified directory.
  * Use the optional manifest file.
  */
-void add_contents (ufs_t *disk, const char *dirname, const char *manifest)
+static void
+add_contents (ufs_t *disk, const char *dirname, const char *manifest)
 {
+    //TODO
+#if 0
     manifest_t m;
     void *cursor;
     char *path, *link;
@@ -474,8 +486,8 @@ void add_contents (ufs_t *disk, const char *dirname, const char *manifest)
     ufs_disk_close (&disk);
     printf ("Installed %u directories, %u files, %u devices, %u links, %u symlinks\n",
         ndirs, nfiles, ndevs, nlinks, nsymlinks);
-}
 #endif
+}
 
 int main (int argc, char **argv)
 {
@@ -564,14 +576,11 @@ int main (int argc, char **argv)
             return -1;
         }
         mkfs(&disk, argv[i]);
-#if 0
-        //TODO
         if (i == argc-2) {
             /* Add the contents from the specified directory.
              * Use the optional manifest file. */
             add_contents (&disk, argv[i+1], manifest);
         }
-#endif
         ufs_disk_close (&disk);
         return 0;
     }
@@ -618,19 +627,18 @@ int main (int argc, char **argv)
 
     if (extract) {
         /* Extract all files to current directory. */
+        ufs_inode_t inode;
+
         if (i != argc-1) {
             print_help (argv[0]);
             return -1;
         }
-#if 0
-        //TODO
-        if (fs_inode_get (&disk, &inode, ROOTINO) < 0) {
+        if (ufs_inode_get (&disk, &inode, ROOTINO) < 0) {
             fprintf (stderr, "%s: cannot get inode 1\n", argv[i]);
             return -1;
         }
-        fs_directory_scan (&inode, "", extractor, (void*) stdout);
+        ufs_directory_scan (&inode, "", scan_extract, (void*) stdout);
         ufs_disk_close (&disk);
-#endif
         return 0;
     }
 
@@ -640,13 +648,10 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
-#if 0
-        //TODO
         while (++i < argc)
             add_object (&disk, argv[i]);
-        fs_sync (&disk, 0);
+        //fs_sync (&disk, 0);
         ufs_disk_close (&disk);
-#endif
         return 0;
     }
 
@@ -682,7 +687,7 @@ int main (int argc, char **argv)
                 printf ("--------\n");
             }
         }
-        ufs_directory_scan (&inode, "", scanner, (void*) stdout);
+        ufs_directory_scan (&inode, "", scan_print, (void*) stdout);
     }
     ufs_disk_close (&disk);
     return 0;
