@@ -768,6 +768,4 @@ CTASSERT(sizeof(struct jtrncrec) == JREC_SIZE);
 CTASSERT(sizeof(union jrec) == JREC_SIZE);
 #endif
 
-extern int inside[], around[];
-extern u_char *fragtbl[];
 #endif

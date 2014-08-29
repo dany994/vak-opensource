@@ -53,9 +53,9 @@ ufs_disk_close(ufs_t *disk)
 }
 
 int
-ufs_disk_fillout(ufs_t *disk, const char *name)
+ufs_disk_open(ufs_t *disk, const char *name)
 {
-    if (ufs_disk_fillout_blank(disk, name) == -1) {
+    if (ufs_disk_open_blank(disk, name) == -1) {
         return (-1);
     }
     if (sbread(disk) == -1) {
@@ -66,7 +66,7 @@ ufs_disk_fillout(ufs_t *disk, const char *name)
 }
 
 int
-ufs_disk_fillout_blank(ufs_t *disk, const char *name)
+ufs_disk_open_blank(ufs_t *disk, const char *name)
 {
     int fd;
 

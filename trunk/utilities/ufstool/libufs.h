@@ -180,6 +180,13 @@ int cgwrite(ufs_t *);
 int cgwrite1(ufs_t *, int);
 void ufs_print_cg(struct cg *cgr, FILE *out);
 
+/*
+ * disk.c
+ */
+int ufs_disk_close(ufs_t *);
+int ufs_disk_open(ufs_t *, const char *);
+int ufs_disk_open_blank(ufs_t *, const char *);
+int ufs_disk_reopen_writable(ufs_t *);
 
 /*
  * inode.c
@@ -203,14 +210,6 @@ void ufs_directory_scan (ufs_inode_t *inode, const char *dirname,
 int sbread(ufs_t *);
 int sbwrite(ufs_t *, int);
 void ufs_print(ufs_t *disk, FILE *out);
-
-/*
- * type.c
- */
-int ufs_disk_close(ufs_t *);
-int ufs_disk_fillout(ufs_t *, const char *);
-int ufs_disk_fillout_blank(ufs_t *, const char *);
-int ufs_disk_reopen_writable(ufs_t *);
 
 /*
  * ffs_subr.c

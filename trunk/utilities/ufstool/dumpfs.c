@@ -100,7 +100,7 @@ main(int argc, char *argv[])
         usage();
 
     while ((name = *argv++) != NULL) {
-        if (ufs_disk_fillout(&disk, name) == -1) {
+        if (ufs_disk_open(&disk, name) == -1) {
             ufserr(name);
             eval |= 1;
             continue;

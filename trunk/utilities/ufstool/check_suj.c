@@ -181,8 +181,8 @@ opendisk(const char *devnam)
     disk = Malloc(sizeof(*disk));
     if (disk == NULL)
         err(EX_OSERR, "malloc(%zu)", sizeof(*disk));
-    if (ufs_disk_fillout(disk, devnam) == -1) {
-        err(EX_OSERR, "ufs_disk_fillout(%s) failed: %s", devnam,
+    if (ufs_disk_open(disk, devnam) == -1) {
+        err(EX_OSERR, "ufs_disk_open(%s) failed: %s", devnam,
             disk->d_error);
     }
     fs = &disk->d_fs;

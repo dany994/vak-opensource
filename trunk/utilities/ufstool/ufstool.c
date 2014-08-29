@@ -195,12 +195,14 @@ scan_extract (ufs_inode_t *dir, ufs_inode_t *inode,
     }
 }
 
-#if 0
 /*
  * Create a directory.
  */
-void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
+static void
+add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
 {
+    //TODO
+#if 0
     ufs_inode_t dir, parent;
     char buf [MAXBSIZE], *p;
 
@@ -246,35 +248,18 @@ void add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
     ++parent.nlink;
     ufs_inode_save (&parent, 1);
 /*printf ("*** inode %d: increment link counter to %d\n", parent.number, parent.nlink);*/
-}
-
-/*
- * Create a device node.
- */
-void add_device (ufs_t *disk, char *name, int mode, int owner, int group,
-    int type, int majr, int minr)
-{
-    ufs_inode_t dev;
-
-    mode &= 07777;
-    mode |= (type == 'b') ? IFBLK : IFCHR;
-    if (ufs_inode_create (disk, &dev, name, mode) < 0) {
-        fprintf (stderr, "%s: device inode create failed\n", name);
-        return;
-    }
-    dev.addr[1] = majr << 8 | minr;
-    dev.uid = owner;
-    dev.gid = group;
-    time (&dev.mtime);
-    ufs_inode_save (&dev, 1);
+#endif
 }
 
 /*
  * Copy regular file to filesystem.
  */
-void add_file (ufs_t *disk, const char *path, const char *dirname,
+static void
+add_file (ufs_t *disk, const char *path, const char *dirname,
     int mode, int owner, int group)
 {
+    //TODO
+#if 0
     fs_file_t file;
     FILE *fd;
     char accpath [MAXBSIZE];
@@ -325,14 +310,43 @@ void add_file (ufs_t *disk, const char *path, const char *dirname,
     file.inode.dirty = 1;
     fs_file_close (&file);
     fclose (fd);
+#endif
+}
+
+/*
+ * Create a device node.
+ */
+static void
+add_device (ufs_t *disk, char *name, int mode, int owner, int group,
+    int type, int majr, int minr)
+{
+    //TODO
+#if 0
+    ufs_inode_t dev;
+
+    mode &= 07777;
+    mode |= (type == 'b') ? IFBLK : IFCHR;
+    if (ufs_inode_create (disk, &dev, name, mode) < 0) {
+        fprintf (stderr, "%s: device inode create failed\n", name);
+        return;
+    }
+    dev.addr[1] = majr << 8 | minr;
+    dev.uid = owner;
+    dev.gid = group;
+    time (&dev.mtime);
+    ufs_inode_save (&dev, 1);
+#endif
 }
 
 /*
  * Create a symlink.
  */
-void add_symlink (ufs_t *disk, const char *path, const char *link,
+static void
+add_symlink (ufs_t *disk, const char *path, const char *link,
     int mode, int owner, int group)
 {
+    //TODO
+#if 0
     fs_file_t file;
     int len;
 
@@ -352,13 +366,17 @@ void add_symlink (ufs_t *disk, const char *path, const char *link,
     time (&file.inode.mtime);
     file.inode.dirty = 1;
     fs_file_close (&file);
+#endif
 }
 
 /*
  * Create a hard link.
  */
-void add_hardlink (ufs_t *disk, const char *path, const char *link)
+static void
+add_hardlink (ufs_t *disk, const char *path, const char *link)
 {
+    //TODO
+#if 0
     ufs_inode_t source, target;
 
     /* Find source. */
@@ -378,8 +396,8 @@ void add_hardlink (ufs_t *disk, const char *path, const char *link)
     }
     source.nlink++;
     ufs_inode_save (&source, 1);
-}
 #endif
+}
 
 /*
  * Create a file/device/directory in the filesystem.
@@ -388,10 +406,6 @@ void add_hardlink (ufs_t *disk, const char *path, const char *link)
 static void
 add_object (ufs_t *disk, char *name)
 {
-    //TODO
-#if 0
-    int majr, minr;
-    char type;
     char *p;
 
     if (verbose) {
@@ -403,21 +417,7 @@ add_object (ufs_t *disk, char *name)
         add_directory (disk, name, 0777, 0, 0);
         return;
     }
-    p = strrchr (name, '!');
-    if (p) {
-        *p++ = 0;
-        if (sscanf (p, "%c%d:%d", &type, &majr, &minr) != 3 ||
-            (type != 'c' && type != 'b') ||
-            majr < 0 || majr > 255 || minr < 0 || minr > 255) {
-            fprintf (stderr, "%s: invalid device specification\n", p);
-            fprintf (stderr, "expected c<major>:<minor> or b<major>:<minor>\n");
-            return;
-        }
-        add_device (disk, name, 0666, 0, 0, type, majr, minr);
-        return;
-    }
     add_file (disk, name, 0, -1, 0, 0);
-#endif
 }
 
 /*
@@ -427,8 +427,6 @@ add_object (ufs_t *disk, char *name)
 static void
 add_contents (ufs_t *disk, const char *dirname, const char *manifest)
 {
-    //TODO
-#if 0
     manifest_t m;
     void *cursor;
     char *path, *link;
@@ -482,11 +480,10 @@ add_contents (ufs_t *disk, const char *dirname, const char *manifest)
             break;
         }
     }
-    fs_sync (disk, 0);
-    ufs_disk_close (&disk);
+    //fs_sync (disk, 0);
+    ufs_disk_close (disk);
     printf ("Installed %u directories, %u files, %u devices, %u links, %u symlinks\n",
         ndirs, nfiles, ndevs, nlinks, nsymlinks);
-#endif
 }
 
 int main (int argc, char **argv)
@@ -570,7 +567,7 @@ int main (int argc, char **argv)
 
         /* Create the file. */
         close(open(argv[i], O_RDONLY | O_CREAT | O_TRUNC, 0664));
-        if (ufs_disk_fillout_blank(&disk, argv[i]) == -1 ||
+        if (ufs_disk_open_blank(&disk, argv[i]) == -1 ||
             ufs_disk_reopen_writable(&disk) == -1) {
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
@@ -591,7 +588,7 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
-        if (ufs_disk_fillout_blank(&disk, argv[i]) == -1 ||
+        if (ufs_disk_open_blank(&disk, argv[i]) == -1 ||
             (fix && ufs_disk_reopen_writable(&disk) == -1)) {
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
@@ -621,7 +618,7 @@ int main (int argc, char **argv)
         print_help (argv[0]);
         return -1;
     }
-    if (ufs_disk_fillout (&disk, argv[i]) < 0) {
+    if (ufs_disk_open (&disk, argv[i]) < 0) {
         fprintf (stderr, "%s: cannot open\n", argv[i]);
         return -1;
     }
