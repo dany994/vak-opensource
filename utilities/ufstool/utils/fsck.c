@@ -33,11 +33,12 @@
 #include <sys/stat.h>
 #include <stdint.h>
 #include <signal.h>
+#include <unistd.h>
 #include <err.h>
 #include <time.h>
 
-#include "fs.h"
-#include "fsck.h"
+#include "libufs.h"
+#include "internal.h"
 
 static void usage(void);
 static int argtoi(int flag, const char *req, const char *str, int base);
@@ -176,14 +177,14 @@ checkfilesys(char *filesys)
         if ((check_fsreadfd = open(filesys, O_RDONLY)) < 0 || check_readsb(0) == 0)
             exit(3);    /* Cannot read superblock */
         close(check_fsreadfd);
-        if ((sblock.fs_flags & FS_GJOURNAL) != 0) {
+        if ((check_sblk.b_un.b_fs->fs_flags & FS_GJOURNAL) != 0) {
             //printf("GJournaled file system detected on %s.\n",
             //    filesys);
-            if (sblock.fs_clean == 1) {
+            if (check_sblk.b_un.b_fs->fs_clean == 1) {
                 check_warn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
                 exit(0);
             }
-            if ((sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
+            if ((check_sblk.b_un.b_fs->fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
                 check_gjournal(filesys);
                 exit(0);
             } else {
@@ -199,19 +200,19 @@ checkfilesys(char *filesys)
             check_fatal("CAN'T CHECK FILE SYSTEM.");
         return (0);
     case -1:
-        check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
-            sblock.fs_frag * sblock.fs_cstotal.cs_nbfree));
+        check_warn("clean, %ld free ", (long)(check_sblk.b_un.b_fs->fs_cstotal.cs_nffree +
+            check_sblk.b_un.b_fs->fs_frag * check_sblk.b_un.b_fs->fs_cstotal.cs_nbfree));
         printf("(%jd frags, %jd blocks, %.1f%% fragmentation)\n",
-            (intmax_t)sblock.fs_cstotal.cs_nffree,
-            (intmax_t)sblock.fs_cstotal.cs_nbfree,
-            sblock.fs_cstotal.cs_nffree * 100.0 / sblock.fs_dsize);
+            (intmax_t)check_sblk.b_un.b_fs->fs_cstotal.cs_nffree,
+            (intmax_t)check_sblk.b_un.b_fs->fs_cstotal.cs_nbfree,
+            check_sblk.b_un.b_fs->fs_cstotal.cs_nffree * 100.0 / check_sblk.b_un.b_fs->fs_dsize);
         return (0);
     }
     /*
      * Determine if we can and should do journal recovery.
      */
-    if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
-        if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
+    if ((check_sblk.b_un.b_fs->fs_flags & FS_SUJ) == FS_SUJ) {
+        if ((check_sblk.b_un.b_fs->fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
             if (check_preen || check_reply("USE JOURNAL")) {
                 if (check_suj(filesys) == 0) {
                     printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
@@ -224,8 +225,8 @@ checkfilesys(char *filesys)
          * Write the superblock so we don't try to recover the
          * journal on another pass.
          */
-        sblock.fs_mtime = time(NULL);
-        sbdirty();
+        check_sblk.b_un.b_fs->fs_mtime = time(NULL);
+        dirty(&check_sblk);
     }
 
     /*
@@ -237,7 +238,7 @@ checkfilesys(char *filesys)
      * 1: scan inodes tallying blocks used
      */
     if (check_preen == 0) {
-        printf("** Last Mounted on %s\n", sblock.fs_fsmnt);
+        printf("** Last Mounted on %s\n", check_sblk.b_un.b_fs->fs_fsmnt);
         printf("** Phase 1 - Check Blocks and Sizes\n");
     }
     check_pass1();
@@ -286,20 +287,20 @@ checkfilesys(char *filesys)
     /*
      * print out summary statistics
      */
-    n_ffree = sblock.fs_cstotal.cs_nffree;
-    n_bfree = sblock.fs_cstotal.cs_nbfree;
-    files = check_maxino - ROOTINO - sblock.fs_cstotal.cs_nifree - check_n_files;
+    n_ffree = check_sblk.b_un.b_fs->fs_cstotal.cs_nffree;
+    n_bfree = check_sblk.b_un.b_fs->fs_cstotal.cs_nbfree;
+    files = check_maxino - ROOTINO - check_sblk.b_un.b_fs->fs_cstotal.cs_nifree - check_n_files;
     blks = check_n_blks +
-        sblock.fs_ncg * (cgdmin(&sblock, 0) - cgsblock(&sblock, 0));
-    blks += cgsblock(&sblock, 0) - cgbase(&sblock, 0);
-    blks += howmany(sblock.fs_cssize, sblock.fs_fsize);
-    blks = check_maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
+        check_sblk.b_un.b_fs->fs_ncg * (cgdmin(check_sblk.b_un.b_fs, 0) - cgsblock(check_sblk.b_un.b_fs, 0));
+    blks += cgsblock(check_sblk.b_un.b_fs, 0) - cgbase(check_sblk.b_un.b_fs, 0);
+    blks += howmany(check_sblk.b_un.b_fs->fs_cssize, check_sblk.b_un.b_fs->fs_fsize);
+    blks = check_maxfsblock - (n_ffree + check_sblk.b_un.b_fs->fs_frag * n_bfree) - blks;
     check_warn("%ld files, %jd used, %ju free ",
         (long)check_n_files, (intmax_t)check_n_blks,
-        (uintmax_t)(n_ffree + sblock.fs_frag * n_bfree));
+        (uintmax_t)(n_ffree + check_sblk.b_un.b_fs->fs_frag * n_bfree));
     printf("(%ju frags, %ju blocks, %.1f%% fragmentation)\n",
         (uintmax_t)n_ffree, (uintmax_t)n_bfree,
-        n_ffree * 100.0 / sblock.fs_dsize);
+        n_ffree * 100.0 / check_sblk.b_un.b_fs->fs_dsize);
     if (check_debug) {
         if (files < 0)
             printf("%jd inodes missing\n", -files);
@@ -316,16 +317,16 @@ checkfilesys(char *filesys)
     check_muldup = (struct dups *)0;
     check_inocleanup();
     if (check_fsmodified) {
-        sblock.fs_time = time(NULL);
-        sbdirty();
+        check_sblk.b_un.b_fs->fs_time = time(NULL);
+        dirty(&check_sblk);
     }
     if (check_cvtlevel && check_sblk.b_dirty) {
         /*
          * Write out the duplicate super blocks
          */
-        for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-            check_blwrite(check_fswritefd, (char *)&sblock,
-                fsbtodb(&sblock, cgsblock(&sblock, cylno)),
+        for (cylno = 0; cylno < check_sblk.b_un.b_fs->fs_ncg; cylno++)
+            check_blwrite(check_fswritefd, (char *)check_sblk.b_un.b_fs,
+                fsbtodb(check_sblk.b_un.b_fs, cgsblock(check_sblk.b_un.b_fs, cylno)),
                 SBLOCKSIZE);
     }
     if (check_rerun)
@@ -336,7 +337,7 @@ checkfilesys(char *filesys)
      */
     check_finish(check_resolved);
 
-    for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
+    for (cylno = 0; cylno < check_sblk.b_un.b_fs->fs_ncg; cylno++)
         if (check_inostathead[cylno].il_stat != NULL)
             free((char *)check_inostathead[cylno].il_stat);
     free((char *)check_inostathead);

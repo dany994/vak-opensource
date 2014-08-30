@@ -29,9 +29,10 @@
 #include <string.h>
 #include <time.h>
 
-#define _LIBUFS
 #include "libufs.h"
 #include "dir.h"
+#define _LIBUFS
+#include "internal.h"
 
 extern int verbose;
 
@@ -853,8 +854,15 @@ ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
  * Return 0 when the inode was found.
  * Return 1 when the inode was created/deleted/linked.
  */
-int
-ufs_inode_by_name (ufs_t *disk, ufs_inode_t *inode, const char *name,
+typedef enum {
+    INODE_OP_LOOKUP,                    /* lookup inode by name */
+    INODE_OP_CREATE,                    /* create new file */
+    INODE_OP_DELETE,                    /* delete file */
+    INODE_OP_LINK,                      /* make a link to a file */
+} ufs_op_t;
+
+static int
+inode_by_name (ufs_t *disk, ufs_inode_t *inode, const char *name,
     ufs_op_t op, int mode)
 {
     ufs_inode_t dir;
@@ -1161,7 +1169,7 @@ ufs_inode_alloc (ufs_t *disk, ufs_inode_t *inode)
 int
 ufs_inode_lookup (ufs_t *disk, ufs_inode_t *inode, const char *name)
 {
-    return ufs_inode_by_name (disk, inode, name, INODE_OP_LOOKUP, 0);
+    return inode_by_name (disk, inode, name, INODE_OP_LOOKUP, 0);
 }
 
 /*
@@ -1173,7 +1181,7 @@ ufs_inode_lookup (ufs_t *disk, ufs_inode_t *inode, const char *name)
 int
 ufs_inode_create (ufs_t *disk, ufs_inode_t *inode, const char *name, int mode)
 {
-    return ufs_inode_by_name (disk, inode, name, INODE_OP_CREATE, mode);
+    return inode_by_name (disk, inode, name, INODE_OP_CREATE, mode);
 }
 
 /*
@@ -1184,7 +1192,7 @@ ufs_inode_create (ufs_t *disk, ufs_inode_t *inode, const char *name, int mode)
 int
 ufs_inode_delete (ufs_t *disk, ufs_inode_t *inode, const char *name)
 {
-    return ufs_inode_by_name (disk, inode, name, INODE_OP_DELETE, 0);
+    return inode_by_name (disk, inode, name, INODE_OP_DELETE, 0);
 }
 
 /*
@@ -1195,5 +1203,5 @@ ufs_inode_delete (ufs_t *disk, ufs_inode_t *inode, const char *name)
 int
 ufs_inode_link (ufs_t *disk, ufs_inode_t *inode, const char *name, int inum)
 {
-    return ufs_inode_by_name (disk, inode, name, INODE_OP_LINK, inum);
+    return inode_by_name (disk, inode, name, INODE_OP_LINK, inum);
 }

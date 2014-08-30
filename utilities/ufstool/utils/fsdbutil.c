@@ -31,6 +31,7 @@
 #include <sys/param.h>
 #include <grp.h>
 #include <pwd.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
@@ -39,7 +40,7 @@
 
 #include "fs.h"
 #include "fsdb.h"
-#include "fsck.h"
+#include "internal.h"
 
 static int charsperline(void);
 static void printindir(ufs2_daddr_t blk, int level, char *bufp);
@@ -124,9 +125,9 @@ printstat(const char *cp, ino_t inum, union dinode *dp)
     case IFLNK:
 	fputs("symlink",stdout);
 	if (DIP(dp, di_size) > 0 &&
-	    DIP(dp, di_size) < sblock.fs_maxsymlinklen &&
+	    DIP(dp, di_size) < check_sblk.b_un.b_fs->fs_maxsymlinklen &&
 	    DIP(dp, di_blocks) == 0) {
-	    if (sblock.fs_magic == FS_UFS1_MAGIC)
+	    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 		p = (caddr_t)dp->dp1.di_db;
 	    else
 		p = (caddr_t)dp->dp2.di_db;
@@ -144,27 +145,27 @@ printstat(const char *cp, ino_t inum, union dinode *dp)
     }
     printf("I=%ju MODE=%o SIZE=%ju", (uintmax_t)inum, DIP(dp, di_mode),
 	(uintmax_t)DIP(dp, di_size));
-    if (sblock.fs_magic != FS_UFS1_MAGIC) {
+    if (check_sblk.b_un.b_fs->fs_magic != FS_UFS1_MAGIC) {
 	t = _time64_to_time(dp->dp2.di_birthtime);
 	p = ctime(&t);
 	printf("\n\tBTIME=%15.15s %4.4s [%d nsec]", &p[4], &p[20],
 	   dp->dp2.di_birthnsec);
     }
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 	t = _time32_to_time(dp->dp1.di_mtime);
     else
 	t = _time64_to_time(dp->dp2.di_mtime);
     p = ctime(&t);
     printf("\n\tMTIME=%15.15s %4.4s [%d nsec]", &p[4], &p[20],
 	   DIP(dp, di_mtimensec));
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 	t = _time32_to_time(dp->dp1.di_ctime);
     else
 	t = _time64_to_time(dp->dp2.di_ctime);
     p = ctime(&t);
     printf("\n\tCTIME=%15.15s %4.4s [%d nsec]", &p[4], &p[20],
 	   DIP(dp, di_ctimensec));
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 	t = _time32_to_time(dp->dp1.di_atime);
     else
 	t = _time64_to_time(dp->dp2.di_atime);
@@ -231,13 +232,13 @@ printindir(ufs2_daddr_t blk, int level, char *bufp)
 	bp->b_un.b_buf = bufp;
 	initbarea(bp, BT_UNKNOWN);
 
-	check_getblk(bp, blk, sblock.fs_bsize);
+	check_getblk(bp, blk, check_sblk.b_un.b_fs->fs_bsize);
     } else
-	bp = check_getdatablk(blk, sblock.fs_bsize, BT_UNKNOWN);
+	bp = check_getdatablk(blk, check_sblk.b_un.b_fs->fs_bsize, BT_UNKNOWN);
 
     cpl = charsperline();
-    for (i = charssofar = 0; i < NINDIR(&sblock); i++) {
-	if (sblock.fs_magic == FS_UFS1_MAGIC)
+    for (i = charssofar = 0; i < NINDIR(check_sblk.b_un.b_fs); i++) {
+	if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 		blkno = bp->b_un.b_indir1[i];
 	else
 		blkno = bp->b_un.b_indir2[i];
@@ -281,7 +282,7 @@ printblocks(ino_t inum, union dinode *dp)
 
     printf("Blocks for inode %ju:\n", (uintmax_t)inum);
     printf("Direct blocks:\n");
-    ndb = howmany(DIP(dp, di_size), sblock.fs_bsize);
+    ndb = howmany(DIP(dp, di_size), check_sblk.b_un.b_fs->fs_bsize);
     for (i = 0; i < NDADDR && i < ndb; i++) {
 	if (i > 0)
 	    printf(", ");
@@ -289,9 +290,9 @@ printblocks(ino_t inum, union dinode *dp)
 	printf("%jd", (intmax_t)blkno);
     }
     if (ndb <= NDADDR) {
-	offset = blkoff(&sblock, DIP(dp, di_size));
+	offset = blkoff(check_sblk.b_un.b_fs, DIP(dp, di_size));
 	if (offset != 0) {
-	    nfrags = numfrags(&sblock, fragroundup(&sblock, offset));
+	    nfrags = numfrags(check_sblk.b_un.b_fs, fragroundup(check_sblk.b_un.b_fs, offset));
 	    printf(" (%d frag%s)", nfrags, nfrags > 1? "s": "");
 	}
     }
@@ -299,7 +300,7 @@ printblocks(ino_t inum, union dinode *dp)
     if (ndb <= NDADDR)
 	return;
 
-    bufp = malloc((unsigned int)sblock.fs_bsize);
+    bufp = malloc((unsigned int)check_sblk.b_un.b_fs->fs_bsize);
     if (bufp == 0)
 	errx(EEXIT, "cannot allocate indirect block buffer");
     printf("Indirect blocks:\n");

@@ -33,7 +33,6 @@
 #include <getopt.h>
 
 #include "libufs.h"
-#include "newfs.h"
 #include "manifest.h"
 
 int verbose;

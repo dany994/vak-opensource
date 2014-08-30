@@ -1,71 +1,35 @@
-/*
- * Copyright (c) 2002 Networks Associates Technology, Inc.
- * All rights reserved.
- *
- * This software was developed for the FreeBSD Project by Marshall
- * Kirk McKusick and Network Associates Laboratories, the Security
- * Research Division of Network Associates, Inc. under DARPA/SPAWAR
- * contract N66001-01-C-8035 ("CBOSS"), as part of the DARPA CHATS
- * research program.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * Copyright (c) 1980, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- *	@(#)fsck.h	8.4 (Berkeley) 5/9/95
- * $FreeBSD$
- */
-
-#ifndef _FSCK_H_
-#define	_FSCK_H_
-
-#include <unistd.h>
 #include <stdlib.h>
-#include <stdio.h>
+
+#define	EEXIT	8		/* Standard error exit. */
+
+/*
+ * libufs macros (internal, non-exported).
+ */
+#ifdef  _LIBUFS
+/*
+ * Trace steps through libufs, to be used at entry and erroneous return.
+ */
+static inline void
+ERROR(ufs_t *u, const char *str)
+{
+#ifdef  _LIBUFS_DEBUGGING
+    if (str != NULL) {
+        fprintf(stderr, "libufs: %s", str);
+        if (errno != 0)
+            fprintf(stderr, ": %s", strerror(errno));
+        fprintf(stderr, "\n");
+    }
+#endif
+    if (u != NULL)
+        u->d_error = str;
+}
+#endif  /* _LIBUFS */
+
+/* Calculate (bytes / DEV_BSIZE) */
+#ifdef __APPLE__
+#undef btodb
+#define btodb(bytes) ((unsigned)(bytes) >> 9)
+#endif
 
 #ifndef _SYS_QUEUE_H_
 /*
@@ -191,69 +155,6 @@ struct name {								\
 
 #endif /* _SYS_QUEUE_H_ */
 
-#define	MAXDUP		10	/* limit on dup blks (per inode) */
-#define	MAXBAD		10	/* limit on bad blks (per inode) */
-#define	MINBUFS		10	/* minimum number of buffers required */
-#define	MAXBUFS		40	/* maximum space to allocate to buffers */
-#define	INOBUFSIZE	64*1024	/* size of buffer to read inodes in pass1 */
-#define	ZEROBUFSIZE	(dev_bsize * 128) /* size of zero buffer used by -Z */
-
-union dinode {
-	struct ufs1_dinode dp1;
-	struct ufs2_dinode dp2;
-};
-#define	DIP(dp, field) \
-	((sblock.fs_magic == FS_UFS1_MAGIC) ? \
-	(dp)->dp1.field : (dp)->dp2.field)
-
-#define DIP_SET(dp, field, val) do { \
-	if (sblock.fs_magic == FS_UFS1_MAGIC) \
-		(dp)->dp1.field = (val); \
-	else \
-		(dp)->dp2.field = (val); \
-	} while (0)
-
-/*
- * Each inode on the file system is described by the following structure.
- * The linkcnt is initially set to the value in the inode. Each time it
- * is found during the descent in passes 2, 3, and 4 the count is
- * decremented. Any inodes whose count is non-zero after pass 4 needs to
- * have its link count adjusted by the value remaining in ino_linkcnt.
- */
-struct inostat {
-	char	ino_state;	/* state of inode, see below */
-	char	ino_type;	/* type of inode */
-	short	ino_linkcnt;	/* number of links not found */
-};
-
-/*
- * Inode states.
- */
-#define	USTATE	0x1		/* inode not allocated */
-#define	FSTATE	0x2		/* inode is file */
-#define	FZLINK	0x3		/* inode is file with a link count of zero */
-#define	DSTATE	0x4		/* inode is directory */
-#define	DZLINK	0x5		/* inode is directory with a zero link count  */
-#define	DFOUND	0x6		/* directory found during descent */
-/*     		0x7		   UNUSED - see S_IS_DVALID() definition */
-#define	DCLEAR	0x8		/* directory is to be cleared */
-#define	FCLEAR	0x9		/* file is to be cleared */
-/*     	DUNFOUND === (state == DSTATE || state == DZLINK) */
-#define	S_IS_DUNFOUND(state)	(((state) & ~0x1) == DSTATE)
-/*     	DVALID   === (state == DSTATE || state == DZLINK || state == DFOUND) */
-#define	S_IS_DVALID(state)	(((state) & ~0x3) == DSTATE)
-#define	INO_IS_DUNFOUND(ino)	S_IS_DUNFOUND(inoinfo(ino)->ino_state)
-#define	INO_IS_DVALID(ino)	S_IS_DVALID(inoinfo(ino)->ino_state)
-
-/*
- * Inode state information is contained on per cylinder group lists
- * which are described by the following structure.
- */
-struct inostatlist {
-	long	il_numalloced;	/* number of inodes allocated in this cg */
-	struct inostat *il_stat;/* inostat info for this cylinder group */
-};
-
 /*
  * buffer cache structure.
  */
@@ -277,11 +178,11 @@ struct bufarea {
 };
 
 #define	IBLK(bp, i) \
-	((sblock.fs_magic == FS_UFS1_MAGIC) ? \
+	((check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) ? \
 	(bp)->b_un.b_indir1[i] : (bp)->b_un.b_indir2[i])
 
 #define IBLK_SET(bp, i, val) do { \
-	if (sblock.fs_magic == FS_UFS1_MAGIC) \
+	if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) \
 		(bp)->b_un.b_indir1[i] = (val); \
 	else \
 		(bp)->b_un.b_indir2[i] = (val); \
@@ -330,9 +231,6 @@ struct bufarea {
 	(bp)->b_type = type; \
 } while (0)
 
-#define	sbdirty()	dirty(&check_sblk)
-#define	sblock		(*check_sblk.b_un.b_fs)
-
 enum fixstate {DONTKNOW, NOFIX, FIX, IGNORE};
 
 struct inodesc {
@@ -352,10 +250,66 @@ struct inodesc {
 	char id_type;		/* type of descriptor, DATA or ADDR */
 };
 
+/*
+ * Inode state information is contained on per cylinder group lists
+ * which are described by the following structure.
+ */
+struct inostatlist {
+	long	il_numalloced;	/* number of inodes allocated in this cg */
+	struct inostat *il_stat;/* inostat info for this cylinder group */
+};
+
+/*
+ * Each inode on the file system is described by the following structure.
+ * The linkcnt is initially set to the value in the inode. Each time it
+ * is found during the descent in passes 2, 3, and 4 the count is
+ * decremented. Any inodes whose count is non-zero after pass 4 needs to
+ * have its link count adjusted by the value remaining in ino_linkcnt.
+ */
+struct inostat {
+	char	ino_state;	/* state of inode, see below */
+	char	ino_type;	/* type of inode */
+	short	ino_linkcnt;	/* number of links not found */
+};
+
+/*
+ * Inode states.
+ */
+#define	USTATE	0x1		/* inode not allocated */
+#define	FSTATE	0x2		/* inode is file */
+#define	FZLINK	0x3		/* inode is file with a link count of zero */
+#define	DSTATE	0x4		/* inode is directory */
+#define	DZLINK	0x5		/* inode is directory with a zero link count  */
+#define	DFOUND	0x6		/* directory found during descent */
+/*     		0x7		   UNUSED - see S_IS_DVALID() definition */
+#define	DCLEAR	0x8		/* directory is to be cleared */
+#define	FCLEAR	0x9		/* file is to be cleared */
+/*     	DUNFOUND === (state == DSTATE || state == DZLINK) */
+#define	S_IS_DUNFOUND(state)	(((state) & ~0x1) == DSTATE)
+/*     	DVALID   === (state == DSTATE || state == DZLINK || state == DFOUND) */
+#define	S_IS_DVALID(state)	(((state) & ~0x3) == DSTATE)
+#define	INO_IS_DUNFOUND(ino)	S_IS_DUNFOUND(inoinfo(ino)->ino_state)
+#define	INO_IS_DVALID(ino)	S_IS_DVALID(inoinfo(ino)->ino_state)
+
 /* file types */
 #define	DATA	1	/* a directory */
 #define	SNAP	2	/* a snapshot */
 #define	ADDR	3	/* anything but a directory or a snapshot */
+
+union dinode {
+	struct ufs1_dinode dp1;
+	struct ufs2_dinode dp2;
+};
+#define	DIP(dp, field) \
+	((check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) ? \
+	(dp)->dp1.field : (dp)->dp2.field)
+
+#define DIP_SET(dp, field, val) do { \
+	if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) \
+		(dp)->dp1.field = (val); \
+	else \
+		(dp)->dp2.field = (val); \
+	} while (0)
 
 /*
  * Linked list of duplicate blocks.
@@ -400,91 +354,85 @@ struct inoinfo {
 #define	testbmap(blkno)	isset(blockmap, blkno)
 #define	clrbmap(blkno)	clrbit(blockmap, blkno)
 
+#define	clearinode(dp) \
+	if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) { \
+		(dp)->dp1 = ufs1_zino; \
+	} else { \
+		(dp)->dp2 = ufs2_zino; \
+	}
+
 #define	STOP	0x01
 #define	SKIP	0x02
 #define	KEEPON	0x04
 #define	ALTERED	0x08
 #define	FOUND	0x10
 
-#define	EEXIT	8		/* Standard error exit. */
-
-#undef btodb
-#define btodb(bytes) ((unsigned)(bytes) >> 9)
-
-int		check_setup(const char *dev, int part_num);
-void            check_finish(int markclean);
-void            check_fatal(const char *fmt, ...);
-void            check_warn(const char *fmt, ...);
-void		check_catch(int);
-void		check_catchquit(int);
-void		check_sblock_init(void);
 int		check_readsb(int listerr);
-union dinode   *check_ginode(ino_t inumber);
-int             check_findino(struct inodesc *idesc);
-struct bufarea *check_cgget(int cg);
-struct bufarea *check_getdatablk(ufs2_daddr_t blkno, long size, int type);
-void            check_getblk(struct bufarea *bp, ufs2_daddr_t blk, long size);
+int		check_setup(const char *dev, int part_num);
 int             check_blread(int fd, char *buf, ufs2_daddr_t blk, long size);
-void            check_blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size);
-void            check_inodirty(void);
-void            check_stats(char *what);
-void            check_finalstats(void);
-int             check_reply(const char *question);
-int             check_makeentry(ino_t parent, ino_t ino, const char *name);
-void            check_inocleanup(void);
+int             check_changeino(ino_t dir, const char *name, ino_t newnum);
+int             check_findino(struct inodesc *idesc);
 int             check_flushentry(void);
 int             check_inode(union dinode *dp, struct inodesc *idesc);
-int             check_changeino(ino_t dir, const char *name, ino_t newnum);
-void            check_gjournal(const char *filesys);
+int             check_makeentry(ino_t parent, ino_t ino, const char *name);
+int             check_reply(const char *question);
 int             check_suj(const char *filesys);
+struct bufarea *check_cgget(int cg);
+struct bufarea *check_getdatablk(ufs2_daddr_t blkno, long size, int type);
+union dinode   *check_ginode(ino_t inumber);
+void		check_catch(int);
+void		check_catchquit(int);
 void		check_pass1(void);
 void		check_pass1b(void);
 void		check_pass2(void);
 void		check_pass3(void);
 void		check_pass4(void);
 void		check_pass5(void);
+void		check_sblock_init(void);
+void            check_blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size);
+void            check_fatal(const char *fmt, ...);
+void            check_finalstats(void);
+void            check_finish(int markclean);
+void            check_getblk(struct bufarea *bp, ufs2_daddr_t blk, long size);
+void            check_gjournal(const char *filesys);
+void            check_inocleanup(void);
+void            check_inodirty(void);
+void            check_stats(char *what);
+void            check_warn(const char *fmt, ...);
 
+char            check_clean;		/* only do work if not cleanly unmounted */
+char            check_nflag;		/* assume a no response */
+char            check_preen;		/* just fix normal inconsistencies */
+char            check_rerun;		/* rerun fsck. Only used in non-preen mode */
+char            check_resolved;		/* cleared if unresolved changes => not clean */
+char            check_skipclean;	/* skip clean file systems if preening */
+char            check_usedsoftdep;	/* just fix soft dependency inconsistencies */
+char            check_yflag;		/* assume a yes response */
 const char      *check_filename;        /* name of device being checked */
-struct inostatlist *check_inostathead;
+ino_t           check_maxino;		/* number of inodes in file system */
+ino_t           check_n_files;		/* number of files in use */
+int             check_Eflag;		/* delete empty data blocks */
+int             check_Zflag;		/* zero empty data blocks */
+int             check_bflag;		/* location of alternate super block */
+int             check_cvtlevel;		/* convert to newer file system format */
+int             check_debug;            /* output debugging info */
+int             check_fsmodified;	/* 1 => write done to file system */
+int             check_fsreadfd;		/* file descriptor for reading file system */
+int             check_fswritefd;	/* file descriptor for writing file system */
+int             check_inoopt;		/* trim out unused inodes */
+int             check_lfmode;		/* lost & found directory creation mode */
+int             check_returntosingle;	/* 1 => return to single user mode on exit */
+int             check_surrender;	/* Give up if reads fail */
+long            check_secsize;		/* actual disk sector size */
+struct	ufs1_dinode ufs1_zino;
+struct	ufs2_dinode ufs2_zino;
 struct bufarea  check_sblk;             /* file system superblock */
 struct dups     *check_duplist;         /* head of dup list */
 struct dups     *check_muldup;          /* end of unique duplicate dup block numbers */
-int             check_debug;            /* output debugging info */
-char            check_preen;		/* just fix normal inconsistencies */
+struct inostatlist *check_inostathead;
 u_int           check_real_dev_bsize;   /* actual disk sector size, not overriden */
-long            check_secsize;		/* actual disk sector size */
-int             check_lfmode;		/* lost & found directory creation mode */
-ino_t           check_maxino;		/* number of inodes in file system */
-int             check_fsreadfd;		/* file descriptor for reading file system */
-int             check_fswritefd;	/* file descriptor for writing file system */
-char            check_rerun;		/* rerun fsck. Only used in non-preen mode */
-int             check_fsmodified;	/* 1 => write done to file system */
-char            check_clean;		/* only do work if not cleanly unmounted */
-char            check_skipclean;	/* skip clean file systems if preening */
-int             check_inoopt;		/* trim out unused inodes */
-int             check_bflag;		/* location of alternate super block */
-int             check_cvtlevel;		/* convert to newer file system format */
-int             check_Eflag;		/* delete empty data blocks */
-char            check_nflag;		/* assume a no response */
-char            check_yflag;		/* assume a yes response */
-int             check_surrender;	/* Give up if reads fail */
-int             check_Zflag;		/* zero empty data blocks */
-int             check_returntosingle;	/* 1 => return to single user mode on exit */
-char            check_resolved;		/* cleared if unresolved changes => not clean */
-char            check_usedsoftdep;	/* just fix soft dependency inconsistencies */
-ino_t           check_n_files;		/* number of files in use */
-ufs2_daddr_t    check_n_blks;		/* number of blocks in use */
 ufs2_daddr_t    check_maxfsblock;	/* number of blocks in the file system */
-
-struct	ufs1_dinode ufs1_zino;
-struct	ufs2_dinode ufs2_zino;
-
-#define	clearinode(dp) \
-	if (sblock.fs_magic == FS_UFS1_MAGIC) { \
-		(dp)->dp1 = ufs1_zino; \
-	} else { \
-		(dp)->dp2 = ufs2_zino; \
-	}
+ufs2_daddr_t    check_n_blks;		/* number of blocks in use */
 
 /*
  * Wrapper for malloc() that flushes the cylinder group cache to try
@@ -515,5 +463,3 @@ Calloc(int cnt, int size)
 			break;
 	return (retval);
 }
-
-#endif	/* !_FSCK_H_ */

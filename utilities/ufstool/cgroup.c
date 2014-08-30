@@ -30,8 +30,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define _LIBUFS
 #include "libufs.h"
+#define _LIBUFS
+#include "internal.h"
 
 ufs2_daddr_t
 cgballoc(ufs_t *disk)

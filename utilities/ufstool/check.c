@@ -36,13 +36,21 @@
 #include <string.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <pwd.h>
 #include <time.h>
 
 #include "dir.h"
 #include "fs.h"
 #include "libufs.h"
-#include "fsck.h"
+#include "internal.h"
+
+#define	MAXDUP		10	/* limit on dup blks (per inode) */
+#define	MAXBAD		10	/* limit on bad blks (per inode) */
+#define	MINBUFS		10	/* minimum number of buffers required */
+#define	MAXBUFS		40	/* maximum space to allocate to buffers */
+#define	INOBUFSIZE	64*1024	/* size of buffer to read inodes in pass1 */
+#define	ZEROBUFSIZE	(dev_bsize * 128) /* size of zero buffer used by -Z */
 
 int check_lfmode = 0700;
 
@@ -163,7 +171,7 @@ bufinit(void)
     char *bufp;
 
     pbp = pdirbp = (struct bufarea *)0;
-    bufp = Malloc((unsigned int)sblock.fs_bsize);
+    bufp = Malloc((unsigned int)check_sblk.b_un.b_fs->fs_bsize);
     if (bufp == 0)
         errx(EEXIT, "cannot allocate buffer pool");
     cgblk.b_un.b_buf = bufp;
@@ -174,7 +182,7 @@ bufinit(void)
         bufcnt = MINBUFS;
     for (i = 0; i < bufcnt; i++) {
         bp = (struct bufarea *)Malloc(sizeof(struct bufarea));
-        bufp = Malloc((unsigned int)sblock.fs_bsize);
+        bufp = Malloc((unsigned int)check_sblk.b_un.b_fs->fs_bsize);
         if (bp == NULL || bufp == NULL) {
             if (i >= MINBUFS)
                 break;
@@ -301,11 +309,11 @@ flush(int fd, struct bufarea *bp)
     check_blwrite(fd, bp->b_un.b_buf, bp->b_bno, bp->b_size);
     if (bp != &check_sblk)
         return;
-    for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
-        check_blwrite(check_fswritefd, (char *)sblock.fs_csp + i,
-            fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
-            sblock.fs_cssize - i < sblock.fs_bsize ?
-            sblock.fs_cssize - i : sblock.fs_bsize);
+    for (i = 0, j = 0; i < check_sblk.b_un.b_fs->fs_cssize; i += check_sblk.b_un.b_fs->fs_bsize, j++) {
+        check_blwrite(check_fswritefd, (char *)check_sblk.b_un.b_fs->fs_csp + i,
+            fsbtodb(check_sblk.b_un.b_fs, check_sblk.b_un.b_fs->fs_csaddr + j * check_sblk.b_un.b_fs->fs_frag),
+            check_sblk.b_un.b_fs->fs_cssize - i < check_sblk.b_un.b_fs->fs_bsize ?
+            check_sblk.b_un.b_fs->fs_cssize - i : check_sblk.b_un.b_fs->fs_bsize);
     }
 }
 
@@ -320,11 +328,11 @@ check_finish(int markclean)
         return;
     }
     flush(check_fswritefd, &check_sblk);
-    if (havesb && sblock.fs_magic == FS_UFS2_MAGIC &&
-        check_sblk.b_bno != sblock.fs_sblockloc / dev_bsize &&
+    if (havesb && check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC &&
+        check_sblk.b_bno != check_sblk.b_un.b_fs->fs_sblockloc / dev_bsize &&
         !check_preen && check_reply("UPDATE STANDARD SUPERBLOCK")) {
-        check_sblk.b_bno = sblock.fs_sblockloc / dev_bsize;
-        sbdirty();
+        check_sblk.b_bno = check_sblk.b_un.b_fs->fs_sblockloc / dev_bsize;
+        dirty(&check_sblk);
         flush(check_fswritefd, &check_sblk);
     }
     flush(check_fswritefd, &cgblk);
@@ -339,7 +347,7 @@ check_finish(int markclean)
     }
     if (numbufs != cnt)
         errx(EEXIT, "panic: lost %d buffers", numbufs - cnt);
-    for (cnt = 0; cnt < sblock.fs_ncg; cnt++) {
+    for (cnt = 0; cnt < check_sblk.b_un.b_fs->fs_ncg; cnt++) {
         if (cgbufs[cnt].b_un.b_cg == NULL)
             continue;
         flush(check_fswritefd, &cgbufs[cnt]);
@@ -347,13 +355,13 @@ check_finish(int markclean)
     }
     free(cgbufs);
     pbp = pdirbp = (struct bufarea *)0;
-    if (sblock.fs_clean != markclean) {
-        if ((sblock.fs_clean = markclean) != 0) {
-            sblock.fs_flags &= ~(FS_UNCLEAN | FS_NEEDSFSCK);
-            sblock.fs_pendingblocks = 0;
-            sblock.fs_pendinginodes = 0;
+    if (check_sblk.b_un.b_fs->fs_clean != markclean) {
+        if ((check_sblk.b_un.b_fs->fs_clean = markclean) != 0) {
+            check_sblk.b_un.b_fs->fs_flags &= ~(FS_UNCLEAN | FS_NEEDSFSCK);
+            check_sblk.b_un.b_fs->fs_pendingblocks = 0;
+            check_sblk.b_un.b_fs->fs_pendinginodes = 0;
         }
-        sbdirty();
+        dirty(&check_sblk);
         ofsmodified = check_fsmodified;
         flush(check_fswritefd, &check_sblk);
         check_fsmodified = ofsmodified;
@@ -443,57 +451,57 @@ check_setup(const char *dev, int part_num)
         check_warn("USING ALTERNATE SUPERBLOCK AT %d\n", check_bflag);
         check_bflag = 0;
     }
-    if (check_skipclean && check_clean && sblock.fs_clean) {
+    if (check_skipclean && check_clean && check_sblk.b_un.b_fs->fs_clean) {
         check_warn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
         return (-1);
     }
-    check_maxfsblock = sblock.fs_size;
-    check_maxino = sblock.fs_ncg * sblock.fs_ipg;
+    check_maxfsblock = check_sblk.b_un.b_fs->fs_size;
+    check_maxino = check_sblk.b_un.b_fs->fs_ncg * check_sblk.b_un.b_fs->fs_ipg;
 
     /*
      * Check and potentially fix certain fields in the super block.
      */
-    if (sblock.fs_optim != FS_OPTTIME && sblock.fs_optim != FS_OPTSPACE) {
+    if (check_sblk.b_un.b_fs->fs_optim != FS_OPTTIME && check_sblk.b_un.b_fs->fs_optim != FS_OPTSPACE) {
         check_fatal("UNDEFINED OPTIMIZATION IN SUPERBLOCK");
         if (check_reply("SET TO DEFAULT") == 1) {
-            sblock.fs_optim = FS_OPTTIME;
-            sbdirty();
+            check_sblk.b_un.b_fs->fs_optim = FS_OPTTIME;
+            dirty(&check_sblk);
         }
     }
-    if ((sblock.fs_minfree < 0 || sblock.fs_minfree > 99)) {
+    if ((check_sblk.b_un.b_fs->fs_minfree < 0 || check_sblk.b_un.b_fs->fs_minfree > 99)) {
         check_fatal("IMPOSSIBLE MINFREE=%d IN SUPERBLOCK",
-            sblock.fs_minfree);
+            check_sblk.b_un.b_fs->fs_minfree);
         if (check_reply("SET TO DEFAULT") == 1) {
-            sblock.fs_minfree = 10;
-            sbdirty();
+            check_sblk.b_un.b_fs->fs_minfree = 10;
+            dirty(&check_sblk);
         }
     }
-    if (sblock.fs_magic == FS_UFS1_MAGIC &&
-        sblock.fs_old_inodefmt < FS_44INODEFMT) {
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC &&
+        check_sblk.b_un.b_fs->fs_old_inodefmt < FS_44INODEFMT) {
         check_warn("Format of file system is too old.\n");
         check_warn("Must update to modern format using a version of fsck\n");
         check_fatal("from before 2002 with the command ``fsck -c 2''\n");
         exit(EEXIT);
     }
     if (asblk.b_dirty && !check_bflag) {
-        memmove(&altsblock, &sblock, (size_t)sblock.fs_sbsize);
+        memmove(&altsblock, check_sblk.b_un.b_fs, (size_t)check_sblk.b_un.b_fs->fs_sbsize);
         flush(check_fswritefd, &asblk);
     }
     /*
      * read in the summary info.
      */
     asked = 0;
-    sblock.fs_csp = Calloc(1, sblock.fs_cssize);
-    if (sblock.fs_csp == NULL) {
+    check_sblk.b_un.b_fs->fs_csp = Calloc(1, check_sblk.b_un.b_fs->fs_cssize);
+    if (check_sblk.b_un.b_fs->fs_csp == NULL) {
         printf("cannot alloc %u bytes for cg summary info\n",
-            (unsigned)sblock.fs_cssize);
+            (unsigned)check_sblk.b_un.b_fs->fs_cssize);
         goto badsb;
     }
-    for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
-        size = sblock.fs_cssize - i < sblock.fs_bsize ?
-            sblock.fs_cssize - i : sblock.fs_bsize;
-        if (check_blread(check_fsreadfd, (char *)sblock.fs_csp + i,
-            fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
+    for (i = 0, j = 0; i < check_sblk.b_un.b_fs->fs_cssize; i += check_sblk.b_un.b_fs->fs_bsize, j++) {
+        size = check_sblk.b_un.b_fs->fs_cssize - i < check_sblk.b_un.b_fs->fs_bsize ?
+            check_sblk.b_un.b_fs->fs_cssize - i : check_sblk.b_un.b_fs->fs_bsize;
+        if (check_blread(check_fsreadfd, (char *)check_sblk.b_un.b_fs->fs_csp + i,
+            fsbtodb(check_sblk.b_un.b_fs, check_sblk.b_un.b_fs->fs_csaddr + j * check_sblk.b_un.b_fs->fs_frag),
             size) != 0 && !asked) {
             check_fatal("BAD SUMMARY INFORMATION");
             if (check_reply("CONTINUE") == 0) {
@@ -513,14 +521,14 @@ check_setup(const char *dev, int part_num)
             (unsigned)bmapsize);
         goto badsb;
     }
-    check_inostathead = Calloc((unsigned)(sblock.fs_ncg),
+    check_inostathead = Calloc((unsigned)(check_sblk.b_un.b_fs->fs_ncg),
         sizeof(struct inostatlist));
     if (check_inostathead == NULL) {
         printf("cannot alloc %u bytes for inostathead\n",
-            (unsigned)(sizeof(struct inostatlist) * (sblock.fs_ncg)));
+            (unsigned)(sizeof(struct inostatlist) * (check_sblk.b_un.b_fs->fs_ncg)));
         goto badsb;
     }
-    numdirs = MAX(sblock.fs_cstotal.cs_ndir, 128);
+    numdirs = MAX(check_sblk.b_un.b_fs->fs_cstotal.cs_ndir, 128);
     dirhash = numdirs;
     inplast = 0;
     listmax = numdirs + 10;
@@ -534,7 +542,7 @@ check_setup(const char *dev, int part_num)
         goto badsb;
     }
     bufinit();
-    if (sblock.fs_flags & FS_DOSOFTDEP)
+    if (check_sblk.b_un.b_fs->fs_flags & FS_DOSOFTDEP)
         check_usedsoftdep = 1;
     else
         check_usedsoftdep = 0;
@@ -576,14 +584,14 @@ check_readsb(int listerr)
 
     if (check_bflag) {
         super = check_bflag;
-        if ((check_blread(check_fsreadfd, (char *)&sblock, super, (long)SBLOCKSIZE)))
+        if ((check_blread(check_fsreadfd, (char *)check_sblk.b_un.b_fs, super, (long)SBLOCKSIZE)))
             return (0);
-        if (sblock.fs_magic == FS_BAD_MAGIC) {
+        if (check_sblk.b_un.b_fs->fs_magic == FS_BAD_MAGIC) {
             fprintf(stderr, BAD_MAGIC_MSG);
             exit(11);
         }
-        if (sblock.fs_magic != FS_UFS1_MAGIC &&
-            sblock.fs_magic != FS_UFS2_MAGIC) {
+        if (check_sblk.b_un.b_fs->fs_magic != FS_UFS1_MAGIC &&
+            check_sblk.b_un.b_fs->fs_magic != FS_UFS2_MAGIC) {
             fprintf(stderr, "%d is not a file system superblock\n",
                 check_bflag);
             return (0);
@@ -591,19 +599,19 @@ check_readsb(int listerr)
     } else {
         for (i = 0; sblock_try[i] != -1; i++) {
             super = sblock_try[i] / dev_bsize;
-            if ((check_blread(check_fsreadfd, (char *)&sblock, super,
+            if ((check_blread(check_fsreadfd, (char *)check_sblk.b_un.b_fs, super,
                 (long)SBLOCKSIZE)))
                 return (0);
-            if (sblock.fs_magic == FS_BAD_MAGIC) {
+            if (check_sblk.b_un.b_fs->fs_magic == FS_BAD_MAGIC) {
                 fprintf(stderr, BAD_MAGIC_MSG);
                 exit(11);
             }
-            if ((sblock.fs_magic == FS_UFS1_MAGIC ||
-                 (sblock.fs_magic == FS_UFS2_MAGIC &&
-                  sblock.fs_sblockloc == sblock_try[i])) &&
-                sblock.fs_ncg >= 1 &&
-                sblock.fs_bsize >= MINBSIZE &&
-                sblock.fs_sbsize >= roundup(sizeof(struct fs), dev_bsize))
+            if ((check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC ||
+                 (check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC &&
+                  check_sblk.b_un.b_fs->fs_sblockloc == sblock_try[i])) &&
+                check_sblk.b_un.b_fs->fs_ncg >= 1 &&
+                check_sblk.b_un.b_fs->fs_bsize >= MINBSIZE &&
+                check_sblk.b_un.b_fs->fs_sbsize >= roundup(sizeof(struct fs), dev_bsize))
                 break;
         }
         if (sblock_try[i] == -1) {
@@ -617,7 +625,7 @@ check_readsb(int listerr)
      * so we can tell if this is an alternate later.
      */
     super *= dev_bsize;
-    dev_bsize = sblock.fs_fsize / fsbtodb(&sblock, 1);
+    dev_bsize = check_sblk.b_un.b_fs->fs_fsize / fsbtodb(check_sblk.b_un.b_fs, 1);
     check_sblk.b_bno = super / dev_bsize;
     check_sblk.b_size = SBLOCKSIZE;
     if (check_bflag)
@@ -626,30 +634,30 @@ check_readsb(int listerr)
      * Compare all fields that should not differ in alternate super block.
      * When an alternate super-block is specified this check is skipped.
      */
-    check_getblk(&asblk, cgsblock(&sblock, sblock.fs_ncg - 1), sblock.fs_sbsize);
+    check_getblk(&asblk, cgsblock(check_sblk.b_un.b_fs, check_sblk.b_un.b_fs->fs_ncg - 1), check_sblk.b_un.b_fs->fs_sbsize);
     if (asblk.b_errs)
         return (0);
-    if (altsblock.fs_sblkno != sblock.fs_sblkno ||
-        altsblock.fs_cblkno != sblock.fs_cblkno ||
-        altsblock.fs_iblkno != sblock.fs_iblkno ||
-        altsblock.fs_dblkno != sblock.fs_dblkno ||
-        altsblock.fs_ncg != sblock.fs_ncg ||
-        altsblock.fs_bsize != sblock.fs_bsize ||
-        altsblock.fs_fsize != sblock.fs_fsize ||
-        altsblock.fs_frag != sblock.fs_frag ||
-        altsblock.fs_bmask != sblock.fs_bmask ||
-        altsblock.fs_fmask != sblock.fs_fmask ||
-        altsblock.fs_bshift != sblock.fs_bshift ||
-        altsblock.fs_fshift != sblock.fs_fshift ||
-        altsblock.fs_fragshift != sblock.fs_fragshift ||
-        altsblock.fs_fsbtodb != sblock.fs_fsbtodb ||
-        altsblock.fs_sbsize != sblock.fs_sbsize ||
-        altsblock.fs_nindir != sblock.fs_nindir ||
-        altsblock.fs_inopb != sblock.fs_inopb ||
-        altsblock.fs_cssize != sblock.fs_cssize ||
-        altsblock.fs_ipg != sblock.fs_ipg ||
-        altsblock.fs_fpg != sblock.fs_fpg ||
-        altsblock.fs_magic != sblock.fs_magic) {
+    if (altsblock.fs_sblkno != check_sblk.b_un.b_fs->fs_sblkno ||
+        altsblock.fs_cblkno != check_sblk.b_un.b_fs->fs_cblkno ||
+        altsblock.fs_iblkno != check_sblk.b_un.b_fs->fs_iblkno ||
+        altsblock.fs_dblkno != check_sblk.b_un.b_fs->fs_dblkno ||
+        altsblock.fs_ncg != check_sblk.b_un.b_fs->fs_ncg ||
+        altsblock.fs_bsize != check_sblk.b_un.b_fs->fs_bsize ||
+        altsblock.fs_fsize != check_sblk.b_un.b_fs->fs_fsize ||
+        altsblock.fs_frag != check_sblk.b_un.b_fs->fs_frag ||
+        altsblock.fs_bmask != check_sblk.b_un.b_fs->fs_bmask ||
+        altsblock.fs_fmask != check_sblk.b_un.b_fs->fs_fmask ||
+        altsblock.fs_bshift != check_sblk.b_un.b_fs->fs_bshift ||
+        altsblock.fs_fshift != check_sblk.b_un.b_fs->fs_fshift ||
+        altsblock.fs_fragshift != check_sblk.b_un.b_fs->fs_fragshift ||
+        altsblock.fs_fsbtodb != check_sblk.b_un.b_fs->fs_fsbtodb ||
+        altsblock.fs_sbsize != check_sblk.b_un.b_fs->fs_sbsize ||
+        altsblock.fs_nindir != check_sblk.b_un.b_fs->fs_nindir ||
+        altsblock.fs_inopb != check_sblk.b_un.b_fs->fs_inopb ||
+        altsblock.fs_cssize != check_sblk.b_un.b_fs->fs_cssize ||
+        altsblock.fs_ipg != check_sblk.b_un.b_fs->fs_ipg ||
+        altsblock.fs_fpg != check_sblk.b_un.b_fs->fs_fpg ||
+        altsblock.fs_magic != check_sblk.b_un.b_fs->fs_magic) {
         badsb(listerr,
         "VALUES IN SUPER BLOCK DISAGREE WITH THOSE IN FIRST ALTERNATE");
         return (0);
@@ -658,17 +666,17 @@ out:
     /*
      * If not yet done, update UFS1 superblock with new wider fields.
      */
-    if (sblock.fs_magic == FS_UFS1_MAGIC &&
-        sblock.fs_maxbsize != sblock.fs_bsize) {
-        sblock.fs_maxbsize = sblock.fs_bsize;
-        sblock.fs_time = sblock.fs_old_time;
-        sblock.fs_size = sblock.fs_old_size;
-        sblock.fs_dsize = sblock.fs_old_dsize;
-        sblock.fs_csaddr = sblock.fs_old_csaddr;
-        sblock.fs_cstotal.cs_ndir = sblock.fs_old_cstotal.cs_ndir;
-        sblock.fs_cstotal.cs_nbfree = sblock.fs_old_cstotal.cs_nbfree;
-        sblock.fs_cstotal.cs_nifree = sblock.fs_old_cstotal.cs_nifree;
-        sblock.fs_cstotal.cs_nffree = sblock.fs_old_cstotal.cs_nffree;
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC &&
+        check_sblk.b_un.b_fs->fs_maxbsize != check_sblk.b_un.b_fs->fs_bsize) {
+        check_sblk.b_un.b_fs->fs_maxbsize = check_sblk.b_un.b_fs->fs_bsize;
+        check_sblk.b_un.b_fs->fs_time = check_sblk.b_un.b_fs->fs_old_time;
+        check_sblk.b_un.b_fs->fs_size = check_sblk.b_un.b_fs->fs_old_size;
+        check_sblk.b_un.b_fs->fs_dsize = check_sblk.b_un.b_fs->fs_old_dsize;
+        check_sblk.b_un.b_fs->fs_csaddr = check_sblk.b_un.b_fs->fs_old_csaddr;
+        check_sblk.b_un.b_fs->fs_cstotal.cs_ndir = check_sblk.b_un.b_fs->fs_old_cstotal.cs_ndir;
+        check_sblk.b_un.b_fs->fs_cstotal.cs_nbfree = check_sblk.b_un.b_fs->fs_old_cstotal.cs_nbfree;
+        check_sblk.b_un.b_fs->fs_cstotal.cs_nifree = check_sblk.b_un.b_fs->fs_old_cstotal.cs_nifree;
+        check_sblk.b_un.b_fs->fs_cstotal.cs_nffree = check_sblk.b_un.b_fs->fs_old_cstotal.cs_nffree;
     }
     havesb = 1;
     return (1);
@@ -760,8 +768,8 @@ inoinfo(ino_t inum)
     if (inum > check_maxino)
         errx(EEXIT, "inoinfo: inumber %ju out of range",
             (uintmax_t)inum);
-    ilp = &check_inostathead[inum / sblock.fs_ipg];
-    iloff = inum % sblock.fs_ipg;
+    ilp = &check_inostathead[inum / check_sblk.b_un.b_fs->fs_ipg];
+    iloff = inum % check_sblk.b_un.b_fs->fs_ipg;
     if (iloff >= ilp->il_numalloced)
         return (&unallocated);
     return (&ilp->il_stat[iloff]);
@@ -777,7 +785,7 @@ check_cgget(int cg)
     struct cg *cgp;
 
     if (cgbufs == NULL) {
-        cgbufs = Calloc(sblock.fs_ncg, sizeof(struct bufarea));
+        cgbufs = Calloc(check_sblk.b_un.b_fs->fs_ncg, sizeof(struct bufarea));
         if (cgbufs == NULL)
             errx(EEXIT, "cannot allocate cylinder group buffers");
     }
@@ -786,14 +794,14 @@ check_cgget(int cg)
         return (cgbp);
     cgp = NULL;
     if (flushtries == 0)
-        cgp = malloc((unsigned int)sblock.fs_cgsize);
+        cgp = malloc((unsigned int)check_sblk.b_un.b_fs->fs_cgsize);
     if (cgp == NULL) {
-        check_getblk(&cgblk, cgtod(&sblock, cg), sblock.fs_cgsize);
+        check_getblk(&cgblk, cgtod(check_sblk.b_un.b_fs, cg), check_sblk.b_un.b_fs->fs_cgsize);
         return (&cgblk);
     }
     cgbp->b_un.b_cg = cgp;
     initbarea(cgbp, BT_CYLGRP);
-    check_getblk(cgbp, cgtod(&sblock, cg), sblock.fs_cgsize);
+    check_getblk(cgbp, cgtod(check_sblk.b_un.b_fs, cg), check_sblk.b_un.b_fs->fs_cgsize);
     return (cgbp);
 }
 
@@ -824,7 +832,7 @@ check_getdatablk(ufs2_daddr_t blkno, long size, int type)
     struct bufarea *bp;
 
     TAILQ_FOREACH(bp, &bufhead, b_list)
-        if (bp->b_bno == fsbtodb(&sblock, blkno))
+        if (bp->b_bno == fsbtodb(check_sblk.b_un.b_fs, blkno))
             goto foundit;
     TAILQ_FOREACH_REVERSE(bp, &bufhead, buflist, b_list)
         if ((bp->b_flags & B_INUSE) == 0)
@@ -871,7 +879,7 @@ check_getblk(struct bufarea *bp, ufs2_daddr_t blk, long size)
 {
     ufs2_daddr_t dblk;
 
-    dblk = fsbtodb(&sblock, blk);
+    dblk = fsbtodb(check_sblk.b_un.b_fs, blk);
     if (bp->b_bno != dblk) {
         flush(check_fswritefd, bp);
         bp->b_errs = check_blread(check_fsreadfd, bp->b_un.b_buf, dblk, size);
@@ -986,14 +994,14 @@ check_cgmagic(int cg, struct bufarea *cgbp)
      * Extended cylinder group checks.
      */
     if (cg_chkmagic(cgp) &&
-        ((sblock.fs_magic == FS_UFS1_MAGIC &&
-          cgp->cg_old_niblk == sblock.fs_ipg &&
-          cgp->cg_ndblk <= sblock.fs_fpg &&
-          cgp->cg_old_ncyl <= sblock.fs_old_cpg) ||
-         (sblock.fs_magic == FS_UFS2_MAGIC &&
-          cgp->cg_niblk == sblock.fs_ipg &&
-          cgp->cg_ndblk <= sblock.fs_fpg &&
-          cgp->cg_initediblk <= sblock.fs_ipg))) {
+        ((check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC &&
+          cgp->cg_old_niblk == check_sblk.b_un.b_fs->fs_ipg &&
+          cgp->cg_ndblk <= check_sblk.b_un.b_fs->fs_fpg &&
+          cgp->cg_old_ncyl <= check_sblk.b_un.b_fs->fs_old_cpg) ||
+         (check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC &&
+          cgp->cg_niblk == check_sblk.b_un.b_fs->fs_ipg &&
+          cgp->cg_ndblk <= check_sblk.b_un.b_fs->fs_fpg &&
+          cgp->cg_initediblk <= check_sblk.b_un.b_fs->fs_ipg))) {
         return (1);
     }
     check_fatal("CYLINDER GROUP %d: BAD MAGIC NUMBER", cg);
@@ -1006,39 +1014,39 @@ check_cgmagic(int cg, struct bufarea *cgbp)
      * Zero out the cylinder group and then initialize critical fields.
      * Bit maps and summaries will be recalculated by later passes.
      */
-    memset(cgp, 0, (size_t)sblock.fs_cgsize);
+    memset(cgp, 0, (size_t)check_sblk.b_un.b_fs->fs_cgsize);
     cgp->cg_magic = CG_MAGIC;
     cgp->cg_cgx = cg;
-    cgp->cg_niblk = sblock.fs_ipg;
-    cgp->cg_initediblk = sblock.fs_ipg < 2 * INOPB(&sblock) ?
-        sblock.fs_ipg : 2 * INOPB(&sblock);
-    if (cgbase(&sblock, cg) + sblock.fs_fpg < sblock.fs_size)
-        cgp->cg_ndblk = sblock.fs_fpg;
+    cgp->cg_niblk = check_sblk.b_un.b_fs->fs_ipg;
+    cgp->cg_initediblk = check_sblk.b_un.b_fs->fs_ipg < 2 * INOPB(check_sblk.b_un.b_fs) ?
+        check_sblk.b_un.b_fs->fs_ipg : 2 * INOPB(check_sblk.b_un.b_fs);
+    if (cgbase(check_sblk.b_un.b_fs, cg) + check_sblk.b_un.b_fs->fs_fpg < check_sblk.b_un.b_fs->fs_size)
+        cgp->cg_ndblk = check_sblk.b_un.b_fs->fs_fpg;
     else
-        cgp->cg_ndblk = sblock.fs_size - cgbase(&sblock, cg);
+        cgp->cg_ndblk = check_sblk.b_un.b_fs->fs_size - cgbase(check_sblk.b_un.b_fs, cg);
     cgp->cg_iusedoff = &cgp->cg_space[0] - (u_char *)(&cgp->cg_firstfield);
-    if (sblock.fs_magic == FS_UFS1_MAGIC) {
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) {
         cgp->cg_niblk = 0;
         cgp->cg_initediblk = 0;
-        cgp->cg_old_ncyl = sblock.fs_old_cpg;
-        cgp->cg_old_niblk = sblock.fs_ipg;
+        cgp->cg_old_ncyl = check_sblk.b_un.b_fs->fs_old_cpg;
+        cgp->cg_old_niblk = check_sblk.b_un.b_fs->fs_ipg;
         cgp->cg_old_btotoff = cgp->cg_iusedoff;
         cgp->cg_old_boff = cgp->cg_old_btotoff +
-            sblock.fs_old_cpg * sizeof(int32_t);
+            check_sblk.b_un.b_fs->fs_old_cpg * sizeof(int32_t);
         cgp->cg_iusedoff = cgp->cg_old_boff +
-            sblock.fs_old_cpg * sizeof(u_int16_t);
+            check_sblk.b_un.b_fs->fs_old_cpg * sizeof(u_int16_t);
     }
-    cgp->cg_freeoff = cgp->cg_iusedoff + howmany(sblock.fs_ipg, CHAR_BIT);
-    cgp->cg_nextfreeoff = cgp->cg_freeoff + howmany(sblock.fs_fpg,CHAR_BIT);
-    if (sblock.fs_contigsumsize > 0) {
-        cgp->cg_nclusterblks = cgp->cg_ndblk / sblock.fs_frag;
+    cgp->cg_freeoff = cgp->cg_iusedoff + howmany(check_sblk.b_un.b_fs->fs_ipg, CHAR_BIT);
+    cgp->cg_nextfreeoff = cgp->cg_freeoff + howmany(check_sblk.b_un.b_fs->fs_fpg,CHAR_BIT);
+    if (check_sblk.b_un.b_fs->fs_contigsumsize > 0) {
+        cgp->cg_nclusterblks = cgp->cg_ndblk / check_sblk.b_un.b_fs->fs_frag;
         cgp->cg_clustersumoff =
             roundup(cgp->cg_nextfreeoff, sizeof(u_int32_t));
         cgp->cg_clustersumoff -= sizeof(u_int32_t);
         cgp->cg_clusteroff = cgp->cg_clustersumoff +
-            (sblock.fs_contigsumsize + 1) * sizeof(u_int32_t);
+            (check_sblk.b_un.b_fs->fs_contigsumsize + 1) * sizeof(u_int32_t);
         cgp->cg_nextfreeoff = cgp->cg_clusteroff +
-            howmany(fragstoblks(&sblock, sblock.fs_fpg), CHAR_BIT);
+            howmany(fragstoblks(check_sblk.b_un.b_fs, check_sblk.b_un.b_fs->fs_fpg), CHAR_BIT);
     }
     dirty(cgbp);
     return (0);
@@ -1054,10 +1062,10 @@ allocblk(long frags)
     struct bufarea *cgbp;
     struct cg *cgp;
 
-    if (frags <= 0 || frags > sblock.fs_frag)
+    if (frags <= 0 || frags > check_sblk.b_un.b_fs->fs_frag)
         return (0);
-    for (i = 0; i < check_maxfsblock - sblock.fs_frag; i += sblock.fs_frag) {
-        for (j = 0; j <= sblock.fs_frag - frags; j++) {
+    for (i = 0; i < check_maxfsblock - check_sblk.b_un.b_fs->fs_frag; i += check_sblk.b_un.b_fs->fs_frag) {
+        for (j = 0; j <= check_sblk.b_un.b_fs->fs_frag - frags; j++) {
             if (testbmap(i + j))
                 continue;
             for (k = 1; k < frags; k++)
@@ -1067,18 +1075,18 @@ allocblk(long frags)
                 j += k;
                 continue;
             }
-            cg = dtog(&sblock, i + j);
+            cg = dtog(check_sblk.b_un.b_fs, i + j);
             cgbp = check_cgget(cg);
             cgp = cgbp->b_un.b_cg;
             if (!check_cgmagic(cg, cgbp))
                 return (0);
-            baseblk = dtogd(&sblock, i + j);
+            baseblk = dtogd(check_sblk.b_un.b_fs, i + j);
             for (k = 0; k < frags; k++) {
                 setbmap(i + j + k);
                 clrbit(cg_blksfree(cgp), baseblk + k);
             }
             check_n_blks += frags;
-            if (frags == sblock.fs_frag)
+            if (frags == check_sblk.b_un.b_fs->fs_frag)
                 cgp->cg_cs.cs_nbfree--;
             else
                 cgp->cg_cs.cs_nffree -= frags;
@@ -1353,7 +1361,7 @@ fsck_readdir(struct inodesc *idesc)
     struct bufarea *bp;
     long size, blksiz, fix, dploc;
 
-    blksiz = idesc->id_numfrags * sblock.fs_fsize;
+    blksiz = idesc->id_numfrags * check_sblk.b_un.b_fs->fs_fsize;
     bp = getdirblk(idesc->id_blkno, blksiz);
     if (idesc->id_loc % DIRBLKSIZ == 0 && idesc->id_filesize > 0 &&
         idesc->id_loc < blksiz) {
@@ -1415,32 +1423,32 @@ chkrange(ufs2_daddr_t blk, int cnt)
     if (cnt <= 0 || blk <= 0 || blk > check_maxfsblock ||
         cnt - 1 > check_maxfsblock - blk)
         return (1);
-    if (cnt > sblock.fs_frag ||
-        fragnum(&sblock, blk) + cnt > sblock.fs_frag) {
+    if (cnt > check_sblk.b_un.b_fs->fs_frag ||
+        fragnum(check_sblk.b_un.b_fs, blk) + cnt > check_sblk.b_un.b_fs->fs_frag) {
         if (check_debug)
             printf("bad size: blk %ld, offset %i, size %d\n",
-                (long)blk, (int)fragnum(&sblock, blk), cnt);
+                (long)blk, (int)fragnum(check_sblk.b_un.b_fs, blk), cnt);
         return (1);
     }
-    c = dtog(&sblock, blk);
-    if (blk < cgdmin(&sblock, c)) {
-        if ((blk + cnt) > cgsblock(&sblock, c)) {
+    c = dtog(check_sblk.b_un.b_fs, blk);
+    if (blk < cgdmin(check_sblk.b_un.b_fs, c)) {
+        if ((blk + cnt) > cgsblock(check_sblk.b_un.b_fs, c)) {
             if (check_debug) {
                 printf("blk %ld < cgdmin %ld;",
-                    (long)blk, (long)cgdmin(&sblock, c));
+                    (long)blk, (long)cgdmin(check_sblk.b_un.b_fs, c));
                 printf(" blk + cnt %ld > cgsbase %ld\n",
                     (long)(blk + cnt),
-                    (long)cgsblock(&sblock, c));
+                    (long)cgsblock(check_sblk.b_un.b_fs, c));
             }
             return (1);
         }
     } else {
-        if ((blk + cnt) > cgbase(&sblock, c+1)) {
+        if ((blk + cnt) > cgbase(check_sblk.b_un.b_fs, c+1)) {
             if (check_debug)  {
                 printf("blk %ld >= cgdmin %ld;",
-                    (long)blk, (long)cgdmin(&sblock, c));
-                printf(" blk + cnt %ld > sblock.fs_fpg %ld\n",
-                    (long)(blk + cnt), (long)sblock.fs_fpg);
+                    (long)blk, (long)cgdmin(check_sblk.b_un.b_fs, c));
+                printf(" blk + cnt %ld > check_sblk.b_un.b_fs->fs_fpg %ld\n",
+                    (long)(blk + cnt), (long)check_sblk.b_un.b_fs->fs_fpg);
             }
             return (1);
         }
@@ -1465,7 +1473,7 @@ dirscan(struct inodesc *idesc)
     if (idesc->id_entryno == 0 &&
         (idesc->id_filesize & (DIRBLKSIZ - 1)) != 0)
         idesc->id_filesize = roundup(idesc->id_filesize, DIRBLKSIZ);
-    blksiz = idesc->id_numfrags * sblock.fs_fsize;
+    blksiz = idesc->id_numfrags * check_sblk.b_un.b_fs->fs_fsize;
     if (chkrange(idesc->id_blkno, idesc->id_numfrags)) {
         idesc->id_filesize -= blksiz;
         return (SKIP);
@@ -1482,7 +1490,7 @@ dirscan(struct inodesc *idesc)
             memmove(bp->b_un.b_buf + idesc->id_loc - dsize, dbuf,
                 (size_t)dsize);
             dirty(bp);
-            sbdirty();
+            dirty(&check_sblk);
         }
         if (n & STOP)
             return (n);
@@ -1514,16 +1522,16 @@ iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
         func = dirscan;
     if (chkrange(idesc->id_blkno, idesc->id_numfrags))
         return (SKIP);
-    bp = check_getdatablk(idesc->id_blkno, sblock.fs_bsize, type);
+    bp = check_getdatablk(idesc->id_blkno, check_sblk.b_un.b_fs->fs_bsize, type);
     ilevel--;
-    for (sizepb = sblock.fs_bsize, i = 0; i < ilevel; i++)
-        sizepb *= NINDIR(&sblock);
-    if (howmany(isize, sizepb) > NINDIR(&sblock))
-        nif = NINDIR(&sblock);
+    for (sizepb = check_sblk.b_un.b_fs->fs_bsize, i = 0; i < ilevel; i++)
+        sizepb *= NINDIR(check_sblk.b_un.b_fs);
+    if (howmany(isize, sizepb) > NINDIR(check_sblk.b_un.b_fs))
+        nif = NINDIR(check_sblk.b_un.b_fs);
     else
         nif = howmany(isize, sizepb);
-    if (idesc->id_func == pass1check && nif < NINDIR(&sblock)) {
-        for (i = nif; i < NINDIR(&sblock); i++) {
+    if (idesc->id_func == pass1check && nif < NINDIR(check_sblk.b_un.b_fs)) {
+        for (i = nif; i < NINDIR(check_sblk.b_un.b_fs); i++) {
             if (IBLK(bp, i) == 0)
                 continue;
             (void)sprintf(buf, "PARTIALLY TRUNCATED INODE I=%lu",
@@ -1594,21 +1602,21 @@ check_inode(union dinode *dp, struct inodesc *idesc)
     idesc->id_filesize = DIP(dp, di_size);
     mode = DIP(dp, di_mode) & IFMT;
     if (mode == IFBLK || mode == IFCHR || (mode == IFLNK &&
-        DIP(dp, di_size) < (unsigned)sblock.fs_maxsymlinklen))
+        DIP(dp, di_size) < (unsigned)check_sblk.b_un.b_fs->fs_maxsymlinklen))
         return (KEEPON);
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
         dino.dp1 = dp->dp1;
     else
         dino.dp2 = dp->dp2;
-    ndb = howmany(DIP(&dino, di_size), sblock.fs_bsize);
+    ndb = howmany(DIP(&dino, di_size), check_sblk.b_un.b_fs->fs_bsize);
     for (i = 0; i < NDADDR; i++) {
         idesc->id_lbn++;
         if (--ndb == 0 &&
-            (offset = blkoff(&sblock, DIP(&dino, di_size))) != 0)
+            (offset = blkoff(check_sblk.b_un.b_fs, DIP(&dino, di_size))) != 0)
             idesc->id_numfrags =
-                numfrags(&sblock, fragroundup(&sblock, offset));
+                numfrags(check_sblk.b_un.b_fs, fragroundup(check_sblk.b_un.b_fs, offset));
         else
-            idesc->id_numfrags = sblock.fs_frag;
+            idesc->id_numfrags = check_sblk.b_un.b_fs->fs_frag;
         if (DIP(&dino, di_db[i]) == 0) {
             if (idesc->id_type == DATA && ndb >= 0) {
                 /* An empty block in a directory XXX */
@@ -1619,7 +1627,7 @@ check_inode(union dinode *dp, struct inodesc *idesc)
                 if (check_reply("ADJUST LENGTH") == 1) {
                     dp = check_ginode(idesc->id_number);
                     DIP_SET(dp, di_size,
-                        i * sblock.fs_bsize);
+                        i * check_sblk.b_un.b_fs->fs_bsize);
                     printf(
                         "YOU MUST RERUN FSCK AFTERWARDS\n");
                     check_rerun = 1;
@@ -1637,18 +1645,18 @@ check_inode(union dinode *dp, struct inodesc *idesc)
         if (ret & STOP)
             return (ret);
     }
-    idesc->id_numfrags = sblock.fs_frag;
-    remsize = DIP(&dino, di_size) - sblock.fs_bsize * NDADDR;
-    sizepb = sblock.fs_bsize;
+    idesc->id_numfrags = check_sblk.b_un.b_fs->fs_frag;
+    remsize = DIP(&dino, di_size) - check_sblk.b_un.b_fs->fs_bsize * NDADDR;
+    sizepb = check_sblk.b_un.b_fs->fs_bsize;
     for (i = 0; i < NIADDR; i++) {
-        sizepb *= NINDIR(&sblock);
+        sizepb *= NINDIR(check_sblk.b_un.b_fs);
         if (DIP(&dino, di_ib[i])) {
             idesc->id_blkno = DIP(&dino, di_ib[i]);
             ret = iblock(idesc, i + 1, remsize, BT_LEVEL1 + i);
             if (ret & STOP)
                 return (ret);
         } else {
-            idesc->id_lbn += sizepb / sblock.fs_bsize;
+            idesc->id_lbn += sizepb / check_sblk.b_un.b_fs->fs_bsize;
             if (idesc->id_type == DATA && remsize > 0) {
                 /* An empty block in a directory XXX */
                 getpathname(pathbuf, idesc->id_number,
@@ -1685,17 +1693,17 @@ check_ginode(ino_t inumber)
         errx(EEXIT, "bad inode number %ju to ginode",
             (uintmax_t)inumber);
     if (startinum == 0 ||
-        inumber < startinum || inumber >= startinum + INOPB(&sblock)) {
-        iblk = ino_to_fsba(&sblock, inumber);
+        inumber < startinum || inumber >= startinum + INOPB(check_sblk.b_un.b_fs)) {
+        iblk = ino_to_fsba(check_sblk.b_un.b_fs, inumber);
         if (pbp != 0)
             pbp->b_flags &= ~B_INUSE;
-        pbp = check_getdatablk(iblk, sblock.fs_bsize, BT_INODES);
-        startinum = (inumber / INOPB(&sblock)) * INOPB(&sblock);
+        pbp = check_getdatablk(iblk, check_sblk.b_un.b_fs->fs_bsize, BT_INODES);
+        startinum = (inumber / INOPB(check_sblk.b_un.b_fs)) * INOPB(check_sblk.b_un.b_fs);
     }
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
         return ((union dinode *)
-            &pbp->b_un.b_dinode1[inumber % INOPB(&sblock)]);
-    return ((union dinode *)&pbp->b_un.b_dinode2[inumber % INOPB(&sblock)]);
+            &pbp->b_un.b_dinode1[inumber % INOPB(check_sblk.b_un.b_fs)]);
+    return ((union dinode *)&pbp->b_un.b_dinode2[inumber % INOPB(check_sblk.b_un.b_fs)]);
 }
 
 /*
@@ -1721,7 +1729,7 @@ getnextinode(ino_t inumber, int rebuildcg)
             (uintmax_t)inumber);
     if (inumber >= lastinum) {
         readcount++;
-        blk = ino_to_fsba(&sblock, lastinum);
+        blk = ino_to_fsba(check_sblk.b_un.b_fs, lastinum);
         if (readcount % readpercg == 0) {
             size = partialsize;
             lastinum += partialcnt;
@@ -1754,7 +1762,7 @@ getnextinode(ino_t inumber, int rebuildcg)
         }
         if (!ftypeok(dp))
             return (NULL);
-        ndb = howmany(DIP(dp, di_size), sblock.fs_bsize);
+        ndb = howmany(DIP(dp, di_size), check_sblk.b_un.b_fs->fs_bsize);
         if (ndb < 0)
             return (NULL);
         if (mode == IFBLK || mode == IFCHR)
@@ -1764,13 +1772,13 @@ getnextinode(ino_t inumber, int rebuildcg)
              * Fake ndb value so direct/indirect block checks below
              * will detect any garbage after symlink string.
              */
-            if (DIP(dp, di_size) < (off_t)sblock.fs_maxsymlinklen) {
+            if (DIP(dp, di_size) < (off_t)check_sblk.b_un.b_fs->fs_maxsymlinklen) {
                 ndb = howmany(DIP(dp, di_size),
                     sizeof(ufs2_daddr_t));
                 if (ndb > NDADDR) {
                     j = ndb - NDADDR;
                     for (ndb = 1; j > 1; j--)
-                        ndb *= NINDIR(&sblock);
+                        ndb *= NINDIR(check_sblk.b_un.b_fs);
                     ndb += NDADDR;
                 }
             }
@@ -1779,13 +1787,13 @@ getnextinode(ino_t inumber, int rebuildcg)
             if (DIP(dp, di_db[j]) != 0)
                 return (NULL);
         for (j = 0, ndb -= NDADDR; ndb > 0; j++)
-            ndb /= NINDIR(&sblock);
+            ndb /= NINDIR(check_sblk.b_un.b_fs);
         for (; j < NIADDR; j++)
             if (DIP(dp, di_ib[j]) != 0)
                 return (NULL);
     }
 inodegood:
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
         nextinop += sizeof(struct ufs1_dinode);
     else
         nextinop += sizeof(struct ufs2_dinode);
@@ -1796,22 +1804,22 @@ static void
 setinodebuf(ino_t inum)
 {
 
-    if (inum % sblock.fs_ipg != 0)
+    if (inum % check_sblk.b_un.b_fs->fs_ipg != 0)
         errx(EEXIT, "bad inode number %ju to setinodebuf",
             (uintmax_t)inum);
-    lastvalidinum = inum + sblock.fs_ipg - 1;
+    lastvalidinum = inum + check_sblk.b_un.b_fs->fs_ipg - 1;
     startinum = 0;
     nextino = inum;
     lastinum = inum;
     readcount = 0;
     if (inobuf.b_un.b_buf != NULL)
         return;
-    inobufsize = blkroundup(&sblock, INOBUFSIZE);
-    fullcnt = inobufsize / ((sblock.fs_magic == FS_UFS1_MAGIC) ?
+    inobufsize = blkroundup(check_sblk.b_un.b_fs, INOBUFSIZE);
+    fullcnt = inobufsize / ((check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) ?
         sizeof(struct ufs1_dinode) : sizeof(struct ufs2_dinode));
-    readpercg = sblock.fs_ipg / fullcnt;
-    partialcnt = sblock.fs_ipg % fullcnt;
-    partialsize = partialcnt * ((sblock.fs_magic == FS_UFS1_MAGIC) ?
+    readpercg = check_sblk.b_un.b_fs->fs_ipg / fullcnt;
+    partialcnt = check_sblk.b_un.b_fs->fs_ipg % fullcnt;
+    partialsize = partialcnt * ((check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC) ?
         sizeof(struct ufs1_dinode) : sizeof(struct ufs2_dinode));
     if (partialcnt != 0) {
         readpercg++;
@@ -1846,10 +1854,10 @@ cacheino(union dinode *dp, ino_t inumber)
     struct inoinfo *inp, **inpp;
     int i, blks;
 
-    if (howmany(DIP(dp, di_size), sblock.fs_bsize) > NDADDR)
+    if (howmany(DIP(dp, di_size), check_sblk.b_un.b_fs->fs_bsize) > NDADDR)
         blks = NDADDR + NIADDR;
     else
-        blks = howmany(DIP(dp, di_size), sblock.fs_bsize);
+        blks = howmany(DIP(dp, di_size), check_sblk.b_un.b_fs->fs_bsize);
     inp = (struct inoinfo *)
         Malloc(sizeof(*inp) + (blks - 1) * sizeof(ufs2_daddr_t));
     if (inp == NULL)
@@ -1994,12 +2002,12 @@ allocino(ino_t request, int type)
             break;
     if (ino == check_maxino)
         return (0);
-    cg = ino_to_cg(&sblock, ino);
+    cg = ino_to_cg(check_sblk.b_un.b_fs, ino);
     cgbp = check_cgget(cg);
     cgp = cgbp->b_un.b_cg;
     if (!check_cgmagic(cg, cgbp))
         return (0);
-    setbit(cg_inosused(cgp), ino % sblock.fs_ipg);
+    setbit(cg_inosused(cgp), ino % check_sblk.b_un.b_fs->fs_ipg);
     cgp->cg_cs.cs_nifree--;
     switch (type & IFMT) {
     case IFDIR:
@@ -2028,8 +2036,8 @@ allocino(ino_t request, int type)
     DIP_SET(dp, di_mtimensec, 0);
     DIP_SET(dp, di_ctimensec, 0);
     DIP_SET(dp, di_atimensec, 0);
-    DIP_SET(dp, di_size, sblock.fs_fsize);
-    DIP_SET(dp, di_blocks, btodb(sblock.fs_fsize));
+    DIP_SET(dp, di_size, check_sblk.b_un.b_fs->fs_fsize);
+    DIP_SET(dp, di_blocks, btodb(check_sblk.b_un.b_fs->fs_fsize));
     check_n_files++;
     check_inodirty();
     inoinfo(ino)->ino_type = IFTODT(type);
@@ -2236,14 +2244,14 @@ allocdir(ino_t parent, ino_t request, int mode)
     dirp->dot_ino = ino;
     dirp->dotdot_ino = parent;
     dp = check_ginode(ino);
-    bp = getdirblk(DIP(dp, di_db[0]), sblock.fs_fsize);
+    bp = getdirblk(DIP(dp, di_db[0]), check_sblk.b_un.b_fs->fs_fsize);
     if (bp->b_errs) {
         freeino(ino);
         return (0);
     }
     memmove(bp->b_un.b_buf, dirp, sizeof(struct dirtemplate));
     for (cp = &bp->b_un.b_buf[DIRBLKSIZ];
-         cp < &bp->b_un.b_buf[sblock.fs_fsize];
+         cp < &bp->b_un.b_buf[check_sblk.b_un.b_fs->fs_fsize];
          cp += DIRBLKSIZ)
         memmove(cp, &emptydir, sizeof emptydir);
     dirty(bp);
@@ -2428,32 +2436,32 @@ expanddir(union dinode *dp, char *name)
     struct bufarea *bp;
     char *cp, firstblk[DIRBLKSIZ];
 
-    lastbn = lblkno(&sblock, DIP(dp, di_size));
+    lastbn = lblkno(check_sblk.b_un.b_fs, DIP(dp, di_size));
     if (lastbn >= NDADDR - 1 || DIP(dp, di_db[lastbn]) == 0 ||
         DIP(dp, di_size) == 0)
         return (0);
-    if ((newblk = allocblk(sblock.fs_frag)) == 0)
+    if ((newblk = allocblk(check_sblk.b_un.b_fs->fs_frag)) == 0)
         return (0);
     DIP_SET(dp, di_db[lastbn + 1], DIP(dp, di_db[lastbn]));
     DIP_SET(dp, di_db[lastbn], newblk);
-    DIP_SET(dp, di_size, DIP(dp, di_size) + sblock.fs_bsize);
-    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) + btodb(sblock.fs_bsize));
+    DIP_SET(dp, di_size, DIP(dp, di_size) + check_sblk.b_un.b_fs->fs_bsize);
+    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) + btodb(check_sblk.b_un.b_fs->fs_bsize));
     bp = getdirblk(DIP(dp, di_db[lastbn + 1]),
-        sblksize(&sblock, DIP(dp, di_size), lastbn + 1));
+        sblksize(check_sblk.b_un.b_fs, DIP(dp, di_size), lastbn + 1));
     if (bp->b_errs)
         goto bad;
     memmove(firstblk, bp->b_un.b_buf, DIRBLKSIZ);
-    bp = getdirblk(newblk, sblock.fs_bsize);
+    bp = getdirblk(newblk, check_sblk.b_un.b_fs->fs_bsize);
     if (bp->b_errs)
         goto bad;
     memmove(bp->b_un.b_buf, firstblk, DIRBLKSIZ);
     for (cp = &bp->b_un.b_buf[DIRBLKSIZ];
-         cp < &bp->b_un.b_buf[sblock.fs_bsize];
+         cp < &bp->b_un.b_buf[check_sblk.b_un.b_fs->fs_bsize];
          cp += DIRBLKSIZ)
         memmove(cp, &emptydir, sizeof emptydir);
     dirty(bp);
     bp = getdirblk(DIP(dp, di_db[lastbn + 1]),
-        sblksize(&sblock, DIP(dp, di_size), lastbn + 1));
+        sblksize(check_sblk.b_un.b_fs, DIP(dp, di_size), lastbn + 1));
     if (bp->b_errs)
         goto bad;
     memmove(bp->b_un.b_buf, &emptydir, sizeof emptydir);
@@ -2468,9 +2476,9 @@ expanddir(union dinode *dp, char *name)
 bad:
     DIP_SET(dp, di_db[lastbn], DIP(dp, di_db[lastbn + 1]));
     DIP_SET(dp, di_db[lastbn + 1], 0);
-    DIP_SET(dp, di_size, DIP(dp, di_size) - sblock.fs_bsize);
-    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) - btodb(sblock.fs_bsize));
-    freeblk(newblk, sblock.fs_frag);
+    DIP_SET(dp, di_size, DIP(dp, di_size) - check_sblk.b_un.b_fs->fs_bsize);
+    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) - btodb(check_sblk.b_un.b_fs->fs_bsize));
+    freeblk(newblk, check_sblk.b_un.b_fs->fs_frag);
     return (0);
 }
 
@@ -2530,10 +2538,10 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
        (intmax_t)idesc->id_number, (intmax_t)dp->di_extsize);
     if (dp->di_extsize == 0)
         return 0;
-    if (dp->di_extsize <= sblock.fs_fsize)
-        blksiz = sblock.fs_fsize;
+    if (dp->di_extsize <= check_sblk.b_un.b_fs->fs_fsize)
+        blksiz = check_sblk.b_un.b_fs->fs_fsize;
     else
-        blksiz = sblock.fs_bsize;
+        blksiz = check_sblk.b_un.b_fs->fs_bsize;
     printf("blksiz = %ju\n", (intmax_t)blksiz);
     bp = check_getdatablk(dp->di_extb[0], blksiz, BT_EXTATTR);
     cp = (u_char *)bp->b_un.b_buf;
@@ -2558,13 +2566,13 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
         return (0);
     mode = DIP(dp, di_mode) & IFMT;
     if (mode == 0) {
-        if ((sblock.fs_magic == FS_UFS1_MAGIC &&
+        if ((check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC &&
              (memcmp(dp->dp1.di_db, ufs1_zino.di_db,
             NDADDR * sizeof(ufs1_daddr_t)) ||
               memcmp(dp->dp1.di_ib, ufs1_zino.di_ib,
             NIADDR * sizeof(ufs1_daddr_t)) ||
               dp->dp1.di_mode || dp->dp1.di_size)) ||
-            (sblock.fs_magic == FS_UFS2_MAGIC &&
+            (check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC &&
              (memcmp(dp->dp2.di_db, ufs2_zino.di_db,
             NDADDR * sizeof(ufs2_daddr_t)) ||
               memcmp(dp->dp2.di_ib, ufs2_zino.di_ib,
@@ -2583,12 +2591,12 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
     }
     lastino = inumber;
     /* This should match the file size limit in ffs_mountfs(). */
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
-        kernmaxfilesize = (off_t)0x40000000 * sblock.fs_bsize - 1;
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
+        kernmaxfilesize = (off_t)0x40000000 * check_sblk.b_un.b_fs->fs_bsize - 1;
     else
-        kernmaxfilesize = sblock.fs_maxfilesize;
+        kernmaxfilesize = check_sblk.b_un.b_fs->fs_maxfilesize;
     if (DIP(dp, di_size) > kernmaxfilesize ||
-        DIP(dp, di_size) > sblock.fs_maxfilesize ||
+        DIP(dp, di_size) > check_sblk.b_un.b_fs->fs_maxfilesize ||
         (mode == IFDIR && DIP(dp, di_size) > MAXDIRSIZE)) {
         if (check_debug)
             printf("bad size %ju:", (uintmax_t)DIP(dp, di_size));
@@ -2596,7 +2604,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
     }
     if (!check_preen && mode == IFMT && check_reply("HOLD BAD BLOCK") == 1) {
         dp = check_ginode(inumber);
-        DIP_SET(dp, di_size, sblock.fs_fsize);
+        DIP_SET(dp, di_size, check_sblk.b_un.b_fs->fs_fsize);
         DIP_SET(dp, di_mode, IFREG|0600);
         check_inodirty();
     }
@@ -2613,7 +2621,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
             printf("bad special-file rdev NODEV:");
         goto unknown;
     }
-    ndb = howmany(DIP(dp, di_size), sblock.fs_bsize);
+    ndb = howmany(DIP(dp, di_size), check_sblk.b_un.b_fs->fs_bsize);
     if (ndb < 0) {
         if (check_debug)
             printf("bad size %ju ndb %ju:",
@@ -2627,8 +2635,8 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
          * Fake ndb value so direct/indirect block checks below
          * will detect any garbage after symlink string.
          */
-        if (DIP(dp, di_size) < (off_t)sblock.fs_maxsymlinklen) {
-            if (sblock.fs_magic == FS_UFS1_MAGIC)
+        if (DIP(dp, di_size) < (off_t)check_sblk.b_un.b_fs->fs_maxsymlinklen) {
+            if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
                 ndb = howmany(DIP(dp, di_size),
                     sizeof(ufs1_daddr_t));
             else
@@ -2637,7 +2645,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
             if (ndb > NDADDR) {
                 j = ndb - NDADDR;
                 for (ndb = 1; j > 1; j--)
-                    ndb *= NINDIR(&sblock);
+                    ndb *= NINDIR(check_sblk.b_un.b_fs);
                 ndb += NDADDR;
             }
         }
@@ -2650,7 +2658,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
             goto unknown;
         }
     for (j = 0, ndb -= NDADDR; ndb > 0; j++)
-        ndb /= NINDIR(&sblock);
+        ndb /= NINDIR(check_sblk.b_un.b_fs);
     for (; j < NIADDR; j++)
         if (DIP(dp, di_ib[j]) != 0) {
             if (check_debug)
@@ -2685,16 +2693,16 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 #endif
         idesc->id_type = ADDR;
     (void)check_inode(dp, idesc);
-    if (sblock.fs_magic == FS_UFS2_MAGIC && dp->dp2.di_extsize > 0) {
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC && dp->dp2.di_extsize > 0) {
         idesc->id_type = ADDR;
-        ndb = howmany(dp->dp2.di_extsize, sblock.fs_bsize);
+        ndb = howmany(dp->dp2.di_extsize, check_sblk.b_un.b_fs->fs_bsize);
         for (j = 0; j < NXADDR; j++) {
             if (--ndb == 0 &&
-                (offset = blkoff(&sblock, dp->dp2.di_extsize)) != 0)
-                idesc->id_numfrags = numfrags(&sblock,
-                    fragroundup(&sblock, offset));
+                (offset = blkoff(check_sblk.b_un.b_fs, dp->dp2.di_extsize)) != 0)
+                idesc->id_numfrags = numfrags(check_sblk.b_un.b_fs,
+                    fragroundup(check_sblk.b_un.b_fs, offset));
             else
-                idesc->id_numfrags = sblock.fs_frag;
+                idesc->id_numfrags = check_sblk.b_un.b_fs->fs_frag;
             if (dp->dp2.di_extb[j] == 0)
                 continue;
             idesc->id_blkno = dp->dp2.di_extb[j];
@@ -2703,9 +2711,9 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
                 break;
         }
     }
-    if (sblock.fs_magic == FS_UFS2_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC)
         eascan(idesc, &dp->dp2);
-    idesc->id_entryno *= btodb(sblock.fs_fsize);
+    idesc->id_entryno *= btodb(check_sblk.b_un.b_fs->fs_fsize);
     if (DIP(dp, di_blocks) != idesc->id_entryno) {
         check_warn("INCORRECT BLOCK COUNT I=%lu (%ju should be %ju)",
             (u_long)inumber, (uintmax_t)DIP(dp, di_blocks),
@@ -2746,17 +2754,17 @@ check_pass1(void)
     /*
      * Set file system reserved blocks in used block map.
      */
-    for (c = 0; c < sblock.fs_ncg; c++) {
-        cgd = cgdmin(&sblock, c);
+    for (c = 0; c < check_sblk.b_un.b_fs->fs_ncg; c++) {
+        cgd = cgdmin(check_sblk.b_un.b_fs, c);
         if (c == 0) {
-            i = cgbase(&sblock, c);
+            i = cgbase(check_sblk.b_un.b_fs, c);
         } else
-            i = cgsblock(&sblock, c);
+            i = cgsblock(check_sblk.b_un.b_fs, c);
         for (; i < cgd; i++)
             setbmap(i);
     }
-    i = sblock.fs_csaddr;
-    cgd = i + howmany(sblock.fs_cssize, sblock.fs_fsize);
+    i = check_sblk.b_un.b_fs->fs_csaddr;
+    cgd = i + howmany(check_sblk.b_un.b_fs->fs_cssize, check_sblk.b_un.b_fs->fs_fsize);
     for (; i < cgd; i++)
         setbmap(i);
 
@@ -2766,31 +2774,31 @@ check_pass1(void)
     memset(&idesc, 0, sizeof(struct inodesc));
     idesc.id_func = pass1check;
     check_n_files = check_n_blks = 0;
-    for (c = 0; c < sblock.fs_ncg; c++) {
-        inumber = c * sblock.fs_ipg;
+    for (c = 0; c < check_sblk.b_un.b_fs->fs_ncg; c++) {
+        inumber = c * check_sblk.b_un.b_fs->fs_ipg;
         setinodebuf(inumber);
         cgbp = check_cgget(c);
         cgp = cgbp->b_un.b_cg;
         rebuildcg = 0;
         if (!check_cgmagic(c, cgbp))
             rebuildcg = 1;
-        if (!rebuildcg && sblock.fs_magic == FS_UFS2_MAGIC) {
+        if (!rebuildcg && check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC) {
             inosused = cgp->cg_initediblk;
-            if (inosused > sblock.fs_ipg) {
+            if (inosused > check_sblk.b_un.b_fs->fs_ipg) {
                 check_fatal(
 "Too many initialized inodes (%ju > %d) in cylinder group %d\nReset to %d\n",
                     (uintmax_t)inosused,
-                    sblock.fs_ipg, c, sblock.fs_ipg);
-                inosused = sblock.fs_ipg;
+                    check_sblk.b_un.b_fs->fs_ipg, c, check_sblk.b_un.b_fs->fs_ipg);
+                inosused = check_sblk.b_un.b_fs->fs_ipg;
             }
         } else {
-            inosused = sblock.fs_ipg;
+            inosused = check_sblk.b_un.b_fs->fs_ipg;
         }
 #if 0
         if (got_siginfo) {
             printf("%s: phase 1: cyl group %d of %d (%d%%)\n",
-                check_filename, c, sblock.fs_ncg,
-                c * 100 / sblock.fs_ncg);
+                check_filename, c, check_sblk.b_un.b_fs->fs_ncg,
+                c * 100 / check_sblk.b_un.b_fs->fs_ncg);
             got_siginfo = 0;
         }
 #endif
@@ -2853,30 +2861,30 @@ check_pass1(void)
          * groups that formerly had many inodes but now have
          * fewer in use.
          */
-        mininos = roundup(inosused + INOPB(&sblock), INOPB(&sblock));
+        mininos = roundup(inosused + INOPB(check_sblk.b_un.b_fs), INOPB(check_sblk.b_un.b_fs));
         if (check_inoopt && !check_preen && !rebuildcg &&
-            sblock.fs_magic == FS_UFS2_MAGIC &&
-            cgp->cg_initediblk > 2 * INOPB(&sblock) &&
+            check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC &&
+            cgp->cg_initediblk > 2 * INOPB(check_sblk.b_un.b_fs) &&
             mininos < cgp->cg_initediblk) {
             i = cgp->cg_initediblk;
-            if (mininos < 2 * INOPB(&sblock))
-                cgp->cg_initediblk = 2 * INOPB(&sblock);
+            if (mininos < 2 * INOPB(check_sblk.b_un.b_fs))
+                cgp->cg_initediblk = 2 * INOPB(check_sblk.b_un.b_fs);
             else
                 cgp->cg_initediblk = mininos;
             check_warn("CYLINDER GROUP %d: RESET FROM %ju TO %d %s\n",
                 c, (long)i, cgp->cg_initediblk, "VALID INODES");
             dirty(cgbp);
         }
-        if (inosused < sblock.fs_ipg)
+        if (inosused < check_sblk.b_un.b_fs->fs_ipg)
             continue;
         lastino += 1;
-        if (lastino < (c * sblock.fs_ipg))
+        if (lastino < (c * check_sblk.b_un.b_fs->fs_ipg))
             inosused = 0;
         else
-            inosused = lastino - (c * sblock.fs_ipg);
+            inosused = lastino - (c * check_sblk.b_un.b_fs->fs_ipg);
         if (rebuildcg && inosused > cgp->cg_initediblk &&
-            sblock.fs_magic == FS_UFS2_MAGIC) {
-            cgp->cg_initediblk = roundup(inosused, INOPB(&sblock));
+            check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC) {
+            cgp->cg_initediblk = roundup(inosused, INOPB(check_sblk.b_un.b_fs));
             check_warn("CYLINDER GROUP %d: FOUND %d VALID INODES\n", c,
                 cgp->cg_initediblk);
         }
@@ -3028,16 +3036,16 @@ check_pass1b(void)
     idesc.id_func = pass1bcheck;
     duphead = check_duplist;
     inumber = 0;
-    for (c = 0; c < sblock.fs_ncg; c++) {
+    for (c = 0; c < check_sblk.b_un.b_fs->fs_ncg; c++) {
 #if 0
         if (got_siginfo) {
             printf("%s: phase 1b: cyl group %d of %d (%d%%)\n",
-                check_filename, c, sblock.fs_ncg,
-                c * 100 / sblock.fs_ncg);
+                check_filename, c, check_sblk.b_un.b_fs->fs_ncg,
+                c * 100 / check_sblk.b_un.b_fs->fs_ncg);
             got_siginfo = 0;
         }
 #endif
-        for (i = 0; i < sblock.fs_ipg; i++, inumber++) {
+        for (i = 0; i < check_sblk.b_un.b_fs->fs_ipg; i++, inumber++) {
             if (inumber < ROOTINO)
                 continue;
             dp = check_ginode(inumber);
@@ -3653,16 +3661,16 @@ check_pass4(void)
     memset(&idesc, 0, sizeof(struct inodesc));
     idesc.id_type = ADDR;
     idesc.id_func = pass4check;
-    for (cg = 0; cg < sblock.fs_ncg; cg++) {
+    for (cg = 0; cg < check_sblk.b_un.b_fs->fs_ncg; cg++) {
 #if 0
         if (got_siginfo) {
             printf("%s: phase 4: cyl group %d of %d (%d%%)\n",
-                check_filename, cg, sblock.fs_ncg,
-                cg * 100 / sblock.fs_ncg);
+                check_filename, cg, check_sblk.b_un.b_fs->fs_ncg,
+                cg * 100 / check_sblk.b_un.b_fs->fs_ncg);
             got_siginfo = 0;
         }
 #endif
-        inumber = cg * sblock.fs_ipg;
+        inumber = cg * check_sblk.b_un.b_fs->fs_ipg;
         for (i = 0; i < check_inostathead[cg].il_numalloced; i++, inumber++) {
             if (inumber < ROOTINO)
                 continue;
@@ -3754,11 +3762,11 @@ clear_blocks(ufs2_daddr_t start, ufs2_daddr_t end)
     if (check_debug)
         printf("Zero frags %jd to %jd\n", (intmax_t)start, (intmax_t)end);
     if (check_Zflag)
-        blzero(check_fswritefd, fsbtodb(&sblock, start),
-            lfragtosize(&sblock, end - start + 1));
+        blzero(check_fswritefd, fsbtodb(check_sblk.b_un.b_fs, start),
+            lfragtosize(check_sblk.b_un.b_fs, end - start + 1));
     if (check_Eflag)
-        blerase(check_fswritefd, fsbtodb(&sblock, start),
-            lfragtosize(&sblock, end - start + 1));
+        blerase(check_fswritefd, fsbtodb(check_sblk.b_un.b_fs, start),
+            lfragtosize(check_sblk.b_un.b_fs, end - start + 1));
 }
 
 static void
@@ -3887,7 +3895,7 @@ update_maps(
     struct cg *newcg)   /* cylinder group of determined allocations */
 {
     int inomapsize, excessdirs;
-    struct fs *fs = &sblock;
+    struct fs *fs = check_sblk.b_un.b_fs;
 
     inomapsize = howmany(fs->fs_ipg, CHAR_BIT);
     excessdirs = oldcg->cg_cs.cs_ndir - newcg->cg_cs.cs_ndir;
@@ -3913,7 +3921,7 @@ check_pass5(void)
 {
     int c, i, j, blk, frags, basesize, mapsize;
     int inomapsize, blkmapsize;
-    struct fs *fs = &sblock;
+    struct fs *fs = check_sblk.b_un.b_fs;
     ufs2_daddr_t d, dbase, dmax, start;
     int rewritecg = 0;
     struct csum *cs;
@@ -3933,7 +3941,7 @@ check_pass5(void)
             if (check_preen || check_reply("DELETE CLUSTERING MAPS")) {
                 fs->fs_contigsumsize = 0;
                 rewritecg = 1;
-                sbdirty();
+                dirty(&check_sblk);
             }
         }
         if (fs->fs_maxcontig > 1) {
@@ -3960,13 +3968,13 @@ check_pass5(void)
                     fs->fs_cgsize =
                         fragroundup(fs, CGSIZE(fs));
                     rewritecg = 1;
-                    sbdirty();
+                    dirty(&check_sblk);
                 }
             }
         }
     }
     basesize = &newcg->cg_space[0] - (u_char *)(&newcg->cg_firstfield);
-    if (sblock.fs_magic == FS_UFS2_MAGIC) {
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC) {
         newcg->cg_iusedoff = basesize;
     } else {
         /*
@@ -4009,8 +4017,8 @@ check_pass5(void)
 #if 0
         if (got_siginfo) {
             printf("%s: phase 5: cyl group %d of %d (%d%%)\n",
-                check_filename, c, sblock.fs_ncg,
-                c * 100 / sblock.fs_ncg);
+                check_filename, c, check_sblk.b_un.b_fs->fs_ncg,
+                c * 100 / check_sblk.b_un.b_fs->fs_ncg);
             got_siginfo = 0;
         }
 #endif
@@ -4166,7 +4174,7 @@ check_pass5(void)
         if (memcmp(&newcg->cg_cs, cs, sizeof *cs) != 0 &&
             dofix(&idesc[0], "FREE BLK COUNT(S) WRONG IN SUPERBLK")) {
             memmove(cs, &newcg->cg_cs, sizeof *cs);
-            sbdirty();
+            dirty(&check_sblk);
         }
         if (rewritecg) {
             memmove(cg, newcg, (size_t)fs->fs_cgsize);
@@ -4192,7 +4200,7 @@ check_pass5(void)
         memmove(&fs->fs_cstotal, &cstotal, sizeof cstotal);
         fs->fs_ronly = 0;
         fs->fs_fmod = 0;
-        sbdirty();
+        dirty(&check_sblk);
     }
 }
 
@@ -4218,20 +4226,20 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
         check_fatal("CAN'T CHECK FILE SYSTEM.");
         return;
     case -1:
-        check_warn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
-            sblock.fs_frag * sblock.fs_cstotal.cs_nbfree));
+        check_warn("clean, %ld free ", (long)(check_sblk.b_un.b_fs->fs_cstotal.cs_nffree +
+            check_sblk.b_un.b_fs->fs_frag * check_sblk.b_un.b_fs->fs_cstotal.cs_nbfree));
         printf("(%jd frags, %jd blocks, %.1f%% fragmentation)\n",
-            (intmax_t)sblock.fs_cstotal.cs_nffree,
-            (intmax_t)sblock.fs_cstotal.cs_nbfree,
-            sblock.fs_cstotal.cs_nffree * 100.0 / sblock.fs_dsize);
+            (intmax_t)check_sblk.b_un.b_fs->fs_cstotal.cs_nffree,
+            (intmax_t)check_sblk.b_un.b_fs->fs_cstotal.cs_nbfree,
+            check_sblk.b_un.b_fs->fs_cstotal.cs_nffree * 100.0 / check_sblk.b_un.b_fs->fs_dsize);
         return;
     }
 
     /*
      * Determine if we can and should do journal recovery.
      */
-    if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
-        if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
+    if ((check_sblk.b_un.b_fs->fs_flags & FS_SUJ) == FS_SUJ) {
+        if ((check_sblk.b_un.b_fs->fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
             if (check_suj(filesys) == 0) {
                 printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
                 exit(0);
@@ -4242,8 +4250,8 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
          * Write the superblock so we don't try to recover the
          * journal on another pass.
          */
-        sblock.fs_mtime = time(NULL);
-        sbdirty();
+        check_sblk.b_un.b_fs->fs_mtime = time(NULL);
+        dirty(&check_sblk);
     }
 
     /*
@@ -4254,7 +4262,7 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     /*
      * 1: scan inodes tallying blocks used
      */
-    printf("** Last Mounted on %s\n", sblock.fs_fsmnt);
+    printf("** Last Mounted on %s\n", check_sblk.b_un.b_fs->fs_fsmnt);
     printf("** Phase 1 - Check Blocks and Sizes\n");
     check_pass1();
 
@@ -4293,20 +4301,20 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     /*
      * print out summary statistics
      */
-    n_ffree = sblock.fs_cstotal.cs_nffree;
-    n_bfree = sblock.fs_cstotal.cs_nbfree;
-    files = check_maxino - ROOTINO - sblock.fs_cstotal.cs_nifree - check_n_files;
+    n_ffree = check_sblk.b_un.b_fs->fs_cstotal.cs_nffree;
+    n_bfree = check_sblk.b_un.b_fs->fs_cstotal.cs_nbfree;
+    files = check_maxino - ROOTINO - check_sblk.b_un.b_fs->fs_cstotal.cs_nifree - check_n_files;
     blks = check_n_blks +
-        sblock.fs_ncg * (cgdmin(&sblock, 0) - cgsblock(&sblock, 0));
-    blks += cgsblock(&sblock, 0) - cgbase(&sblock, 0);
-    blks += howmany(sblock.fs_cssize, sblock.fs_fsize);
-    blks = check_maxfsblock - (n_ffree + sblock.fs_frag * n_bfree) - blks;
+        check_sblk.b_un.b_fs->fs_ncg * (cgdmin(check_sblk.b_un.b_fs, 0) - cgsblock(check_sblk.b_un.b_fs, 0));
+    blks += cgsblock(check_sblk.b_un.b_fs, 0) - cgbase(check_sblk.b_un.b_fs, 0);
+    blks += howmany(check_sblk.b_un.b_fs->fs_cssize, check_sblk.b_un.b_fs->fs_fsize);
+    blks = check_maxfsblock - (n_ffree + check_sblk.b_un.b_fs->fs_frag * n_bfree) - blks;
     check_warn("%ld files, %jd used, %ju free ",
         (long)check_n_files, (intmax_t)check_n_blks,
-        (uintmax_t)(n_ffree + sblock.fs_frag * n_bfree));
+        (uintmax_t)(n_ffree + check_sblk.b_un.b_fs->fs_frag * n_bfree));
     printf("(%ju frags, %ju blocks, %.1f%% fragmentation)\n",
         (uintmax_t)n_ffree, (uintmax_t)n_bfree,
-        n_ffree * 100.0 / sblock.fs_dsize);
+        n_ffree * 100.0 / check_sblk.b_un.b_fs->fs_dsize);
     if (verbose) {
         if (files < 0)
             printf("%jd inodes missing\n", -files);
@@ -4323,16 +4331,16 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     check_muldup = (struct dups *)0;
     check_inocleanup();
     if (check_fsmodified) {
-        sblock.fs_time = time(NULL);
-        sbdirty();
+        check_sblk.b_un.b_fs->fs_time = time(NULL);
+        dirty(&check_sblk);
     }
     if (check_cvtlevel && check_sblk.b_dirty) {
         /*
          * Write out the duplicate super blocks
          */
-        for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-            check_blwrite(check_fswritefd, (char *)&sblock,
-                fsbtodb(&sblock, cgsblock(&sblock, cylno)),
+        for (cylno = 0; cylno < check_sblk.b_un.b_fs->fs_ncg; cylno++)
+            check_blwrite(check_fswritefd, (char *)check_sblk.b_un.b_fs,
+                fsbtodb(check_sblk.b_un.b_fs, cgsblock(check_sblk.b_un.b_fs, cylno)),
                 SBLOCKSIZE);
     }
     if (check_rerun)
@@ -4343,7 +4351,7 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
      */
     check_finish(check_resolved);
 
-    for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
+    for (cylno = 0; cylno < check_sblk.b_un.b_fs->fs_ncg; cylno++)
         if (check_inostathead[cylno].il_stat != NULL)
             free((char *)check_inostathead[cylno].il_stat);
     free((char *)check_inostathead);
