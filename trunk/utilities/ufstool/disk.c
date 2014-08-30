@@ -30,11 +30,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#define _LIBUFS
 #include "libufs.h"
-
-/* Track if its fd points to a writable device. */
-#define MINE_WRITE  0x02
+#define _LIBUFS
+#include "internal.h"
 
 int
 ufs_disk_close(ufs_t *disk)

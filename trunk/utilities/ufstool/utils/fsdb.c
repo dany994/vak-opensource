@@ -34,13 +34,14 @@
 #include <pwd.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include <time.h>
 #include <err.h>
 
 #include "dir.h"
 #include "fs.h"
 #include "fsdb.h"
-#include "fsck.h"
+#include "internal.h"
 
 static void usage(void);
 int cmdloop(void);
@@ -101,11 +102,11 @@ main(int argc, char *argv[])
     if (!check_setup(fsys, 0))
         errx(1, "cannot set up file system `%s'", fsys);
     printf("%s file system `%s'\nLast Mounted on %s\n",
-        nflag? "Examining": "Editing", fsys, sblock.fs_fsmnt);
+        nflag? "Examining": "Editing", fsys, check_sblk.b_un.b_fs->fs_fsmnt);
     rval = cmdloop();
     if (!nflag) {
-        sblock.fs_clean = 0;	/* mark it dirty */
-        sbdirty();
+        check_sblk.b_un.b_fs->fs_clean = 0;	/* mark it dirty */
+        dirty(&check_sblk);
         check_finish(0);
         printf("*** FILE SYSTEM MARKED DIRTY\n");
         printf("*** BE SURE TO RUN FSCK TO CLEAN UP ANY DAMAGE\n");
@@ -436,7 +437,7 @@ CMDFUNCSTART(findblk)
     int c, i, is_ufs2;
 
     wantedblksize = (argc - 1);
-    is_ufs2 = sblock.fs_magic == FS_UFS2_MAGIC;
+    is_ufs2 = check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC;
     ocurrent = curinum;
 
     if (is_ufs2) {
@@ -444,25 +445,25 @@ CMDFUNCSTART(findblk)
 	if (wantedblk64 == NULL)
 	    err(1, "malloc");
 	for (i = 1; i < argc; i++)
-	    wantedblk64[i - 1] = dbtofsb(&sblock, strtoull(argv[i], NULL, 0));
+	    wantedblk64[i - 1] = dbtofsb(check_sblk.b_un.b_fs, strtoull(argv[i], NULL, 0));
     } else {
 	wantedblk32 = calloc(wantedblksize, sizeof(uint32_t));
 	if (wantedblk32 == NULL)
 	    err(1, "malloc");
 	for (i = 1; i < argc; i++)
-	    wantedblk32[i - 1] = dbtofsb(&sblock, strtoull(argv[i], NULL, 0));
+	    wantedblk32[i - 1] = dbtofsb(check_sblk.b_un.b_fs, strtoull(argv[i], NULL, 0));
     }
     findblk_numtofind = wantedblksize;
     /*
-     * sblock.fs_ncg holds a number of cylinder groups.
+     * check_sblk.b_un.b_fs->fs_ncg holds a number of cylinder groups.
      * Iterate over all cylinder groups.
      */
-    for (c = 0; c < sblock.fs_ncg; c++) {
+    for (c = 0; c < check_sblk.b_un.b_fs->fs_ncg; c++) {
 	/*
-	 * sblock.fs_ipg holds a number of inodes per cylinder group.
+	 * check_sblk.b_un.b_fs->fs_ipg holds a number of inodes per cylinder group.
 	 * Calculate a highest inode number for a given cylinder group.
 	 */
-	inum = c * sblock.fs_ipg;
+	inum = c * check_sblk.b_un.b_fs->fs_ipg;
 	/* Read cylinder group. */
 	cgbp = check_cgget(c);
 	cgp = cgbp->b_un.b_cg;
@@ -473,7 +474,7 @@ CMDFUNCSTART(findblk)
 	if (is_ufs2)
 	    inosused = cgp->cg_initediblk;
 	else
-	    inosused = sblock.fs_ipg;
+	    inosused = check_sblk.b_un.b_fs->fs_ipg;
 
 	for (; inosused > 0; inum++, inosused--) {
 	    /* Skip magic inodes: 0, WINO, ROOTINO. */
@@ -486,13 +487,13 @@ CMDFUNCSTART(findblk)
 	     * INOPB() - get a number of inodes in one disk block.
 	     */
 	    if (is_ufs2 ?
-		compare_blk64(wantedblk64, ino_to_fsba(&sblock, inum)) :
-		compare_blk32(wantedblk32, ino_to_fsba(&sblock, inum))) {
+		compare_blk64(wantedblk64, ino_to_fsba(check_sblk.b_un.b_fs, inum)) :
+		compare_blk32(wantedblk32, ino_to_fsba(check_sblk.b_un.b_fs, inum))) {
 		printf("block %llu: inode block (%ju-%ju)\n",
-		    (unsigned long long)fsbtodb(&sblock,
-			ino_to_fsba(&sblock, inum)),
-		    (uintmax_t)(inum / INOPB(&sblock)) * INOPB(&sblock),
-		    (uintmax_t)(inum / INOPB(&sblock) + 1) * INOPB(&sblock));
+		    (unsigned long long)fsbtodb(check_sblk.b_un.b_fs,
+			ino_to_fsba(check_sblk.b_un.b_fs, inum)),
+		    (uintmax_t)(inum / INOPB(check_sblk.b_un.b_fs)) * INOPB(check_sblk.b_un.b_fs),
+		    (uintmax_t)(inum / INOPB(check_sblk.b_un.b_fs) + 1) * INOPB(check_sblk.b_un.b_fs));
 		findblk_numtofind--;
 		if (findblk_numtofind == 0)
 		    goto end;
@@ -510,7 +511,7 @@ CMDFUNCSTART(findblk)
 	    case IFLNK:
 		{
 		    uint64_t size = DIP(curinode, di_size);
-		    if (size > 0 && size < sblock.fs_maxsymlinklen &&
+		    if (size > 0 && size < check_sblk.b_un.b_fs->fs_maxsymlinklen &&
 			DIP(curinode, di_blocks) == 0)
 			continue;
 		    else
@@ -588,7 +589,7 @@ static int
 founddatablk(uint64_t blk)
 {
     printf("%llu: data block of inode %ju\n",
-	(unsigned long long)fsbtodb(&sblock, blk), (uintmax_t)curinum);
+	(unsigned long long)fsbtodb(check_sblk.b_un.b_fs, blk), (uintmax_t)curinum);
     findblk_numtofind--;
     if (findblk_numtofind == 0)
 	return 1;
@@ -617,13 +618,13 @@ find_indirblks32(uint32_t blk, int ind_level, uint32_t *wantedblk)
     uint32_t idblk[MAXNINDIR];
     int i;
 
-    check_blread(check_fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
+    check_blread(check_fsreadfd, (char *)idblk, fsbtodb(check_sblk.b_un.b_fs, blk), (int)check_sblk.b_un.b_fs->fs_bsize);
     if (ind_level <= 0) {
-	if (find_blks32(idblk, sblock.fs_bsize / sizeof(uint32_t), wantedblk))
+	if (find_blks32(idblk, check_sblk.b_un.b_fs->fs_bsize / sizeof(uint32_t), wantedblk))
 	    return 1;
     } else {
 	ind_level--;
-	for (i = 0; i < sblock.fs_bsize / sizeof(uint32_t); i++) {
+	for (i = 0; i < check_sblk.b_un.b_fs->fs_bsize / sizeof(uint32_t); i++) {
 	    if (compare_blk32(wantedblk, idblk[i])) {
 		if (founddatablk(idblk[i]))
 		    return 1;
@@ -659,13 +660,13 @@ find_indirblks64(uint64_t blk, int ind_level, uint64_t *wantedblk)
     uint64_t idblk[MAXNINDIR];
     int i;
 
-    check_blread(check_fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
+    check_blread(check_fsreadfd, (char *)idblk, fsbtodb(check_sblk.b_un.b_fs, blk), (int)check_sblk.b_un.b_fs->fs_bsize);
     if (ind_level <= 0) {
-	if (find_blks64(idblk, sblock.fs_bsize / sizeof(uint64_t), wantedblk))
+	if (find_blks64(idblk, check_sblk.b_un.b_fs->fs_bsize / sizeof(uint64_t), wantedblk))
 	    return 1;
     } else {
 	ind_level--;
-	for (i = 0; i < sblock.fs_bsize / sizeof(uint64_t); i++) {
+	for (i = 0; i < check_sblk.b_un.b_fs->fs_bsize / sizeof(uint64_t); i++) {
 	    if (compare_blk64(wantedblk, idblk[i])) {
 		if (founddatablk(idblk[i]))
 		    return 1;
@@ -1177,7 +1178,7 @@ CMDFUNCSTART(chbtime)
 
     if (dotime(argv[1], &secs, &nsecs))
 	return 1;
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 	return 1;
     curinode->dp2.di_birthtime = _time_to_time64(secs);
     curinode->dp2.di_birthnsec = nsecs;
@@ -1193,7 +1194,7 @@ CMDFUNCSTART(chmtime)
 
     if (dotime(argv[1], &secs, &nsecs))
 	return 1;
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 	curinode->dp1.di_mtime = _time_to_time32(secs);
     else
 	curinode->dp2.di_mtime = _time_to_time64(secs);
@@ -1210,7 +1211,7 @@ CMDFUNCSTART(chatime)
 
     if (dotime(argv[1], &secs, &nsecs))
 	return 1;
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 	curinode->dp1.di_atime = _time_to_time32(secs);
     else
 	curinode->dp2.di_atime = _time_to_time64(secs);
@@ -1227,7 +1228,7 @@ CMDFUNCSTART(chctime)
 
     if (dotime(argv[1], &secs, &nsecs))
 	return 1;
-    if (sblock.fs_magic == FS_UFS1_MAGIC)
+    if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
 	curinode->dp1.di_ctime = _time_to_time32(secs);
     else
 	curinode->dp2.di_ctime = _time_to_time64(secs);

@@ -49,7 +49,7 @@
 
 #include "dir.h"
 #include "libufs.h"
-#include "newfs.h"
+#include "internal.h"
 
 /*
  * make file system for cylinder-group style file systems
@@ -57,17 +57,31 @@
 #define UMASK       0755
 #define POWEROF2(num)   (((num) & ((num) - 1)) == 0)
 
+/*
+ * MAXBLKPG determines the maximum number of data blocks which are
+ * placed in a single cylinder group. The default is one indirect
+ * block worth of data blocks.
+ */
+#define MAXBLKPG(bsize)	((bsize) / sizeof(ufs2_daddr_t))
+
+/*
+ * Cylinder groups may have up to MAXBLKSPERCG blocks. The actual
+ * number used depends upon how much information can be stored
+ * in a cylinder group map which must fit in a single file system
+ * block. The default is to use as many as possible blocks per group.
+ */
+#define	MAXBLKSPERCG	0x7fffffff	/* desired fs_fpg ("infinity") */
+
+/*
+ * Each file system has a number of inodes statically allocated.
+ * We allocate one inode slot per NFPI fragments, expecting this
+ * to be far more than we will ever need.
+ */
+#define	NFPI		2
+
 static struct   csum *fscs;
 #define sblock  disk->d_fs
 #define acg disk->d_cg
-
-union dinode {
-    struct ufs1_dinode dp1;
-    struct ufs2_dinode dp2;
-};
-#define DIP(dp, field) \
-    ((sblock.fs_magic == FS_UFS1_MAGIC) ? \
-    (dp)->dp1.field : (dp)->dp2.field)
 
 int mkfs_Eflag;                     /* Erase previous disk contents */
 int mkfs_Lflag;                     /* add a volume label */

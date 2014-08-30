@@ -49,28 +49,6 @@
 #define	DFL_BLKSIZE	32768
 
 /*
- * Cylinder groups may have up to MAXBLKSPERCG blocks. The actual
- * number used depends upon how much information can be stored
- * in a cylinder group map which must fit in a single file system
- * block. The default is to use as many as possible blocks per group.
- */
-#define	MAXBLKSPERCG	0x7fffffff	/* desired fs_fpg ("infinity") */
-
-/*
- * MAXBLKPG determines the maximum number of data blocks which are
- * placed in a single cylinder group. The default is one indirect
- * block worth of data blocks.
- */
-#define MAXBLKPG(bsize)	((bsize) / sizeof(ufs2_daddr_t))
-
-/*
- * Each file system has a number of inodes statically allocated.
- * We allocate one inode slot per NFPI fragments, expecting this
- * to be far more than we will ever need.
- */
-#define	NFPI		2
-
-/*
  * variables set up by front end.
  */
 extern int	mkfs_Eflag;		/* Erase previous disk contents */

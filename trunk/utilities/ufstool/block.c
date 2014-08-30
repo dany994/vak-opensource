@@ -29,8 +29,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#define _LIBUFS
 #include "libufs.h"
+#define _LIBUFS
+#include "internal.h"
 
 int verbose;
 

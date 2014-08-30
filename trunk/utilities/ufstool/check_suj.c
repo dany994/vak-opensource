@@ -35,7 +35,7 @@
 
 #include "dir.h"
 #include "libufs.h"
-#include "fsck.h"
+#include "internal.h"
 
 #define DOTDOT_OFFSET   DIRECTSIZ(1)
 #define SUJ_HASHSIZE    2048
@@ -2685,8 +2685,8 @@ check_suj(const char *filesys)
     ino_visit(ip, ROOTINO, suj_find, 0);
     if (sujino == 0) {
         printf("Journal inode removed.  Use tunefs to re-create.\n");
-        sblock.fs_flags &= ~FS_SUJ;
-        sblock.fs_sujfree = 0;
+        check_sblk.b_un.b_fs->fs_flags &= ~FS_SUJ;
+        check_sblk.b_un.b_fs->fs_sujfree = 0;
         return (-1);
     }
     /*

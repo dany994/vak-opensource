@@ -60,7 +60,7 @@
 #include <err.h>
 
 #include "libufs.h"
-#include "fsck.h"
+#include "internal.h"
 
 struct cgchain {
     union {
