@@ -27,11 +27,10 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <unistd.h>
-//#include <time.h>
+#include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <getopt.h>
-//#include <fts.h>
 
 #include "libufs.h"
 #include "newfs.h"
@@ -201,8 +200,6 @@ scan_extract (ufs_inode_t *dir, ufs_inode_t *inode,
 static void
 add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
 {
-    //TODO
-#if 0
     ufs_inode_t dir, parent;
     char buf [MAXBSIZE], *p;
 
@@ -248,7 +245,6 @@ add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
     ++parent.nlink;
     ufs_inode_save (&parent, 1);
 /*printf ("*** inode %d: increment link counter to %d\n", parent.number, parent.nlink);*/
-#endif
 }
 
 /*
@@ -258,12 +254,11 @@ static void
 add_file (ufs_t *disk, const char *path, const char *dirname,
     int mode, int owner, int group)
 {
-    //TODO
-#if 0
-    fs_file_t file;
+    ufs_inode_t inode;
     FILE *fd;
     char accpath [MAXBSIZE];
     unsigned char data [MAXBSIZE];
+    unsigned long offset;
     struct stat st;
     int len;
 
@@ -288,29 +283,36 @@ add_file (ufs_t *disk, const char *path, const char *dirname,
         mode = st.st_mode;
     mode &= 07777;
     mode |= IFREG;
-    if (fs_file_create (disk, &file, path, mode) < 0) {
+    if (ufs_inode_create (disk, &inode, path, mode) < 0) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
     }
+    ufs_inode_truncate (&inode, 0);
+    ufs_inode_save (&inode, 0);
+    offset = 0;
     for (;;) {
-        len = fread (data, 1, sizeof (data), fd);
+        len = fread (data, 1, disk->d_fs.fs_bsize, fd);
 /*      printf ("read %d bytes from %s\n", len, accpath);*/
         if (len < 0)
             perror (accpath);
         if (len <= 0)
             break;
-        if (fs_file_write (&file, data, len) < 0) {
-            fprintf (stderr, "%s: write error\n", path);
+        if (ufs_inode_write (&inode, offset, data, len) < 0) {
+            fprintf (stderr, "inode %d: file write failed, %u bytes, offset %lu\n",
+                inode.number, len, offset);
             break;
         }
+        offset += len;
     }
-    file.inode.uid = owner;
-    file.inode.gid = group;
-    file.inode.mtime = st.st_mtime;
-    file.inode.dirty = 1;
-    fs_file_close (&file);
+    inode.uid = owner;
+    inode.gid = group;
+    inode.mtime = st.st_mtime;
+    inode.dirty = 1;
+    if (ufs_inode_save (&inode, 0) < 0) {
+        fprintf (stderr, "inode %d: file close failed\n", inode.number);
+        return;
+    }
     fclose (fd);
-#endif
 }
 
 /*
@@ -320,8 +322,6 @@ static void
 add_device (ufs_t *disk, char *name, int mode, int owner, int group,
     int type, int majr, int minr)
 {
-    //TODO
-#if 0
     ufs_inode_t dev;
 
     mode &= 07777;
@@ -330,12 +330,11 @@ add_device (ufs_t *disk, char *name, int mode, int owner, int group,
         fprintf (stderr, "%s: device inode create failed\n", name);
         return;
     }
-    dev.addr[1] = majr << 8 | minr;
+    dev.daddr[0] = majr << 8 | minr;
     dev.uid = owner;
     dev.gid = group;
-    time (&dev.mtime);
+    dev.mtime = time(NULL);
     ufs_inode_save (&dev, 1);
-#endif
 }
 
 /*
@@ -345,28 +344,32 @@ static void
 add_symlink (ufs_t *disk, const char *path, const char *link,
     int mode, int owner, int group)
 {
-    //TODO
-#if 0
-    fs_file_t file;
+    ufs_inode_t inode;
     int len;
 
     mode &= 07777;
     mode |= IFLNK;
-    if (fs_file_create (disk, &file, path, mode) < 0) {
+    if (ufs_inode_create (disk, &inode, path, mode) < 0) {
         fprintf (stderr, "%s: cannot create\n", path);
         return;
     }
+    ufs_inode_truncate (&inode, 0);
+    ufs_inode_save (&inode, 0);
+
     len = strlen (link);
-    if (fs_file_write (&file, (unsigned char*) link, len) < 0) {
-        fprintf (stderr, "%s: write error\n", path);
+    if (ufs_inode_write (&inode, 0, (unsigned char*) link, len) < 0) {
+        fprintf (stderr, "inode %d: symlink write failed, %u bytes\n",
+            inode.number, len);
         return;
     }
-    file.inode.uid = owner;
-    file.inode.gid = group;
-    time (&file.inode.mtime);
-    file.inode.dirty = 1;
-    fs_file_close (&file);
-#endif
+    inode.uid = owner;
+    inode.gid = group;
+    inode.mtime = time(NULL);
+    inode.dirty = 1;
+    if (ufs_inode_save (&inode, 0) < 0) {
+        fprintf (stderr, "inode %d: symlink close failed\n", inode.number);
+        return;
+    }
 }
 
 /*
@@ -375,8 +378,6 @@ add_symlink (ufs_t *disk, const char *path, const char *link,
 static void
 add_hardlink (ufs_t *disk, const char *path, const char *link)
 {
-    //TODO
-#if 0
     ufs_inode_t source, target;
 
     /* Find source. */
@@ -396,7 +397,6 @@ add_hardlink (ufs_t *disk, const char *path, const char *link)
     }
     source.nlink++;
     ufs_inode_save (&source, 1);
-#endif
 }
 
 /*

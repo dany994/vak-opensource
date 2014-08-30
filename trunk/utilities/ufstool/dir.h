@@ -71,7 +71,7 @@
  * Entries other than the first in a directory do not normally have
  * dp->d_ino set to 0.
  */
-#define DIRBLKSIZ   DEV_BSIZE
+#define DIRBLKSIZ   512
 #define MAXNAMLEN   255
 
 struct  direct {

@@ -86,7 +86,7 @@ ufs_disk_open_blank(ufs_t *disk, const char *name)
     disk->d_inomin = 0;
     disk->d_inomax = 0;
     disk->d_lcg = 0;
-    disk->d_mine = 0;
+    disk->d_writable = 0;
     disk->d_ufs = 0;
     disk->d_error = NULL;
     disk->d_sbcsum = NULL;
@@ -99,18 +99,14 @@ ufs_disk_reopen_writable(ufs_t *disk)
 {
     ERROR(disk, NULL);
 
-    if (disk->d_mine & MINE_WRITE)
-        return (0);
-
-    close(disk->d_fd);
-
-    disk->d_fd = open(disk->d_name, O_RDWR);
-    if (disk->d_fd < 0) {
-        ERROR(disk, "failed to open disk for writing");
-        return (-1);
+    if (! disk->d_writable) {
+        close(disk->d_fd);
+        disk->d_fd = open(disk->d_name, O_RDWR);
+        if (disk->d_fd < 0) {
+            ERROR(disk, "failed to open disk for writing");
+            return (-1);
+        }
+        disk->d_writable = 1;
     }
-
-    disk->d_mine |= MINE_WRITE;
-
     return (0);
 }

@@ -115,7 +115,7 @@ calcsb(int part_num, int devfd, struct fs *fs)
         part_size = disk_nsectors;
     } else {
         /* Get a partition. */
-        part_size = 0; // TODO
+        part_size = 0; // TODO: get size from partition table
     }
     part_fsize = DEV_BSIZE;
     part_frag = 1;

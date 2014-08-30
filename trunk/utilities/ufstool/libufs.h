@@ -63,7 +63,7 @@ typedef struct {
     int d_ccg;              /* current cylinder group */
     int d_lcg;              /* last cylinder group (in d_cg) */
     const char *d_error;    /* human readable disk error */
-    int d_mine;             /* internal flags */
+    int d_writable;         /* open for write */
 #define d_fs    d_sbunion.d_fs
 #define d_sb    d_sbunion.d_sb
 #define d_cg    d_cgunion.d_cg
@@ -94,6 +94,13 @@ typedef struct {
 
 typedef void (*ufs_directory_scanner_t) (ufs_inode_t *dir,
     ufs_inode_t *file, const char *dirname, const char *filename, void *arg);
+
+typedef enum {
+    INODE_OP_LOOKUP,                    /* lookup inode by name */
+    INODE_OP_CREATE,                    /* create new file */
+    INODE_OP_DELETE,                    /* delete file */
+    INODE_OP_LINK,                      /* make a link to a file */
+} ufs_op_t;
 
 /*
  * libufs macros (internal, non-exported).
@@ -166,7 +173,9 @@ int ufs_read64 (ufs_t *disk, u_int64_t *val);
 int ufs_write8 (ufs_t *disk, u_int8_t val);
 int ufs_write16 (ufs_t *disk, u_int16_t val);
 int ufs_write32 (ufs_t *disk, u_int32_t val);
-int ufs_block_alloc (ufs_t *fs, unsigned int *bno);
+int ufs_write64 (ufs_t *disk, unsigned long long val);
+int ufs_block_alloc (ufs_t *disk, unsigned int *bno);
+int ufs_block_free (ufs_t *disk, unsigned int bno);
 
 /*
  * cgroup.c
@@ -195,7 +204,8 @@ int getino(ufs_t *, void **, ino_t, int *);
 int putino(ufs_t *);
 int ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum);
 void ufs_inode_print (ufs_inode_t *inode, FILE *out);
-void ufs_inode_print_path (ufs_inode_t *inode, const char *dirname, const char *filename, FILE *out);
+void ufs_inode_print_path (ufs_inode_t *inode, const char *dirname,
+    const char *filename, FILE *out);
 void ufs_inode_print_blocks (ufs_inode_t *inode, FILE *out);
 int ufs_inode_read (ufs_inode_t *inode, unsigned long offset,
     unsigned char *data, unsigned long bytes);
@@ -203,6 +213,16 @@ int ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
     unsigned char *data, unsigned long bytes);
 void ufs_directory_scan (ufs_inode_t *inode, const char *dirname,
     ufs_directory_scanner_t scanner, void *arg);
+int ufs_inode_by_name (ufs_t *disk, ufs_inode_t *inode, const char *name,
+    ufs_op_t op, int mode);
+int ufs_inode_lookup (ufs_t *disk, ufs_inode_t *inode, const char *name);
+int ufs_inode_create (ufs_t *disk, ufs_inode_t *inode, const char *name, int mode);
+int ufs_inode_delete (ufs_t *disk, ufs_inode_t *inode, const char *name);
+int ufs_inode_link (ufs_t *disk, ufs_inode_t *inode, const char *name, int mode);
+int ufs_inode_save (ufs_inode_t *inode, int force);
+void ufs_inode_clear (ufs_inode_t *inode);
+void ufs_inode_truncate (ufs_inode_t *inode, unsigned long size);
+int ufs_inode_alloc (ufs_t *disk, ufs_inode_t *inode);
 
 /*
  * sblock.c
