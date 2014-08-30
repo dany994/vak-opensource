@@ -240,13 +240,30 @@ ufs_write32 (ufs_t *disk, unsigned val)
     return 0;
 }
 
+int
+ufs_write64 (ufs_t *disk, unsigned long long val)
+{
+    unsigned char data [8];
+
+    data[0] = val;
+    data[1] = val >> 8;
+    data[2] = val >> 16;
+    data[3] = val >> 24;
+    data[4] = val >> 32;
+    data[5] = val >> 40;
+    data[6] = val >> 48;
+    data[7] = val >> 56;
+    if (write (disk->d_fd, data, 8) != 8)
+        return -1;
+    return 0;
+}
+
 /*
  * Get a block from free list.
  */
 int
 ufs_block_alloc (ufs_t *fs, unsigned int *bno)
 {
-    //TODO
 #if 0
     int i;
     unsigned buf [MAXBSIZE / 4];
@@ -270,6 +287,43 @@ again:
     if (*bno == 0)
         goto again;
     return 0;
-#endif
+#else
+    //TODO: allocate block
+    fprintf (stderr, "%s: not implemented yet\n", __func__);
     return -1;
+#endif
+}
+
+/*
+ * Add a block to free list.
+ */
+int ufs_block_free (ufs_t *disk, unsigned int bno)
+{
+#if 0
+    int i;
+    unsigned buf [BSDFS_BSIZE / 4];
+
+    if (verbose > 1)
+        printf ("free block %d, total %d\n", bno, fs->nfree);
+    if (fs->nfree >= NICFREE) {
+        buf[0] = fs->nfree;
+        for (i=0; i<NICFREE; i++)
+            buf[i+1] = fs->free[i];
+        if (! fs_write_block (fs, bno, (unsigned char*) buf)) {
+            fprintf (stderr, "block_free: write error at block %d\n", bno);
+            return -1;
+        }
+        fs->nfree = 0;
+    }
+    fs->free [fs->nfree] = bno;
+    fs->nfree++;
+    fs->dirty = 1;
+    if (bno)            /* Count total free blocks. */
+        ++fs->tfree;
+    return 0;
+#else
+    //TODO: free block
+    fprintf (stderr, "%s: not implemented yet\n", __func__);
+    return -1;
+#endif
 }
