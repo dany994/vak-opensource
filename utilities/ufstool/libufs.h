@@ -232,6 +232,7 @@ extern int	mkfs_bsize;		/* block size */
 extern int	mkfs_fsize;		/* fragment size */
 extern int	mkfs_sectorsize;	/* bytes/sector */
 extern int	mkfs_realsectorsize;	/* bytes/sector in hardware */
+extern int      mkfs_nflag;             /* do not create .snap directory */
 
 __END_DECLS
 

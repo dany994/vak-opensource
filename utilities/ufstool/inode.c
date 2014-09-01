@@ -88,9 +88,8 @@ getino(ufs_t *disk, void **dino, ino_t ino, int *mode)
 int
 putino(ufs_t *disk)
 {
-    struct fs *fs;
+    struct fs *fs = &disk->d_fs;
 
-    fs = &disk->d_fs;
     if (disk->d_inoblock == NULL) {
         ERROR(disk, "No inode block allocated");
         return (-1);
@@ -258,12 +257,13 @@ ufs_inode_save (ufs_inode_t *inode, int force)
 static int
 free_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
 {
-    unsigned bsize = disk->d_fs.fs_bsize;
+    struct fs *fs = &disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
     unsigned nb;
     unsigned char data [MAXBSIZE];
     int i;
 
-    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
@@ -287,12 +287,13 @@ free_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
 static int
 free_double_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
 {
-    unsigned bsize = disk->d_fs.fs_bsize;
+    struct fs *fs = &disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
     unsigned nb;
     unsigned char data [MAXBSIZE];
     int i;
 
-    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
@@ -316,12 +317,13 @@ free_double_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
 static int
 free_triple_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
 {
-    unsigned bsize = disk->d_fs.fs_bsize;
+    struct fs *fs = &disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
     unsigned nb;
     unsigned char data [MAXBSIZE];
     int i;
 
-    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
@@ -484,14 +486,15 @@ ufs_inode_print_path (ufs_inode_t *inode,
 static void
 print_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
-    unsigned bsize = disk->d_fs.fs_bsize;
-    unsigned inodes_per_block = INOPB(&disk->d_fs);
+    struct fs *fs = &disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
+    unsigned inodes_per_block = INOPB(fs);
     unsigned nb;
     int32_t data [MAXBSIZE/4];
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
@@ -505,14 +508,15 @@ print_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 static void
 print_double_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
-    unsigned bsize = disk->d_fs.fs_bsize;
-    unsigned inodes_per_block = INOPB(&disk->d_fs);
+    struct fs *fs = &disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
+    unsigned inodes_per_block = INOPB(fs);
     unsigned nb;
     int32_t data [MAXBSIZE/4];
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
@@ -526,14 +530,15 @@ print_double_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 static void
 print_triple_indirect_block (ufs_t *disk, unsigned int bno, FILE *out)
 {
-    unsigned bsize = disk->d_fs.fs_bsize;
-    unsigned inodes_per_block = INOPB(&disk->d_fs);
+    struct fs *fs = &disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
+    unsigned inodes_per_block = INOPB(fs);
     unsigned nb;
     int32_t data [MAXBSIZE/4];
     int i;
 
     fprintf (out, " [%d]", bno);
-    if (ufs_sector_read (disk, bno, data, bsize) < 0) {
+    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return;
     }
@@ -612,11 +617,12 @@ void ufs_directory_scan (ufs_inode_t *dir, const char *dirname,
 static unsigned
 map_block (ufs_inode_t *inode, unsigned lbn)
 {
-    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    struct fs *fs = &inode->disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
     unsigned block [MAXBSIZE / 4];
     unsigned int nb, i, j, sh;
-    unsigned nshift = ffs(NINDIR(&inode->disk->d_fs)) - 1;
-    unsigned nmask = NINDIR(&inode->disk->d_fs) - 1;
+    unsigned nshift = ffs(NINDIR(fs)) - 1;
+    unsigned nmask = NINDIR(fs) - 1;
 
     /*
      * Blocks 0..NDADDR-1 are direct blocks.
@@ -656,7 +662,8 @@ map_block (ufs_inode_t *inode, unsigned lbn)
      * Fetch through the indirect blocks.
      */
     for(; j <= 3; j++) {
-        if (ufs_sector_read (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+        if (ufs_sector_read (inode->disk, fsbtodb(fs, nb),
+            (unsigned char*) block, bsize) < 0)
             return 0;
 
         sh -= nshift;
@@ -736,7 +743,8 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
         if (verbose)
             printf ("inode %d: allocate new block %d\n", inode->number, nb);
         memset (block, 0, bsize);
-        if (ufs_sector_write (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+        if (ufs_sector_write (inode->disk, fsbtodb(fs, nb),
+            (unsigned char*) block, bsize) < 0)
             return 0;
         inode->iaddr [NIADDR-j] = nb;
         inode->dirty = 1;
@@ -746,7 +754,8 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
      * Fetch through the indirect blocks
      */
     for(; j <= 3; j++) {
-        if (ufs_sector_read (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+        if (ufs_sector_read (inode->disk, fsbtodb(fs, nb),
+            (unsigned char*) block, bsize) < 0)
             return 0;
 
         sh -= nshift;
@@ -760,10 +769,12 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
             if (verbose)
                 printf ("inode %d: allocate new block %d\n", inode->number, newb);
             block[i] = newb;
-            if (ufs_sector_write (inode->disk, nb, (unsigned char*) block, bsize) < 0)
+            if (ufs_sector_write (inode->disk, fsbtodb(fs, nb),
+                (unsigned char*) block, bsize) < 0)
                 return 0;
             memset (block, 0, bsize);
-            if (ufs_sector_write (inode->disk, newb, (unsigned char*) block, bsize) < 0)
+            if (ufs_sector_write (inode->disk, fsbtodb(fs, newb),
+                (unsigned char*) block, bsize) < 0)
                 return 0;
             nb = newb;
         }
@@ -775,7 +786,8 @@ int
 ufs_inode_read (ufs_inode_t *inode, unsigned long offset,
     unsigned char *data, unsigned long bytes)
 {
-    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    struct fs *fs = &inode->disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
     unsigned char block [MAXBSIZE];
     unsigned long n;
     unsigned int bn, inblock_offset;
@@ -788,13 +800,13 @@ ufs_inode_read (ufs_inode_t *inode, unsigned long offset,
         if (n > bytes)
             n = bytes;
 
-//printf ("--- %s: offset %lu -> block %lu, inblock_offset=%u, n=%lu \n", __func__, offset, offset / bsize, inblock_offset, n);
+//printf ("--- %s: offset %lu -> block %lu, inblock_offset=%u, bytes=%lu \n", __func__, offset, offset / bsize, inblock_offset, n);
         bn = map_block (inode, offset / bsize);
 //printf ("---     map_block returned bn=%u \n", bn);
         if (bn == 0)
             return -1;
 
-        if (ufs_sector_read (inode->disk, bn, block, bsize) < 0)
+        if (ufs_sector_read (inode->disk, fsbtodb(fs, bn), block, bsize) < 0)
             return -1;
         memcpy (data, block + inblock_offset, n);
         data += n;
@@ -808,7 +820,8 @@ int
 ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
     unsigned char *data, unsigned long bytes)
 {
-    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    struct fs *fs = &inode->disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
     unsigned char block [MAXBSIZE];
     unsigned long n;
     unsigned int bn, inblock_offset;
@@ -820,7 +833,9 @@ ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
         if (n > bytes)
             n = bytes;
 
+//printf ("--- %s: offset %lu -> block %lu, inblock_offset=%u, bytes=%lu \n", __func__, offset, offset / bsize, inblock_offset, n);
         bn = map_block_write (inode, offset / bsize);
+//printf ("---     map_block returned bn=%u \n", bn);
         if (bn == 0)
             return -1;
         if (inode->size < offset + n) {
@@ -833,13 +848,13 @@ ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
                 inode->number, offset, n, bn);
 
         if (n == bsize) {
-            if (ufs_sector_write (inode->disk, bn, data, bsize) < 0)
+            if (ufs_sector_write (inode->disk, fsbtodb(fs, bn), data, bsize) < 0)
                 return -1;
         } else {
-            if (ufs_sector_read (inode->disk, bn, block, bsize) < 0)
+            if (ufs_sector_read (inode->disk, fsbtodb(fs, bn), block, bsize) < 0)
                 return -1;
             memcpy (block + inblock_offset, data, n);
-            if (ufs_sector_write (inode->disk, bn, block, bsize) < 0)
+            if (ufs_sector_write (inode->disk, fsbtodb(fs, bn), block, bsize) < 0)
                 return -1;
         }
         data += n;
@@ -974,9 +989,13 @@ cloop:
         }
         if (verbose > 2)
             printf ("scan offset %lu: inum=%u, reclen=%u, namlen=%u\n", offset, dirent.d_ino, dirent.d_reclen, dirent.d_namlen);
-        if (dirent.d_ino == 0 || dirent.d_namlen != namlen)
+        if (dirent.d_reclen == 0) {
+            fprintf (stderr, "inode %d: zero length record detected\n", dir.number);
+            return -1;
+        }
+        if (dirent.d_ino == 0)
             continue;
-        if (ufs_inode_read (&dir, offset+8, fname, namlen) < 0) {
+        if (ufs_inode_read (&dir, offset+8, fname, (dirent.d_namlen + 4) / 4 * 4) < 0) {
             fprintf (stderr, "inode %d: name read error at offset %ld\n",
                 dir.number, offset);
             return -1;
@@ -1359,17 +1378,6 @@ noinodes:
         ipref = 0;
     cg = ino_to_cg(fs, ipref);
 
-    /*
-     * Track number of dirs created one after another
-     * in a same cg without intervening by files.
-     */
-    if ((mode & IFMT) == IFDIR) {
-        if (fs->fs_contigdirs[cg] < 255)
-            fs->fs_contigdirs[cg]++;
-    } else {
-        if (fs->fs_contigdirs[cg] > 0)
-            fs->fs_contigdirs[cg]--;
-    }
     ino = ufs_cgroup_hashalloc(dir->disk, cg, ipref, mode, cg_alloc_inode);
     if (ino == 0)
         goto noinodes;
