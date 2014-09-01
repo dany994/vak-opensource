@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <time.h>
 
 #include "libufs.h"
 #define _LIBUFS
@@ -260,45 +262,91 @@ ufs_write64 (ufs_t *disk, unsigned long long val)
 }
 
 /*
- * Get a block from free list.
+ * Allocate a block in a cylinder group.
+ *
+ * This algorithm implements the following policy:
+ *   1) allocate the requested block.
+ *   2) allocate a rotationally optimal block in the same cylinder.
+ *   3) allocate the next available block on the block rotor for the
+ *      specified cylinder group.
+ * Note that this routine only allocates fs_bsize blocks; these
+ * blocks may be fragmented by the routine that allocates them.
+ */
+static daddr_t
+cg_alloc_block(ufs_t *disk, int cg, daddr_t bpref, int size)
+{
+    struct fs *fs = &disk->d_fs;
+    struct cg *cgp = &disk->d_cg;
+    daddr_t bno, blkno;
+
+    if (size != fs->fs_bsize) {
+        fprintf (stderr, "%s: fragments not supported\n", __func__);
+        exit(-1);
+    }
+    if (fs->fs_cs(fs, cg).cs_nbfree == 0)
+        return 0;
+    if (ufs_cgroup_read(disk, cg) < 0) {
+        return 0;
+    }
+    if (!cg_chkmagic(cgp) || cgp->cg_cs.cs_nbfree == 0) {
+        return 0;
+    }
+    cgp->cg_time = time(NULL);
+
+    if (bpref == 0 || dtog(fs, bpref) != cgp->cg_cgx) {
+        bpref = cgp->cg_rotor;
+        goto norot;
+    }
+    bpref = blknum(fs, bpref);
+    bpref = dtogd(fs, bpref);
+
+    if (ffs_isblock(fs, cg_blksfree(cgp), fragstoblks(fs, bpref))) {
+        /* The requested block is available, use it. */
+        bno = bpref;
+    } else {
+        /* Take next available block in this cylinder group. */
+norot:  bno = ffs_mapsearch(fs, cgp, bpref, (int)fs->fs_frag);
+        if (bno < 0)
+            return 0;
+        cgp->cg_rotor = bno;
+    }
+
+    blkno = fragstoblks(fs, bno);
+    ffs_clrblock(fs, cg_blksfree(cgp), (long)blkno);
+    ffs_clusteracct(fs, cgp, blkno, -1);
+    cgp->cg_cs.cs_nbfree--;
+    fs->fs_cstotal.cs_nbfree--;
+    fs->fs_cs(fs, cgp->cg_cgx).cs_nbfree--;
+    fs->fs_fmod = 1;
+    blkno = cgp->cg_cgx * fs->fs_fpg + bno;
+
+    ufs_cgroup_write_last(disk);
+    return blkno;
+}
+
+/*
+ * Allocate a block near the preferenced address.
  */
 int
-ufs_block_alloc (ufs_t *fs, unsigned int *bno)
+ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno)
 {
-#if 0
-    int i;
-    unsigned buf [MAXBSIZE / 4];
-again:
-    if (fs->nfree == 0)
-        return -1;
-    fs->nfree--;
-    --fs->tfree;            /* Count total free blocks. */
-    *bno = fs->free [fs->nfree];
-    if (verbose)
-        printf ("allocate new block %d from slot %d\n", *bno, fs->nfree);
-    fs->free [fs->nfree] = 0;
-    fs->dirty = 1;
-    if (fs->nfree <= 0) {
-        if (! fs_read_block (fs, *bno, (unsigned char*) buf))
-            return -1;
-        fs->nfree = buf[0];
-        for (i=0; i<NICFREE; i++)
-            fs->free[i] = buf[i+1];
+    struct fs *fs = &disk->d_fs;
+    int cg;
+
+    if (fs->fs_cstotal.cs_nbfree != 0) {
+        if (bpref >= fs->fs_size)
+            bpref = 0;
+        cg = dtog(fs, bpref);
+        *bno = ufs_cgroup_hashalloc(disk, cg, bpref, fs->fs_bsize, cg_alloc_block);
     }
-    if (*bno == 0)
-        goto again;
-    return 0;
-#else
-    //TODO: allocate block
-    fprintf (stderr, "%s: not implemented yet\n", __func__);
-    return -1;
-#endif
+    *bno = 0;
+    return -ENOSPC;
 }
 
 /*
  * Add a block to free list.
  */
-int ufs_block_free (ufs_t *disk, unsigned int bno)
+int ufs_block_free (ufs_t *disk, daddr_t bno)
 {
 #if 0
     int i;

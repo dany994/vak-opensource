@@ -255,3 +255,53 @@ ufs_print_cg(struct cg *cgr, FILE *out)
     fprintf(out, " Offset of counts of avail blocks: %d bytes\n", cgr->cg_clustersumoff);
     fprintf(out, "         Offset of free block map: %d bytes\n", cgr->cg_clusteroff);
 }
+
+/*
+ * Implement the cylinder overflow algorithm.
+ *
+ * The policy implemented by this algorithm is:
+ *   1) allocate the block in its requested cylinder group.
+ *   2) quadradically rehash on the cylinder group number.
+ *   3) brute force search for a free block.
+ */
+daddr_t
+ufs_cgroup_hashalloc(ufs_t *disk, int cg, daddr_t pref, int param,
+    daddr_t (*allocator)())
+{
+    struct fs *fs = &disk->d_fs;
+    daddr_t result;
+    int i, icg = cg;
+
+    /*
+     * 1: preferred cylinder group
+     */
+    result = (*allocator)(disk, cg, pref, param);
+    if (result)
+        return (result);
+    /*
+     * 2: quadratic rehash
+     */
+    for (i = 1; i < fs->fs_ncg; i *= 2) {
+        cg += i;
+        if (cg >= fs->fs_ncg)
+            cg -= fs->fs_ncg;
+        result = (*allocator)(disk, cg, 0, param);
+        if (result)
+            return (result);
+    }
+    /*
+     * 3: brute force search
+     * Note that we start at i == 2, since 0 was checked initially,
+     * and 1 is always checked in the quadratic rehash.
+     */
+    cg = (icg + 2) % fs->fs_ncg;
+    for (i = 2; i < fs->fs_ncg; i++) {
+        result = (*allocator)(disk, cg, 0, param);
+        if (result)
+            return (result);
+        cg++;
+        if (cg == fs->fs_ncg)
+            cg = 0;
+    }
+    return 0;
+}
