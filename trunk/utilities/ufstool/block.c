@@ -41,22 +41,22 @@ ssize_t
 ufs_sector_read(ufs_t *disk, ufs2_daddr_t sectno, void *data, size_t size)
 {
     ssize_t cnt;
+    off_t offset = (off_t)sectno * disk->d_bsize;
 
-    ERROR(disk, NULL);
-
-    cnt = pread(disk->d_fd, data, size, (off_t)(sectno * disk->d_bsize));
+    cnt = pread(disk->d_fd, data, size, offset);
     if (cnt == -1) {
-        ERROR(disk, "read error from block device");
+        printf ("%s(sectno=%llu, size=%zu) read error at offset=%lld \n", __func__, sectno, size, offset);
         goto fail;
     }
     if (cnt == 0) {
-        ERROR(disk, "end of file from block device");
+        printf ("%s(sectno=%llu, size=%zu) end of file at offset=%lld \n", __func__, sectno, size, offset);
         goto fail;
     }
     if ((size_t)cnt != size) {
-        ERROR(disk, "short read or read error from block device");
+        printf ("%s(sectno=%llu, size=%zu) short read at offset=%lld \n", __func__, sectno, size, offset);
         goto fail;
     }
+//printf ("--- %s(sectno=%llu, size=%zu) offset=%lld - returned %zd bytes \n", __func__, sectno, size, offset, cnt);
     return (cnt);
 fail:
     memset(data, 0, size);
@@ -333,13 +333,15 @@ ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno)
     struct fs *fs = &disk->d_fs;
     int cg;
 
+    *bno = 0;
     if (fs->fs_cstotal.cs_nbfree != 0) {
         if (bpref >= fs->fs_size)
             bpref = 0;
         cg = dtog(fs, bpref);
         *bno = ufs_cgroup_hashalloc(disk, cg, bpref, fs->fs_bsize, cg_alloc_block);
+        if (*bno > 0)
+            return 0;
     }
-    *bno = 0;
     return -ENOSPC;
 }
 

@@ -115,14 +115,12 @@ ufs_superblock_read(ufs_t *disk)
 int
 ufs_superblock_write(ufs_t *disk, int all)
 {
-    struct fs *fs;
+    struct fs *fs = &disk->d_fs;
     int blks, size;
     u_int8_t *space;
     unsigned i;
 
     ERROR(disk, NULL);
-
-    fs = &disk->d_fs;
 
     if (!disk->d_sblock) {
         disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;

@@ -479,7 +479,8 @@ add_contents (ufs_t *disk, const char *dirname, const char *manifest)
             break;
         }
     }
-    //fs_sync (disk, 0);
+    if (disk->d_fs.fs_fmod)
+        ufs_superblock_write(disk, 0);
     ufs_disk_close (disk);
     printf ("Installed %u directories, %u files, %u devices, %u links, %u symlinks\n",
         ndirs, nfiles, ndevs, nlinks, nsymlinks);
@@ -558,6 +559,7 @@ int main (int argc, char **argv)
         mkfs_sectorsize = 512;
         mkfs_realsectorsize = mkfs_bsize;
         mkfs_fsize = mkfs_bsize;
+        mkfs_nflag = 1; /* no .snap directory */
 
         /* Set size of filesystem. */
         /* TODO: set fssize and part_ofs from the partition */
@@ -647,7 +649,9 @@ int main (int argc, char **argv)
         }
         while (++i < argc)
             add_object (&disk, argv[i]);
-        //fs_sync (&disk, 0);
+
+        if (disk.d_fs.fs_fmod)
+            ufs_superblock_write(&disk, 0);
         ufs_disk_close (&disk);
         return 0;
     }
