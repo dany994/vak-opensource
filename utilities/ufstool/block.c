@@ -344,35 +344,43 @@ ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno)
 }
 
 /*
- * Add a block to free list.
+ * Free a block or fragment.
+ * The specified block is placed back in the free map.
  */
-int ufs_block_free (ufs_t *disk, daddr_t bno)
+void
+ufs_block_free (ufs_t *disk, daddr_t bno)
 {
-#if 0
-    int i;
-    unsigned buf [BSDFS_BSIZE / 4];
+    struct fs *fs = &disk->d_fs;
+    struct cg *cgp = &disk->d_cg;
+    daddr_t blkno;
+    int cg;
 
     if (verbose > 1)
-        printf ("free block %d, total %d\n", bno, fs->nfree);
-    if (fs->nfree >= NICFREE) {
-        buf[0] = fs->nfree;
-        for (i=0; i<NICFREE; i++)
-            buf[i+1] = fs->free[i];
-        if (! fs_write_block (fs, bno, (unsigned char*) buf)) {
-            fprintf (stderr, "block_free: write error at block %d\n", bno);
-            return -1;
-        }
-        fs->nfree = 0;
+        printf ("free block %d, total %lld\n", bno, fs->fs_cstotal.cs_nbfree);
+    if (bno >= fs->fs_size) {
+        fprintf (stderr, "%s: bad block %d\n", __func__, bno);
+        return;
     }
-    fs->free [fs->nfree] = bno;
-    fs->nfree++;
-    fs->dirty = 1;
-    if (bno)            /* Count total free blocks. */
-        ++fs->tfree;
-    return 0;
-#else
-    //TODO: free block
-    fprintf (stderr, "%s: not implemented yet\n", __func__);
-    return -1;
-#endif
+    cg = dtog(fs, bno);
+    if (ufs_cgroup_read(disk, cg) < 0) {
+        return;
+    }
+    if (!cg_chkmagic(cgp)) {
+        return;
+    }
+    cgp->cg_time = time(NULL);
+    bno = dtogd(fs, bno);
+    blkno = fragstoblks(fs, bno);
+    if (!ffs_isfreeblock(fs, cg_blksfree(cgp), blkno)) {
+        fprintf (stderr, "%s: freeing free block: block = %d, fs = %s\n",
+            __func__, bno, fs->fs_fsmnt);
+        exit(-1);
+    }
+    ffs_setblock(fs, cg_blksfree(cgp), blkno);
+    ffs_clusteracct(fs, cgp, blkno, 1);
+    cgp->cg_cs.cs_nbfree++;
+    fs->fs_cstotal.cs_nbfree++;
+    fs->fs_cs(fs, cg).cs_nbfree++;
+    fs->fs_fmod = 1;
+    ufs_cgroup_write_last(disk);
 }

@@ -145,7 +145,7 @@ int     ufs_write16 (ufs_t *disk, u_int16_t val);
 int     ufs_write32 (ufs_t *disk, u_int32_t val);
 int     ufs_write64 (ufs_t *disk, unsigned long long val);
 int     ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno);
-int     ufs_block_free (ufs_t *disk, daddr_t bno);
+void    ufs_block_free (ufs_t *disk, daddr_t bno);
 
 /*
  * cgroup.c
