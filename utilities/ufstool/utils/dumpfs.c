@@ -265,7 +265,7 @@ dumpfs(const char *name)
         printf("blocks in last group %ld\n\n",
             (long)((fssize % afs.fs_fpg) / afs.fs_frag));
     }
-    while ((i = cgread(&disk)) != 0) {
+    while ((i = ufs_cgroup_read_next(&disk)) != 0) {
         if (i == -1 || dumpcg())
             goto err;
     }
@@ -342,7 +342,7 @@ dumpfreespace(const char *name, int fflag)
 {
     int i;
 
-    while ((i = cgread(&disk)) != 0) {
+    while ((i = ufs_cgroup_read_next(&disk)) != 0) {
         if (i == -1)
             goto err;
         dumpfreespacecg(fflag);

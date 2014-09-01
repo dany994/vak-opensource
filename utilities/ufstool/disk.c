@@ -56,7 +56,7 @@ ufs_disk_open(ufs_t *disk, const char *name)
     if (ufs_disk_open_blank(disk, name) == -1) {
         return (-1);
     }
-    if (sbread(disk) == -1) {
+    if (ufs_superblock_read(disk) == -1) {
         ERROR(disk, "could not read superblock to fill out disk");
         return (-1);
     }

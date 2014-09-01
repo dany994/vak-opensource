@@ -911,7 +911,7 @@ int ufs_mount(ufs_t *disk, char *dirname)
 
     /* Save filesystem superblock. */
     disk->d_fs.fs_clean = 1;
-    sbwrite(disk, 0);
+    ufs_superblock_write(disk, 0);
     ufs_disk_close(disk);
     return ret;
 }

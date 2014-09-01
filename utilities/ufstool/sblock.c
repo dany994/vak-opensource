@@ -39,7 +39,7 @@
 static int superblocks[] = SBLOCKSEARCH;
 
 int
-sbread(ufs_t *disk)
+ufs_superblock_read(ufs_t *disk)
 {
     u_int8_t block[MAXBSIZE];
     struct fs *fs;
@@ -113,7 +113,7 @@ sbread(ufs_t *disk)
 }
 
 int
-sbwrite(ufs_t *disk, int all)
+ufs_superblock_write(ufs_t *disk, int all)
 {
     struct fs *fs;
     int blks, size;

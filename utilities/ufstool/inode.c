@@ -25,9 +25,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/param.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 #include "libufs.h"
 #include "dir.h"
@@ -262,7 +264,7 @@ free_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
     int i;
 
     if (ufs_sector_read (disk, bno, data, bsize) < 0) {
-        fprintf (stderr, "inode_clear: read error at block %d\n", bno);
+        fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
     for (i=bsize-4; i>=0; i-=4) {
@@ -291,7 +293,7 @@ free_double_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
     int i;
 
     if (ufs_sector_read (disk, bno, data, bsize) < 0) {
-        fprintf (stderr, "inode_clear: read error at block %d\n", bno);
+        fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
     for (i=bsize-4; i>=0; i-=4) {
@@ -320,7 +322,7 @@ free_triple_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
     int i;
 
     if (ufs_sector_read (disk, bno, data, bsize) < 0) {
-        fprintf (stderr, "inode_clear: read error at block %d\n", bno);
+        fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
     for (i=bsize-4; i>=0; i-=4) {
@@ -843,6 +845,53 @@ ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
 }
 
 /*
+ * Put the specified inode back in the free map.
+ */
+static int
+ffs_inode_free (ufs_t *disk, ino_t ino, mode_t mode)
+{
+    struct fs *fs = &disk->d_fs;
+    struct cg *cgp = &disk->d_cg;
+    int error, cg;
+
+    if ((u_int)ino >= fs->fs_ipg * fs->fs_ncg) {
+        fprintf (stderr, "%s: inode index out of range: ino = %lld, fs = %s\n",
+            __func__, ino, fs->fs_fsmnt);
+        exit(-1);
+    }
+    cg = ino_to_cg(fs, ino);
+    error = ufs_cgroup_read(disk, cg);
+    if (error < 0) {
+        return error;
+    }
+    if (!cg_chkmagic(cgp)) {
+        fprintf (stderr, "%s: bad magic of cgroup %d\n", __func__, cg);
+        return (0);
+    }
+    cgp->cg_time = time(NULL);
+    ino %= fs->fs_ipg;
+    if (isclr(cg_inosused(cgp), ino)) {
+        fprintf (stderr, "%s: freeing free inode: ino = %lld, fs = %s\n",
+            __func__, ino, fs->fs_fsmnt);
+        exit(-1);
+    }
+    clrbit(cg_inosused(cgp), ino);
+    if (ino < cgp->cg_irotor)
+        cgp->cg_irotor = ino;
+    cgp->cg_cs.cs_nifree++;
+    fs->fs_cstotal.cs_nifree++;
+    fs->fs_cs(fs, cg).cs_nifree++;
+    if ((mode & IFMT) == IFDIR) {
+        cgp->cg_cs.cs_ndir--;
+        fs->fs_cstotal.cs_ndir--;
+        fs->fs_cs(fs, cg).cs_ndir--;
+    }
+    fs->fs_fmod = 1;
+    ufs_cgroup_write_last(disk);
+    return (0);
+}
+
+/*
  * Convert a pathname into a pointer to an inode.
  * op =
  *  INODE_OP_LOOKUP if name is saught
@@ -955,7 +1004,7 @@ cloop:
      * Make a new file, and return it's inode.
      */
 create_file:
-    if (ufs_inode_alloc (disk, inode) < 0) {
+    if (ufs_inode_alloc (&dir, mode, inode) < 0) {
         fprintf (stderr, "%s: cannot allocate inode\n", namptr);
         return -1;
     }
@@ -1053,13 +1102,8 @@ delete_file:
     inode->nlink--;
     if (inode->nlink <= 0) {
         ufs_inode_truncate (inode, 0);
+        ffs_inode_free (disk, dirent.d_ino, inode->mode);
         ufs_inode_clear (inode);
-#if 0
-        if (inode->disk->ninode < NICINOD) {
-            inode->disk->inode [inode->fs->ninode++] = dirent.d_ino;
-            inode->disk->dirty = 1;
-        }
-#endif
     }
     /* Extend previous entry to cover the empty space. */
     reclen = dirent.d_reclen;
@@ -1122,46 +1166,6 @@ create_link:
 }
 
 /*
- * Allocate an unused Inode on the specified device.
- */
-int
-ufs_inode_alloc (ufs_t *disk, ufs_inode_t *inode)
-{
-#if 0
-    int ino;
-
-    for (;;) {
-        if (disk->ninode <= 0) {
-            /* Build a list of free inodes. */
-            if (! inode_build_list (disk)) {
-                fprintf (stderr, "inode_alloc: cannot build inode list\n");
-                return -1;
-            }
-            if (disk->ninode <= 0) {
-                fprintf (stderr, "inode_alloc: out of in-core inodes\n");
-                return -1;
-            }
-        }
-        ino = disk->inode[--disk->ninode];
-        disk->dirty = 1;
-        disk->tinode--;
-        if (ufs_inode_get (disk, inode, ino) < 0) {
-            fprintf (stderr, "inode_alloc: cannot get inode %d\n", ino);
-            return -1;
-        }
-        if (inode->mode == 0) {
-            ufs_inode_clear (inode);
-            return 0;
-        }
-    }
-#else
-    //TODO: allocate inode
-    fprintf (stderr, "%s: not implemented yet\n", __func__);
-    return -1;
-#endif
-}
-
-/*
  * Find inode by name.
  * Return 0 on any error.
  * Return 1 when the inode was found.
@@ -1204,4 +1208,233 @@ int
 ufs_inode_link (ufs_t *disk, ufs_inode_t *inode, const char *name, int inum)
 {
     return inode_by_name (disk, inode, name, INODE_OP_LINK, inum);
+}
+
+/*
+ * Implement the cylinder overflow algorithm.
+ *
+ * The policy implemented by this algorithm is:
+ *   1) allocate the block in its requested cylinder group.
+ *   2) quadradically rehash on the cylinder group number.
+ *   3) brute force search for a free block.
+ */
+static daddr_t
+ffs_hashalloc(ufs_t *disk, int cg, daddr_t pref, int param,
+    daddr_t (*allocator)())
+{
+    struct fs *fs = &disk->d_fs;
+    daddr_t result;
+    int i, icg = cg;
+
+    /*
+     * 1: preferred cylinder group
+     */
+    result = (*allocator)(disk, cg, pref, param);
+    if (result)
+        return (result);
+    /*
+     * 2: quadratic rehash
+     */
+    for (i = 1; i < fs->fs_ncg; i *= 2) {
+        cg += i;
+        if (cg >= fs->fs_ncg)
+            cg -= fs->fs_ncg;
+        result = (*allocator)(disk, cg, 0, param);
+        if (result)
+            return (result);
+    }
+    /*
+     * 3: brute force search
+     * Note that we start at i == 2, since 0 was checked initially,
+     * and 1 is always checked in the quadratic rehash.
+     */
+    cg = (icg + 2) % fs->fs_ncg;
+    for (i = 2; i < fs->fs_ncg; i++) {
+        result = (*allocator)(disk, cg, 0, param);
+        if (result)
+            return (result);
+        cg++;
+        if (cg == fs->fs_ncg)
+            cg = 0;
+    }
+    return 0;
+}
+
+/*
+ * Count a number of 0xff bytes in the array.
+ */
+static int
+count_ff(int size, unsigned char *cp)
+{
+    unsigned char *end = &cp[size];
+
+    while (cp < end && *cp == 0xff)
+        ++cp;
+    return end - cp;
+}
+
+/*
+ * Determine whether an inode can be allocated.
+ *
+ * Check to see if an inode is available, and if it is,
+ * allocate it using the following policy:
+ *   1) allocate the requested inode.
+ *   2) allocate the next available inode after the requested
+ *      inode in the specified cylinder group.
+ */
+static daddr_t
+ffs_nodealloccg(ufs_t *disk, int cg, daddr_t ipref, int mode)
+{
+    struct fs *fs = &disk->d_fs;
+    struct cg *cgp = &disk->d_cg;
+    int start, len, loc, map, i;
+
+    if (fs->fs_cs(fs, cg).cs_nifree == 0)
+        return 0;
+    if (ufs_cgroup_read(disk, cg) < 0) {
+        return 0;
+    }
+    if (!cg_chkmagic(cgp) || cgp->cg_cs.cs_nifree == 0) {
+        return 0;
+    }
+    cgp->cg_time = time(NULL);
+    if (ipref) {
+        ipref %= fs->fs_ipg;
+        if (isclr(cg_inosused(cgp), ipref))
+            goto gotit;
+    }
+    start = cgp->cg_irotor / NBBY;
+    len = howmany(fs->fs_ipg - cgp->cg_irotor, NBBY);
+    loc = count_ff(len, &cg_inosused(cgp)[start]);
+    if (loc == 0) {
+        len = start + 1;
+        start = 0;
+        loc = count_ff(len, &cg_inosused(cgp)[0]);
+        if (loc == 0) {
+            fprintf (stderr, "%s: map corrupted, cg = %d, irotor = %d, fs = %s\n",
+                __func__, cg, cgp->cg_irotor, fs->fs_fsmnt);
+            exit(-1);
+        }
+    }
+    i = start + len - loc;
+    map = cg_inosused(cgp)[i];
+    ipref = i * NBBY;
+    for (i = 1; i < (1 << NBBY); i <<= 1, ipref++) {
+        if ((map & i) == 0) {
+            cgp->cg_irotor = ipref;
+            goto gotit;
+        }
+    }
+    fprintf (stderr, "%s: block not in map, fs = %s\n",
+        __func__, fs->fs_fsmnt);
+    exit(-1);
+gotit:
+    setbit(cg_inosused(cgp), ipref);
+    cgp->cg_cs.cs_nifree--;
+    fs->fs_cstotal.cs_nifree--;
+    fs->fs_cs(fs, cg).cs_nifree--;
+    fs->fs_fmod = 1;
+    if ((mode & IFMT) == IFDIR) {
+            cgp->cg_cs.cs_ndir++;
+            fs->fs_cstotal.cs_ndir++;
+            fs->fs_cs(fs, cg).cs_ndir++;
+    }
+
+    ufs_cgroup_write_last(disk);
+    return (cg * fs->fs_ipg + ipref);
+}
+
+/*
+ * Find a cylinder to place a directory.
+ *
+ * The policy implemented by this algorithm is to select from
+ * among those cylinder groups with above the average number of
+ * free inodes, the one with the smallest number of directories.
+ */
+static ino_t
+ffs_dirpref(fs)
+    struct fs *fs;
+{
+    int cg, minndir, mincg, avgifree;
+
+    avgifree = fs->fs_cstotal.cs_nifree / fs->fs_ncg;
+    minndir = fs->fs_ipg;
+    mincg = 0;
+    for (cg = 0; cg < fs->fs_ncg; cg++) {
+        if (fs->fs_cs(fs, cg).cs_ndir < minndir &&
+            fs->fs_cs(fs, cg).cs_nifree >= avgifree)
+        {
+            mincg = cg;
+            minndir = fs->fs_cs(fs, cg).cs_ndir;
+        }
+    }
+    return (ino_t)(fs->fs_ipg * mincg);
+}
+
+/*
+ * Allocate an inode in the file system.
+ *
+ * If allocating a directory, use ffs_dirpref to select the inode:
+ *   1) allocate the preferred inode.
+ *   2) allocate an inode in the same cylinder group.
+ *   3) quadratically rehash into other cylinder groups, until an
+ *      available inode is located.
+ * If no inode preference is given the following hierarchy is used:
+ *   1) allocate an inode in cylinder group 0.
+ *   2) quadratically rehash into other cylinder groups, until an
+ *      available inode is located.
+ */
+int
+ufs_inode_alloc (ufs_inode_t *dir, int mode, ufs_inode_t *inode)
+{
+    struct fs *fs = &dir->disk->d_fs;
+    ino_t ino, ipref;
+    int cg, error;
+
+    if (fs->fs_cstotal.cs_nifree == 0) {
+noinodes:
+        fprintf (stderr, "%s: create/symlink failed, no inodes free\n", __func__);
+        return -ENOSPC;
+    }
+    if ((mode & IFMT) == IFDIR)
+        ipref = ffs_dirpref(fs);
+    else
+        ipref = dir->number;
+
+    if (ipref >= fs->fs_ncg * fs->fs_ipg)
+        ipref = 0;
+    cg = ino_to_cg(fs, ipref);
+
+    /*
+     * Track number of dirs created one after another
+     * in a same cg without intervening by files.
+     */
+    if ((mode & IFMT) == IFDIR) {
+        if (fs->fs_contigdirs[cg] < 255)
+            fs->fs_contigdirs[cg]++;
+    } else {
+        if (fs->fs_contigdirs[cg] > 0)
+            fs->fs_contigdirs[cg]--;
+    }
+    ino = (ino_t)ffs_hashalloc(dir->disk, cg, ipref, mode, ffs_nodealloccg);
+    if (ino == 0)
+        goto noinodes;
+
+    error = ufs_inode_get (dir->disk, inode, ino);
+    if (error) {
+        ffs_inode_free(dir->disk, ino, mode);
+        return (error);
+    }
+    if (inode->mode) {
+        fprintf (stderr, "%s: dup alloc: mode = 0%o, inum = %d, fs = %s\n",
+            __func__, inode->mode, inode->number, fs->fs_fsmnt);
+        exit(-1);
+    }
+    if (inode->blocks) {				/* XXX */
+        printf("free inode %s/%lld had %d blocks\n",
+            fs->fs_fsmnt, ino, inode->blocks);
+        inode->blocks = 0;
+    }
+    inode->flags = 0;
+    return (0);
 }
