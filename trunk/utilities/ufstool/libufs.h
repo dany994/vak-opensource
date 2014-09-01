@@ -144,8 +144,8 @@ int     ufs_write8 (ufs_t *disk, u_int8_t val);
 int     ufs_write16 (ufs_t *disk, u_int16_t val);
 int     ufs_write32 (ufs_t *disk, u_int32_t val);
 int     ufs_write64 (ufs_t *disk, unsigned long long val);
-int     ufs_block_alloc (ufs_t *disk, unsigned int *bno);
-int     ufs_block_free (ufs_t *disk, unsigned int bno);
+int     ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno);
+int     ufs_block_free (ufs_t *disk, daddr_t bno);
 
 /*
  * cgroup.c
@@ -155,6 +155,8 @@ int     ufs_cgroup_read(ufs_t *disk, int cg);
 int     ufs_cgroup_write_last(ufs_t *disk);
 int     ufs_cgroup_write(ufs_t *disk, int cg);
 void    ufs_print_cg(struct cg *cgr, FILE *out);
+daddr_t ufs_cgroup_hashalloc(ufs_t *disk, int cg, daddr_t pref, int param,
+            daddr_t (*allocator)());
 
 /*
  * disk.c
@@ -197,7 +199,7 @@ int     ufs_superblock_write(ufs_t *, int);
 void    ufs_print(ufs_t *disk, FILE *out);
 
 /*
- * ffs_subr.c
+ * bitmap.c
  */
 void    ffs_clrblock(struct fs *, u_char *, ufs1_daddr_t);
 void    ffs_clusteracct(struct fs *, struct cg *, ufs1_daddr_t, int);
@@ -205,6 +207,7 @@ void    ffs_fragacct(struct fs *, int, int32_t [], int);
 int     ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
 int     ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
 void    ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
+daddr_t ffs_mapsearch(struct fs *fs, struct cg *cgp, daddr_t bpref, int allocsiz);
 
 /*
  * check.c

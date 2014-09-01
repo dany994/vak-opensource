@@ -30,8 +30,9 @@
  */
 
 #include <sys/param.h>
+#include <stdlib.h>
 
-#include "fs.h"
+#include "libufs.h"
 
 /*
  * Bit patterns for identifying fragments in the block map
@@ -148,7 +149,7 @@ ffs_fragacct(fs, fragmap, fraglist, cnt)
     int field, subfield;
     int siz, pos;
 
-    inblk = (int)(fragtbl[fs->fs_frag][fragmap]) << 1;
+    inblk = (int)fragtbl[fs->fs_frag][fragmap] << 1;
     fragmap <<= 1;
     for (siz = 1; siz < fs->fs_frag; siz++) {
         if ((inblk & (1 << (siz + (fs->fs_frag % NBBY)))) == 0)
@@ -371,4 +372,75 @@ ffs_clusteracct(fs, cgp, blkno, cnt)
         if (*lp-- > 0)
             break;
     fs->fs_maxcluster[cgp->cg_cgx] = i;
+}
+
+static int
+scanc(u_int size, u_char *cp, const u_char table[], int mask)
+{
+    u_char *end = &cp[size];
+
+    while (cp < end && (table[*cp] & mask) == 0)
+        ++cp;
+    return end - cp;
+}
+
+/*
+ * Find a block of the specified size in the specified cylinder group.
+ *
+ * It is a panic if a request is made to find a block if none are
+ * available.
+ */
+daddr_t
+ffs_mapsearch(struct fs *fs, struct cg *cgp, daddr_t bpref, int allocsiz)
+{
+    daddr_t bno;
+    int start, len, loc, i;
+    int blk, field, subfield, pos;
+
+    /*
+     * find the fragment by searching through the free block
+     * map for an appropriate bit pattern
+     */
+    if (bpref)
+        start = dtogd(fs, bpref) / NBBY;
+    else
+        start = cgp->cg_frotor / NBBY;
+    len = howmany(fs->fs_fpg, NBBY) - start;
+    loc = scanc((u_int)len, (u_char *)&cg_blksfree(cgp)[start],
+        fragtbl[fs->fs_frag],
+        (u_char)(1 << (allocsiz - 1 + (fs->fs_frag % NBBY))));
+    if (loc == 0) {
+        len = start + 1;
+        start = 0;
+        loc = scanc((u_int)len, (u_char *)&cg_blksfree(cgp)[0],
+            fragtbl[fs->fs_frag],
+            (u_char)(1 << (allocsiz - 1 + (fs->fs_frag % NBBY))));
+        if (loc == 0) {
+            fprintf(stderr, "%s: map corrupted: start = %d, len = %d, fs = %s\n",
+                __func__, start, len, fs->fs_fsmnt);
+            exit(-1);
+        }
+    }
+    bno = (start + len - loc) * NBBY;
+    cgp->cg_frotor = bno;
+    /*
+     * found the byte in the map
+     * sift through the bits to find the selected frag
+     */
+    for (i = bno + NBBY; bno < i; bno += fs->fs_frag) {
+        blk = blkmap(fs, cg_blksfree(cgp), bno);
+        blk <<= 1;
+        field = around[allocsiz];
+        subfield = inside[allocsiz];
+        for (pos = 0; pos <= fs->fs_frag - allocsiz; pos++) {
+            if ((blk & field) == subfield)
+                return (bno + pos);
+            field <<= 1;
+            subfield <<= 1;
+        }
+    }
+    fprintf(stderr, "%s: block not in map: bno = %d, fs = %s\n",
+        __func__, bno, fs->fs_fsmnt);
+    exit(-1);
+    return (-1);
 }

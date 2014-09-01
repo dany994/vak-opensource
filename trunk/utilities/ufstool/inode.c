@@ -39,7 +39,7 @@
 extern int verbose;
 
 int
-getino(ufs_t *disk, void **dino, ino_t inode, int *mode)
+getino(ufs_t *disk, void **dino, ino_t ino, int *mode)
 {
     ino_t min, max;
     caddr_t inoblock;
@@ -62,19 +62,19 @@ getino(ufs_t *disk, void **dino, ino_t inode, int *mode)
         }
         disk->d_inoblock = inoblock;
     }
-    if (inode < min || inode >= max) {
-        ufs_sector_read(disk, fsbtodb(fs, ino_to_fsba(fs, inode)), inoblock, fs->fs_bsize);
-        disk->d_inomin = min = inode - (inode % INOPB(fs));
+    if (ino < min || ino >= max) {
+        ufs_sector_read(disk, fsbtodb(fs, ino_to_fsba(fs, ino)), inoblock, fs->fs_bsize);
+        disk->d_inomin = min = ino - (ino % INOPB(fs));
         disk->d_inomax = max = min + INOPB(fs);
     }
     switch (disk->d_ufs) {
     case 1:
-        dp1 = &((struct ufs1_dinode *)inoblock)[inode - min];
+        dp1 = &((struct ufs1_dinode *)inoblock)[ino - min];
         *mode = dp1->di_mode & IFMT;
         *dino = dp1;
         return (0);
     case 2:
-        dp2 = &((struct ufs2_dinode *)inoblock)[inode - min];
+        dp2 = &((struct ufs2_dinode *)inoblock)[ino - min];
         *mode = dp2->di_mode & IFMT;
         *dino = dp2;
         return (0);
@@ -676,11 +676,13 @@ map_block (ufs_inode_t *inode, unsigned lbn)
 static unsigned
 map_block_write (ufs_inode_t *inode, unsigned lbn)
 {
-    unsigned bsize = inode->disk->d_fs.fs_bsize;
+    struct fs *fs = &inode->disk->d_fs;
+    unsigned bsize = fs->fs_bsize;
     unsigned block [MAXBSIZE / 4];
-    unsigned int nb, newb, sh, i, j;
-    unsigned nshift = ffs(NINDIR(&inode->disk->d_fs)) - 1;
-    unsigned nmask = NINDIR(&inode->disk->d_fs) - 1;
+    unsigned int sh, i, j;
+    unsigned nshift = ffs(NINDIR(fs)) - 1;
+    unsigned nmask = NINDIR(fs) - 1;
+    daddr_t nb, newb, bpref;
 
     /*
      * Blocks 0..NDADDR-1 are direct blocks.
@@ -695,9 +697,11 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
         }
 
         /* allocate new block */
-        if (ufs_block_alloc (inode->disk, &nb) < 0)
+        bpref = (lbn > 0) ? inode->daddr [lbn-1] : ino_to_fsba(fs, inode->number);
+        if (ufs_block_alloc (inode->disk, bpref, &nb) < 0)
             return 0;
         inode->daddr[lbn] = nb;
+        inode->blocks += bsize / 512;
         inode->dirty = 1;
         return nb;
     }
@@ -726,7 +730,8 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
      */
     nb = inode->iaddr [NIADDR-j];
     if (nb == 0) {
-        if (ufs_block_alloc (inode->disk, &nb) < 0)
+        bpref = inode->daddr[NDADDR-1];
+        if (ufs_block_alloc (inode->disk, bpref, &nb) < 0)
             return 0;
         if (verbose)
             printf ("inode %d: allocate new block %d\n", inode->number, nb);
@@ -750,7 +755,7 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
             nb = block [i];
         else {
             /* Allocate new block. */
-            if (ufs_block_alloc (inode->disk, &newb) < 0)
+            if (ufs_block_alloc (inode->disk, nb, &newb) < 0)
                 return 0;
             if (verbose)
                 printf ("inode %d: allocate new block %d\n", inode->number, newb);
@@ -1211,56 +1216,6 @@ ufs_inode_link (ufs_t *disk, ufs_inode_t *inode, const char *name, int inum)
 }
 
 /*
- * Implement the cylinder overflow algorithm.
- *
- * The policy implemented by this algorithm is:
- *   1) allocate the block in its requested cylinder group.
- *   2) quadradically rehash on the cylinder group number.
- *   3) brute force search for a free block.
- */
-static daddr_t
-ffs_hashalloc(ufs_t *disk, int cg, daddr_t pref, int param,
-    daddr_t (*allocator)())
-{
-    struct fs *fs = &disk->d_fs;
-    daddr_t result;
-    int i, icg = cg;
-
-    /*
-     * 1: preferred cylinder group
-     */
-    result = (*allocator)(disk, cg, pref, param);
-    if (result)
-        return (result);
-    /*
-     * 2: quadratic rehash
-     */
-    for (i = 1; i < fs->fs_ncg; i *= 2) {
-        cg += i;
-        if (cg >= fs->fs_ncg)
-            cg -= fs->fs_ncg;
-        result = (*allocator)(disk, cg, 0, param);
-        if (result)
-            return (result);
-    }
-    /*
-     * 3: brute force search
-     * Note that we start at i == 2, since 0 was checked initially,
-     * and 1 is always checked in the quadratic rehash.
-     */
-    cg = (icg + 2) % fs->fs_ncg;
-    for (i = 2; i < fs->fs_ncg; i++) {
-        result = (*allocator)(disk, cg, 0, param);
-        if (result)
-            return (result);
-        cg++;
-        if (cg == fs->fs_ncg)
-            cg = 0;
-    }
-    return 0;
-}
-
-/*
  * Count a number of 0xff bytes in the array.
  */
 static int
@@ -1283,7 +1238,7 @@ count_ff(int size, unsigned char *cp)
  *      inode in the specified cylinder group.
  */
 static daddr_t
-ffs_nodealloccg(ufs_t *disk, int cg, daddr_t ipref, int mode)
+cg_alloc_inode(ufs_t *disk, int cg, daddr_t ipref, int mode)
 {
     struct fs *fs = &disk->d_fs;
     struct cg *cgp = &disk->d_cg;
@@ -1339,7 +1294,6 @@ gotit:
             fs->fs_cstotal.cs_ndir++;
             fs->fs_cs(fs, cg).cs_ndir++;
     }
-
     ufs_cgroup_write_last(disk);
     return (cg * fs->fs_ipg + ipref);
 }
@@ -1416,7 +1370,7 @@ noinodes:
         if (fs->fs_contigdirs[cg] > 0)
             fs->fs_contigdirs[cg]--;
     }
-    ino = (ino_t)ffs_hashalloc(dir->disk, cg, ipref, mode, ffs_nodealloccg);
+    ino = ufs_cgroup_hashalloc(dir->disk, cg, ipref, mode, cg_alloc_inode);
     if (ino == 0)
         goto noinodes;
 
