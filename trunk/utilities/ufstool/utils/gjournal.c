@@ -121,8 +121,8 @@ getcg(int cg)
         if (cgc == NULL)
             err(1, "malloc(%zu)", sizeof(*cgc));
     }
-    if (cgread1(disk, cg) == -1)
-        err(1, "cgread1(%d)", cg);
+    if (ufs_cgroup_read(disk, cg) == -1)
+        err(1, "ufs_cgroup_read(%d)", cg);
     bcopy(&disk->d_cg, &cgc->cgc_cg, sizeof(cgc->cgc_union));
     cgc->cgc_busy = 0;
     cgc->cgc_dirty = 0;
@@ -177,8 +177,8 @@ putcgs(void)
         if (cgc->cgc_dirty) {
             bcopy(&cgc->cgc_cg, &disk->d_cg,
                 sizeof(cgc->cgc_union));
-            if (cgwrite1(disk, cgc->cgc_cg.cg_cgx) == -1)
-                err(1, "cgwrite1(%d)", cgc->cgc_cg.cg_cgx);
+            if (ufs_cgroup_write(disk, cgc->cgc_cg.cg_cgx) == -1)
+                err(1, "ufs_cgroup_write(%d)", cgc->cgc_cg.cg_cgx);
             //printf("%s: Wrote cg=%d\n", __func__,
             //    cgc->cgc_cg.cg_cgx);
         }
@@ -211,8 +211,8 @@ static void
 closedisk(void)
 {
     fs->fs_clean = 1;
-    if (sbwrite(disk, 0) == -1)
-        err(1, "sbwrite(%s)", devnam);
+    if (ufs_superblock_write(disk, 0) == -1)
+        err(1, "ufs_superblock_write(%s)", devnam);
     if (ufs_disk_close(disk) == -1)
         err(1, "ufs_disk_close(%s)", devnam);
     free(disk);

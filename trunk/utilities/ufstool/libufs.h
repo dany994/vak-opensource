@@ -150,13 +150,10 @@ int     ufs_block_free (ufs_t *disk, unsigned int bno);
 /*
  * cgroup.c
  */
-ufs2_daddr_t cgballoc(ufs_t *);
-int     cgbfree(ufs_t *, ufs2_daddr_t, long);
-ino_t   cgialloc(ufs_t *);
-int     cgread(ufs_t *);
-int     cgread1(ufs_t *, int);
-int     cgwrite(ufs_t *);
-int     cgwrite1(ufs_t *, int);
+int     ufs_cgroup_read_next(ufs_t *disk);
+int     ufs_cgroup_read(ufs_t *disk, int cg);
+int     ufs_cgroup_write_last(ufs_t *disk);
+int     ufs_cgroup_write(ufs_t *disk, int cg);
 void    ufs_print_cg(struct cg *cgr, FILE *out);
 
 /*
@@ -190,13 +187,13 @@ int     ufs_inode_link (ufs_t *disk, ufs_inode_t *inode, const char *name, int m
 int     ufs_inode_save (ufs_inode_t *inode, int force);
 void    ufs_inode_clear (ufs_inode_t *inode);
 void    ufs_inode_truncate (ufs_inode_t *inode, unsigned long size);
-int     ufs_inode_alloc (ufs_t *disk, ufs_inode_t *inode);
+int     ufs_inode_alloc (ufs_inode_t *dir, int mode, ufs_inode_t *inode);
 
 /*
  * sblock.c
  */
-int     sbread(ufs_t *);
-int     sbwrite(ufs_t *, int);
+int     ufs_superblock_read(ufs_t *);
+int     ufs_superblock_write(ufs_t *, int);
 void    ufs_print(ufs_t *disk, FILE *out);
 
 /*

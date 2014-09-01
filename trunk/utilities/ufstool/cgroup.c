@@ -34,6 +34,7 @@
 #define _LIBUFS
 #include "internal.h"
 
+#if 0
 ufs2_daddr_t
 cgballoc(ufs_t *disk)
 {
@@ -71,7 +72,7 @@ cgbfree(ufs_t *disk, ufs2_daddr_t bno, long size)
 
     fs = &disk->d_fs;
     cg = dtog(fs, bno);
-    if (cgread1(disk, cg) != 1)
+    if (ufs_cgroup_read(disk, cg) < 0)
         return (-1);
     cgp = &disk->d_cg;
     cgbno = dtogd(fs, bno);
@@ -118,7 +119,7 @@ cgbfree(ufs_t *disk, ufs2_daddr_t bno, long size)
             fs->fs_cs(fs, cg).cs_nbfree++;
         }
     }
-    return cgwrite(disk);
+    return ufs_cgroup_write_last(disk);
 }
 
 ino_t
@@ -167,26 +168,25 @@ gotit:
 
     return (ino + (cgp->cg_cgx * fs->fs_ipg));
 }
+#endif
 
 int
-cgread(ufs_t *disk)
+ufs_cgroup_read_next(ufs_t *disk)
 {
-    return (cgread1(disk, disk->d_ccg++));
+    return ufs_cgroup_read(disk, disk->d_ccg++);
 }
 
 int
-cgread1(ufs_t *disk, int c)
+ufs_cgroup_read(ufs_t *disk, int c)
 {
-    struct fs *fs;
-
-    fs = &disk->d_fs;
+    struct fs *fs = &disk->d_fs;
 
     if ((unsigned)c >= fs->fs_ncg) {
         return (0);
     }
     if (ufs_sector_read(disk, fsbtodb(fs, cgtod(fs, c)), disk->d_cgunion.d_buf,
-        fs->fs_bsize) == -1) {
-        ERROR(disk, "unable to read cylinder group");
+        fs->fs_bsize) < 0) {
+        fprintf (stderr, "%s: unable to read cylinder group %u\n", __func__, c);
         return (-1);
     }
     disk->d_lcg = c;
@@ -194,13 +194,13 @@ cgread1(ufs_t *disk, int c)
 }
 
 int
-cgwrite(ufs_t *disk)
+ufs_cgroup_write_last(ufs_t *disk)
 {
-    return (cgwrite1(disk, disk->d_lcg));
+    return (ufs_cgroup_write(disk, disk->d_lcg));
 }
 
 int
-cgwrite1(ufs_t *disk, int c)
+ufs_cgroup_write(ufs_t *disk, int c)
 {
     struct fs *fs;
 

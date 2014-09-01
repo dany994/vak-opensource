@@ -1003,7 +1003,7 @@ goth:
         for (i = frag; i < sblock.fs_frag; i++)
             setbit(cg_blksfree(&acg), d + i);
     }
-    /* XXX cgwrite(disk, 0)??? */
+    /* XXX ufs_cgroup_write_last(disk)??? */
     wtfs(disk, fsbtodb(&sblock, cgtod(&sblock, 0)), sblock.fs_cgsize,
         (char *)&acg);
     return ((ufs2_daddr_t)d);
