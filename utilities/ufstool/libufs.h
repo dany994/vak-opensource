@@ -45,7 +45,7 @@ typedef struct {
     int d_ufs;              /* decimal UFS version */
     int d_fd;               /* raw device file descriptor */
     long d_bsize;           /* disk sector size in bytes */
-    ufs2_daddr_t d_sblock;  /* superblock location */
+    ufs1_daddr_t d_sblock;  /* superblock location */
     struct csum *d_sbcsum;  /* Superblock summary info */
     caddr_t d_inoblock;     /* inode block */
     ino_t d_inomin;         /* low inode */
@@ -132,9 +132,9 @@ __BEGIN_DECLS
 /*
  * block.c
  */
-ssize_t ufs_sector_read(ufs_t *, ufs2_daddr_t, void *, size_t);
-ssize_t ufs_sector_write(ufs_t *, ufs2_daddr_t, const void *, size_t);
-int     ufs_sector_erase(ufs_t *, ufs2_daddr_t, ufs2_daddr_t);
+ssize_t ufs_sector_read(ufs_t *, ufs1_daddr_t, void *, size_t);
+ssize_t ufs_sector_write(ufs_t *, ufs1_daddr_t, const void *, size_t);
+int     ufs_sector_erase(ufs_t *, ufs1_daddr_t, ufs1_daddr_t);
 int     ufs_seek (ufs_t *disk, off_t offset);
 int     ufs_read8 (ufs_t *disk, u_int8_t *val);
 int     ufs_read16 (ufs_t *disk, u_int16_t *val);
@@ -143,9 +143,9 @@ int     ufs_read64 (ufs_t *disk, u_int64_t *val);
 int     ufs_write8 (ufs_t *disk, u_int8_t val);
 int     ufs_write16 (ufs_t *disk, u_int16_t val);
 int     ufs_write32 (ufs_t *disk, u_int32_t val);
-int     ufs_write64 (ufs_t *disk, unsigned long long val);
-int     ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno);
-void    ufs_block_free (ufs_t *disk, daddr_t bno);
+int     ufs_write64 (ufs_t *disk, u_int64_t val);
+int     ufs_block_alloc (ufs_t *disk, ufs1_daddr_t bpref, ufs1_daddr_t *bno);
+void    ufs_block_free (ufs_t *disk, ufs1_daddr_t bno);
 
 /*
  * cgroup.c
@@ -155,8 +155,8 @@ int     ufs_cgroup_read(ufs_t *disk, int cg);
 int     ufs_cgroup_write_last(ufs_t *disk);
 int     ufs_cgroup_write(ufs_t *disk, int cg);
 void    ufs_print_cg(struct cg *cgr, FILE *out);
-daddr_t ufs_cgroup_hashalloc(ufs_t *disk, int cg, daddr_t pref, int param,
-            daddr_t (*allocator)());
+ufs1_daddr_t ufs_cgroup_hashalloc(ufs_t *disk, int cg, ufs1_daddr_t pref, int param,
+            ufs1_daddr_t (*allocator)());
 
 /*
  * disk.c
@@ -207,7 +207,7 @@ void    ffs_fragacct(struct fs *, int, int32_t [], int);
 int     ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
 int     ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
 void    ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
-daddr_t ffs_mapsearch(struct fs *fs, struct cg *cgp, daddr_t bpref, int allocsiz);
+ufs1_daddr_t ffs_mapsearch(struct fs *fs, struct cg *cgp, ufs1_daddr_t bpref, int allocsiz);
 
 /*
  * check.c
@@ -226,10 +226,10 @@ int     ufs_mount(ufs_t *disk, char *dirname);
  */
 void    mkfs (ufs_t *disk, const char *fsys);
 
-extern intmax_t mkfs_fssize;		/* file system size */
-extern off_t	mkfs_mediasize;         /* device size */
-extern int	mkfs_bsize;		/* block size */
-extern int	mkfs_fsize;		/* fragment size */
+extern int64_t  mkfs_fssize;		/* file system size in sectors */
+extern int64_t  mkfs_mediasize;         /* device size in bytes */
+extern int	mkfs_bsize;		/* block size in bytes */
+extern int	mkfs_fsize;		/* fragment size in bytes */
 extern int	mkfs_sectorsize;	/* bytes/sector */
 extern int	mkfs_realsectorsize;	/* bytes/sector in hardware */
 extern int      mkfs_nflag;             /* do not create .snap directory */

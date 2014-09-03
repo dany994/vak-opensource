@@ -302,9 +302,9 @@ flush(int fd, struct bufarea *bp)
         return;
     }
     if (bp->b_errs != 0)
-        check_fatal("WRITING %sZERO'ED BLOCK %lld TO DISK\n",
+        check_fatal("WRITING %sZERO'ED BLOCK %jd TO DISK\n",
             (bp->b_errs == bp->b_size / dev_bsize) ? "" : "PARTIALLY ",
-            (long long)bp->b_bno);
+            (intmax_t)bp->b_bno);
     bp->b_errs = 0;
     check_blwrite(fd, bp->b_un.b_buf, bp->b_bno, bp->b_size);
     if (bp != &check_sblk)
@@ -2037,7 +2037,7 @@ allocino(ino_t request, int type)
     DIP_SET(dp, di_ctimensec, 0);
     DIP_SET(dp, di_atimensec, 0);
     DIP_SET(dp, di_size, check_sblk.b_un.b_fs->fs_fsize);
-    DIP_SET(dp, di_blocks, btodb(check_sblk.b_un.b_fs->fs_fsize));
+    DIP_SET(dp, di_blocks, bytes_to_sectors(check_sblk.b_un.b_fs->fs_fsize));
     check_n_files++;
     check_inodirty();
     inoinfo(ino)->ino_type = IFTODT(type);
@@ -2445,7 +2445,7 @@ expanddir(union dinode *dp, char *name)
     DIP_SET(dp, di_db[lastbn + 1], DIP(dp, di_db[lastbn]));
     DIP_SET(dp, di_db[lastbn], newblk);
     DIP_SET(dp, di_size, DIP(dp, di_size) + check_sblk.b_un.b_fs->fs_bsize);
-    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) + btodb(check_sblk.b_un.b_fs->fs_bsize));
+    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) + bytes_to_sectors(check_sblk.b_un.b_fs->fs_bsize));
     bp = getdirblk(DIP(dp, di_db[lastbn + 1]),
         sblksize(check_sblk.b_un.b_fs, DIP(dp, di_size), lastbn + 1));
     if (bp->b_errs)
@@ -2477,7 +2477,7 @@ bad:
     DIP_SET(dp, di_db[lastbn], DIP(dp, di_db[lastbn + 1]));
     DIP_SET(dp, di_db[lastbn + 1], 0);
     DIP_SET(dp, di_size, DIP(dp, di_size) - check_sblk.b_un.b_fs->fs_bsize);
-    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) - btodb(check_sblk.b_un.b_fs->fs_bsize));
+    DIP_SET(dp, di_blocks, DIP(dp, di_blocks) - bytes_to_sectors(check_sblk.b_un.b_fs->fs_bsize));
     freeblk(newblk, check_sblk.b_un.b_fs->fs_frag);
     return (0);
 }
@@ -2713,7 +2713,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
     }
     if (check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC)
         eascan(idesc, &dp->dp2);
-    idesc->id_entryno *= btodb(check_sblk.b_un.b_fs->fs_fsize);
+    idesc->id_entryno *= bytes_to_sectors(check_sblk.b_un.b_fs->fs_fsize);
     if (DIP(dp, di_blocks) != idesc->id_entryno) {
         check_warn("INCORRECT BLOCK COUNT I=%lu (%ju should be %ju)",
             (u_long)inumber, (uintmax_t)DIP(dp, di_blocks),

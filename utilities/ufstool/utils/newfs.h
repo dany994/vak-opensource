@@ -62,19 +62,19 @@ extern int	mkfs_Jflag;		/* enable gjournal for file system */
 extern int	mkfs_lflag;		/* enable multilabel MAC for file system */
 extern int	mkfs_nflag;		/* do not create .snap directory */
 extern int	mkfs_tflag;		/* enable TRIM */
-extern intmax_t	mkfs_fssize;		/* file system size */
-extern off_t	mkfs_mediasize;	/* device size */
+extern int64_t	mkfs_fssize;		/* file system size */
+extern int64_t	mkfs_mediasize;         /* device size */
 extern int	mkfs_sectorsize;	/* bytes/sector */
 extern int	mkfs_realsectorsize;	/* bytes/sector in hardware*/
 extern int	mkfs_fsize;		/* fragment size */
 extern int	mkfs_bsize;		/* block size */
-extern int	mkfs_maxbsize;	/* maximum clustering */
+extern int	mkfs_maxbsize;          /* maximum clustering */
 extern int	mkfs_maxblkspercg;	/* maximum blocks per cylinder group */
-extern int	mkfs_minfree;	/* free space threshold */
-extern int	mkfs_metaspace;	/* space held for metadata blocks */
+extern int	mkfs_minfree;           /* free space threshold */
+extern int	mkfs_metaspace;         /* space held for metadata blocks */
 extern int	mkfs_opt;		/* optimization preference (space or time) */
-extern int	mkfs_density;	/* number of bytes per inode */
-extern int	mkfs_maxcontig;	/* max contiguous blocks to allocate */
+extern int	mkfs_density;           /* number of bytes per inode */
+extern int	mkfs_maxcontig;         /* max contiguous blocks to allocate */
 extern int	mkfs_maxbpg;		/* maximum blocks per file in a cyl group */
 extern int	mkfs_avgfilesize;	/* expected average file size */
 extern int	mkfs_avgfilesperdir;	/* expected number of files per directory */

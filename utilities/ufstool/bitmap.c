@@ -390,10 +390,10 @@ scanc(u_int size, u_char *cp, const u_char table[], int mask)
  * It is a panic if a request is made to find a block if none are
  * available.
  */
-daddr_t
-ffs_mapsearch(struct fs *fs, struct cg *cgp, daddr_t bpref, int allocsiz)
+ufs1_daddr_t
+ffs_mapsearch(struct fs *fs, struct cg *cgp, ufs1_daddr_t bpref, int allocsiz)
 {
-    daddr_t bno;
+    ufs1_daddr_t bno;
     int start, len, loc, i;
     int blk, field, subfield, pos;
 

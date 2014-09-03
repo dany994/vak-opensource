@@ -31,6 +31,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "libufs.h"
 #define _LIBUFS
@@ -235,9 +236,9 @@ void ufs_print(ufs_t *disk, FILE *out)
     sb->fs_old_inodefmt == FS_42INODEFMT ? "4.2bsd" :
     sb->fs_old_inodefmt == FS_44INODEFMT ? "4.4bsd" : "unknown");
 
-    fprintf(out, "                Maximum file size: %llu bytes\n", (unsigned long long) sb->fs_maxfilesize);
-    fprintf(out, "                Block offset mask: %#018llx\n", (unsigned long long) sb->fs_qbmask);
-    fprintf(out, "                 Frag offset mask: %#018llx\n", (unsigned long long) sb->fs_qfmask);
+    fprintf(out, "                Maximum file size: %ju bytes\n", (uintmax_t) sb->fs_maxfilesize);
+    fprintf(out, "                Block offset mask: %#018jx\n", (uintmax_t) sb->fs_qbmask);
+    fprintf(out, "                 Frag offset mask: %#018jx\n", (uintmax_t) sb->fs_qfmask);
 
     fprintf(out, "   Number of rotational positions: %d\n", sb->fs_old_nrpos);
     fprintf(out, "                     Magic number: %#x\n", sb->fs_magic);

@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "libufs.h"
 #define _LIBUFS
@@ -38,25 +39,25 @@
 int verbose;
 
 ssize_t
-ufs_sector_read(ufs_t *disk, ufs2_daddr_t sectno, void *data, size_t size)
+ufs_sector_read(ufs_t *disk, ufs1_daddr_t sectno, void *data, size_t size)
 {
     ssize_t cnt;
     off_t offset = (off_t)sectno * disk->d_bsize;
 
     cnt = pread(disk->d_fd, data, size, offset);
     if (cnt == -1) {
-        printf ("%s(sectno=%llu, size=%zu) read error at offset=%lld \n", __func__, sectno, size, offset);
+        printf ("%s(sectno=%ju, size=%zu) read error at offset=%jd \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset);
         goto fail;
     }
     if (cnt == 0) {
-        printf ("%s(sectno=%llu, size=%zu) end of file at offset=%lld \n", __func__, sectno, size, offset);
+        printf ("%s(sectno=%ju, size=%zu) end of file at offset=%jd \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset);
         goto fail;
     }
     if ((size_t)cnt != size) {
-        printf ("%s(sectno=%llu, size=%zu) short read at offset=%lld \n", __func__, sectno, size, offset);
+        printf ("%s(sectno=%ju, size=%zu) short read at offset=%jd \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset);
         goto fail;
     }
-//printf ("--- %s(sectno=%llu, size=%zu) offset=%lld - returned %zd bytes \n", __func__, sectno, size, offset, cnt);
+//printf ("--- %s(sectno=%ju, size=%zu) offset=%jd - returned %zd bytes \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset, cnt);
     return (cnt);
 fail:
     memset(data, 0, size);
@@ -64,7 +65,7 @@ fail:
 }
 
 ssize_t
-ufs_sector_write(ufs_t *disk, ufs2_daddr_t sectno, const void *data, size_t size)
+ufs_sector_write(ufs_t *disk, ufs1_daddr_t sectno, const void *data, size_t size)
 {
     ssize_t cnt;
     int rv;
@@ -90,7 +91,7 @@ ufs_sector_write(ufs_t *disk, ufs2_daddr_t sectno, const void *data, size_t size
 }
 
 int
-ufs_sector_erase(ufs_t *disk, ufs2_daddr_t sectno, ufs2_daddr_t size)
+ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
 {
     char *zero_chunk;
     off_t offset, zero_chunk_size, pwrite_size;
@@ -135,8 +136,8 @@ ufs_seek (ufs_t *disk, off_t offset)
 /*  printf ("seek %ld, block %ld\n", offset, offset / bsize);*/
     if (lseek (disk->d_fd, offset, 0) < 0) {
         if (verbose)
-            printf ("error seeking %lld, block %d\n",
-                (long long)offset, (int) (offset / bsize));
+            printf ("error seeking %jd, block %d\n",
+                (intmax_t)offset, (int) (offset / bsize));
         return -1;
     }
     disk->seek = offset;
@@ -144,29 +145,29 @@ ufs_seek (ufs_t *disk, off_t offset)
 }
 
 int
-ufs_read8 (ufs_t *disk, unsigned char *val)
+ufs_read8 (ufs_t *disk, u_int8_t *val)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
 
     if (read (disk->d_fd, val, 1) != 1) {
         if (verbose)
-            printf ("error read8, seek %lld block %d\n",
-                (long long)disk->seek, (int) (disk->seek / bsize));
+            printf ("error read8, seek %jd block %d\n",
+                (intmax_t)disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
     return 0;
 }
 
 int
-ufs_read16 (ufs_t *disk, unsigned short *val)
+ufs_read16 (ufs_t *disk, u_int16_t *val)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
     unsigned char data [2];
 
     if (read (disk->d_fd, data, 2) != 2) {
         if (verbose)
-            printf ("error read16, seek %lld block %d\n",
-                (long long)disk->seek, (int) (disk->seek / bsize));
+            printf ("error read16, seek %jd block %d\n",
+                (intmax_t)disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
     *val = data[1] << 8 | data[0];
@@ -174,43 +175,41 @@ ufs_read16 (ufs_t *disk, unsigned short *val)
 }
 
 int
-ufs_read32 (ufs_t *disk, unsigned *val)
+ufs_read32 (ufs_t *disk, u_int32_t *val)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
     unsigned char data [4];
 
     if (read (disk->d_fd, data, 4) != 4) {
         if (verbose)
-            printf ("error read32, seek %lld block %d\n",
-                (long long)disk->seek, (int) (disk->seek / bsize));
+            printf ("error read32, seek %jd block %d\n",
+                (intmax_t)disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
-    *val = (unsigned long) data[0] | (unsigned long) data[1] << 8 |
-        data[2] << 16 | data[3] << 24;
+    *val = data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;
     return 0;
 }
 
 int
-ufs_read64 (ufs_t *disk, unsigned long long *val)
+ufs_read64 (ufs_t *disk, u_int64_t *val)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
     unsigned char data [8];
 
     if (read (disk->d_fd, data, 8) != 8) {
         if (verbose)
-            printf ("error read32, seek %lld block %d\n",
-                (long long)disk->seek, (int) (disk->seek / bsize));
+            printf ("error read32, seek %jd block %d\n",
+                (intmax_t)disk->seek, (int) (disk->seek / bsize));
         return -1;
     }
-    *val = (unsigned long) data[0] | (unsigned long) data[1] << 8 |
-        data[2] << 16 | data[3] << 24 | (unsigned long long)data[4] << 32 |
-        (unsigned long long)data[5] << 40 | (unsigned long long)data[6] << 48 |
-        (unsigned long long)data[7] << 56;
+    *val = data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24 |
+        (u_int64_t)data[4] << 32 | (u_int64_t)data[5] << 40 |
+        (u_int64_t)data[6] << 48 | (u_int64_t)data[7] << 56;
     return 0;
 }
 
 int
-ufs_write8 (ufs_t *disk, unsigned char val)
+ufs_write8 (ufs_t *disk, u_int8_t val)
 {
     if (write (disk->d_fd, &val, 1) != 1)
         return -1;
@@ -218,7 +217,7 @@ ufs_write8 (ufs_t *disk, unsigned char val)
 }
 
 int
-ufs_write16 (ufs_t *disk, unsigned short val)
+ufs_write16 (ufs_t *disk, u_int16_t val)
 {
     unsigned char data [2];
 
@@ -230,7 +229,7 @@ ufs_write16 (ufs_t *disk, unsigned short val)
 }
 
 int
-ufs_write32 (ufs_t *disk, unsigned val)
+ufs_write32 (ufs_t *disk, u_int32_t val)
 {
     unsigned char data [4];
 
@@ -244,7 +243,7 @@ ufs_write32 (ufs_t *disk, unsigned val)
 }
 
 int
-ufs_write64 (ufs_t *disk, unsigned long long val)
+ufs_write64 (ufs_t *disk, u_int64_t val)
 {
     unsigned char data [8];
 
@@ -272,12 +271,12 @@ ufs_write64 (ufs_t *disk, unsigned long long val)
  * Note that this routine only allocates fs_bsize blocks; these
  * blocks may be fragmented by the routine that allocates them.
  */
-static daddr_t
-cg_alloc_block(ufs_t *disk, int cg, daddr_t bpref, int size)
+static ufs1_daddr_t
+cg_alloc_block(ufs_t *disk, int cg, ufs1_daddr_t bpref, int size)
 {
     struct fs *fs = &disk->d_fs;
     struct cg *cgp = &disk->d_cg;
-    daddr_t bno, blkno;
+    ufs1_daddr_t bno, blkno;
 
     if (size != fs->fs_bsize) {
         fprintf (stderr, "%s: fragments not supported\n", __func__);
@@ -328,7 +327,7 @@ norot:  bno = ffs_mapsearch(fs, cgp, bpref, (int)fs->fs_frag);
  * Allocate a block near the preferenced address.
  */
 int
-ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno)
+ufs_block_alloc (ufs_t *disk, ufs1_daddr_t bpref, ufs1_daddr_t *bno)
 {
     struct fs *fs = &disk->d_fs;
     int cg;
@@ -350,11 +349,11 @@ ufs_block_alloc (ufs_t *disk, daddr_t bpref, daddr_t *bno)
  * The specified block is placed back in the free map.
  */
 void
-ufs_block_free (ufs_t *disk, daddr_t bno)
+ufs_block_free (ufs_t *disk, ufs1_daddr_t bno)
 {
     struct fs *fs = &disk->d_fs;
     struct cg *cgp = &disk->d_cg;
-    daddr_t blkno;
+    ufs1_daddr_t blkno;
     int cg;
 
     if (verbose > 1)

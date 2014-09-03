@@ -30,6 +30,7 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include "libufs.h"
 #include "dir.h"
@@ -123,7 +124,7 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 
     offset = (bno * (off_t) disk->d_bsize) +
         (ino_to_fsbo(&disk->d_fs, inum) * sizeof(struct ufs1_dinode));
-//printf("--- %s(inum = %u) bno=%u, offset=%llu, d_bsize=%lu \n", __func__, inum, bno, (unsigned long long) offset, disk->d_bsize);
+//printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
     if (ufs_seek (disk, offset) < 0)
         return -1;
 
@@ -198,7 +199,7 @@ ufs_inode_save (ufs_inode_t *inode, int force)
 
     offset = (bno * (off_t) disk->d_bsize) +
         (ino_to_fsbo(&disk->d_fs, inode->number) * sizeof(struct ufs1_dinode));
-//printf("--- %s(inum = %u) bno=%u, offset=%llu, d_bsize=%lu \n", __func__, inum, bno, (unsigned long long) offset, disk->d_bsize);
+//printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
     if (ufs_seek (disk, offset) < 0)
         return 0;
 
@@ -426,7 +427,7 @@ ufs_inode_print (ufs_inode_t *inode, FILE *out)
         (inode->mode & IFMT) == IFSOCK? "Socket" :
         (inode->mode & IFMT) == IFWHT ? "Whiteout" :
         "Unknown");
-    fprintf (out, "       Size: %llu bytes\n", (unsigned long long)inode->size);
+    fprintf (out, "       Size: %ju bytes\n", (uintmax_t)inode->size);
     fprintf (out, "       Mode: %#o\n", inode->mode);
 
     fprintf (out, "            ");
@@ -477,7 +478,7 @@ ufs_inode_print_path (ufs_inode_t *inode,
             inode->daddr[0] >> 8, inode->daddr[0] & 0xff);
         break;
     default:
-        fprintf (out, " - %llu bytes", (unsigned long long)inode->size);
+        fprintf (out, " - %ju bytes", (uintmax_t)inode->size);
         break;
     }
     fprintf (out, "\n");
@@ -689,7 +690,7 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
     unsigned int sh, i, j;
     unsigned nshift = ffs(NINDIR(fs)) - 1;
     unsigned nmask = NINDIR(fs) - 1;
-    daddr_t nb, newb, bpref;
+    ufs1_daddr_t nb, newb, bpref;
 
     /*
      * Blocks 0..NDADDR-1 are direct blocks.
@@ -875,8 +876,8 @@ ffs_inode_free (ufs_t *disk, ino_t ino, mode_t mode)
     int error, cg;
 
     if ((u_int)ino >= fs->fs_ipg * fs->fs_ncg) {
-        fprintf (stderr, "%s: inode index out of range: ino = %lld, fs = %s\n",
-            __func__, ino, fs->fs_fsmnt);
+        fprintf (stderr, "%s: inode index out of range: ino = %jd, fs = %s\n",
+            __func__, (intmax_t)ino, fs->fs_fsmnt);
         exit(-1);
     }
     cg = ino_to_cg(fs, ino);
@@ -891,8 +892,8 @@ ffs_inode_free (ufs_t *disk, ino_t ino, mode_t mode)
     cgp->cg_time = time(NULL);
     ino %= fs->fs_ipg;
     if (isclr(cg_inosused(cgp), ino)) {
-        fprintf (stderr, "%s: freeing free inode: ino = %lld, fs = %s\n",
-            __func__, ino, fs->fs_fsmnt);
+        fprintf (stderr, "%s: freeing free inode: ino = %jd, fs = %s\n",
+            __func__, (intmax_t)ino, fs->fs_fsmnt);
         exit(-1);
     }
     clrbit(cg_inosused(cgp), ino);
@@ -1256,8 +1257,8 @@ count_ff(int size, unsigned char *cp)
  *   2) allocate the next available inode after the requested
  *      inode in the specified cylinder group.
  */
-static daddr_t
-cg_alloc_inode(ufs_t *disk, int cg, daddr_t ipref, int mode)
+static ufs1_daddr_t
+cg_alloc_inode(ufs_t *disk, int cg, ufs1_daddr_t ipref, int mode)
 {
     struct fs *fs = &disk->d_fs;
     struct cg *cgp = &disk->d_cg;
@@ -1393,8 +1394,8 @@ noinodes:
         exit(-1);
     }
     if (inode->blocks) {				/* XXX */
-        printf("free inode %s/%lld had %d blocks\n",
-            fs->fs_fsmnt, ino, inode->blocks);
+        printf("free inode %s/%jd had %d blocks\n",
+            fs->fs_fsmnt, (intmax_t)ino, inode->blocks);
         inode->blocks = 0;
     }
     inode->flags = 0;
