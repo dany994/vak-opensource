@@ -50,12 +50,12 @@ struct cmdtable {
 	int (*handler)(int argc, char *argv[]);
 };
 extern union dinode *curinode;
-extern ino_t curinum;
+extern ufs_ino_t curinum;
 
 int argcount(struct cmdtable *cmdp, int argc, char *argv[]);
 char **crack(char *line, int *argc);
 char **recrack(char *line, int *argc, int argc_max);
-void printstat(const char *cp, ino_t inum, union dinode *dp);
+void printstat(const char *cp, ufs_ino_t inum, union dinode *dp);
 int printactive(int doblocks);
 int checkactive(void);
 int checkactivedir(void);

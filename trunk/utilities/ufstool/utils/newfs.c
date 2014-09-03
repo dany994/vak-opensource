@@ -181,7 +181,7 @@ expand_number_int(const char *buf, int *num)
 }
 
 static void
-getfssize(intmax_t *fsz, const char *s, intmax_t disksize, intmax_t reserved)
+getfssize(int64_t *fsz, const char *s, intmax_t disksize, intmax_t reserved)
 {
     intmax_t available;
 

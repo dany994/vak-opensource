@@ -234,12 +234,12 @@ struct inodesc {
 	enum fixstate id_fix;	/* policy on fixing errors */
 	int (*id_func)(struct inodesc *);
 				/* function to be applied to blocks of inode */
-	ino_t id_number;	/* inode number described */
-	ino_t id_parent;	/* for DATA nodes, their parent */
+	ufs_ino_t id_number;	/* inode number described */
+	ufs_ino_t id_parent;	/* for DATA nodes, their parent */
 	ufs_lbn_t id_lbn;	/* logical block number of current block */
 	ufs2_daddr_t id_blkno;	/* current block number being examined */
 	int id_numfrags;	/* number of frags contained in block */
-	off_t id_filesize;	/* for DATA nodes, the size of the directory */
+	int64_t id_filesize;	/* for DATA nodes, the size of the directory */
 	ufs2_daddr_t id_entryno;/* for DATA nodes, current entry number */
 	int id_loc;		/* for DATA nodes, current location in dir */
 	struct direct *id_dirp;	/* for DATA nodes, ptr to current entry */
@@ -338,13 +338,13 @@ struct dups {
  * Inode cache data structures.
  */
 struct inoinfo {
-	struct	inoinfo *i_nexthash;	/* next entry in hash chain */
-	ino_t	i_number;		/* inode number of this entry */
-	ino_t	i_parent;		/* inode number of parent */
-	ino_t	i_dotdot;		/* inode number of `..' */
-	size_t	i_isize;		/* size of inode */
-	u_int	i_numblks;		/* size of block array in bytes */
-	ufs2_daddr_t i_blks[1];		/* actually longer */
+	struct inoinfo  *i_nexthash;	/* next entry in hash chain */
+	ufs_ino_t	i_number;	/* inode number of this entry */
+	ufs_ino_t	i_parent;	/* inode number of parent */
+	ufs_ino_t	i_dotdot;	/* inode number of `..' */
+	size_t          i_isize;	/* size of inode */
+	u_int           i_numblks;	/* size of block array in bytes */
+	ufs2_daddr_t    i_blks[1];	/* actually longer */
 };
 
 #define	setbmap(blkno)	setbit(blockmap, blkno)
@@ -367,16 +367,16 @@ struct inoinfo {
 int		check_readsb(int listerr);
 int		check_setup(const char *dev, int part_num);
 int             check_blread(int fd, char *buf, ufs2_daddr_t blk, long size);
-int             check_changeino(ino_t dir, const char *name, ino_t newnum);
+int             check_changeino(ufs_ino_t dir, const char *name, ufs_ino_t newnum);
 int             check_findino(struct inodesc *idesc);
 int             check_flushentry(void);
 int             check_inode(union dinode *dp, struct inodesc *idesc);
-int             check_makeentry(ino_t parent, ino_t ino, const char *name);
+int             check_makeentry(ufs_ino_t parent, ufs_ino_t ino, const char *name);
 int             check_reply(const char *question);
 int             check_suj(const char *filesys);
 struct bufarea *check_cgget(int cg);
 struct bufarea *check_getdatablk(ufs2_daddr_t blkno, long size, int type);
-union dinode   *check_ginode(ino_t inumber);
+union dinode   *check_ginode(ufs_ino_t inumber);
 void		check_catch(int);
 void		check_catchquit(int);
 void		check_pass1(void);
@@ -406,8 +406,8 @@ char            check_skipclean;	/* skip clean file systems if preening */
 char            check_usedsoftdep;	/* just fix soft dependency inconsistencies */
 char            check_yflag;		/* assume a yes response */
 const char      *check_filename;        /* name of device being checked */
-ino_t           check_maxino;		/* number of inodes in file system */
-ino_t           check_n_files;		/* number of files in use */
+ufs_ino_t       check_maxino;		/* number of inodes in file system */
+ufs_ino_t       check_n_files;		/* number of files in use */
 int             check_Eflag;		/* delete empty data blocks */
 int             check_Zflag;		/* zero empty data blocks */
 int             check_bflag;		/* location of alternate super block */

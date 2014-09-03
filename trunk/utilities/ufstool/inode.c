@@ -40,9 +40,9 @@
 extern int verbose;
 
 int
-getino(ufs_t *disk, void **dino, ino_t ino, int *mode)
+getino(ufs_t *disk, void **dino, ufs_ino_t ino, int *mode)
 {
-    ino_t min, max;
+    ufs_ino_t min, max;
     caddr_t inoblock;
     struct ufs1_dinode *dp1;
     struct ufs2_dinode *dp2;
@@ -105,7 +105,7 @@ int
 ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 {
     unsigned bno, i;
-    off_t offset;
+    int64_t offset;
     u_int32_t freelink, gen;
     int32_t atimensec, mtimensec, ctimensec;
 
@@ -122,7 +122,7 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
     if (inum == 0 || bno >= disk->d_fs.fs_old_size)
         return -1;
 
-    offset = (bno * (off_t) disk->d_bsize) +
+    offset = (bno * (int64_t) disk->d_bsize) +
         (ino_to_fsbo(&disk->d_fs, inum) * sizeof(struct ufs1_dinode));
 //printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
     if (ufs_seek (disk, offset) < 0)
@@ -197,7 +197,7 @@ ufs_inode_save (ufs_inode_t *inode, int force)
     if (inode->number == 0 || bno >= disk->d_fs.fs_old_size)
         return -1;
 
-    offset = (bno * (off_t) disk->d_bsize) +
+    offset = (bno * (int64_t) disk->d_bsize) +
         (ino_to_fsbo(&disk->d_fs, inode->number) * sizeof(struct ufs1_dinode));
 //printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
     if (ufs_seek (disk, offset) < 0)
@@ -869,7 +869,7 @@ ufs_inode_write (ufs_inode_t *inode, unsigned long offset,
  * Put the specified inode back in the free map.
  */
 static int
-ffs_inode_free (ufs_t *disk, ino_t ino, mode_t mode)
+ffs_inode_free (ufs_t *disk, ufs_ino_t ino, mode_t mode)
 {
     struct fs *fs = &disk->d_fs;
     struct cg *cgp = &disk->d_cg;
@@ -1325,7 +1325,7 @@ gotit:
  * among those cylinder groups with above the average number of
  * free inodes, the one with the smallest number of directories.
  */
-static ino_t
+static ufs_ino_t
 ffs_dirpref(fs)
     struct fs *fs;
 {
@@ -1342,7 +1342,7 @@ ffs_dirpref(fs)
             minndir = fs->fs_cs(fs, cg).cs_ndir;
         }
     }
-    return (ino_t)(fs->fs_ipg * mincg);
+    return (ufs_ino_t)(fs->fs_ipg * mincg);
 }
 
 /*
@@ -1362,7 +1362,7 @@ int
 ufs_inode_alloc (ufs_inode_t *dir, int mode, ufs_inode_t *inode)
 {
     struct fs *fs = &dir->disk->d_fs;
-    ino_t ino, ipref;
+    ufs_ino_t ino, ipref;
     int cg, error;
 
     if (fs->fs_cstotal.cs_nifree == 0) {

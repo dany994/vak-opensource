@@ -532,11 +532,11 @@ struct cg {
  *     inode number to cylinder group number.
  *     inode number to filesystem block address.
  */
-#define ino_to_cg(fs, x)    (((ino_t)(x)) / (fs)->fs_ipg)
+#define ino_to_cg(fs, x)    (((ufs_ino_t)(x)) / (fs)->fs_ipg)
 #define ino_to_fsba(fs, x)                                      \
-    ((ufs2_daddr_t)(cgimin(fs, ino_to_cg(fs, (ino_t)(x))) +     \
-    (blkstofrags((fs), ((((ino_t)(x)) % (fs)->fs_ipg) / INOPB(fs))))))
-#define ino_to_fsbo(fs, x)  (((ino_t)(x)) % INOPB(fs))
+    ((ufs2_daddr_t)(cgimin(fs, ino_to_cg(fs, (ufs_ino_t)(x))) +     \
+    (blkstofrags((fs), ((((ufs_ino_t)(x)) % (fs)->fs_ipg) / INOPB(fs))))))
+#define ino_to_fsbo(fs, x)  (((ufs_ino_t)(x)) % INOPB(fs))
 
 /*
  * Give cylinder group number for a filesystem block.
@@ -561,10 +561,10 @@ struct cg {
     ((loc) & (fs)->fs_qbmask)
 #define fragoff(fs, loc)        /* calculates (loc % fs->fs_fsize) */ \
     ((loc) & (fs)->fs_qfmask)
-#define lfragtosize(fs, frag)   /* calculates ((off_t)frag * fs->fs_fsize) */ \
-    (((off_t)(frag)) << (fs)->fs_fshift)
-#define lblktosize(fs, blk)     /* calculates ((off_t)blk * fs->fs_bsize) */ \
-    (((off_t)(blk)) << (fs)->fs_bshift)
+#define lfragtosize(fs, frag)   /* calculates (frag * fs->fs_fsize) */ \
+    (((int64_t)(frag)) << (fs)->fs_fshift)
+#define lblktosize(fs, blk)     /* calculates (blk * fs->fs_bsize) */ \
+    (((int64_t)(blk)) << (fs)->fs_bshift)
 /* Use this only when `blk' is known to be small, e.g., < NDADDR. */
 #define smalllblktosize(fs, blk)/* calculates (blk * fs->fs_bsize) */ \
     ((blk) << (fs)->fs_bshift)
@@ -592,7 +592,7 @@ struct cg {
 #define freespace(fs, percentreserved) \
     (blkstofrags((fs), (fs)->fs_cstotal.cs_nbfree) + \
     (fs)->fs_cstotal.cs_nffree - \
-    (((off_t)((fs)->fs_dsize)) * (percentreserved) / 100))
+    (((int64_t)((fs)->fs_dsize)) * (percentreserved) / 100))
 
 /*
  * Determining the size of a file block in the filesystem.
