@@ -26,10 +26,7 @@ ERROR(ufs_t *u, const char *str)
 #endif  /* _LIBUFS */
 
 /* Calculate (bytes / DEV_BSIZE) */
-#ifdef __APPLE__
-#undef btodb
-#define btodb(bytes) ((unsigned)(bytes) >> 9)
-#endif
+#define bytes_to_sectors(x) ((x) >> 9)
 
 #ifndef _SYS_QUEUE_H_
 /*

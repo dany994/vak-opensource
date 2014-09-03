@@ -94,8 +94,8 @@ int mkfs_Jflag;                     /* enable gjournal for file system */
 int mkfs_lflag;                     /* enable multilabel for file system */
 int mkfs_nflag;                     /* do not create .snap directory */
 int mkfs_tflag;                     /* enable TRIM */
-intmax_t mkfs_fssize;               /* file system size */
-off_t   mkfs_mediasize;             /* device size */
+int64_t mkfs_fssize;                /* file system size */
+int64_t mkfs_mediasize;             /* device size */
 int mkfs_sectorsize;                /* bytes/sector */
 int mkfs_realsectorsize;            /* bytes/sector in hardware */
 int mkfs_fsize = 0;                 /* fragment size */
@@ -875,7 +875,7 @@ fsinit(ufs_t *disk, time_t utime)
         node.dp1.di_size = makedir(root_dir, entries);
         node.dp1.di_db[0] = alloc(disk, sblock.fs_fsize, node.dp1.di_mode);
         node.dp1.di_blocks =
-            btodb(fragroundup(&sblock, node.dp1.di_size));
+            bytes_to_sectors(fragroundup(&sblock, node.dp1.di_size));
         wtfs(disk, fsbtodb(&sblock, node.dp1.di_db[0]), sblock.fs_fsize,
             iobuf);
         iput(disk, &node, ROOTINO);
@@ -890,7 +890,7 @@ fsinit(ufs_t *disk, time_t utime)
                 node.dp1.di_db[0] =
                     alloc(disk, sblock.fs_fsize, node.dp1.di_mode);
             node.dp1.di_blocks =
-                btodb(fragroundup(&sblock, node.dp1.di_size));
+                bytes_to_sectors(fragroundup(&sblock, node.dp1.di_size));
                 wtfs(disk, fsbtodb(&sblock, node.dp1.di_db[0]),
                     sblock.fs_fsize, iobuf);
             iput(disk, &node, ROOTINO + 1);
@@ -911,7 +911,7 @@ fsinit(ufs_t *disk, time_t utime)
         node.dp2.di_size = makedir(root_dir, entries);
         node.dp2.di_db[0] = alloc(disk, sblock.fs_fsize, node.dp2.di_mode);
         node.dp2.di_blocks =
-            btodb(fragroundup(&sblock, node.dp2.di_size));
+            bytes_to_sectors(fragroundup(&sblock, node.dp2.di_size));
         wtfs(disk, fsbtodb(&sblock, node.dp2.di_db[0]), sblock.fs_fsize,
             iobuf);
         iput(disk, &node, ROOTINO);
@@ -926,7 +926,7 @@ fsinit(ufs_t *disk, time_t utime)
                 node.dp2.di_db[0] =
                     alloc(disk, sblock.fs_fsize, node.dp2.di_mode);
             node.dp2.di_blocks =
-                btodb(fragroundup(&sblock, node.dp2.di_size));
+                bytes_to_sectors(fragroundup(&sblock, node.dp2.di_size));
                 wtfs(disk, fsbtodb(&sblock, node.dp2.di_db[0]),
                     sblock.fs_fsize, iobuf);
             iput(disk, &node, ROOTINO + 1);

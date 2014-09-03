@@ -2,13 +2,14 @@
 
 PROGS           = ufstool
 
-OBJS_UFSTOOL    = libufs.a ufstool.o manifest.o mount.o
+OBJS_UFSTOOL    = ufstool.o manifest.o mount.o
 OBJS_LIBUFS     = block.o cgroup.o disk.o inode.o sblock.o \
                   bitmap.o mkfs.o check.o check_suj.o
 
 CFLAGS          = -O1 -g -Wall -Werror
 #CFLAGS         += -D_LIBUFS_DEBUGGING
 LDFLAGS         = -g
+LIBS            = libufs.a
 
 # Fuse
 MOUNT_CFLAGS    = $(shell pkg-config --cflags fuse)
@@ -16,7 +17,7 @@ LIBS            += $(shell pkg-config --libs fuse)
 
 all:            $(PROGS)
 
-ufstool:        $(OBJS_UFSTOOL)
+ufstool:        libufs.a $(OBJS_UFSTOOL)
 		$(CC) $(LDFLAGS) $(OBJS_UFSTOOL) $(LIBS) -o $@
 
 libufs.a:       $(OBJS_LIBUFS)

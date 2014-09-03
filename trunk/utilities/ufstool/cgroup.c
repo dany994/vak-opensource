@@ -128,12 +128,12 @@ ufs_print_cg(struct cg *cgr, FILE *out)
  *   2) quadradically rehash on the cylinder group number.
  *   3) brute force search for a free block.
  */
-daddr_t
-ufs_cgroup_hashalloc(ufs_t *disk, int cg, daddr_t pref, int param,
-    daddr_t (*allocator)())
+ufs1_daddr_t
+ufs_cgroup_hashalloc(ufs_t *disk, int cg, ufs1_daddr_t pref, int param,
+    ufs1_daddr_t (*allocator)())
 {
     struct fs *fs = &disk->d_fs;
-    daddr_t result;
+    ufs1_daddr_t result;
     int i, icg = cg;
 
     /*

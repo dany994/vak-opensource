@@ -224,18 +224,6 @@
 #define FFS_MAXID           16  /* number of valid ffs ids */
 
 /*
- * Command structure passed in to the filesystem to adjust filesystem values.
- */
-#define FFS_CMD_VERSION     0x19790518  /* version ID */
-struct fsck_cmd {
-    int32_t version;        /* version of command structure */
-    int32_t handle;         /* reference to filesystem to be changed */
-    int64_t value;          /* inode or block number to be affected */
-    int64_t size;           /* amount or range to be adjusted */
-    int64_t spare;          /* reserved for future use */
-};
-
-/*
  * Per cylinder group information; summarized in blocks allocated
  * from first cylinder group data blocks.  These blocks have to be
  * read in from fs_csaddr (size fs_cssize) in addition to the
@@ -520,7 +508,7 @@ struct cg {
  * Turn filesystem block numbers into disk block addresses.
  * This maps filesystem blocks to device size blocks.
  */
-#define fsbtodb(fs, b)  ((daddr_t)(b) << (fs)->fs_fsbtodb)
+#define fsbtodb(fs, b)  ((ufs2_daddr_t)(b) << (fs)->fs_fsbtodb)
 #define dbtofsb(fs, b)  ((b) >> (fs)->fs_fsbtodb)
 
 /*

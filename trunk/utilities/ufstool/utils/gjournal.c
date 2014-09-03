@@ -326,7 +326,7 @@ clear_inode(struct ufs2_dinode *dino)
 
     extblocks = 0;
     if (fs->fs_magic == FS_UFS2_MAGIC && dino->di_extsize > 0)
-        extblocks = btodb(fragroundup(fs, dino->di_extsize));
+        extblocks = bytes_to_sectors(fragroundup(fs, dino->di_extsize));
     /* deallocate external attributes blocks */
     if (extblocks > 0) {
         osize = dino->di_extsize;
