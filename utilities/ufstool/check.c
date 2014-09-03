@@ -766,8 +766,7 @@ inoinfo(ufs_ino_t inum)
     int iloff;
 
     if (inum > check_maxino)
-        errx(EEXIT, "inoinfo: inumber %ju out of range",
-            (uintmax_t)inum);
+        errx(EEXIT, "inoinfo: inumber %u out of range", inum);
     ilp = &check_inostathead[inum / check_sblk.b_un.b_fs->fs_ipg];
     iloff = inum % check_sblk.b_un.b_fs->fs_ipg;
     if (iloff >= ilp->il_numalloced)
@@ -1690,8 +1689,7 @@ check_ginode(ufs_ino_t inumber)
     ufs2_daddr_t iblk;
 
     if (inumber < ROOTINO || inumber > check_maxino)
-        errx(EEXIT, "bad inode number %ju to ginode",
-            (uintmax_t)inumber);
+        errx(EEXIT, "bad inode number %u to ginode", inumber);
     if (startinum == 0 ||
         inumber < startinum || inumber >= startinum + INOPB(check_sblk.b_un.b_fs)) {
         iblk = ino_to_fsba(check_sblk.b_un.b_fs, inumber);
@@ -1725,8 +1723,7 @@ getnextinode(ufs_ino_t inumber, int rebuildcg)
     static caddr_t nextinop;
 
     if (inumber != nextino++ || inumber > lastvalidinum)
-        errx(EEXIT, "bad inode number %ju to nextinode",
-            (uintmax_t)inumber);
+        errx(EEXIT, "bad inode number %u to nextinode", inumber);
     if (inumber >= lastinum) {
         readcount++;
         blk = ino_to_fsba(check_sblk.b_un.b_fs, lastinum);
@@ -1803,10 +1800,8 @@ inodegood:
 static void
 setinodebuf(ufs_ino_t inum)
 {
-
     if (inum % check_sblk.b_un.b_fs->fs_ipg != 0)
-        errx(EEXIT, "bad inode number %ju to setinodebuf",
-            (uintmax_t)inum);
+        errx(EEXIT, "bad inode number %u to setinodebuf", inum);
     lastvalidinum = inum + check_sblk.b_un.b_fs->fs_ipg - 1;
     startinum = 0;
     nextino = inum;
@@ -1898,7 +1893,7 @@ getinoinfo(ufs_ino_t inumber)
             continue;
         return (inp);
     }
-    errx(EEXIT, "cannot find inode %ju", (uintmax_t)inumber);
+    errx(EEXIT, "cannot find inode %u", inumber);
     return ((struct inoinfo *)0);
 }
 
@@ -1957,7 +1952,7 @@ clearentry(struct inodesc *idesc)
 static void
 blkerror(ufs_ino_t ino, const char *type, ufs2_daddr_t blk)
 {
-    check_fatal("%jd %s I=%ju", (intmax_t)blk, type, (uintmax_t)ino);
+    check_fatal("%jd %s I=%u", (intmax_t)blk, type, ino);
     printf("\n");
     switch (inoinfo(ino)->ino_state) {
 
@@ -2534,8 +2529,8 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
     u_char *cp;
     long blksiz;
 
-    printf("Inode %ju extsize %ju\n",
-       (intmax_t)idesc->id_number, (intmax_t)dp->di_extsize);
+    printf("Inode %u extsize %ju\n",
+        idesc->id_number, (intmax_t)dp->di_extsize);
     if (dp->di_extsize == 0)
         return 0;
     if (dp->di_extsize <= check_sblk.b_un.b_fs->fs_fsize)
@@ -2785,10 +2780,9 @@ check_pass1(void)
         if (!rebuildcg && check_sblk.b_un.b_fs->fs_magic == FS_UFS2_MAGIC) {
             inosused = cgp->cg_initediblk;
             if (inosused > check_sblk.b_un.b_fs->fs_ipg) {
-                check_fatal(
-"Too many initialized inodes (%ju > %d) in cylinder group %d\nReset to %d\n",
-                    (uintmax_t)inosused,
-                    check_sblk.b_un.b_fs->fs_ipg, c, check_sblk.b_un.b_fs->fs_ipg);
+                check_fatal("Too many initialized inodes (%u > %d) in cylinder group %d\nReset to %d\n",
+                    inosused, check_sblk.b_un.b_fs->fs_ipg,
+                    c, check_sblk.b_un.b_fs->fs_ipg);
                 inosused = check_sblk.b_un.b_fs->fs_ipg;
             }
         } else {
@@ -3357,9 +3351,8 @@ again:
             break;
 
         default:
-            errx(EEXIT, "BAD STATE %d FOR INODE I=%ju",
-                inoinfo(dirp->d_ino)->ino_state,
-                (uintmax_t)dirp->d_ino);
+            errx(EEXIT, "BAD STATE %d FOR INODE I=%u",
+                inoinfo(dirp->d_ino)->ino_state, dirp->d_ino);
         }
     }
     if (n == 0)
@@ -3544,14 +3537,14 @@ check_pass2(void)
          *    inp->i_parent is directory to which ".." should point.
          */
         getpathname(pathbuf, inp->i_parent, inp->i_number);
-        printf("BAD INODE NUMBER FOR '..' in DIR I=%ju (%s)\n",
-            (uintmax_t)inp->i_number, pathbuf);
+        printf("BAD INODE NUMBER FOR '..' in DIR I=%u (%s)\n",
+            inp->i_number, pathbuf);
         getpathname(pathbuf, inp->i_dotdot, inp->i_dotdot);
-        printf("CURRENTLY POINTS TO I=%ju (%s), ",
-            (uintmax_t)inp->i_dotdot, pathbuf);
+        printf("CURRENTLY POINTS TO I=%u (%s), ",
+            inp->i_dotdot, pathbuf);
         getpathname(pathbuf, inp->i_parent, inp->i_parent);
-        printf("SHOULD POINT TO I=%ju (%s)",
-            (uintmax_t)inp->i_parent, pathbuf);
+        printf("SHOULD POINT TO I=%u (%s)",
+            inp->i_parent, pathbuf);
         if (check_preen)
             printf(" (FIXED)\n");
         else if (check_reply("FIX") == 0)
@@ -3713,9 +3706,8 @@ check_pass4(void)
                 break;
 
             default:
-                errx(EEXIT, "BAD STATE %d FOR INODE I=%ju",
-                    inoinfo(inumber)->ino_state,
-                    (uintmax_t)inumber);
+                errx(EEXIT, "BAD STATE %d FOR INODE I=%u",
+                    inoinfo(inumber)->ino_state, inumber);
             }
         }
     }

@@ -1030,8 +1030,7 @@ iput(ufs_t *disk, union dinode *ip, ufs_ino_t ino)
     sblock.fs_cstotal.cs_nifree--;
     fscs[0].cs_nifree--;
     if (ino >= (unsigned long)sblock.fs_ipg * sblock.fs_ncg) {
-        printf("fsinit: inode value out of range (%ju).\n",
-            (uintmax_t)ino);
+        printf("fsinit: inode value out of range (%u).\n", ino);
         exit(32);
     }
     d = fsbtodb(&sblock, ino_to_fsba(&sblock, ino));
