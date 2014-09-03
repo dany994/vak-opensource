@@ -48,8 +48,8 @@ typedef struct {
     ufs1_daddr_t d_sblock;  /* superblock location */
     struct csum *d_sbcsum;  /* Superblock summary info */
     caddr_t d_inoblock;     /* inode block */
-    ino_t d_inomin;         /* low inode */
-    ino_t d_inomax;         /* high inode */
+    ufs_ino_t d_inomin;     /* low inode */
+    ufs_ino_t d_inomax;     /* high inode */
     union {
         struct fs d_fs;     /* filesystem information */
         char d_sb[MAXBSIZE];
@@ -67,7 +67,7 @@ typedef struct {
 #define d_fs    d_sbunion.d_fs
 #define d_sb    d_sbunion.d_sb
 #define d_cg    d_cgunion.d_cg
-    off_t seek;
+    int64_t seek;
 } ufs_t;
 
 /*
@@ -135,7 +135,7 @@ __BEGIN_DECLS
 ssize_t ufs_sector_read(ufs_t *, ufs1_daddr_t, void *, size_t);
 ssize_t ufs_sector_write(ufs_t *, ufs1_daddr_t, const void *, size_t);
 int     ufs_sector_erase(ufs_t *, ufs1_daddr_t, ufs1_daddr_t);
-int     ufs_seek (ufs_t *disk, off_t offset);
+int     ufs_seek (ufs_t *disk, int64_t offset);
 int     ufs_read8 (ufs_t *disk, u_int8_t *val);
 int     ufs_read16 (ufs_t *disk, u_int16_t *val);
 int     ufs_read32 (ufs_t *disk, u_int32_t *val);
@@ -169,7 +169,7 @@ int     ufs_disk_reopen_writable(ufs_t *);
 /*
  * inode.c
  */
-int     getino(ufs_t *, void **, ino_t, int *);
+int     getino(ufs_t *, void **, ufs_ino_t, int *);
 int     putino(ufs_t *);
 int     ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum);
 void    ufs_inode_print (ufs_inode_t *inode, FILE *out);

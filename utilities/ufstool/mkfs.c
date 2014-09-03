@@ -123,7 +123,7 @@ static void fsinit(ufs_t *, time_t);
 static int ilog2(int);
 static void initcg(ufs_t *, int, time_t);
 static int isblock(struct fs *, unsigned char *, int);
-static void iput(ufs_t *disk, union dinode *, ino_t);
+static void iput(ufs_t *disk, union dinode *, ufs_ino_t);
 static int makedir(struct direct *, int);
 static void setblock(struct fs *, unsigned char *, int);
 static void wtfs(ufs_t *disk, ufs2_daddr_t, int, char *);
@@ -134,8 +134,8 @@ do_sbwrite(ufs_t *disk)
 {
     if (!disk->d_sblock)
         disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
-    return (pwrite(disk->d_fd, &disk->d_fs, SBLOCKSIZE,
-        (off_t)((mkfs_part_ofs + disk->d_sblock) * disk->d_bsize)));
+    return pwrite(disk->d_fd, &disk->d_fs, SBLOCKSIZE,
+        (mkfs_part_ofs + disk->d_sblock) * (int64_t)disk->d_bsize);
 }
 
 void
@@ -147,7 +147,7 @@ mkfs(ufs_t *disk, const char *fsys)
     time_t utime;
     quad_t sizepb;
     int width;
-    ino_t maxinum;
+    ufs_ino_t maxinum;
     int minfragsperinode;   /* minimum ratio of frags to inodes */
     char tmpbuf[100];       /* XXX this will break in about 2,500 years */
     union {
@@ -1013,7 +1013,7 @@ goth:
  * Allocate an inode on the disk
  */
 void
-iput(ufs_t *disk, union dinode *ip, ino_t ino)
+iput(ufs_t *disk, union dinode *ip, ufs_ino_t ino)
 {
     ufs2_daddr_t d;
 

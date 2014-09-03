@@ -205,7 +205,7 @@ int op_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 /*
  * Read data from an open file.
  */
-int op_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+int op_read(const char *path, char *buf, size_t size, int64_t offset, struct fuse_file_info *fi)
 {
     printlog("--- op_read(path=\"%s\", buf=%p, size=%d, offset=%lld, fi=%p)\n",
         path, buf, size, offset, fi);
@@ -231,7 +231,7 @@ int op_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 /*
  * Write data to an open file.
  */
-int op_write(const char *path, const char *buf, size_t size, off_t offset,
+int op_write(const char *path, const char *buf, size_t size, int64_t offset,
 	     struct fuse_file_info *fi)
 {
     printlog("--- op_write(path=\"%s\", buf=%p, size=%d, offset=%lld, fi=%p)\n",
@@ -269,7 +269,7 @@ int op_release(const char *path, struct fuse_file_info *fi)
 /*
  * Change the size of a file
  */
-int op_truncate(const char *path, off_t newsize)
+int op_truncate(const char *path, int64_t newsize)
 {
     printlog("--- op_truncate(path=\"%s\", newsize=%lld)\n", path, newsize);
 #if 0
@@ -296,7 +296,7 @@ int op_truncate(const char *path, off_t newsize)
 /*
  * Change the size of an open file.
  */
-int op_ftruncate(const char *path, off_t offset, struct fuse_file_info *fi)
+int op_ftruncate(const char *path, int64_t offset, struct fuse_file_info *fi)
 {
     printlog("--- op_ftruncate(path=\"%s\", offset=%lld, fi=%p)\n",
         path, offset, fi);
@@ -776,7 +776,7 @@ int op_opendir(const char *path, struct fuse_file_info *fi)
 /*
  * Read directory.
  */
-int op_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
+int op_readdir(const char *path, void *buf, fuse_fill_dir_t filler, int64_t offset,
 	       struct fuse_file_info *fi)
 {
     printlog("--- op_readdir(path=\"%s\", buf=%p, filler=%p, offset=%lld, fi=%p)\n",

@@ -74,7 +74,7 @@
  * the root inode is 2.  (Inode 1 is no longer used for this purpose, however
  * numerous dump tapes make this assumption, so we are stuck with it).
  */
-#define ROOTINO ((ino_t)2)
+#define ROOTINO 2
 
 /*
  * The Whiteout inode# is a dummy non-zero inode number which will
@@ -82,7 +82,7 @@
  * in the directory entry which has been tagged as a DT_WHT entry.
  * See the comments about ROOTINO above.
  */
-#define WINO    ((ino_t)1)
+#define WINO    1
 
 /*
  * The size of physical and logical block numbers and time fields in UFS.
@@ -91,6 +91,7 @@ typedef int32_t ufs1_daddr_t;
 typedef int64_t ufs2_daddr_t;
 typedef int64_t ufs_lbn_t;
 typedef int64_t ufs_time_t;
+typedef u_int32_t ufs_ino_t;
 
 /* File permissions. */
 #define IEXEC   0000100     /* Executable. */

@@ -60,7 +60,7 @@ struct suj_ino {
     struct srechd       si_newrecs;
     struct srechd       si_movs;
     struct jtrncrec     *si_trunc;
-    ino_t               si_ino;
+    ufs_ino_t           si_ino;
     char                si_skipparent;
     char                si_hasrecs;
     char                si_blkadj;
@@ -118,7 +118,7 @@ TAILQ_HEAD(seghd, suj_seg) allsegs;
 uint64_t oldseq;
 static ufs_t *disk = NULL;
 static struct fs *fs = NULL;
-ino_t sujino;
+ufs_ino_t sujino;
 
 /*
  * Summary statistics.
@@ -132,10 +132,10 @@ uint64_t jrecs;
 
 static jmp_buf  jmpbuf;
 
-typedef void (*ino_visitor)(ino_t, ufs_lbn_t, ufs2_daddr_t, int);
+typedef void (*ino_visitor)(ufs_ino_t, ufs_lbn_t, ufs2_daddr_t, int);
 static void err_suj(const char *, ...);
-static void ino_trunc(ino_t, off_t);
-static void ino_decr(ino_t);
+static void ino_trunc(ufs_ino_t, int64_t);
+static void ino_decr(ufs_ino_t);
 static void ino_adjust(struct suj_ino *);
 static void ino_build(struct suj_ino *);
 static int blk_isfree(ufs2_daddr_t);
@@ -264,7 +264,7 @@ cg_lookup(int cgx)
  * not exist.
  */
 static struct suj_ino *
-ino_lookup(ino_t ino, int creat)
+ino_lookup(ufs_ino_t ino, int creat)
 {
     struct suj_ino *sino;
     struct inohd *hd;
@@ -390,7 +390,7 @@ dblk_write(void)
 }
 
 static union dinode *
-ino_read(ino_t ino)
+ino_read(ufs_ino_t ino)
 {
     struct ino_blk *iblk;
     struct iblkhd *hd;
@@ -427,7 +427,7 @@ found:
 }
 
 static void
-ino_dirty(ino_t ino)
+ino_dirty(ufs_ino_t ino)
 {
     struct ino_blk *iblk;
     struct iblkhd *hd;
@@ -479,7 +479,7 @@ blk_overlaps(struct jblkrec *brec, ufs2_daddr_t start, int frags)
 }
 
 static int
-blk_equals(struct jblkrec *brec, ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t start,
+blk_equals(struct jblkrec *brec, ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t start,
     int frags)
 {
 
@@ -510,7 +510,7 @@ blk_setmask(struct jblkrec *brec, int *mask)
  * to be freed.  The mask value can be used to free partial blocks.
  */
 static int
-blk_freemask(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t lbn, int frags)
+blk_freemask(ufs2_daddr_t blk, ufs_ino_t ino, ufs_lbn_t lbn, int frags)
 {
     struct suj_blk *sblk;
     struct suj_rec *srec;
@@ -562,7 +562,7 @@ blk_freemask(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t lbn, int frags)
  * Returns 1 if it's safe to follow the indirect and 0 otherwise.
  */
 static int
-blk_isindir(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t lbn)
+blk_isindir(ufs2_daddr_t blk, ufs_ino_t ino, ufs_lbn_t lbn)
 {
     struct suj_blk *sblk;
     struct jblkrec *brec;
@@ -584,7 +584,7 @@ blk_isindir(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t lbn)
  * 0 so the caller knows it does not have to check the inode contents.
  */
 static int
-ino_free(ino_t ino, int mode)
+ino_free(ufs_ino_t ino, int mode)
 {
     struct suj_cg *sc;
     uint8_t *inosused;
@@ -679,7 +679,7 @@ blk_isfree(ufs2_daddr_t bno)
  * to fetch a specific block.
  */
 static ufs2_daddr_t
-indir_blkatoff(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t cur, ufs_lbn_t lbn)
+indir_blkatoff(ufs2_daddr_t blk, ufs_ino_t ino, ufs_lbn_t cur, ufs_lbn_t lbn)
 {
     ufs2_daddr_t *bap2;
     ufs2_daddr_t *bap1;
@@ -730,7 +730,7 @@ indir_blkatoff(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t cur, ufs_lbn_t lbn)
  * negative if an extattr or indirect block is requested.
  */
 static ufs2_daddr_t
-ino_blkatoff(union dinode *ip, ino_t ino, ufs_lbn_t lbn, int *frags)
+ino_blkatoff(union dinode *ip, ufs_ino_t ino, ufs_lbn_t lbn, int *frags)
 {
     ufs_lbn_t tmpval;
     ufs_lbn_t cur;
@@ -784,7 +784,7 @@ ino_blkatoff(union dinode *ip, ino_t ino, ufs_lbn_t lbn, int *frags)
  * or ext blocks.
  */
 static int
-blk_isat(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int *frags)
+blk_isat(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int *frags)
 {
     union dinode *ip;
     ufs2_daddr_t nblk;
@@ -803,7 +803,7 @@ blk_isat(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int *frags)
  * checking is done and it is assumed that this path was verified with isat.
  */
 static void
-ino_clrat(ino_t parent, off_t diroff, ino_t child)
+ino_clrat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child)
 {
     union dinode *dip;
     struct direct *dp;
@@ -841,7 +841,7 @@ ino_clrat(ino_t parent, off_t diroff, ino_t child)
  * at a specified offset.  Returns the mode of the found entry.
  */
 static int
-ino_isat(ino_t parent, off_t diroff, ino_t child, int *mode, int *isdot)
+ino_isat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child, int *mode, int *isdot)
 {
     union dinode *dip;
     struct direct *dp;
@@ -940,7 +940,7 @@ ino_isat(ino_t parent, off_t diroff, ino_t child, int *mode, int *isdot)
  * Read an indirect level which may or may not be linked into an inode.
  */
 static void
-indir_visit(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, uint64_t *frags,
+indir_visit(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, uint64_t *frags,
     ino_visitor visitor, int flags)
 {
     ufs2_daddr_t *bap2;
@@ -1004,7 +1004,7 @@ out:
  * the correct di_blocks for a file.
  */
 static uint64_t
-ino_visit(union dinode *ip, ino_t ino, ino_visitor visitor, int flags)
+ino_visit(union dinode *ip, ufs_ino_t ino, ino_visitor visitor, int flags)
 {
     ufs_lbn_t nextlbn;
     ufs_lbn_t tmpval;
@@ -1064,7 +1064,7 @@ ino_visit(union dinode *ip, ino_t ino, ino_visitor visitor, int flags)
  */
 ufs_lbn_t visitlbn;
 static void
-null_visit(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
+null_visit(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
 {
     if (lbn > 0)
         visitlbn = lbn;
@@ -1082,9 +1082,9 @@ ino_adjblks(struct suj_ino *sino)
     union dinode *ip;
     uint64_t blocks;
     uint64_t frags;
-    off_t isize;
-    off_t size;
-    ino_t ino;
+    int64_t isize;
+    int64_t size;
+    ufs_ino_t ino;
 
     ino = sino->si_ino;
     ip = ino_read(ino);
@@ -1125,7 +1125,7 @@ ino_adjblks(struct suj_ino *sino)
 }
 
 static void
-blk_free_visit(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
+blk_free_visit(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
 {
 
     blk_free(blk, blk_freemask(blk, ino, lbn, frags), frags);
@@ -1137,7 +1137,7 @@ blk_free_visit(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
  * recursively.
  */
 static void
-blk_free_lbn(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t lbn, int frags, int follow)
+blk_free_lbn(ufs2_daddr_t blk, ufs_ino_t ino, ufs_lbn_t lbn, int frags, int follow)
 {
     uint64_t resid;
     int mask;
@@ -1151,7 +1151,7 @@ blk_free_lbn(ufs2_daddr_t blk, ino_t ino, ufs_lbn_t lbn, int frags, int follow)
 }
 
 static void
-ino_setskip(struct suj_ino *sino, ino_t parent)
+ino_setskip(struct suj_ino *sino, ufs_ino_t parent)
 {
     int isdot;
     int mode;
@@ -1161,7 +1161,7 @@ ino_setskip(struct suj_ino *sino, ino_t parent)
 }
 
 static void
-ino_remref(ino_t parent, ino_t child, uint64_t diroff, int isdotdot)
+ino_remref(ufs_ino_t parent, ufs_ino_t child, uint64_t diroff, int isdotdot)
 {
     struct suj_ino *sino;
     struct suj_rec *srec;
@@ -1215,11 +1215,11 @@ ino_remref(ino_t parent, ino_t child, uint64_t diroff, int isdotdot)
  * Free the children of a directory when the directory is discarded.
  */
 static void
-ino_free_children(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
+ino_free_children(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
 {
     struct suj_ino *sino;
     struct direct *dp;
-    off_t diroff;
+    int64_t diroff;
     uint8_t *block;
     int skipparent;
     int isdotdot;
@@ -1257,7 +1257,7 @@ ino_free_children(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
  * link counts.  Free the inode back to the cg.
  */
 static void
-ino_reclaim(union dinode *ip, ino_t ino, int mode)
+ino_reclaim(union dinode *ip, ufs_ino_t ino, int mode)
 {
     uint32_t gen;
 
@@ -1288,7 +1288,7 @@ ino_reclaim(union dinode *ip, ino_t ino, int mode)
  * Adjust an inode's link count down by one when a directory goes away.
  */
 static void
-ino_decr(ino_t ino)
+ino_decr(ufs_ino_t ino)
 {
     union dinode *ip;
     int reqlink;
@@ -1334,7 +1334,7 @@ ino_adjust(struct suj_ino *sino)
     int reqlink;
     int isdot;
     int mode;
-    ino_t ino;
+    ufs_ino_t ino;
 
     nlink = sino->si_nlink;
     ino = sino->si_ino;
@@ -1423,7 +1423,7 @@ ino_adjust(struct suj_ino *sino)
  * and zeroing the indirect.
  */
 static void
-indir_trunc(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, ufs_lbn_t lastlbn)
+indir_trunc(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, ufs_lbn_t lastlbn)
 {
     ufs2_daddr_t *bap2;
     ufs1_daddr_t *bap1;
@@ -1491,7 +1491,7 @@ indir_trunc(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, ufs_lbn_t lastlbn)
  * code never extends files, only shrinks them.
  */
 static void
-ino_trunc(ino_t ino, off_t size)
+ino_trunc(ufs_ino_t ino, int64_t size)
 {
     union dinode *ip;
     ufs2_daddr_t bn;
@@ -1502,8 +1502,8 @@ ino_trunc(ino_t ino, off_t size)
     ufs_lbn_t lbn;
     ufs_lbn_t i;
     int frags;
-    off_t cursize;
-    off_t off;
+    int64_t cursize;
+    int64_t off;
     int mode;
 
     ip = ino_read(ino);
@@ -1619,7 +1619,7 @@ ino_check(struct suj_ino *sino)
     int newlinks;
     int removes;
     int nlink;
-    ino_t ino;
+    ufs_ino_t ino;
     int isdot;
     int isat;
     int mode;
@@ -1905,8 +1905,8 @@ ino_unlinked(void)
 {
     union dinode *ip;
     uint16_t mode;
-    ino_t inon;
-    ino_t ino;
+    ufs_ino_t inon;
+    ufs_ino_t ino;
 
     ino = fs->fs_sujfree;
     fs->fs_sujfree = 0;
@@ -2006,7 +2006,7 @@ ino_add_ref(struct suj_ino *sino, struct suj_rec *srec)
  * Create a duplicate of a reference at a previous location.
  */
 static void
-ino_dup_ref(struct suj_ino *sino, struct jrefrec *refrec, off_t diroff)
+ino_dup_ref(struct suj_ino *sino, struct jrefrec *refrec, int64_t diroff)
 {
     struct jrefrec *rrn;
     struct suj_rec *srn;
@@ -2035,7 +2035,7 @@ ino_build_ref(struct suj_ino *sino, struct suj_rec *srec)
     struct suj_rec *srp;
     struct suj_rec *srn;
     struct jrefrec *rrn;
-    off_t diroff;
+    int64_t diroff;
 
     refrec = (struct jrefrec *)srec->sr_rec;
     /*
@@ -2507,7 +2507,7 @@ jblocks_add(struct jblocks *jblocks, ufs2_daddr_t daddr, int blocks)
  * buffer and segments may span mutliple contiguous blocks.
  */
 static void
-suj_add_block(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
+suj_add_block(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
 {
 
     jblocks_add(suj_jblocks, fsbtodb(fs, blk), fsbtodb(fs, frags));
@@ -2616,7 +2616,7 @@ restart:
  * Search a directory block for the SUJ_FILE.
  */
 static void
-suj_find(ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
+suj_find(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
 {
     char block[MAXBSIZE];
     struct direct *dp;

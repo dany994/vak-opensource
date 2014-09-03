@@ -287,7 +287,7 @@ cmdloop(void)
 }
 
 union dinode *curinode;
-ino_t curinum, ocurrent;
+ufs_ino_t curinum, ocurrent;
 
 #define GETINUM(ac,inum)    inum = strtoul(argv[ac], &cp, 0); \
     if (inum < ROOTINO || inum > check_maxino || cp == argv[ac] || *cp != '\0' ) { \
@@ -301,7 +301,7 @@ ino_t curinum, ocurrent;
  */
 CMDFUNCSTART(focus)
 {
-    ino_t inum;
+    ufs_ino_t inum;
     char *cp;
 
     GETINUM(1,inum);
@@ -322,7 +322,7 @@ CMDFUNCSTART(back)
 
 CMDFUNCSTART(zapi)
 {
-    ino_t inum;
+    ufs_ino_t inum;
     union dinode *dp;
     char *cp;
 
@@ -429,7 +429,7 @@ static int wantedblksize;
 
 CMDFUNCSTART(findblk)
 {
-    ino_t inum, inosused;
+    ufs_ino_t inum, inosused;
     uint32_t *wantedblk32 = 0;
     uint64_t *wantedblk64 = 0;
     struct bufarea *cgbp;
@@ -735,7 +735,7 @@ CMDFUNCSTART(focusname)
 
 CMDFUNCSTART(ln)
 {
-    ino_t inum;
+    ufs_ino_t inum;
     int rval;
     char *cp;
 
@@ -785,7 +785,7 @@ chinumfunc(struct inodesc *idesc)
 CMDFUNCSTART(chinum)
 {
     char *cp;
-    ino_t inum;
+    ufs_ino_t inum;
     struct inodesc idesc;
 
     slotcount = 0;

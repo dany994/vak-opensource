@@ -42,7 +42,7 @@ ssize_t
 ufs_sector_read(ufs_t *disk, ufs1_daddr_t sectno, void *data, size_t size)
 {
     ssize_t cnt;
-    off_t offset = (off_t)sectno * disk->d_bsize;
+    int64_t offset = (int64_t)sectno * disk->d_bsize;
 
     cnt = pread(disk->d_fd, data, size, offset);
     if (cnt == -1) {
@@ -78,7 +78,7 @@ ufs_sector_write(ufs_t *disk, ufs1_daddr_t sectno, const void *data, size_t size
         return (-1);
     }
 
-    cnt = pwrite(disk->d_fd, data, size, (off_t)(sectno * disk->d_bsize));
+    cnt = pwrite(disk->d_fd, data, size, (int64_t)sectno * disk->d_bsize);
     if (cnt == -1) {
         ERROR(disk, "write error to block device");
         return (-1);
@@ -94,7 +94,7 @@ int
 ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
 {
     char *zero_chunk;
-    off_t offset, zero_chunk_size, pwrite_size;
+    int64_t offset, zero_chunk_size, pwrite_size;
     int rv;
 
     ERROR(disk, NULL);
@@ -129,7 +129,7 @@ ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
 }
 
 int
-ufs_seek (ufs_t *disk, off_t offset)
+ufs_seek (ufs_t *disk, int64_t offset)
 {
     unsigned bsize = disk->d_fs.fs_bsize;
 

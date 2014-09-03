@@ -64,7 +64,7 @@ static int  dumpfreespace(const char *, int);
 static void dumpfreespacecg(int);
 static int  marshal(const char *);
 static void pbits(void *, int);
-static void pblklist(void *, int, off_t, int);
+static void pblklist(void *, int, int64_t, int);
 static void ufserr(const char *);
 static void usage(void);
 
@@ -280,7 +280,7 @@ static int
 dumpcg(void)
 {
     time_t cgtime;
-    off_t cur;
+    int64_t cur;
     int i, j;
 
     printf("\ncg %d:\n", disk.d_lcg);
@@ -438,7 +438,7 @@ pbits(void *vp, int max)
 }
 
 static void
-pblklist(void *vp, int max, off_t offset, int fflag)
+pblklist(void *vp, int max, int64_t offset, int fflag)
 {
     int i, j;
     char *p;

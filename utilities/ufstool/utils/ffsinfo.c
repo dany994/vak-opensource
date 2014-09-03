@@ -76,8 +76,8 @@ static struct csum  *fscs;
 
 /* ******************************************************** PROTOTYPES ***** */
 static void usage(void);
-static void dump_whole_ufs1_inode(ino_t, int);
-static void dump_whole_ufs2_inode(ino_t, int);
+static void dump_whole_ufs1_inode(ufs_ino_t, int);
+static void dump_whole_ufs2_inode(ufs_ino_t, int);
 
 #define DUMP_WHOLE_INODE(A,B) \
     ( disk.d_ufs == 1 \
@@ -108,7 +108,7 @@ main(int argc, char **argv)
     int cylno,i;
     int cfg_cg, cfg_in, cfg_lv;
     int cg_start, cg_stop;
-    ino_t in;
+    ufs_ino_t in;
     char *out_file;
 
     DBG_ENTER;
@@ -257,10 +257,10 @@ main(int argc, char **argv)
     if (cfg_lv & 0x300) {
         /* Dump the requested inode(s) */
         if (cfg_in != -2)
-            DUMP_WHOLE_INODE((ino_t)cfg_in, cfg_lv);
+            DUMP_WHOLE_INODE((ufs_ino_t)cfg_in, cfg_lv);
         else {
             for (in = cg_start * sblock.fs_ipg;
-                in < (ino_t)cg_stop * sblock.fs_ipg;
+                in < (ufs_ino_t)cg_stop * sblock.fs_ipg;
                 in++)
                 DUMP_WHOLE_INODE(in, cfg_lv);
         }
@@ -278,7 +278,7 @@ main(int argc, char **argv)
  * all indirect blocks.
  */
 void
-dump_whole_ufs1_inode(ino_t inode, int level)
+dump_whole_ufs1_inode(ufs_ino_t inode, int level)
 {
     DBG_FUNC("dump_whole_ufs1_inode")
     struct ufs1_dinode  *ino;
@@ -430,7 +430,7 @@ dump_whole_ufs1_inode(ino_t inode, int level)
  * all indirect blocks.
  */
 void
-dump_whole_ufs2_inode(ino_t inode, int level)
+dump_whole_ufs2_inode(ufs_ino_t inode, int level)
 {
     DBG_FUNC("dump_whole_ufs2_inode")
     struct ufs2_dinode  *ino;

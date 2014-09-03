@@ -321,7 +321,7 @@ clear_inode(struct ufs2_dinode *dino)
 {
     ufs2_daddr_t bn;
     int extblocks, i, level;
-    off_t osize;
+    int64_t osize;
     long bsize;
 
     extblocks = 0;
@@ -365,7 +365,7 @@ check_gjournal(const char *filesys)
     struct cgchain *cgc;
     struct cg *cgp;
     uint8_t *inosused;
-    ino_t cino, ino;
+    ufs_ino_t cino, ino;
     int cg, mode;
 
     devnam = filesys;

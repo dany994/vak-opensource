@@ -64,7 +64,7 @@ static TAILQ_HEAD(buflist, bufarea) bufhead;        /* head of buffer cache list
 static int numbufs;                                 /* size of buffer cache */
 static char *buftype[BT_NUMBUFTYPES] = BT_NAMES;
 
-static ino_t startinum;
+static ufs_ino_t startinum;
 
 static struct bufarea *cgbufs;  /* header for cylinder group cache */
 static int flushtries;          /* number of tries to reclaim memory */
@@ -82,7 +82,7 @@ static struct   dirtemplate dirhead = {
 
 static int pass1check(struct inodesc *idesc);
 static int pass4check(struct inodesc *idesc);
-static int linkup(ino_t orphan, ino_t parentdir, char *name);
+static int linkup(ufs_ino_t orphan, ufs_ino_t parentdir, char *name);
 
 /* Inode cache data structures. */
 static struct inoinfo **inphead, **inpsort;
@@ -96,7 +96,7 @@ static long countdirs;		/* number of directories we actually found */
 static long	dev_bsize;	/* computed value of DEV_BSIZE */
 static char	havesb;		/* superblock has been read */
 static char	*blockmap;	/* ptr to primary blk allocation map */
-static ino_t	lfdir;		/* lost & found directory inode number */
+static ufs_ino_t lfdir;		/* lost & found directory inode number */
 
 /*
  * Calculate a prototype superblock based on information in the disk label.
@@ -263,7 +263,7 @@ check_blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size)
 {
     int i;
     char *cp;
-    off_t offset;
+    int64_t offset;
 
     if (fd < 0)
         return;
@@ -759,7 +759,7 @@ check_reply(const char *question)
  * Look up state information for an inode.
  */
 static struct inostat *
-inoinfo(ino_t inum)
+inoinfo(ufs_ino_t inum)
 {
     static struct inostat unallocated = { USTATE, 0, 0 };
     struct inostatlist *ilp;
@@ -893,7 +893,7 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
 {
     char *cp;
     int i, errs;
-    off_t offset;
+    int64_t offset;
 
     offset = blk;
     offset *= dev_bsize;
@@ -960,7 +960,7 @@ static void
 blzero(int fd, ufs2_daddr_t blk, long size)
 {
     static char *zero;
-    off_t offset, len;
+    int64_t offset, len;
 
     if (fd < 0)
         return;
@@ -1129,7 +1129,7 @@ findname(struct inodesc *idesc)
  * Find a pathname
  */
 static void
-getpathname(char *namebuf, ino_t curdir, ino_t ino)
+getpathname(char *namebuf, ufs_ino_t curdir, ufs_ino_t ino)
 {
     int len;
     char *cp;
@@ -1202,7 +1202,7 @@ check_catchquit(int sig)
 }
 
 static void
-pinode(ino_t ino)
+pinode(ufs_ino_t ino)
 {
     union dinode *dp;
     char *p;
@@ -1228,7 +1228,7 @@ pinode(ino_t ino)
 }
 
 static void
-fileerror(ino_t cwd, ino_t ino, const char *errmesg)
+fileerror(ufs_ino_t cwd, ufs_ino_t ino, const char *errmesg)
 {
     union dinode *dp;
     char pathbuf[MAXPATHLEN + 1];
@@ -1251,7 +1251,7 @@ fileerror(ino_t cwd, ino_t ino, const char *errmesg)
 }
 
 static void
-direrror(ino_t ino, const char *errmesg)
+direrror(ufs_ino_t ino, const char *errmesg)
 {
     fileerror(ino, ino, errmesg);
 }
@@ -1505,11 +1505,11 @@ check_inodirty(void)
 }
 
 static int
-iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
+iblock(struct inodesc *idesc, long ilevel, int64_t isize, int type)
 {
     struct bufarea *bp;
     int i, n, (*func)(struct inodesc *), nif;
-    off_t sizepb;
+    int64_t sizepb;
     char buf[BUFSIZ];
     char pathbuf[MAXPATHLEN + 1];
     union dinode *dp;
@@ -1588,7 +1588,7 @@ iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
 int
 check_inode(union dinode *dp, struct inodesc *idesc)
 {
-    off_t remsize, sizepb;
+    int64_t remsize, sizepb;
     int i, offset, ret;
     union dinode dino;
     ufs2_daddr_t ndb;
@@ -1685,7 +1685,7 @@ check_inode(union dinode *dp, struct inodesc *idesc)
  * General purpose interface for reading inodes.
  */
 union dinode *
-check_ginode(ino_t inumber)
+check_ginode(ufs_ino_t inumber)
 {
     ufs2_daddr_t iblk;
 
@@ -1710,12 +1710,12 @@ check_ginode(ino_t inumber)
  * Special purpose version of ginode used to optimize first pass
  * over all the inodes in numerical order.
  */
-static ino_t nextino, lastinum, lastvalidinum;
+static ufs_ino_t nextino, lastinum, lastvalidinum;
 static long readcount, readpercg, fullcnt, inobufsize, partialcnt, partialsize;
 static struct bufarea inobuf;
 
 static union dinode *
-getnextinode(ino_t inumber, int rebuildcg)
+getnextinode(ufs_ino_t inumber, int rebuildcg)
 {
     int j;
     long size;
@@ -1772,7 +1772,7 @@ getnextinode(ino_t inumber, int rebuildcg)
              * Fake ndb value so direct/indirect block checks below
              * will detect any garbage after symlink string.
              */
-            if (DIP(dp, di_size) < (off_t)check_sblk.b_un.b_fs->fs_maxsymlinklen) {
+            if (DIP(dp, di_size) < (int64_t)check_sblk.b_un.b_fs->fs_maxsymlinklen) {
                 ndb = howmany(DIP(dp, di_size),
                     sizeof(ufs2_daddr_t));
                 if (ndb > NDADDR) {
@@ -1801,7 +1801,7 @@ inodegood:
 }
 
 static void
-setinodebuf(ino_t inum)
+setinodebuf(ufs_ino_t inum)
 {
 
     if (inum % check_sblk.b_un.b_fs->fs_ipg != 0)
@@ -1849,7 +1849,7 @@ freeinodebuf(void)
  * Enter inodes into the cache.
  */
 static void
-cacheino(union dinode *dp, ino_t inumber)
+cacheino(union dinode *dp, ufs_ino_t inumber)
 {
     struct inoinfo *inp, **inpp;
     int i, blks;
@@ -1865,8 +1865,8 @@ cacheino(union dinode *dp, ino_t inumber)
     inpp = &inphead[inumber % dirhash];
     inp->i_nexthash = *inpp;
     *inpp = inp;
-    inp->i_parent = inumber == ROOTINO ? ROOTINO : (ino_t)0;
-    inp->i_dotdot = (ino_t)0;
+    inp->i_parent = (inumber == ROOTINO) ? ROOTINO : 0;
+    inp->i_dotdot = 0;
     inp->i_number = inumber;
     inp->i_isize = DIP(dp, di_size);
     inp->i_numblks = blks;
@@ -1889,7 +1889,7 @@ cacheino(union dinode *dp, ino_t inumber)
  * Look up an inode cache structure.
  */
 static struct inoinfo *
-getinoinfo(ino_t inumber)
+getinoinfo(ufs_ino_t inumber)
 {
     struct inoinfo *inp;
 
@@ -1955,7 +1955,7 @@ clearentry(struct inodesc *idesc)
 }
 
 static void
-blkerror(ino_t ino, const char *type, ufs2_daddr_t blk)
+blkerror(ufs_ino_t ino, const char *type, ufs2_daddr_t blk)
 {
     check_fatal("%jd %s I=%ju", (intmax_t)blk, type, (uintmax_t)ino);
     printf("\n");
@@ -1984,10 +1984,10 @@ blkerror(ino_t ino, const char *type, ufs2_daddr_t blk)
 /*
  * allocate an unused inode
  */
-static ino_t
-allocino(ino_t request, int type)
+static ufs_ino_t
+allocino(ufs_ino_t request, int type)
 {
-    ino_t ino;
+    ufs_ino_t ino;
     union dinode *dp;
     struct bufarea *cgbp;
     struct cg *cgp;
@@ -2048,7 +2048,7 @@ allocino(ino_t request, int type)
  * deallocate an inode
  */
 static void
-freeino(ino_t ino)
+freeino(ufs_ino_t ino)
 {
     struct inodesc idesc;
     union dinode *dp;
@@ -2115,7 +2115,7 @@ adjust(struct inodesc *idesc, int lcnt)
              * linkup is answered no, but clri is answered yes.
              */
             saveresolved = check_resolved;
-            if (linkup(idesc->id_number, (ino_t)0, NULL) == 0) {
+            if (linkup(idesc->id_number, 0, NULL) == 0) {
                 check_resolved = saveresolved;
                 clri(idesc, "UNREF", 0);
                 return;
@@ -2190,7 +2190,7 @@ chgino(struct inodesc *idesc)
  * free a directory inode
  */
 static void
-freedir(ino_t ino, ino_t parent)
+freedir(ufs_ino_t ino, ufs_ino_t parent)
 {
     union dinode *dp;
 
@@ -2206,9 +2206,9 @@ freedir(ino_t ino, ino_t parent)
  * generate a temporary name for the lost+found directory.
  */
 static int
-lftempname(char *bufp, ino_t ino)
+lftempname(char *bufp, ufs_ino_t ino)
 {
-    ino_t in;
+    ufs_ino_t in;
     char *cp;
     int namlen;
 
@@ -2229,10 +2229,10 @@ lftempname(char *bufp, ino_t ino)
 /*
  * allocate a new directory
  */
-static ino_t
-allocdir(ino_t parent, ino_t request, int mode)
+static ufs_ino_t
+allocdir(ufs_ino_t parent, ufs_ino_t request, int mode)
 {
-    ino_t ino;
+    ufs_ino_t ino;
     char *cp;
     union dinode *dp;
     struct bufarea *bp;
@@ -2285,7 +2285,7 @@ allocdir(ino_t parent, ino_t request, int mode)
  * fix an entry in a directory.
  */
 int
-check_changeino(ino_t dir, const char *name, ino_t newnum)
+check_changeino(ufs_ino_t dir, const char *name, ufs_ino_t newnum)
 {
     struct inodesc idesc;
 
@@ -2300,11 +2300,11 @@ check_changeino(ino_t dir, const char *name, ino_t newnum)
 }
 
 static int
-linkup(ino_t orphan, ino_t parentdir, char *name)
+linkup(ufs_ino_t orphan, ufs_ino_t parentdir, char *name)
 {
     union dinode *dp;
     int lostdir;
-    ino_t oldlfdir;
+    ufs_ino_t oldlfdir;
     struct inodesc idesc;
     char tempname[BUFSIZ];
 
@@ -2333,7 +2333,7 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
         } else {
             check_warn("NO lost+found DIRECTORY");
             if (check_preen || check_reply("CREATE")) {
-                lfdir = allocdir(ROOTINO, (ino_t)0, check_lfmode);
+                lfdir = allocdir(ROOTINO, 0, check_lfmode);
                 if (lfdir != 0) {
                     if (check_makeentry(ROOTINO, lfdir, lfname) != 0) {
                         numdirs++;
@@ -2360,7 +2360,7 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
         if (check_reply("REALLOCATE") == 0)
             return (0);
         oldlfdir = lfdir;
-        if ((lfdir = allocdir(ROOTINO, (ino_t)0, check_lfmode)) == 0) {
+        if ((lfdir = allocdir(ROOTINO, 0, check_lfmode)) == 0) {
             check_fatal("SORRY. CANNOT CREATE lost+found DIRECTORY\n\n");
             return (0);
         }
@@ -2389,14 +2389,14 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
     inoinfo(orphan)->ino_linkcnt--;
     if (lostdir) {
         if ((check_changeino(orphan, "..", lfdir) & ALTERED) == 0 &&
-            parentdir != (ino_t)-1)
+            parentdir != (ufs_ino_t)-1)
             (void)check_makeentry(orphan, lfdir, "..");
         dp = check_ginode(lfdir);
         DIP_SET(dp, di_nlink, DIP(dp, di_nlink) + 1);
         check_inodirty();
         inoinfo(lfdir)->ino_linkcnt++;
         check_warn("DIR I=%lu CONNECTED. ", (u_long)orphan);
-        if (parentdir != (ino_t)-1) {
+        if (parentdir != (ufs_ino_t)-1) {
             printf("PARENT WAS I=%lu\n", (u_long)parentdir);
             /*
              * The parent directory, because of the ordering
@@ -2486,7 +2486,7 @@ bad:
  * make an entry in a directory
  */
 int
-check_makeentry(ino_t parent, ino_t ino, const char *name)
+check_makeentry(ufs_ino_t parent, ufs_ino_t ino, const char *name)
 {
     union dinode *dp;
     struct inodesc idesc;
@@ -2521,7 +2521,7 @@ check_makeentry(ino_t parent, ino_t ino, const char *name)
  */
 static ufs2_daddr_t badblk;
 static ufs2_daddr_t dupblk;
-static ino_t lastino;       /* last inode in use */
+static ufs_ino_t lastino;       /* last inode in use */
 
 /*
  * Scan each entry in an ea block.
@@ -2554,10 +2554,10 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
 }
 
 static int
-ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
+ckinode(ufs_ino_t inumber, struct inodesc *idesc, int rebuildcg)
 {
     union dinode *dp;
-    off_t kernmaxfilesize;
+    int64_t kernmaxfilesize;
     ufs2_daddr_t ndb;
     mode_t mode;
     int j, ret, offset;
@@ -2592,7 +2592,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
     lastino = inumber;
     /* This should match the file size limit in ffs_mountfs(). */
     if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
-        kernmaxfilesize = (off_t)0x40000000 * check_sblk.b_un.b_fs->fs_bsize - 1;
+        kernmaxfilesize = (int64_t)0x40000000 * check_sblk.b_un.b_fs->fs_bsize - 1;
     else
         kernmaxfilesize = check_sblk.b_un.b_fs->fs_maxfilesize;
     if (DIP(dp, di_size) > kernmaxfilesize ||
@@ -2635,7 +2635,7 @@ ckinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
          * Fake ndb value so direct/indirect block checks below
          * will detect any garbage after symlink string.
          */
-        if (DIP(dp, di_size) < (off_t)check_sblk.b_un.b_fs->fs_maxsymlinklen) {
+        if (DIP(dp, di_size) < (int64_t)check_sblk.b_un.b_fs->fs_maxsymlinklen) {
             if (check_sblk.b_un.b_fs->fs_magic == FS_UFS1_MAGIC)
                 ndb = howmany(DIP(dp, di_size),
                     sizeof(ufs1_daddr_t));
@@ -2746,7 +2746,7 @@ check_pass1(void)
     struct inodesc idesc;
     struct bufarea *cgbp;
     struct cg *cgp;
-    ino_t inumber, inosused, mininos;
+    ufs_ino_t inumber, inosused, mininos;
     ufs2_daddr_t i, cgd;
     u_int8_t *cp;
     int c, rebuildcg;
@@ -3029,7 +3029,7 @@ check_pass1b(void)
     int c, i;
     union dinode *dp;
     struct inodesc idesc;
-    ino_t inumber;
+    ufs_ino_t inumber;
 
     memset(&idesc, 0, sizeof(struct inodesc));
     idesc.id_type = ADDR;
@@ -3244,11 +3244,11 @@ chk1:
         fileerror(inp->i_parent, idesc->id_number, "MISSING '..'");
         check_fatal("CANNOT FIX, SECOND ENTRY IN DIRECTORY CONTAINS %s\n",
             dirp->d_name);
-        inp->i_dotdot = (ino_t)-1;
+        inp->i_dotdot = (ufs_ino_t)-1;
     } else if (dirp->d_reclen < entrysize) {
         fileerror(inp->i_parent, idesc->id_number, "MISSING '..'");
         check_fatal("CANNOT FIX, INSUFFICIENT SPACE TO ADD '..'\n");
-        inp->i_dotdot = (ino_t)-1;
+        inp->i_dotdot = (ufs_ino_t)-1;
     } else if (inp->i_parent != 0) {
         /*
          * We know the parent, so fix now.
@@ -3526,7 +3526,7 @@ check_pass2(void)
             INO_IS_DUNFOUND(inp->i_number))
             inoinfo(inp->i_number)->ino_state = DFOUND;
         if (inp->i_dotdot == inp->i_parent ||
-            inp->i_dotdot == (ino_t)-1)
+            inp->i_dotdot == (ufs_ino_t)-1)
             continue;
         if (inp->i_dotdot == 0) {
             inp->i_dotdot = inp->i_parent;
@@ -3575,7 +3575,7 @@ check_pass3(void)
 {
     struct inoinfo *inp;
     int loopcnt, inpindex, state;
-    ino_t orphan;
+    ufs_ino_t orphan;
     struct inodesc idesc;
     char namebuf[MAXNAMLEN+1];
 
@@ -3653,7 +3653,7 @@ check_pass3(void)
 void
 check_pass4(void)
 {
-    ino_t inumber;
+    ufs_ino_t inumber;
     union dinode *dp;
     struct inodesc idesc;
     int i, n, cg;

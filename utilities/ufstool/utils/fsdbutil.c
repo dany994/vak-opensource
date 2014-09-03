@@ -44,7 +44,7 @@
 
 static int charsperline(void);
 static void printindir(ufs2_daddr_t blk, int level, char *bufp);
-static void printblocks(ino_t inum, union dinode *dp);
+static void printblocks(ufs_ino_t inum, union dinode *dp);
 
 char **
 crack(char *line, int *argc)
@@ -99,7 +99,7 @@ argcount(struct cmdtable *cmdp, int argc, char *argv[])
 }
 
 void
-printstat(const char *cp, ino_t inum, union dinode *dp)
+printstat(const char *cp, ufs_ino_t inum, union dinode *dp)
 {
     struct group *grp;
     struct passwd *pw;
@@ -273,7 +273,7 @@ printindir(ufs2_daddr_t blk, int level, char *bufp)
  * Print the block pointers for one inode.
  */
 static void
-printblocks(ino_t inum, union dinode *dp)
+printblocks(ufs_ino_t inum, union dinode *dp)
 {
     char *bufp;
     int i, nfrags;
