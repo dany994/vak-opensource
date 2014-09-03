@@ -876,8 +876,8 @@ ffs_inode_free (ufs_t *disk, ufs_ino_t ino, mode_t mode)
     int error, cg;
 
     if ((u_int)ino >= fs->fs_ipg * fs->fs_ncg) {
-        fprintf (stderr, "%s: inode index out of range: ino = %jd, fs = %s\n",
-            __func__, (intmax_t)ino, fs->fs_fsmnt);
+        fprintf (stderr, "%s: inode index out of range: ino = %u, fs = %s\n",
+            __func__, ino, fs->fs_fsmnt);
         exit(-1);
     }
     cg = ino_to_cg(fs, ino);
@@ -892,8 +892,8 @@ ffs_inode_free (ufs_t *disk, ufs_ino_t ino, mode_t mode)
     cgp->cg_time = time(NULL);
     ino %= fs->fs_ipg;
     if (isclr(cg_inosused(cgp), ino)) {
-        fprintf (stderr, "%s: freeing free inode: ino = %jd, fs = %s\n",
-            __func__, (intmax_t)ino, fs->fs_fsmnt);
+        fprintf (stderr, "%s: freeing free inode: ino = %u, fs = %s\n",
+            __func__, ino, fs->fs_fsmnt);
         exit(-1);
     }
     clrbit(cg_inosused(cgp), ino);
@@ -1394,8 +1394,8 @@ noinodes:
         exit(-1);
     }
     if (inode->blocks) {				/* XXX */
-        printf("free inode %s/%jd had %d blocks\n",
-            fs->fs_fsmnt, (intmax_t)ino, inode->blocks);
+        printf("free inode %s/%u had %d blocks\n",
+            fs->fs_fsmnt, ino, inode->blocks);
         inode->blocks = 0;
     }
     inode->flags = 0;

@@ -815,8 +815,8 @@ ino_clrat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child)
     int doff;
 
     if (check_debug)
-        printf("Clearing inode %ju from parent %ju at offset %jd\n",
-            (uintmax_t)child, (uintmax_t)parent, (uintmax_t)diroff);
+        printf("Clearing inode %u from parent %u at offset %jd\n",
+            child, parent, (uintmax_t)diroff);
 
     lbn = lblkno(fs, diroff);
     doff = blkoff(fs, diroff);
@@ -826,8 +826,8 @@ ino_clrat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child)
     block = dblk_read(blk, blksize);
     dp = (struct direct *)&block[doff];
     if (dp->d_ino != child)
-        errx(1, "Inode %ju does not exist in %ju at %jd",
-            (uintmax_t)child, (uintmax_t)parent, (uintmax_t)diroff);
+        errx(1, "Inode %u does not exist in %u at %jd",
+            child, parent, (uintmax_t)diroff);
     dp->d_ino = 0;
     dblk_dirty(blk);
     /*
@@ -863,11 +863,9 @@ ino_isat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child, int *mode, int *isdo
              * was reallocated.
              */
             if (*mode != 0)
-                printf("Directory %ju has bad mode %o\n",
-                    (uintmax_t)parent, *mode);
+                printf("Directory %u has bad mode %o\n", parent, *mode);
             else
-                printf("Directory %ju has zero mode\n",
-                    (uintmax_t)parent);
+                printf("Directory %u has zero mode\n", parent);
         }
         return (0);
     }
@@ -876,16 +874,16 @@ ino_isat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child, int *mode, int *isdo
     blksize = sblksize(fs, DIP(dip, di_size), lbn);
     if (diroff + DIRECTSIZ(1) > DIP(dip, di_size) || doff >= blksize) {
         if (check_debug)
-            printf("ino %ju absent from %ju due to offset %jd"
+            printf("ino %u absent from %u due to offset %jd"
                 " exceeding size %jd\n",
-                (uintmax_t)child, (uintmax_t)parent, (uintmax_t)diroff,
+                child, parent, (uintmax_t)diroff,
                 (uintmax_t)DIP(dip, di_size));
         return (0);
     }
     blk = ino_blkatoff(dip, parent, lbn, &frags);
     if (blk <= 0) {
         if (check_debug)
-            printf("Sparse directory %ju", (uintmax_t)parent);
+            printf("Sparse directory %u", parent);
         return (0);
     }
     block = dblk_read(blk, blksize);
@@ -904,13 +902,12 @@ ino_isat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child, int *mode, int *isdo
         dpoff += dp->d_reclen;
     } while (dpoff <= doff);
     if (dpoff > fs->fs_bsize)
-        err_suj("Corrupt directory block in dir ino %ju\n",
-            (uintmax_t)parent);
+        err_suj("Corrupt directory block in dir ino %u\n", parent);
     /* Not found. */
     if (dpoff != doff) {
         if (check_debug)
-            printf("ino %ju not found in %ju, lbn %jd, dpoff %d\n",
-                (uintmax_t)child, (uintmax_t)parent, (uintmax_t)lbn, dpoff);
+            printf("ino %u not found in %u, lbn %jd, dpoff %d\n",
+                child, parent, (uintmax_t)lbn, dpoff);
         return (0);
     }
     /*
@@ -927,8 +924,8 @@ ino_isat(ufs_ino_t parent, int64_t diroff, ufs_ino_t child, int *mode, int *isdo
         return (1);
     }
     if (check_debug)
-        printf("ino %ju doesn't match dirent ino %ju in parent %ju\n",
-            (uintmax_t)child, (uintmax_t)dp->d_ino, (uintmax_t)parent);
+        printf("ino %u doesn't match dirent ino %u in parent %u\n",
+            child, dp->d_ino, parent);
     return (0);
 }
 
@@ -964,8 +961,8 @@ indir_visit(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, uint64_t *frags,
         err_suj("Invalid level for lbn %jd\n", lbn);
     if ((flags & VISIT_ROOT) == 0 && blk_isindir(blk, ino, lbn) == 0) {
         if (check_debug)
-            printf("blk %jd ino %ju lbn %jd(%d) is not indir.\n",
-                (uintmax_t)blk, (uintmax_t)ino, (uintmax_t)lbn, level);
+            printf("blk %jd ino %u lbn %jd(%d) is not indir.\n",
+                (uintmax_t)blk, ino, (uintmax_t)lbn, level);
         goto out;
     }
     lbnadd = 1;
@@ -1118,8 +1115,8 @@ ino_adjblks(struct suj_ino *sino)
     if (blocks == DIP(ip, di_blocks))
         return;
     if (check_debug)
-        printf("ino %ju adjusting block count from %jd to %jd\n",
-            (uintmax_t)ino, (uintmax_t)DIP(ip, di_blocks), (uintmax_t)blocks);
+        printf("ino %u adjusting block count from %jd to %jd\n",
+            ino, (uintmax_t)DIP(ip, di_blocks), (uintmax_t)blocks);
     DIP_SET(ip, di_blocks, blocks);
     ino_dirty(ino);
 }
@@ -1245,8 +1242,8 @@ ino_free_children(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
         if (isdotdot && skipparent == 1)
             continue;
         if (check_debug)
-            printf("Directory %ju removing ino %ju name %s\n",
-                (uintmax_t)ino, (uintmax_t)dp->d_ino, dp->d_name);
+            printf("Directory %u removing ino %u name %s\n",
+                ino, dp->d_ino, dp->d_name);
         diroff = lblktosize(fs, lbn) + dpoff;
         ino_remref(ino, dp->d_ino, diroff, isdotdot);
     }
@@ -1264,8 +1261,8 @@ ino_reclaim(union dinode *ip, ufs_ino_t ino, int mode)
     if (ino == ROOTINO)
         err_suj("Attempting to free ROOTINO\n");
     if (check_debug)
-        printf("Truncating and freeing ino %ju, nlink %d, mode %o\n",
-            (uintmax_t)ino, DIP(ip, di_nlink), DIP(ip, di_mode));
+        printf("Truncating and freeing ino %u, nlink %d, mode %o\n",
+            ino, DIP(ip, di_nlink), DIP(ip, di_mode));
 
     /* We are freeing an inode or directory. */
     if ((DIP(ip, di_mode) & IFMT) == IFDIR)
@@ -1309,8 +1306,8 @@ ino_decr(ufs_ino_t ino)
         reqlink = 1;
     if (nlink < reqlink) {
         if (check_debug)
-            printf("ino %ju not enough links to live %d < %d\n",
-                (uintmax_t)ino, nlink, reqlink);
+            printf("ino %u not enough links to live %d < %d\n",
+                ino, nlink, reqlink);
         ino_reclaim(ip, ino, mode);
         return;
     }
@@ -1355,7 +1352,7 @@ ino_adjust(struct suj_ino *sino)
             break;
         }
         if (srec == NULL)
-            errx(1, "Directory %ju name not found", (uintmax_t)ino);
+            errx(1, "Directory %u name not found", ino);
     }
     /*
      * If it's a directory with no real names pointing to it go ahead
@@ -1379,22 +1376,20 @@ ino_adjust(struct suj_ino *sino)
     ip = ino_read(ino);
     mode = DIP(ip, di_mode) & IFMT;
     if (nlink > 127)
-        err_suj("ino %ju nlink manipulation error, new %d, old %d\n",
-            (uintmax_t)ino, nlink, DIP(ip, di_nlink));
+        err_suj("ino %u nlink manipulation error, new %d, old %d\n",
+            ino, nlink, DIP(ip, di_nlink));
     if (check_debug)
-        printf("Adjusting ino %ju, nlink %d, old link %d lastmode %o\n",
-            (uintmax_t)ino, nlink, DIP(ip, di_nlink), sino->si_mode);
+        printf("Adjusting ino %u, nlink %d, old link %d lastmode %o\n",
+            ino, nlink, DIP(ip, di_nlink), sino->si_mode);
     if (mode == 0) {
         if (check_debug)
-            printf("ino %ju, zero inode freeing bitmap\n",
-                (uintmax_t)ino);
+            printf("ino %u, zero inode freeing bitmap\n", ino);
         ino_free(ino, sino->si_mode);
         return;
     }
     /* XXX Should be an assert? */
     if (mode != sino->si_mode && check_debug)
-        printf("ino %ju, mode %o != %o\n",
-            (uintmax_t)ino, mode, sino->si_mode);
+        printf("ino %u, mode %o != %o\n", ino, mode, sino->si_mode);
     if ((mode & IFMT) == IFDIR)
         reqlink = 2;
     else
@@ -1402,16 +1397,15 @@ ino_adjust(struct suj_ino *sino)
     /* If the inode doesn't have enough links to live, free it. */
     if (nlink < reqlink) {
         if (check_debug)
-            printf("ino %ju not enough links to live %d < %d\n",
-                (uintmax_t)ino, nlink, reqlink);
+            printf("ino %u not enough links to live %d < %d\n",
+                ino, nlink, reqlink);
         ino_reclaim(ip, ino, mode);
         return;
     }
     /* If required write the updated link count. */
     if (DIP(ip, di_nlink) == nlink) {
         if (check_debug)
-            printf("ino %ju, link matches, skipping.\n",
-                (uintmax_t)ino);
+            printf("ino %u, link matches, skipping.\n", ino);
         return;
     }
     DIP_SET(ip, di_nlink, nlink);
@@ -1510,8 +1504,8 @@ ino_trunc(ufs_ino_t ino, int64_t size)
     mode = DIP(ip, di_mode) & IFMT;
     cursize = DIP(ip, di_size);
     if (check_debug)
-        printf("Truncating ino %ju, mode %o to size %jd from size %jd\n",
-            (uintmax_t)ino, mode, (uintmax_t)size, (uintmax_t)cursize);
+        printf("Truncating ino %u, mode %o to size %jd from size %jd\n",
+            ino, mode, (uintmax_t)size, (uintmax_t)cursize);
 
     /* Skip datablocks for short links and devices. */
     if (mode == 0 || mode == IFBLK || mode == IFCHR ||
@@ -1569,8 +1563,7 @@ ino_trunc(ufs_ino_t ino, int64_t size)
 
         bn = DIP(ip, di_db[visitlbn]);
         if (bn == 0)
-            err_suj("Bad blk at ino %ju lbn %jd\n",
-                (uintmax_t)ino, visitlbn);
+            err_suj("Bad blk at ino %ju lbn %jd\n", ino, visitlbn);
         oldspace = sblksize(fs, cursize, visitlbn);
         newspace = sblksize(fs, size, visitlbn);
         if (oldspace != newspace) {
@@ -1594,8 +1587,7 @@ ino_trunc(ufs_ino_t ino, int64_t size)
 
         bn = ino_blkatoff(ip, ino, visitlbn, &frags);
         if (bn == 0)
-            err_suj("Block missing from ino %ju at lbn %jd\n",
-                (uintmax_t)ino, visitlbn);
+            err_suj("Block missing from ino %u at lbn %jd\n", ino, visitlbn);
         clrsize = frags * fs->fs_fsize;
         buf = dblk_read(bn, clrsize);
         clrsize -= off;
@@ -1640,9 +1632,9 @@ ino_check(struct suj_ino *sino)
             err_suj("Inode mode/directory type mismatch %o != %o\n",
                 mode, rrec->jr_mode);
         if (check_debug)
-            printf("jrefrec: op %d ino %ju, nlink %d, parent %d, "
+            printf("jrefrec: op %d ino %u, nlink %d, parent %d, "
                 "diroff %jd, mode %o, isat %d, isdot %d\n",
-                rrec->jr_op, (uintmax_t)rrec->jr_ino,
+                rrec->jr_op, rrec->jr_ino,
                 rrec->jr_nlink, rrec->jr_parent, (uintmax_t)rrec->jr_diroff,
                 rrec->jr_mode, isat, isdot);
         mode = rrec->jr_mode & IFMT;
@@ -1660,8 +1652,8 @@ ino_check(struct suj_ino *sino)
      * by one.
      */
     if (check_debug)
-        printf("ino %ju nlink %d newlinks %d removes %d dotlinks %d\n",
-            (uintmax_t)ino, nlink, newlinks, removes, dotlinks);
+        printf("ino %u nlink %d newlinks %d removes %d dotlinks %d\n",
+            ino, nlink, newlinks, removes, dotlinks);
     nlink += newlinks;
     nlink -= removes;
     sino->si_linkadj = 1;
@@ -1702,8 +1694,8 @@ blk_check(struct suj_blk *sblk)
             sino->si_blkadj = 1;
         }
         if (check_debug)
-            printf("op %d blk %jd ino %ju lbn %jd frags %d isat %d (%d)\n",
-                brec->jb_op, (uintmax_t)blk, (uintmax_t)brec->jb_ino,
+            printf("op %d blk %jd ino %u lbn %jd frags %d isat %d (%d)\n",
+                brec->jb_op, (uintmax_t)blk, brec->jb_ino,
                 (uintmax_t)brec->jb_lbn, brec->jb_frags, isat, frags);
         /*
          * If we found the block at this address we still have to
@@ -1920,12 +1912,11 @@ ino_unlinked(void)
          */
         if (DIP(ip, di_nlink) == 0) {
             if (check_debug)
-                printf("Freeing unlinked ino %ju mode %o\n",
-                    (uintmax_t)ino, mode);
+                printf("Freeing unlinked ino %u mode %o\n", ino, mode);
             ino_reclaim(ip, ino, mode);
         } else if (check_debug)
-            printf("Skipping ino %ju mode %o with link %d\n",
-                (uintmax_t)ino, mode, DIP(ip, di_nlink));
+            printf("Skipping ino %u mode %o with link %d\n",
+                ino, mode, DIP(ip, di_nlink));
         ino = inon;
     }
 }
@@ -2350,29 +2341,28 @@ suj_prune(void)
 static int
 suj_verifyino(union dinode *ip)
 {
-
     if (DIP(ip, di_nlink) != 1) {
-        printf("Invalid link count %d for journal inode %ju\n",
-            DIP(ip, di_nlink), (uintmax_t)sujino);
+        printf("Invalid link count %d for journal inode %u\n",
+            DIP(ip, di_nlink), sujino);
         return (-1);
     }
 
     if ((DIP(ip, di_flags) & (SF_IMMUTABLE | SF_NOUNLINK)) !=
         (SF_IMMUTABLE | SF_NOUNLINK)) {
-        printf("Invalid flags 0x%X for journal inode %ju\n",
-            DIP(ip, di_flags), (uintmax_t)sujino);
+        printf("Invalid flags 0x%X for journal inode %u\n",
+            DIP(ip, di_flags), sujino);
         return (-1);
     }
 
     if (DIP(ip, di_mode) != (IFREG | IREAD)) {
-        printf("Invalid mode %o for journal inode %ju\n",
-            DIP(ip, di_mode), (uintmax_t)sujino);
+        printf("Invalid mode %o for journal inode %u\n",
+            DIP(ip, di_mode), sujino);
         return (-1);
     }
 
     if (DIP(ip, di_size) < SUJ_MIN) {
-        printf("Invalid size %jd for journal inode %ju\n",
-            (uintmax_t)DIP(ip, di_size), (uintmax_t)sujino);
+        printf("Invalid size %jd for journal inode %u\n",
+            (uintmax_t)DIP(ip, di_size), sujino);
         return (-1);
     }
 
@@ -2700,12 +2690,12 @@ check_suj(const char *filesys)
      * Build a list of journal blocks in jblocks before parsing the
      * available journal blocks in with suj_read().
      */
-    printf("** Reading %jd byte journal from inode %ju.\n",
-        (uintmax_t)DIP(jip, di_size), (uintmax_t)sujino);
+    printf("** Reading %jd byte journal from inode %u.\n",
+        (uintmax_t)DIP(jip, di_size), sujino);
     suj_jblocks = jblocks_create();
     blocks = ino_visit(jip, sujino, suj_add_block, 0);
     if (blocks != numfrags(fs, DIP(jip, di_size))) {
-        printf("Sparse journal inode %ju.\n", (uintmax_t)sujino);
+        printf("Sparse journal inode %u.\n", sujino);
         return (-1);
     }
     suj_read();

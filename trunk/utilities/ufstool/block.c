@@ -46,18 +46,18 @@ ufs_sector_read(ufs_t *disk, ufs1_daddr_t sectno, void *data, size_t size)
 
     cnt = pread(disk->d_fd, data, size, offset);
     if (cnt == -1) {
-        printf ("%s(sectno=%ju, size=%zu) read error at offset=%jd \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset);
+        printf ("%s(sectno=%u, size=%zu) read error at offset=%jd \n", __func__, sectno, size, (intmax_t)offset);
         goto fail;
     }
     if (cnt == 0) {
-        printf ("%s(sectno=%ju, size=%zu) end of file at offset=%jd \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset);
+        printf ("%s(sectno=%u, size=%zu) end of file at offset=%jd \n", __func__, sectno, size, (intmax_t)offset);
         goto fail;
     }
     if ((size_t)cnt != size) {
-        printf ("%s(sectno=%ju, size=%zu) short read at offset=%jd \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset);
+        printf ("%s(sectno=%u, size=%zu) short read at offset=%jd \n", __func__, sectno, size, (intmax_t)offset);
         goto fail;
     }
-//printf ("--- %s(sectno=%ju, size=%zu) offset=%jd - returned %zd bytes \n", __func__, (uintmax_t)sectno, size, (intmax_t)offset, cnt);
+//printf ("--- %s(sectno=%u, size=%zu) offset=%jd - returned %zd bytes \n", __func__, sectno, size, (intmax_t)offset, cnt);
     return (cnt);
 fail:
     memset(data, 0, size);
