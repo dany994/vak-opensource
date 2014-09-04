@@ -34,7 +34,6 @@
 
 #include "libufs.h"
 #include "dir.h"
-#define _LIBUFS
 #include "internal.h"
 
 extern int verbose;
@@ -48,8 +47,6 @@ getino(ufs_t *disk, void **dino, ufs_ino_t ino, int *mode)
     struct ufs2_dinode *dp2;
     struct fs *fs;
 
-    ERROR(disk, NULL);
-
     fs = &disk->d_fs;
     inoblock = disk->d_inoblock;
     min = disk->d_inomin;
@@ -58,7 +55,7 @@ getino(ufs_t *disk, void **dino, ufs_ino_t ino, int *mode)
     if (inoblock == NULL) {
         inoblock = malloc(fs->fs_bsize);
         if (inoblock == NULL) {
-            ERROR(disk, "unable to allocate inode block");
+            fprintf(stderr, "%s: unable to allocate inode block\n", __func__);
             return (-1);
         }
         disk->d_inoblock = inoblock;
@@ -82,7 +79,7 @@ getino(ufs_t *disk, void **dino, ufs_ino_t ino, int *mode)
     default:
         break;
     }
-    ERROR(disk, "unknown UFS filesystem type");
+    fprintf(stderr, "%s: unknown UFS filesystem type\n", __func__);
     return (-1);
 }
 
@@ -92,7 +89,7 @@ putino(ufs_t *disk)
     struct fs *fs = &disk->d_fs;
 
     if (disk->d_inoblock == NULL) {
-        ERROR(disk, "No inode block allocated");
+        fprintf(stderr, "%s: no inode block allocated\n", __func__);
         return (-1);
     }
     if (ufs_sector_write(disk, fsbtodb(fs, ino_to_fsba(&disk->d_fs, disk->d_inomin)),

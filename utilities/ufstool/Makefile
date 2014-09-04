@@ -6,8 +6,7 @@ OBJS_UFSTOOL    = ufstool.o manifest.o mount.o
 OBJS_LIBUFS     = block.o cgroup.o disk.o inode.o sblock.o \
                   bitmap.o mkfs.o check.o check_suj.o
 
-CFLAGS          = -O1 -g -Wall -Werror
-#CFLAGS         += -D_LIBUFS_DEBUGGING
+CFLAGS          = -O0 -g -Wall -Werror
 LDFLAGS         = -g
 LIBS            = libufs.a
 

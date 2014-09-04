@@ -31,7 +31,6 @@
 #include <time.h>
 
 #include "libufs.h"
-#define _LIBUFS
 #include "internal.h"
 
 int
@@ -71,7 +70,7 @@ ufs_cgroup_write(ufs_t *disk, int c)
     fs = &disk->d_fs;
     if (ufs_sector_write(disk, fsbtodb(fs, cgtod(fs, c)),
         disk->d_cgunion.d_buf, fs->fs_bsize) == -1) {
-        ERROR(disk, "unable to write cylinder group");
+        fprintf(stderr, "%s: unable to write cylinder group\n", __func__);
         return (-1);
     }
     return (0);

@@ -74,7 +74,7 @@
 #define SBLOCK_PIGGY    262144
 #define SBLOCKSIZE      8192
 #define SBLOCKSEARCH \
-    { SBLOCK_UFS2, SBLOCK_UFS1, SBLOCK_FLOPPY, SBLOCK_PIGGY, -1 }
+    { SBLOCK_UFS1, SBLOCK_FLOPPY, SBLOCK_UFS2, SBLOCK_PIGGY, -1 }
 
 /*
  * Max number of fragments per block. This value is NOT tweakable.

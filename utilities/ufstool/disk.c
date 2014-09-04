@@ -31,13 +31,11 @@
 #include <unistd.h>
 
 #include "libufs.h"
-#define _LIBUFS
 #include "internal.h"
 
 int
 ufs_disk_close(ufs_t *disk)
 {
-    ERROR(disk, NULL);
     close(disk->d_fd);
     if (disk->d_inoblock != NULL) {
         free(disk->d_inoblock);
@@ -57,7 +55,7 @@ ufs_disk_open(ufs_t *disk, const char *name)
         return (-1);
     }
     if (ufs_superblock_read(disk) == -1) {
-        ERROR(disk, "could not read superblock to fill out disk");
+        fprintf(stderr, "%s: could not read superblock to fill out disk\n", __func__);
         return (-1);
     }
     return (0);
@@ -68,11 +66,9 @@ ufs_disk_open_blank(ufs_t *disk, const char *name)
 {
     int fd;
 
-    ERROR(disk, NULL);
-
     fd = open(name, O_RDONLY);
     if (fd == -1) {
-        ERROR(disk, "could not open disk image");
+        fprintf(stderr, "%s: could not open disk image\n", __func__);
         return (-1);
     }
 
@@ -95,13 +91,11 @@ ufs_disk_open_blank(ufs_t *disk, const char *name)
 int
 ufs_disk_reopen_writable(ufs_t *disk)
 {
-    ERROR(disk, NULL);
-
     if (! disk->d_writable) {
         close(disk->d_fd);
         disk->d_fd = open(disk->d_name, O_RDWR);
         if (disk->d_fd < 0) {
-            ERROR(disk, "failed to open disk for writing");
+            fprintf(stderr, "%s: failed to open disk for writing\n", __func__);
             return (-1);
         }
         disk->d_writable = 1;

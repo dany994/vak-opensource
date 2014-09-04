@@ -33,7 +33,6 @@
 #include <inttypes.h>
 
 #include "libufs.h"
-#define _LIBUFS
 #include "internal.h"
 
 int verbose;
@@ -68,25 +67,25 @@ ssize_t
 ufs_sector_write(ufs_t *disk, ufs1_daddr_t sectno, const void *data, size_t size)
 {
     ssize_t cnt;
+    int64_t offset = (int64_t)sectno * disk->d_bsize;
     int rv;
-
-    ERROR(disk, NULL);
 
     rv = ufs_disk_reopen_writable(disk);
     if (rv == -1) {
-        ERROR(disk, "failed to open disk for writing");
+        fprintf(stderr, "%s: failed to open disk for writing\n", __func__);
         return (-1);
     }
 
-    cnt = pwrite(disk->d_fd, data, size, (int64_t)sectno * disk->d_bsize);
+    cnt = pwrite(disk->d_fd, data, size, offset);
     if (cnt == -1) {
-        ERROR(disk, "write error to block device");
+        fprintf(stderr, "%s: write error to block device\n", __func__);
         return (-1);
     }
     if ((size_t)cnt != size) {
-        ERROR(disk, "short write to block device");
+        fprintf(stderr, "%s: short write to block device\n", __func__);
         return (-1);
     }
+//printf ("--- %s(sectno=%u, size=%zu) offset=%jd - returned %zd bytes \n", __func__, sectno, size, (intmax_t)offset, cnt);
     return (cnt);
 }
 
@@ -97,10 +96,9 @@ ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
     int64_t offset, zero_chunk_size, pwrite_size;
     int rv;
 
-    ERROR(disk, NULL);
     rv = ufs_disk_reopen_writable(disk);
     if (rv == -1) {
-        ERROR(disk, "failed to open disk for writing");
+        fprintf(stderr, "%s: failed to open disk for writing\n", __func__);
         return(rv);
     }
 
@@ -108,7 +106,7 @@ ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
     zero_chunk_size = 65536 * disk->d_bsize;
     zero_chunk = calloc(1, zero_chunk_size);
     if (zero_chunk == NULL) {
-        ERROR(disk, "failed to allocate memory");
+        fprintf(stderr, "%s: failed to allocate memory\n", __func__);
         return (-1);
     }
     while (size > 0) {
@@ -117,7 +115,7 @@ ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
             pwrite_size = zero_chunk_size;
         rv = pwrite(disk->d_fd, zero_chunk, pwrite_size, offset);
         if (rv == -1) {
-            ERROR(disk, "failed writing to disk");
+            fprintf(stderr, "%s: failed writing to disk\n", __func__);
             break;
         }
         size -= rv;

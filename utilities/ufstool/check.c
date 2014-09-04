@@ -567,7 +567,7 @@ badsb(int listerr, const char *s)
 /*
  * Possible superblock locations ordered from most to least likely.
  */
-static int sblock_try[] = SBLOCKSEARCH;
+static const int sblock_try[] = SBLOCKSEARCH;
 
 #define BAD_MAGIC_MSG \
 "The previous newfs operation on this volume did not complete.\n" \

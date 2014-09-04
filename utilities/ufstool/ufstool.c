@@ -574,6 +574,10 @@ int main (int argc, char **argv)
             return -1;
         }
         mkfs(&disk, argv[i]);
+        if (ufs_superblock_read(&disk) < 0) {
+            fprintf(stderr, "%s: cannot read superblock\n", argv[i]);
+            return (-1);
+        }
         if (i == argc-2) {
             /* Add the contents from the specified directory.
              * Use the optional manifest file. */
