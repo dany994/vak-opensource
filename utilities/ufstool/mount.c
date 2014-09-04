@@ -40,7 +40,8 @@ extern int verbose;
  * File descriptor to be used by op_open(), op_create(), op_read(),
  * op_write(), op_release(), op_fgetattr(), op_fsync(), op_ftruncate().
  */
-//static fs_file_t file;
+static ufs_inode_t file_inode;
+static int file_writable;
 
 /*
  * Print a message to log file.
@@ -57,7 +58,6 @@ static void printlog(const char *format, ...)
     }
 }
 
-#if 0
 static dev_t make_rdev(unsigned raw)
 {
     return makedev (raw >> 8, raw & 0xff);
@@ -66,7 +66,7 @@ static dev_t make_rdev(unsigned raw)
 /*
  * Copy data to struct stat.
  */
-static int getstat (fs_inode_t *inode, struct stat *statbuf)
+static int getstat (ufs_inode_t *inode, struct stat *statbuf)
 {
     statbuf->st_mode   = inode->mode & 07777;    /* protection */
     statbuf->st_ino    = inode->number;          /* inode number */
@@ -75,39 +75,38 @@ static int getstat (fs_inode_t *inode, struct stat *statbuf)
     statbuf->st_gid    = inode->gid;             /* group ID of owner */
     statbuf->st_rdev   = 0;                      /* device ID (if special file) */
     statbuf->st_size   = inode->size;            /* total size, in bytes */
-    statbuf->st_blocks = inode->size >> 9;       /* number of blocks allocated */
+    statbuf->st_blocks = inode->blocks;          /* number of blocks allocated */
     statbuf->st_atime  = inode->atime;           /* time of last access */
     statbuf->st_mtime  = inode->mtime;           /* time of last modification */
     statbuf->st_ctime  = inode->ctime;           /* time of last status change */
 
-    switch (inode->mode & INODE_MODE_FMT) {      /* type of file */
-    case INODE_MODE_FREG:                       /* regular */
+    switch (inode->mode & IFMT) {               /* type of file */
+    case IFREG:                                 /* regular */
         statbuf->st_mode |= S_IFREG;
         break;
-    case INODE_MODE_FDIR:                       /* directory */
+    case IFDIR:                                 /* directory */
         statbuf->st_mode |= S_IFDIR;
         break;
-    case INODE_MODE_FCHR:                       /* character special */
+    case IFCHR:                                 /* character special */
         statbuf->st_mode |= S_IFCHR;
-        statbuf->st_rdev = make_rdev (inode->addr[1]);
+        statbuf->st_rdev = make_rdev (inode->daddr[0]);
         break;
-    case INODE_MODE_FBLK:                       /* block special */
+    case IFBLK:                                 /* block special */
         statbuf->st_mode |= S_IFBLK;
-        statbuf->st_rdev = make_rdev (inode->addr[1]);
+        statbuf->st_rdev = make_rdev (inode->daddr[0]);
         break;
-    case INODE_MODE_FLNK:                       /* symbolic link */
+    case IFLNK:                                 /* symbolic link */
         statbuf->st_mode |= S_IFLNK;
         break;
-    case INODE_MODE_FSOCK:                      /* socket */
+    case IFSOCK:                                /* socket */
         statbuf->st_mode |= S_IFSOCK;
         break;
     default:                                    /* cannot happen */
-        printlog("--- unknown file type %#x\n", inode->mode & INODE_MODE_FMT);
+        printlog("--- unknown file type %#x\n", inode->mode & IFMT);
         return -ENOENT;
     }
     return 0;
 }
-#endif
 
 /*
  * Get file attributes.
@@ -115,18 +114,14 @@ static int getstat (fs_inode_t *inode, struct stat *statbuf)
 int op_getattr(const char *path, struct stat *statbuf)
 {
     printlog("--- op_getattr(path=\"%s\", statbuf=%p)\n", path, statbuf);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
 
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- search failed\n");
         return -ENOENT;
     }
     return getstat (&inode, statbuf);
-#else
-    return 0;
-#endif
 }
 
 /*
@@ -139,14 +134,11 @@ int op_fgetattr(const char *path, struct stat *statbuf, struct fuse_file_info *f
 
     if (strcmp(path, "/") == 0)
 	return op_getattr(path, statbuf);
-#if 0
-    if (file.inode.mode == 0)
+
+    if (file_inode.mode == 0)
         return -EBADF;
 
-    return getstat (&file.inode, statbuf);
-#else
-    return 0;
-#endif
+    return getstat (&file_inode, statbuf);
 }
 
 /*
@@ -157,15 +149,16 @@ int op_open(const char *path, struct fuse_file_info *fi)
     printlog("--- op_open(path=\"%s\", fi=%p) flags=%#x \n",
         path, fi, fi->flags);
 #if 0
+    //TODO: open file
     ufs_t *fs = fuse_get_context()->private_data;
     int write_flag = (fi->flags & O_ACCMODE) != O_RDONLY;
 
-    if (! fs_file_open (disk, &file, path, write_flag)) {
+    if (ufs_file_open (disk, &file, path, write_flag) < 0) {
         printlog("--- open failed\n");
         return -ENOENT;
     }
 
-    if ((file.inode.mode & INODE_MODE_FMT) != INODE_MODE_FREG) {
+    if ((file.inode.mode & IFMT) != IFREG) {
         /* Cannot open special files. */
         file.inode.mode = 0;
         return -ENXIO;
@@ -186,18 +179,19 @@ int op_create(const char *path, mode_t mode, struct fuse_file_info *fi)
     printlog("--- op_create(path=\"%s\", mode=0%03o, fi=%p)\n",
         path, mode, fi);
 #if 0
+    //TODO: create file
     ufs_t *disk = fuse_get_context()->private_data;
 
     file.inode.mode = 0;
-    if (! fs_file_create (disk, &file, path, mode & 07777)) {
+    if (ufs_file_create (disk, &file, path, mode & 07777) < 0) {
         printlog("--- create failed\n");
-	if ((file.inode.mode & INODE_MODE_FMT) == INODE_MODE_FDIR)
+	if ((file.inode.mode & IFMT) == IFDIR)
             return -EISDIR;
         return -EIO;
     }
     file.inode.mtime = time(0);
     file.inode.dirty = 1;
-    fs_file_close (&file);
+    ufs_file_close (&file);
 #endif
     return 0;
 }
@@ -210,6 +204,7 @@ int op_read(const char *path, char *buf, size_t size, int64_t offset, struct fus
     printlog("--- op_read(path=\"%s\", buf=%p, size=%d, offset=%lld, fi=%p)\n",
         path, buf, size, offset, fi);
 #if 0
+    //TODO: read file
     if (offset >= file.inode.size)
         return 0;
 
@@ -217,7 +212,7 @@ int op_read(const char *path, char *buf, size_t size, int64_t offset, struct fus
     if (size > file.inode.size - offset)
         size = file.inode.size - offset;
 
-    if (! fs_file_read (&file, (unsigned char*) buf, size)) {
+    if (ufs_file_read (&file, (unsigned char*) buf, size) < 0) {
         printlog("--- read failed\n");
         return -EIO;
     }
@@ -237,8 +232,9 @@ int op_write(const char *path, const char *buf, size_t size, int64_t offset,
     printlog("--- op_write(path=\"%s\", buf=%p, size=%d, offset=%lld, fi=%p)\n",
         path, buf, size, offset, fi);
 #if 0
+    //TODO: write file
     file.offset = offset;
-    if (! fs_file_write (&file, (unsigned char*) buf, size)) {
+    if (ufs_file_write (&file, (unsigned char*) buf, size) < 0) {
         printlog("--- read failed\n");
         return -EIO;
     }
@@ -257,10 +253,11 @@ int op_release(const char *path, struct fuse_file_info *fi)
 {
     printlog("--- op_release(path=\"%s\", fi=%p)\n", path, fi);
 #if 0
+    //TODO: release file
     if (file.inode.mode == 0)
         return -EBADF;
 
-    fs_file_close (&file);
+    ufs_file_close (&file);
     file.inode.mode = 0;
 #endif
     return 0;
@@ -273,22 +270,23 @@ int op_truncate(const char *path, int64_t newsize)
 {
     printlog("--- op_truncate(path=\"%s\", newsize=%lld)\n", path, newsize);
 #if 0
+    //TODO: truncate file
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_file_t f;
+    ufs_file_t f;
 
-    if (! fs_file_open (disk, &f, path, 1)) {
+    if (ufs_file_open (disk, &f, path, 1) < 0) {
         printlog("--- open failed\n");
         return -ENOENT;
     }
 
-    if ((f.inode.mode & INODE_MODE_FMT) != INODE_MODE_FREG) {
+    if ((f.inode.mode & IFMT) != IFREG) {
         /* Cannot truncate special files. */
         return -EINVAL;
     }
-    fs_inode_truncate (&f.inode, newsize);
+    ufs_inode_truncate (&f.inode, newsize);
     f.inode.mtime = time(0);
     file.inode.dirty = 1;
-    fs_file_close (&f);
+    ufs_file_close (&f);
 #endif
     return 0;
 }
@@ -301,17 +299,18 @@ int op_ftruncate(const char *path, int64_t offset, struct fuse_file_info *fi)
     printlog("--- op_ftruncate(path=\"%s\", offset=%lld, fi=%p)\n",
         path, offset, fi);
 #if 0
-    if (! file.writable)
+    //TODO: truncate opened file
+    if (! file_writable)
         return -EACCES;
 
-    if ((file.inode.mode & INODE_MODE_FMT) != INODE_MODE_FREG) {
+    if ((file.inode.mode & IFMT) != IFREG) {
         /* Cannot truncate special files. */
         return -EINVAL;
     }
-    fs_inode_truncate (&file.inode, offset);
+    ufs_inode_truncate (&file.inode, offset);
     file.inode.mtime = time(0);
     file.inode.dirty = 1;
-    fs_file_close (&file);
+    ufs_file_close (&file);
 #endif
     return 0;
 }
@@ -322,27 +321,25 @@ int op_ftruncate(const char *path, int64_t offset, struct fuse_file_info *fi)
 int op_unlink(const char *path)
 {
     printlog("--- op_unlink(path=\"%s\")\n", path);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
 
     /* Get the file type. */
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- search failed\n");
         return -ENOENT;
     }
-    if ((file.inode.mode & INODE_MODE_FMT) == INODE_MODE_FDIR) {
+    if ((inode.mode & IFMT) == IFDIR) {
         /* Cannot unlink directories. */
         return -EISDIR;
     }
 
     /* Delete file. */
-    if (! fs_inode_delete (disk, &inode, path)) {
+    if (ufs_inode_delete (disk, &inode, path) < 0) {
         printlog("--- delete failed\n");
         return -EIO;
     }
-    fs_inode_save (&inode, 1);
-#endif
+    ufs_inode_save (&inode, 1);
     return 0;
 }
 
@@ -352,17 +349,16 @@ int op_unlink(const char *path)
 int op_rmdir(const char *path)
 {
     printlog("--- op_rmdir(path=\"%s\")\n", path);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode, parent;
-    char buf [BSDFS_BSIZE], *p;
+    ufs_inode_t inode, parent;
+    char buf [MAXBSIZE], *p;
 
     /* Get the file type. */
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- search failed\n");
         return -ENOENT;
     }
-    if ((inode.mode & INODE_MODE_FMT) != INODE_MODE_FDIR) {
+    if ((inode.mode & IFMT) != IFDIR) {
         /* Cannot remove files. */
         return -ENOTDIR;
     }
@@ -378,33 +374,32 @@ int op_rmdir(const char *path)
         *p = 0;
     else
         *buf = 0;
-    if (! fs_inode_lookup (disk, &parent, buf)) {
+    if (ufs_inode_lookup (disk, &parent, buf) < 0) {
         printlog("--- parent not found\n");
         return -ENOENT;
     }
 
     /* Delete directory.
      * Need to decrease a link count first. */
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- directory not found\n");
         return -ENOENT;
     }
     --inode.nlink;
-    fs_inode_save (&inode, 1);
-    if (! fs_inode_delete (disk, &inode, path)) {
+    ufs_inode_save (&inode, 1);
+    if (ufs_inode_delete (disk, &inode, path) < 0) {
         printlog("--- delete failed\n");
         return -EIO;
     }
-    fs_inode_save (&inode, 1);
+    ufs_inode_save (&inode, 1);
 
     /* Decrease a parent's link counter. */
-    if (! fs_inode_get (disk, &parent, parent.number)) {
+    if (ufs_inode_get (disk, &parent, parent.number) < 0) {
         printlog("--- cannot reopen parent\n");
         return -EIO;
     }
     --parent.nlink;
-    fs_inode_save (&parent, 1);
-#endif
+    ufs_inode_save (&parent, 1);
     return 0;
 }
 
@@ -414,10 +409,9 @@ int op_rmdir(const char *path)
 int op_mkdir(const char *path, mode_t mode)
 {
     printlog("--- op_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t dir, parent;
-    char buf [BSDFS_BSIZE], *p;
+    ufs_inode_t dir, parent;
+    char buf [MAXBSIZE], *p;
 
     /* Open parent directory. */
     strcpy (buf, path);
@@ -426,15 +420,15 @@ int op_mkdir(const char *path, mode_t mode)
         *p = 0;
     else
         *buf = 0;
-    if (! fs_inode_lookup (disk, &parent, buf)) {
+    if (ufs_inode_lookup (disk, &parent, buf) < 0) {
         printlog("--- parent not found\n");
         return -ENOENT;
     }
 
     /* Create directory. */
     mode &= 07777;
-    mode |= INODE_MODE_FDIR;
-    int done = fs_inode_create (disk, &dir, path, mode);
+    mode |= IFDIR;
+    int done = ufs_inode_create (disk, &dir, path, mode);
     if (done < 0) {
         printlog("--- cannot create dir inode\n");
         return -ENOENT;
@@ -443,22 +437,21 @@ int op_mkdir(const char *path, mode_t mode)
         /* The directory already existed. */
         return -EEXIST;
     }
-    fs_inode_save (&dir, 0);
+    ufs_inode_save (&dir, 0);
 
     /* Make parent link '..' */
     strcpy (buf, path);
     strcat (buf, "/..");
-    if (! fs_inode_link (disk, &dir, buf, parent.number)) {
+    if (ufs_inode_link (disk, &dir, buf, parent.number) < 0) {
         printlog("--- dotdot link failed\n");
         return -EIO;
     }
-    if (! fs_inode_get (disk, &parent, parent.number)) {
+    if (ufs_inode_get (disk, &parent, parent.number) < 0) {
         printlog("--- cannot reopen parent\n");
         return -EIO;
     }
     ++parent.nlink;
-    fs_inode_save (&parent, 1);
-#endif
+    ufs_inode_save (&parent, 1);
     return 0;
 }
 
@@ -468,29 +461,27 @@ int op_mkdir(const char *path, mode_t mode)
 int op_link(const char *path, const char *newpath)
 {
     printlog("--- op_link(path=\"%s\", newpath=\"%s\")\n", path, newpath);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t source, target;
+    ufs_inode_t source, target;
 
     /* Find source. */
-    if (! fs_inode_lookup (disk, &source, path)) {
+    if (ufs_inode_lookup (disk, &source, path) < 0) {
         printlog("--- source not found\n");
         return -ENOENT;
     }
 
-    if ((source.mode & INODE_MODE_FMT) == INODE_MODE_FDIR) {
+    if ((source.mode & IFMT) == IFDIR) {
         /* Cannot link directories. */
         return -EPERM;
     }
 
     /* Create target link. */
-    if (! fs_inode_link (disk, &target, newpath, source.number)) {
+    if (ufs_inode_link (disk, &target, newpath, source.number) < 0) {
         printlog("--- link failed\n");
         return -EIO;
     }
     source.nlink++;
-    fs_inode_save (&source, 1);
-#endif
+    ufs_inode_save (&source, 1);
     return 0;
 }
 
@@ -500,31 +491,29 @@ int op_link(const char *path, const char *newpath)
 int op_rename(const char *path, const char *newpath)
 {
     printlog("--- op_rename(path=\"%s\", newpath=\"%s\")\n", path, newpath);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t source, target;
+    ufs_inode_t source, target;
 
     /* Find source and increase the link count. */
-    if (! fs_inode_lookup (disk, &source, path)) {
+    if (ufs_inode_lookup (disk, &source, path) < 0) {
         printlog("--- source not found\n");
         return -ENOENT;
     }
     source.nlink++;
-    fs_inode_save (&source, 1);
+    ufs_inode_save (&source, 1);
 
     /* Create target link. */
-    if (! fs_inode_link (disk, &target, newpath, source.number)) {
+    if (ufs_inode_link (disk, &target, newpath, source.number) < 0) {
         printlog("--- link failed\n");
         return -EIO;
     }
 
     /* Delete the source. */
-    if (! fs_inode_delete (disk, &source, path)) {
+    if (ufs_inode_delete (disk, &source, path) < 0) {
         printlog("--- delete failed\n");
         return -EIO;
     }
-    fs_inode_save (&source, 1);
-#endif
+    ufs_inode_save (&source, 1);
     return 0;
 }
 
@@ -535,41 +524,39 @@ int op_mknod(const char *path, mode_t mode, dev_t dev)
 {
     printlog("--- op_mknod(path=\"%s\", mode=0%3o, dev=%lld)\n",
         path, mode, dev);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
 
     /* Check if the file already exists. */
-    if (fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) == 0) {
         printlog("--- already exists\n");
         return -EEXIST;
     }
 
     /* Encode a mode bitmask. */
     if (S_ISREG(mode)) {
-        mode = (mode & 07777) | INODE_MODE_FREG;
+        mode = (mode & 07777) | IFREG;
     } else if (S_ISCHR(mode)) {
-        mode = (mode & 07777) | INODE_MODE_FCHR;
+        mode = (mode & 07777) | IFCHR;
     } else if (S_ISBLK(mode)) {
-        mode = (mode & 07777) | INODE_MODE_FBLK;
+        mode = (mode & 07777) | IFBLK;
     } else
         return -EINVAL;
 
     /* Create the file. */
-    if (! fs_inode_create (disk, &inode, path, mode)) {
+    if (ufs_inode_create (disk, &inode, path, mode) < 0) {
         printlog("--- create failed\n");
         return -EIO;
     }
     if (S_ISCHR(mode) || S_ISBLK(mode)) {
-        inode.addr[1] = major(dev) << 8 | minor(dev);
+        inode.daddr[0] = major(dev) << 8 | minor(dev);
     }
     inode.mtime = time(0);
     inode.dirty = 1;
-    if (! fs_inode_save (&inode, 0)) {
+    if (ufs_inode_save (&inode, 0) < 0) {
         printlog("--- create failed\n");
         return -EIO;
     }
-#endif
     return 0;
 }
 
@@ -580,28 +567,29 @@ int op_readlink(const char *path, char *link, size_t size)
 {
     printlog("--- op_readlink(path=\"%s\", link=\"%s\", size=%d)\n",
         path, link, size);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
 
     /* Open the file. */
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- file not found\n");
         return -ENOENT;
     }
 
-    if ((inode.mode & INODE_MODE_FMT) != INODE_MODE_FLNK)
+    if ((inode.mode & IFMT) != IFLNK)
         return -EINVAL;
 
     /* Leave one byte for the terminating null. */
     if (size > inode.size + 1)
         size = inode.size + 1;
-    if (! fs_inode_read (&inode, 0, (unsigned char*)link, size-1)) {
+    if (inode.size < disk->d_fs.fs_maxsymlinklen) {
+        /* Short symlink is stored in inode. */
+        strncpy (link, (char*)inode.daddr, size-1);
+    } else if (ufs_inode_read (&inode, 0, (unsigned char*)link, size-1) < 0) {
         printlog("--- read failed\n");
         return -EIO;
     }
     link[size-1] = 0;
-#endif
     return 0;
 }
 
@@ -611,37 +599,40 @@ int op_readlink(const char *path, char *link, size_t size)
 int op_symlink(const char *path, const char *newpath)
 {
     printlog("--- op_symlink(path=\"%s\", newpath=\"%s\")\n", path, newpath);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
     int len, mode;
 
     /* Check if the file already exists. */
-    if (fs_inode_lookup (disk, &inode, newpath)) {
+    if (ufs_inode_lookup (disk, &inode, newpath) == 0) {
         printlog("--- already exists\n");
         return -EEXIST;
     }
 
     /* Create symlink. */
-    mode = 0777 | INODE_MODE_FLNK;
-    if (! fs_inode_create (disk, &inode, newpath, mode)) {
+    mode = 0777 | IFLNK;
+    if (ufs_inode_create (disk, &inode, newpath, mode) < 0) {
         printlog("--- create failed\n");
         return -EIO;
     }
-    fs_inode_save (&inode, 0);
+    ufs_inode_save (&inode, 0);
 
     len = strlen (path);
-    if (! fs_inode_write (&inode, 0, (unsigned char*)path, len)) {
+    if (len < disk->d_fs.fs_maxsymlinklen) {
+        /* Short symlink is stored in inode. */
+        strcpy ((char*)inode.daddr, path);
+        inode.size = len;
+
+    } else if (ufs_inode_write (&inode, 0, (unsigned char*)path, len) < 0) {
         printlog("--- write failed\n");
         return -EIO;
     }
     inode.mtime = time(0);
     inode.dirty = 1;
-    if (! fs_inode_save (&inode, 0)) {
+    if (ufs_inode_save (&inode, 0) < 0) {
         printlog("--- create failed\n");
         return -EIO;
     }
-#endif
     return 0;
 }
 
@@ -651,12 +642,11 @@ int op_symlink(const char *path, const char *newpath)
 int op_chmod(const char *path, mode_t mode)
 {
     printlog("--- op_chmod(path=\"%s\", mode=0%03o)\n", path, mode);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
 
     /* Open the file. */
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- file not found\n");
         return -ENOENT;
     }
@@ -665,8 +655,7 @@ int op_chmod(const char *path, mode_t mode)
     inode.mode &= ~07777;
     inode.mode |= mode;
     inode.dirty = 1;
-    fs_inode_save (&inode, 0);
-#endif
+    ufs_inode_save (&inode, 0);
     return 0;
 }
 
@@ -676,12 +665,11 @@ int op_chmod(const char *path, mode_t mode)
 int op_chown(const char *path, uid_t uid, gid_t gid)
 {
     printlog("--- op_chown(path=\"%s\", uid=%d, gid=%d)\n", path, uid, gid);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
 
     /* Open the file. */
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- file not found\n");
         return -ENOENT;
     }
@@ -690,8 +678,7 @@ int op_chown(const char *path, uid_t uid, gid_t gid)
     inode.uid = uid;
     inode.gid = gid;
     inode.dirty = 1;
-    fs_inode_save (&inode, 0);
-#endif
+    ufs_inode_save (&inode, 0);
     return 0;
 }
 
@@ -701,12 +688,11 @@ int op_chown(const char *path, uid_t uid, gid_t gid)
 int op_utime(const char *path, struct utimbuf *ubuf)
 {
     printlog("--- op_utime(path=\"%s\", ubuf=%p)\n", path, ubuf);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t inode;
+    ufs_inode_t inode;
 
     /* Open the file. */
-    if (! fs_inode_lookup (disk, &inode, path)) {
+    if (ufs_inode_lookup (disk, &inode, path) < 0) {
         printlog("--- file not found\n");
         return -ENOENT;
     }
@@ -715,8 +701,7 @@ int op_utime(const char *path, struct utimbuf *ubuf)
     inode.atime = ubuf->actime;
     inode.mtime = ubuf->modtime;
     inode.dirty = 1;
-    fs_inode_save (&inode, 0);
-#endif
+    ufs_inode_save (&inode, 0);
     return 0;
 }
 
@@ -755,12 +740,11 @@ int op_fsync(const char *path, int datasync, struct fuse_file_info *fi)
 {
     printlog("--- op_fsync(path=\"%s\", datasync=%d, fi=%p)\n",
         path, datasync, fi);
-#if 0
-    if (datasync == 0 && file.writable) {
-        if (! fs_inode_save (&file.inode, 0))
+
+    if (datasync == 0 && file_writable) {
+        if (ufs_inode_save (&file_inode, 0) < 0)
             return -EIO;
     }
-#endif
     return 0;
 }
 
@@ -781,47 +765,41 @@ int op_readdir(const char *path, void *buf, fuse_fill_dir_t filler, int64_t offs
 {
     printlog("--- op_readdir(path=\"%s\", buf=%p, filler=%p, offset=%lld, fi=%p)\n",
         path, buf, filler, offset, fi);
-#if 0
     ufs_t *disk = fuse_get_context()->private_data;
-    fs_inode_t dir;
-    char name [BSDFS_BSIZE - 12];
-    struct {
-        unsigned int inum;
-        unsigned short reclen;
-        unsigned short namlen;
-    } dirent;
+    ufs_inode_t dir;
+    unsigned char name [MAXBSIZE - 12];
+    struct direct dirent;
 
-    if (! fs_inode_lookup (disk, &dir, path)) {
+    if (ufs_inode_lookup (disk, &dir, path) < 0) {
         printlog("--- cannot find path %s\n", path);
         return -ENOENT;
     }
 
     /* Copy the entire directory into the buffer. */
-    for (offset = 0; offset < dir.size; offset += dirent.reclen) {
-        if (! fs_inode_read (&dir, offset, (unsigned char*) &dirent, sizeof(dirent))) {
+    for (offset = 0; offset < dir.size; offset += dirent.d_reclen) {
+        if (ufs_inode_read (&dir, offset, (unsigned char*) &dirent, 8) < 0) {
             printlog("--- read error at offset %ld\n", offset);
             return -EIO;
         }
-        //printlog("--- readdir offset %lu: inum=%u, reclen=%u, namlen=%u\n", offset, dirent.inum, dirent.reclen, dirent.namlen);
+        if (dirent.d_ino == 0)
+            continue;
+        //printlog("--- readdir offset %lu: inum=%u, reclen=%u, namlen=%u\n", offset, dirent.d_ino, dirent.d_reclen, dirent.d_namlen);
 
-        if (! fs_inode_read (&dir, offset+sizeof(dirent),
-            (unsigned char*)name, (dirent.namlen + 4) / 4 * 4))
-        {
-            printlog("--- name read error at offset %ld\n", offset);
+        if (ufs_inode_read (&dir, offset+8, name, (dirent.d_namlen + 4) / 4 * 4) < 0) {
+            printlog("--- name read error at offset %ld\n", offset+8);
             return -EIO;
         }
         //printlog("--- readdir offset %lu: name='%s'\n", offset, name);
 
-        if (dirent.inum != 0) {
+        if (dirent.d_ino != 0) {
             //printlog("calling filler with name %s\n", name);
-            name[dirent.namlen] = 0;
-            if (filler(buf, name, NULL, 0) != 0) {
+            name[dirent.d_namlen] = 0;
+            if (filler(buf, (char*)name, NULL, 0) != 0) {
                 printlog("    ERROR op_readdir filler: buffer full");
                 return -ENOMEM;
             }
         }
     }
-#endif
     return 0;
 }
 
