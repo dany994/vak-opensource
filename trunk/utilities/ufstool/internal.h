@@ -2,29 +2,6 @@
 
 #define	EEXIT	8		/* Standard error exit. */
 
-/*
- * libufs macros (internal, non-exported).
- */
-#ifdef  _LIBUFS
-/*
- * Trace steps through libufs, to be used at entry and erroneous return.
- */
-static inline void
-ERROR(ufs_t *u, const char *str)
-{
-#ifdef  _LIBUFS_DEBUGGING
-    if (str != NULL) {
-        fprintf(stderr, "libufs: %s", str);
-        if (errno != 0)
-            fprintf(stderr, ": %s", strerror(errno));
-        fprintf(stderr, "\n");
-    }
-#endif
-    if (u != NULL)
-        u->d_error = str;
-}
-#endif  /* _LIBUFS */
-
 /* Calculate (bytes / DEV_BSIZE) */
 #define bytes_to_sectors(x) ((x) >> 9)
 

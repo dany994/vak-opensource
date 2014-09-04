@@ -523,10 +523,9 @@ restart:
      * Dump out summary information about file system.
      */
 #   define B2MBFACTOR (1 / (1024.0 * 1024.0))
-    printf("%s: %.1fMB (%jd sectors) block size %d, fragment size %d\n",
+    printf("%s: %.1fMB (%jd blocks) block size %d, fragment size %d\n",
         fsys, (float)sblock.fs_size * sblock.fs_fsize * B2MBFACTOR,
-        (intmax_t)fsbtodb(&sblock, sblock.fs_size), sblock.fs_bsize,
-        sblock.fs_fsize);
+        sblock.fs_size, sblock.fs_bsize, sblock.fs_fsize);
     printf("\tusing %d cylinder groups of %.2fMB, %d blks, %d inodes.\n",
         sblock.fs_ncg, (float)sblock.fs_fpg * sblock.fs_fsize * B2MBFACTOR,
         sblock.fs_fpg / sblock.fs_frag, sblock.fs_ipg);

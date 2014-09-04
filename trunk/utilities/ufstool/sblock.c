@@ -34,10 +34,9 @@
 #include <inttypes.h>
 
 #include "libufs.h"
-#define _LIBUFS
 #include "internal.h"
 
-static int superblocks[] = SBLOCKSEARCH;
+static const int superblocks[] = SBLOCKSEARCH;
 
 int
 ufs_superblock_read(ufs_t *disk)
@@ -48,14 +47,13 @@ ufs_superblock_read(ufs_t *disk)
     int i, size, blks;
     u_int8_t *space;
 
-    ERROR(disk, NULL);
-
     fs = &disk->d_fs;
     superblock = superblocks[0];
 
     for (sb = 0; (superblock = superblocks[sb]) != -1; sb++) {
-        if (ufs_sector_read(disk, superblock, disk->d_sb, SBLOCKSIZE) == -1) {
-            ERROR(disk, "non-existent or truncated superblock");
+//printf ("--- %s() superblock offset = %d\n", __func__, superblock);
+        if (ufs_sector_read(disk, superblock / disk->d_bsize, disk->d_sb, SBLOCKSIZE) == -1) {
+            fprintf (stderr, "%s: non-existent or truncated superblock at offset %d\n", __func__, superblock);
             return (-1);
         }
         if (fs->fs_magic == FS_UFS1_MAGIC)
@@ -76,7 +74,7 @@ ufs_superblock_read(ufs_t *disk)
          * must set it to indicate no superblock could be found with
          * which to associate this disk/filesystem.
          */
-        ERROR(disk, "no usable known superblock found");
+        fprintf (stderr, "%s: no usable known superblock found\n", __func__);
         errno = ENOENT;
         return (-1);
     }
@@ -90,7 +88,7 @@ ufs_superblock_read(ufs_t *disk)
     size += fs->fs_ncg * sizeof(int32_t);
     space = malloc(size);
     if (space == NULL) {
-        ERROR(disk, "failed to allocate space for summary information");
+        fprintf (stderr, "%s: failed to allocate space for summary information\n", __func__);
         return (-1);
     }
     fs->fs_csp = (struct csum *)space;
@@ -100,7 +98,7 @@ ufs_superblock_read(ufs_t *disk)
             size = (blks - i) * fs->fs_fsize;
         if (ufs_sector_read(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
             == -1) {
-            ERROR(disk, "Failed to read sb summary information");
+            fprintf (stderr, "%s: failed to read sb summary information\n", __func__);
             free(fs->fs_csp);
             return (-1);
         }
@@ -121,14 +119,12 @@ ufs_superblock_write(ufs_t *disk, int all)
     u_int8_t *space;
     unsigned i;
 
-    ERROR(disk, NULL);
-
     if (!disk->d_sblock) {
         disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
     }
 
     if (ufs_sector_write(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
-        ERROR(disk, "failed to write superblock");
+        fprintf (stderr, "%s: failed to write superblock\n", __func__);
         return (-1);
     }
     /*
@@ -142,7 +138,7 @@ ufs_superblock_write(ufs_t *disk, int all)
             size = (blks - i) * fs->fs_fsize;
         if (ufs_sector_write(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
             == -1) {
-            ERROR(disk, "Failed to write sb summary information");
+            fprintf (stderr, "%s: failed to write sb summary information\n", __func__);
             return (-1);
         }
         space += size;
@@ -151,7 +147,7 @@ ufs_superblock_write(ufs_t *disk, int all)
         for (i = 0; i < fs->fs_ncg; i++)
             if (ufs_sector_write(disk, fsbtodb(fs, cgsblock(fs, i)),
                 fs, SBLOCKSIZE) == -1) {
-                ERROR(disk, "failed to update a superblock");
+                fprintf (stderr, "%s: failed to update a superblock\n", __func__);
                 return (-1);
             }
     }
