@@ -45,9 +45,8 @@ getino(ufs_t *disk, void **dino, ufs_ino_t ino, int *mode)
     caddr_t inoblock;
     struct ufs1_dinode *dp1;
     struct ufs2_dinode *dp2;
-    struct fs *fs;
+    struct fs *fs = &disk->d_fs;
 
-    fs = &disk->d_fs;
     inoblock = disk->d_inoblock;
     min = disk->d_inomin;
     max = disk->d_inomax;
@@ -101,27 +100,33 @@ putino(ufs_t *disk)
 int
 ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 {
+    struct fs *fs = &disk->d_fs;
     unsigned bno, i;
     int64_t offset;
     u_int32_t freelink, gen;
     int32_t atimensec, mtimensec, ctimensec;
 
     if (disk->d_ufs != 1) {
-        fprintf(stderr, "%s: Only UFS1 format supported\n", __func__);
+        fprintf(stderr, "%s: only UFS1 format supported\n", __func__);
         exit(-1);
     }
     memset (inode, 0, sizeof (*inode));
     inode->disk = disk;
     inode->number = inum;
+    if (inum == 0) {
+        fprintf(stderr, "%s: bad inode number = %u\n", __func__, inum);
+        return -1;
+    }
 
     /* Inodes are numbered starting from 1. */
-    bno = fsbtodb(&disk->d_fs, ino_to_fsba(&disk->d_fs, inum));
-    if (inum == 0 || bno >= disk->d_fs.fs_old_size)
-        return -1;
-
-    offset = (bno * (int64_t) disk->d_bsize) +
-        (ino_to_fsbo(&disk->d_fs, inum) * sizeof(struct ufs1_dinode));
+    bno = ino_to_fsba(fs, inum);
+    offset = lfragtosize(fs, bno) +
+        (ino_to_fsbo(fs, inum) * sizeof(struct ufs1_dinode));
 //printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
+    if (bno >= fs->fs_old_size) {
+        fprintf(stderr, "%s: bad block number %u\n", __func__, bno);
+        return -1;
+    }
     if (ufs_seek (disk, offset) < 0)
         return -1;
 
@@ -173,6 +178,7 @@ int
 ufs_inode_save (ufs_inode_t *inode, int force)
 {
     ufs_t *disk = inode->disk;
+    struct fs *fs = &disk->d_fs;
     unsigned long offset;
     unsigned bno;
     int i;
@@ -188,15 +194,20 @@ ufs_inode_save (ufs_inode_t *inode, int force)
         return -1;
     if (! force && ! inode->dirty)
         return 0;
+    if (inode->number == 0) {
+        fprintf(stderr, "%s: bad inode number = %u\n", __func__, inode->number);
+        return -1;
+    }
 
     /* Inodes are numbered starting from 1. */
-    bno = fsbtodb(&disk->d_fs, ino_to_fsba(&disk->d_fs, inode->number));
-    if (inode->number == 0 || bno >= disk->d_fs.fs_old_size)
-        return -1;
-
-    offset = (bno * (int64_t) disk->d_bsize) +
-        (ino_to_fsbo(&disk->d_fs, inode->number) * sizeof(struct ufs1_dinode));
+    bno = ino_to_fsba(fs, inode->number);
+    offset = lfragtosize(fs, bno) +
+        (ino_to_fsbo(fs, inode->number) * sizeof(struct ufs1_dinode));
 //printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
+    if (bno >= fs->fs_old_size) {
+        fprintf(stderr, "%s: bad block number %u\n", __func__, bno);
+        return -1;
+    }
     if (ufs_seek (disk, offset) < 0)
         return 0;
 
@@ -910,6 +921,28 @@ ffs_inode_free (ufs_t *disk, ufs_ino_t ino, mode_t mode)
 }
 
 /*
+ * Write zeroes to inode.
+ */
+static int
+inode_write_zeros (ufs_inode_t *inode, unsigned offset, int nbytes)
+{
+    static unsigned char zeroes[DIRBLKSIZ];
+
+    if (nbytes < 0) {
+        fprintf (stderr, "%s: bad length %d bytes\n", __func__, nbytes);
+        return -1;
+    }
+    if (nbytes > 0) {
+        if (ufs_inode_write (inode, offset, zeroes, nbytes) < 0) {
+            fprintf (stderr, "%s: inode %d: write error at offset %d\n",
+                __func__, inode->number, offset);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/*
  * Convert a pathname into a pointer to an inode.
  * op =
  *  INODE_OP_LOOKUP if name is saught
@@ -940,7 +973,7 @@ inode_by_name (ufs_t *disk, ufs_inode_t *inode, const char *name,
 
     /* Start from root. */
     if (ufs_inode_get (disk, &dir, ROOTINO) < 0) {
-        fprintf (stderr, "inode_open(): cannot get root\n");
+        fprintf (stderr, "%s: cannot get root\n", __func__);
         return -1;
     }
     c = *name++;
@@ -1102,6 +1135,11 @@ create_file:
             dir.number, offset+8);
         return -1;
     }
+    if (inode_write_zeros (&dir, offset+8+namlen, reclen-8-namlen) < 0) {
+        fprintf (stderr, "inode %d: write error at offset %ld\n",
+            dir.number, offset+8+namlen);
+        return -1;
+    }
     /* Align directory size. */
     dir.size = (dir.size + DIRBLKSIZ - 1) / DIRBLKSIZ * DIRBLKSIZ;
     if (ufs_inode_save (&dir, 0) < 0) {
@@ -1177,6 +1215,11 @@ create_link:
     if (ufs_inode_write (&dir, offset+8, (unsigned char*) namptr, namlen) < 0) {
         fprintf (stderr, "inode %d: write error at offset %ld\n",
             dir.number, offset+8);
+        return -1;
+    }
+    if (inode_write_zeros (&dir, offset+8+namlen, reclen-8-namlen) < 0) {
+        fprintf (stderr, "inode %d: write error at offset %ld\n",
+            dir.number, offset+8+namlen);
         return -1;
     }
     if (ufs_inode_save (&dir, 0) < 0) {

@@ -218,11 +218,11 @@ add_directory (ufs_t *disk, char *name, int mode, int owner, int group)
     mode &= 07777;
     mode |= IFDIR;
     int done = ufs_inode_create (disk, &dir, name, mode);
-    if (! done) {
+    if (done < 0) {
         fprintf (stderr, "%s: directory inode create failed\n", name);
         return;
     }
-    if (done == 1) {
+    if (done == 0) {
         /* The directory already existed. */
         return;
     }
