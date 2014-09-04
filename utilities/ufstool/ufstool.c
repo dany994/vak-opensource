@@ -344,6 +344,7 @@ add_symlink (ufs_t *disk, const char *path, const char *link,
     int mode, int owner, int group)
 {
     ufs_inode_t inode;
+    struct fs *fs = &disk->d_fs;
     int len;
 
     mode &= 07777;
@@ -356,7 +357,12 @@ add_symlink (ufs_t *disk, const char *path, const char *link,
     ufs_inode_save (&inode, 0);
 
     len = strlen (link);
-    if (ufs_inode_write (&inode, 0, (unsigned char*) link, len) < 0) {
+    if (len < fs->fs_maxsymlinklen) {
+        /* Short symlink is stored in inode. */
+        strcpy ((char*)inode.daddr, link);
+        inode.size = len;
+
+    } else if (ufs_inode_write (&inode, 0, (unsigned char*) link, len) < 0) {
         fprintf (stderr, "inode %d: symlink write failed, %u bytes\n",
             inode.number, len);
         return;

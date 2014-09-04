@@ -227,7 +227,7 @@ void ufs_print(ufs_t *disk, FILE *out)
     fprintf(out, "    Seek speed, cyls per rotation: %d\n", sb->fs_old_cpc);
 
     fprintf(out, "      Size of block summary array: %d\n", sb->fs_contigsumsize);
-    fprintf(out, "            Max length of symlink: %d\n", sb->fs_maxsymlinklen);
+    fprintf(out, "      Max length of short symlink: %d\n", sb->fs_maxsymlinklen);
     fprintf(out, "         Format of on-disk inodes: %d (%s)\n", sb->fs_old_inodefmt,
     sb->fs_old_inodefmt == FS_42INODEFMT ? "4.2bsd" :
     sb->fs_old_inodefmt == FS_44INODEFMT ? "4.4bsd" : "unknown");

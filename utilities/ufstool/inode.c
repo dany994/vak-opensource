@@ -448,7 +448,7 @@ ufs_inode_print (ufs_inode_t *inode, FILE *out)
     fprintf (out, "\n");
 
     fprintf (out, "      Links: %u\n", inode->nlink);
-    fprintf (out, "   Owner id: %u\n", inode->uid);
+    fprintf (out, "Owner:Group: %u:%u\n", inode->uid, inode->gid);
 
     fprintf (out, "     Blocks:");
     for (i=0; i<NDADDR; ++i) {
@@ -756,6 +756,7 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
             (unsigned char*) block, bsize) < 0)
             return 0;
         inode->iaddr [NIADDR-j] = nb;
+        inode->blocks += bsize / 512;
         inode->dirty = 1;
     }
 
@@ -786,6 +787,8 @@ map_block_write (ufs_inode_t *inode, unsigned lbn)
                 (unsigned char*) block, bsize) < 0)
                 return 0;
             nb = newb;
+            inode->blocks += bsize / 512;
+            inode->dirty = 1;
         }
     }
     return nb;
