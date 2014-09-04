@@ -435,11 +435,11 @@ int op_mkdir(const char *path, mode_t mode)
     mode &= 07777;
     mode |= INODE_MODE_FDIR;
     int done = fs_inode_create (disk, &dir, path, mode);
-    if (! done) {
+    if (done < 0) {
         printlog("--- cannot create dir inode\n");
         return -ENOENT;
     }
-    if (done == 1) {
+    if (done == 0) {
         /* The directory already existed. */
         return -EEXIST;
     }
