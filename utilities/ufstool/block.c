@@ -41,7 +41,7 @@ ssize_t
 ufs_sector_read(ufs_t *disk, ufs1_daddr_t sectno, void *data, size_t size)
 {
     ssize_t cnt;
-    int64_t offset = (int64_t)sectno * disk->d_bsize;
+    int64_t offset = (int64_t)sectno * disk->d_secsize;
 
     cnt = pread(disk->d_fd, data, size, offset);
     if (cnt == -1) {
@@ -67,7 +67,7 @@ ssize_t
 ufs_sector_write(ufs_t *disk, ufs1_daddr_t sectno, const void *data, size_t size)
 {
     ssize_t cnt;
-    int64_t offset = (int64_t)sectno * disk->d_bsize;
+    int64_t offset = (int64_t)sectno * disk->d_secsize;
     int rv;
 
     rv = ufs_disk_reopen_writable(disk);
@@ -102,8 +102,8 @@ ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
         return(rv);
     }
 
-    offset = sectno * disk->d_bsize;
-    zero_chunk_size = 65536 * disk->d_bsize;
+    offset = sectno * disk->d_secsize;
+    zero_chunk_size = 65536 * disk->d_secsize;
     zero_chunk = calloc(1, zero_chunk_size);
     if (zero_chunk == NULL) {
         fprintf(stderr, "%s: failed to allocate memory\n", __func__);

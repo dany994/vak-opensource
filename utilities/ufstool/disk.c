@@ -73,7 +73,7 @@ ufs_disk_open_blank(ufs_t *disk, const char *name)
     }
 
     memset(disk, 0, sizeof(*disk));
-    disk->d_bsize = 1;
+    disk->d_secsize = 1;
     disk->d_ccg = 0;
     disk->d_fd = fd;
     disk->d_inoblock = NULL;
