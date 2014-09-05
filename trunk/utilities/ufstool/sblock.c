@@ -52,7 +52,7 @@ ufs_superblock_read(ufs_t *disk)
 
     for (sb = 0; (superblock = superblocks[sb]) != -1; sb++) {
 //printf ("--- %s() superblock offset = %d\n", __func__, superblock);
-        if (ufs_sector_read(disk, superblock / disk->d_bsize, disk->d_sb, SBLOCKSIZE) == -1) {
+        if (ufs_sector_read(disk, superblock / disk->d_secsize, disk->d_sb, SBLOCKSIZE) == -1) {
             fprintf (stderr, "%s: non-existent or truncated superblock at offset %d\n", __func__, superblock);
             return (-1);
         }
@@ -78,8 +78,8 @@ ufs_superblock_read(ufs_t *disk)
         errno = ENOENT;
         return (-1);
     }
-    disk->d_bsize = fs->fs_fsize / fsbtodb(fs, 1);
-    disk->d_sblock = superblock / disk->d_bsize;
+    disk->d_secsize = fs->fs_fsize / fsbtodb(fs, 1);
+    disk->d_sblock = superblock / disk->d_secsize;
     /*
      * Read in the superblock summary information.
      */
@@ -120,7 +120,7 @@ ufs_superblock_write(ufs_t *disk, int all)
     unsigned i;
 
     if (!disk->d_sblock) {
-        disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
+        disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_secsize;
     }
 
     if (ufs_sector_write(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {

@@ -44,7 +44,7 @@ typedef struct {
     const char *d_name;     /* disk name */
     int d_ufs;              /* decimal UFS version */
     int d_fd;               /* raw device file descriptor */
-    long d_bsize;           /* disk sector size in bytes */
+    long d_secsize;         /* disk sector size in bytes */
     ufs1_daddr_t d_sblock;  /* superblock location */
     struct csum *d_sbcsum;  /* Superblock summary info */
     caddr_t d_inoblock;     /* inode block */

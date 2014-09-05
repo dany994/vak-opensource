@@ -133,9 +133,9 @@ static int
 do_sbwrite(ufs_t *disk)
 {
     if (!disk->d_sblock)
-        disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
+        disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_secsize;
     return pwrite(disk->d_fd, &disk->d_fs, SBLOCKSIZE,
-        (mkfs_part_ofs + disk->d_sblock) * (int64_t)disk->d_bsize);
+        (mkfs_part_ofs + disk->d_sblock) * (int64_t)disk->d_secsize);
 }
 
 void
@@ -161,7 +161,7 @@ mkfs(ufs_t *disk, const char *fsys)
      * Our blocks == sector size, and the version of UFS we are using is
      * specified by Oflag.
      */
-    disk->d_bsize = mkfs_sectorsize;
+    disk->d_secsize = mkfs_sectorsize;
     disk->d_ufs = mkfs_Oflag;
     if (mkfs_Rflag) {
         utime = 1000000000;
@@ -535,22 +535,22 @@ restart:
 
     if (mkfs_Eflag && !mkfs_Nflag) {
         printf("Erasing sectors [%jd...%jd]\n",
-            (intmax_t) (sblock.fs_sblockloc / disk->d_bsize),
+            (intmax_t) (sblock.fs_sblockloc / disk->d_secsize),
             (intmax_t) fsbtodb(&sblock, sblock.fs_size) - 1);
-        ufs_sector_erase(disk, sblock.fs_sblockloc / disk->d_bsize,
+        ufs_sector_erase(disk, sblock.fs_sblockloc / disk->d_secsize,
             sblock.fs_size * sblock.fs_fsize - sblock.fs_sblockloc);
     }
     /*
      * Wipe out old UFS1 superblock(s) if necessary.
      */
     if (!mkfs_Nflag && mkfs_Oflag != 1) {
-        i = ufs_sector_read(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_bsize, chdummy, SBLOCKSIZE);
+        i = ufs_sector_read(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_secsize, chdummy, SBLOCKSIZE);
         if (i == -1)
             err(1, "can't read old UFS1 superblock: %s", disk->d_error);
 
         if (fsdummy.fs_magic == FS_UFS1_MAGIC) {
             fsdummy.fs_magic = 0;
-            ufs_sector_write(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_bsize,
+            ufs_sector_write(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_secsize,
                 chdummy, SBLOCKSIZE);
             for (cg = 0; cg < fsdummy.fs_ncg; cg++) {
                 if (fsbtodb(&fsdummy, cgsblock(&fsdummy, cg)) > mkfs_fssize)

@@ -122,7 +122,7 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
     bno = ino_to_fsba(fs, inum);
     offset = lfragtosize(fs, bno) +
         (ino_to_fsbo(fs, inum) * sizeof(struct ufs1_dinode));
-//printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
+//printf("--- %s(inum = %u) bno=%u, offset=%ju, d_secsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_secsize);
     if (bno >= fs->fs_old_size) {
         fprintf(stderr, "%s: bad block number %u\n", __func__, bno);
         return -1;
@@ -177,7 +177,7 @@ ufs_inode_save (ufs_inode_t *inode, int force)
     bno = ino_to_fsba(fs, inode->number);
     offset = lfragtosize(fs, bno) +
         (ino_to_fsbo(fs, inode->number) * sizeof(struct ufs1_dinode));
-//printf("--- %s(inum = %u) bno=%u, offset=%ju, d_bsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_bsize);
+//printf("--- %s(inum = %u) bno=%u, offset=%ju, d_secsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_secsize);
     if (bno >= fs->fs_old_size) {
         fprintf(stderr, "%s: bad block number %u\n", __func__, bno);
         return -1;
@@ -212,15 +212,15 @@ ufs_inode_save (ufs_inode_t *inode, int force)
  * Free an indirect block.
  */
 static int
-free_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
+free_indirect_block (ufs_inode_t *inode, unsigned int bno, int nblk)
 {
-    struct fs *fs = &disk->d_fs;
+    struct fs *fs = &inode->disk->d_fs;
     unsigned bsize = fs->fs_bsize;
     unsigned nb;
     unsigned char data [MAXBSIZE];
     int i;
 
-    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
+    if (ufs_sector_read (inode->disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
@@ -231,10 +231,12 @@ free_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
         }
         nb = data [i+3] << 24 | data [i+2] << 16 |
              data [i+1] << 8  | data [i];
-        if (nb)
-            ufs_block_free (disk, nb);
+        if (nb) {
+            ufs_block_free (inode->disk, nb);
+            inode->blocks -= bsize / 512;
+        }
     }
-    ufs_block_free (disk, bno);
+    ufs_block_free (inode->disk, bno);
     return 1;
 }
 
@@ -242,15 +244,15 @@ free_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
  * Free a double indirect block.
  */
 static int
-free_double_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
+free_double_indirect_block (ufs_inode_t *inode, unsigned int bno, int nblk)
 {
-    struct fs *fs = &disk->d_fs;
+    struct fs *fs = &inode->disk->d_fs;
     unsigned bsize = fs->fs_bsize;
     unsigned nb;
     unsigned char data [MAXBSIZE];
     int i;
 
-    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
+    if (ufs_sector_read (inode->disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
@@ -261,10 +263,12 @@ free_double_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
         }
         nb = data [i+3] << 24 | data [i+2] << 16 |
              data [i+1] << 8  | data [i];
-        if (nb)
-            free_indirect_block (disk, nb, nblk - i/4 * bsize/4);
+        if (nb) {
+            free_indirect_block (inode, nb, nblk - i/4 * bsize/4);
+            inode->blocks -= bsize / 512;
+        }
     }
-    ufs_block_free (disk, bno);
+    ufs_block_free (inode->disk, bno);
     return 1;
 }
 
@@ -272,15 +276,15 @@ free_double_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
  * Free a triple indirect block.
  */
 static int
-free_triple_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
+free_triple_indirect_block (ufs_inode_t *inode, unsigned int bno, int nblk)
 {
-    struct fs *fs = &disk->d_fs;
+    struct fs *fs = &inode->disk->d_fs;
     unsigned bsize = fs->fs_bsize;
     unsigned nb;
     unsigned char data [MAXBSIZE];
     int i;
 
-    if (ufs_sector_read (disk, fsbtodb(fs, bno), data, bsize) < 0) {
+    if (ufs_sector_read (inode->disk, fsbtodb(fs, bno), data, bsize) < 0) {
         fprintf (stderr, "%s: read error at block %d\n", __func__, bno);
         return 0;
     }
@@ -291,11 +295,13 @@ free_triple_indirect_block (ufs_t *disk, unsigned int bno, int nblk)
         }
         nb = data [i+3] << 24 | data [i+2] << 16 |
              data [i+1] << 8  | data [i];
-        if (nb)
-            free_double_indirect_block (disk, nb,
+        if (nb) {
+            free_double_indirect_block (inode, nb,
                 nblk - i/4 * bsize/4 * bsize/4);
+            inode->blocks -= bsize / 512;
+        }
     }
-    ufs_block_free (disk, bno);
+    ufs_block_free (inode->disk, bno);
     return 1;
 }
 
@@ -332,19 +338,20 @@ void ufs_inode_truncate (ufs_inode_t *inode, unsigned long size)
         blk = &inode->iaddr[i];
         if (*blk != 0) {
             if (i == TRIPLE) {
-                if (free_triple_indirect_block (inode->disk, *blk,
+                if (free_triple_indirect_block (inode, *blk,
                     nblk - (NDADDR + bsize/4 + bsize/4*bsize/4)) < 0)
                     break;
             } else if (i == DOUBLE) {
-                if (free_double_indirect_block (inode->disk, *blk,
+                if (free_double_indirect_block (inode, *blk,
                     nblk - (NDADDR + bsize/4)) < 0)
                     break;
             } else /*if (i == SINGLE)*/ {
-                if (free_indirect_block (inode->disk, *blk, nblk - NDADDR) < 0)
+                if (free_indirect_block (inode, *blk, nblk - NDADDR) < 0)
                     break;
             }
+            *blk = 0;
+            inode->blocks -= bsize / 512;
         }
-        *blk = 0;
     }
 
     inode->size = size;

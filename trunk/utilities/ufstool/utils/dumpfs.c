@@ -284,7 +284,7 @@ dumpcg(void)
     int i, j;
 
     printf("\ncg %d:\n", disk.d_lcg);
-    cur = fsbtodb(&afs, cgtod(&afs, disk.d_lcg)) * disk.d_bsize;
+    cur = fsbtodb(&afs, cgtod(&afs, disk.d_lcg)) * disk.d_secsize;
     switch (disk.d_ufs) {
     case 2:
         cgtime = acg.cg_time;

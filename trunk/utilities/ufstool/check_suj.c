@@ -2418,7 +2418,7 @@ jblocks_next(struct jblocks *jblocks, int bytes, int *actual)
     int freecnt;
     int blocks;
 
-    blocks = bytes / disk->d_bsize;
+    blocks = bytes / disk->d_secsize;
     jext = &jblocks->jb_extent[jblocks->jb_head];
     freecnt = jext->je_blocks - jblocks->jb_off;
     if (freecnt == 0) {
@@ -2430,7 +2430,7 @@ jblocks_next(struct jblocks *jblocks, int bytes, int *actual)
     }
     if (freecnt > blocks)
         freecnt = blocks;
-    *actual = freecnt * disk->d_bsize;
+    *actual = freecnt * disk->d_secsize;
     daddr = jext->je_daddr + jblocks->jb_off;
 
     return (daddr);
@@ -2443,14 +2443,12 @@ jblocks_next(struct jblocks *jblocks, int bytes, int *actual)
 static void
 jblocks_advance(struct jblocks *jblocks, int bytes)
 {
-
-    jblocks->jb_off += bytes / disk->d_bsize;
+    jblocks->jb_off += bytes / disk->d_secsize;
 }
 
 static void
 jblocks_destroy(struct jblocks *jblocks)
 {
-
     free(jblocks->jb_extent);
     free(jblocks);
 }
