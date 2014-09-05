@@ -28,6 +28,7 @@
 #include <sys/param.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <time.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -101,10 +102,9 @@ int
 ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 {
     struct fs *fs = &disk->d_fs;
-    unsigned bno, i;
+    unsigned bno;
     int64_t offset;
-    u_int32_t freelink, gen;
-    int32_t atimensec, mtimensec, ctimensec;
+    struct ufs1_dinode buf;
 
     if (disk->d_ufs != 1) {
         fprintf(stderr, "%s: only UFS1 format supported\n", __func__);
@@ -127,47 +127,24 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
         fprintf(stderr, "%s: bad block number %u\n", __func__, bno);
         return -1;
     }
-    if (ufs_seek (disk, offset) < 0)
-        return -1;
 
-    if (ufs_read16 (disk, &inode->mode) < 0)
+    if (pread (disk->d_fd, &buf, sizeof(buf), offset) != sizeof(buf)) {
+        fprintf(stderr, "%s: read error at offset %jd, inode %u\n",
+            __func__, (intmax_t)offset, inum);
         return -1;
-    if (ufs_read16 (disk, (u_int16_t*) &inode->nlink) < 0)
-        return -1;
-    if (ufs_read32 (disk, &freelink) < 0)
-        return -1;
-    if (ufs_read64 (disk, &inode->size) < 0)
-        return -1;
-    if (ufs_read32 (disk, (u_int32_t*) &inode->atime) < 0)
-        return -1;
-    if (ufs_read32 (disk, (u_int32_t*) &atimensec) < 0)
-        return -1;
-    if (ufs_read32 (disk, (u_int32_t*) &inode->mtime) < 0)
-        return -1;
-    if (ufs_read32 (disk, (u_int32_t*) &mtimensec) < 0)
-        return -1;
-    if (ufs_read32 (disk, (u_int32_t*) &inode->ctime) < 0)
-        return -1;
-    if (ufs_read32 (disk, (u_int32_t*) &ctimensec) < 0)
-        return -1;
-    for (i=0; i<NDADDR; ++i) {
-        if (ufs_read32 (disk, (u_int32_t*) &inode->daddr[i]) < 0)
-            return -1;
     }
-    for (i=0; i<NIADDR; ++i) {
-        if (ufs_read32 (disk, (u_int32_t*) &inode->iaddr[i]) < 0)
-            return -1;
-    }
-    if (ufs_read32 (disk, &inode->flags) < 0)
-        return -1;
-    if (ufs_read32 (disk, (u_int32_t*) &inode->blocks) < 0)
-        return -1;
-    if (ufs_read32 (disk, &gen) < 0)
-        return -1;
-    if (ufs_read32 (disk, &inode->uid) < 0)
-        return -1;
-    if (ufs_read32 (disk, &inode->gid) < 0)
-        return -1;
+    inode->mode   = buf.di_mode;
+    inode->nlink  = buf.di_nlink;
+    inode->size   = buf.di_size;
+    inode->atime  = buf.di_atime;
+    inode->mtime  = buf.di_mtime;
+    inode->ctime  = buf.di_ctime;
+    inode->flags  = buf.di_flags;
+    inode->blocks = buf.di_blocks;
+    inode->uid    = buf.di_uid;
+    inode->gid    = buf.di_gid;
+    memcpy (inode->daddr, buf.di_db, sizeof(buf.di_db));
+    memcpy (inode->iaddr, buf.di_ib, sizeof(buf.di_ib));
 /*if (inode->mode) { ufs_inode_print (inode, stdout); printf ("---\n"); }*/
     if (verbose > 3)
         printf ("get inode %u\n", inode->number);
@@ -179,12 +156,9 @@ ufs_inode_save (ufs_inode_t *inode, int force)
 {
     ufs_t *disk = inode->disk;
     struct fs *fs = &disk->d_fs;
-    unsigned long offset;
+    int64_t offset;
     unsigned bno;
-    int i;
-    u_int32_t freelink = 0, gen = 0;
-    int32_t atimensec = 0, mtimensec = 0, ctimensec = 0;
-    u_int64_t modrev = 0;
+    struct ufs1_dinode buf;
 
     if (disk->d_ufs != 1) {
         fprintf(stderr, "%s: Only UFS1 format supported\n", __func__);
@@ -208,52 +182,26 @@ ufs_inode_save (ufs_inode_t *inode, int force)
         fprintf(stderr, "%s: bad block number %u\n", __func__, bno);
         return -1;
     }
-    if (ufs_seek (disk, offset) < 0)
-        return 0;
 
-    inode->atime = time(NULL);
+    memset (&buf, 0, sizeof(buf));
+    buf.di_mode   = inode->mode;
+    buf.di_nlink  = inode->nlink;
+    buf.di_size   = inode->size;
+    buf.di_atime  = inode->atime = time(NULL);
+    buf.di_mtime  = inode->mtime;
+    buf.di_ctime  = inode->ctime;
+    buf.di_flags  = inode->flags;
+    buf.di_blocks = inode->blocks;
+    buf.di_uid    = inode->uid;
+    buf.di_gid    = inode->gid;
+    memcpy (buf.di_db, inode->daddr, sizeof(buf.di_db));
+    memcpy (buf.di_ib, inode->iaddr, sizeof(buf.di_ib));
 
-    if (ufs_write16 (disk, inode->mode) < 0)
+    if (pwrite (disk->d_fd, &buf, sizeof(buf), offset) != sizeof(buf)) {
+        fprintf(stderr, "%s: write error at offset %jd, inode %u\n",
+            __func__, (intmax_t)offset, inode->number);
         return -1;
-    if (ufs_write16 (disk, inode->nlink) < 0)
-        return -1;
-    if (ufs_write32 (disk, freelink) < 0)
-        return -1;
-    if (ufs_write64 (disk, inode->size) < 0)
-        return -1;
-    if (ufs_write32 (disk, inode->atime) < 0)
-        return -1;
-    if (ufs_write32 (disk, atimensec) < 0)
-        return -1;
-    if (ufs_write32 (disk, inode->mtime) < 0)
-        return -1;
-    if (ufs_write32 (disk, mtimensec) < 0)
-        return -1;
-    if (ufs_write32 (disk, inode->ctime) < 0)
-        return -1;
-    if (ufs_write32 (disk, ctimensec) < 0)
-        return -1;
-    for (i=0; i<NDADDR; ++i) {
-        if (ufs_write32 (disk, inode->daddr[i]) < 0)
-            return -1;
     }
-    for (i=0; i<NIADDR; ++i) {
-        if (ufs_write32 (disk, inode->iaddr[i]) < 0)
-            return -1;
-    }
-    if (ufs_write32 (disk, inode->flags) < 0)
-        return -1;
-    if (ufs_write32 (disk, inode->blocks) < 0)
-        return -1;
-    if (ufs_write32 (disk, gen) < 0)
-        return -1;
-    if (ufs_write32 (disk, inode->uid) < 0)
-        return -1;
-    if (ufs_write32 (disk, inode->gid) < 0)
-        return -1;
-    if (ufs_write64 (disk, modrev) < 0)
-        return -1;
-
     inode->dirty = 0;
     if (verbose > 3)
         printf ("save inode %u\n", inode->number);
