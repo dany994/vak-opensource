@@ -67,7 +67,6 @@ typedef struct {
 #define d_fs    d_sbunion.d_fs
 #define d_sb    d_sbunion.d_sb
 #define d_cg    d_cgunion.d_cg
-    int64_t seek;
 } ufs_t;
 
 /*
@@ -135,15 +134,6 @@ __BEGIN_DECLS
 ssize_t ufs_sector_read(ufs_t *, ufs1_daddr_t, void *, size_t);
 ssize_t ufs_sector_write(ufs_t *, ufs1_daddr_t, const void *, size_t);
 int     ufs_sector_erase(ufs_t *, ufs1_daddr_t, ufs1_daddr_t);
-int     ufs_seek (ufs_t *disk, int64_t offset);
-int     ufs_read8 (ufs_t *disk, u_int8_t *val);
-int     ufs_read16 (ufs_t *disk, u_int16_t *val);
-int     ufs_read32 (ufs_t *disk, u_int32_t *val);
-int     ufs_read64 (ufs_t *disk, u_int64_t *val);
-int     ufs_write8 (ufs_t *disk, u_int8_t val);
-int     ufs_write16 (ufs_t *disk, u_int16_t val);
-int     ufs_write32 (ufs_t *disk, u_int32_t val);
-int     ufs_write64 (ufs_t *disk, u_int64_t val);
 int     ufs_block_alloc (ufs_t *disk, ufs1_daddr_t bpref, ufs1_daddr_t *bno);
 void    ufs_block_free (ufs_t *disk, ufs1_daddr_t bno);
 
