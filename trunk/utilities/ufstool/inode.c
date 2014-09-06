@@ -40,65 +40,6 @@
 extern int verbose;
 
 int
-getino(ufs_t *disk, void **dino, ufs_ino_t ino, int *mode)
-{
-    ufs_ino_t min, max;
-    caddr_t inoblock;
-    struct ufs1_dinode *dp1;
-    struct ufs2_dinode *dp2;
-    struct fs *fs = &disk->d_fs;
-
-    inoblock = disk->d_inoblock;
-    min = disk->d_inomin;
-    max = disk->d_inomax;
-
-    if (inoblock == NULL) {
-        inoblock = malloc(fs->fs_bsize);
-        if (inoblock == NULL) {
-            fprintf(stderr, "%s: unable to allocate inode block\n", __func__);
-            return (-1);
-        }
-        disk->d_inoblock = inoblock;
-    }
-    if (ino < min || ino >= max) {
-        ufs_sector_read(disk, fsbtodb(fs, ino_to_fsba(fs, ino)), inoblock, fs->fs_bsize);
-        disk->d_inomin = min = ino - (ino % INOPB(fs));
-        disk->d_inomax = max = min + INOPB(fs);
-    }
-    switch (disk->d_ufs) {
-    case 1:
-        dp1 = &((struct ufs1_dinode *)inoblock)[ino - min];
-        *mode = dp1->di_mode & IFMT;
-        *dino = dp1;
-        return (0);
-    case 2:
-        dp2 = &((struct ufs2_dinode *)inoblock)[ino - min];
-        *mode = dp2->di_mode & IFMT;
-        *dino = dp2;
-        return (0);
-    default:
-        break;
-    }
-    fprintf(stderr, "%s: unknown UFS filesystem type\n", __func__);
-    return (-1);
-}
-
-int
-putino(ufs_t *disk)
-{
-    struct fs *fs = &disk->d_fs;
-
-    if (disk->d_inoblock == NULL) {
-        fprintf(stderr, "%s: no inode block allocated\n", __func__);
-        return (-1);
-    }
-    if (ufs_sector_write(disk, fsbtodb(fs, ino_to_fsba(&disk->d_fs, disk->d_inomin)),
-        disk->d_inoblock, disk->d_fs.fs_bsize) <= 0)
-        return (-1);
-    return (0);
-}
-
-int
 ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
 {
     struct fs *fs = &disk->d_fs;

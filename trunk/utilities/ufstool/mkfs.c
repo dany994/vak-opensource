@@ -546,7 +546,7 @@ restart:
     if (!mkfs_Nflag && mkfs_Oflag != 1) {
         i = ufs_sector_read(disk, mkfs_part_ofs + SBLOCK_UFS1 / disk->d_secsize, chdummy, SBLOCKSIZE);
         if (i == -1)
-            err(1, "can't read old UFS1 superblock: %s", disk->d_error);
+            err(1, "can't read old UFS1 superblock");
 
         if (fsdummy.fs_magic == FS_UFS1_MAGIC) {
             fsdummy.fs_magic = 0;

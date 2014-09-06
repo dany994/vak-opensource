@@ -377,10 +377,7 @@ main(int argc, char *argv[])
 
     if (ufs_disk_open_blank(&disk, special) == -1 ||
         (!mkfs_Nflag && ufs_disk_reopen_writable(&disk) == -1)) {
-        if (disk.d_error != NULL)
-            errx(1, "%s: %s", special, disk.d_error);
-        else
-            err(1, "%s", special);
+        err(1, "%s", special);
     }
     if (fstat(disk.d_fd, &st) < 0)
         err(1, "%s", special);

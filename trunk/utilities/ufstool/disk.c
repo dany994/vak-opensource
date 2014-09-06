@@ -37,10 +37,6 @@ int
 ufs_disk_close(ufs_t *disk)
 {
     close(disk->d_fd);
-    if (disk->d_inoblock != NULL) {
-        free(disk->d_inoblock);
-        disk->d_inoblock = NULL;
-    }
     if (disk->d_sbcsum != NULL) {
         free(disk->d_sbcsum);
         disk->d_sbcsum = NULL;
@@ -76,13 +72,9 @@ ufs_disk_open_blank(ufs_t *disk, const char *name)
     disk->d_secsize = 1;
     disk->d_ccg = 0;
     disk->d_fd = fd;
-    disk->d_inoblock = NULL;
-    disk->d_inomin = 0;
-    disk->d_inomax = 0;
     disk->d_lcg = 0;
     disk->d_writable = 0;
     disk->d_ufs = 0;
-    disk->d_error = NULL;
     disk->d_sbcsum = NULL;
     disk->d_name = name;
     return (0);

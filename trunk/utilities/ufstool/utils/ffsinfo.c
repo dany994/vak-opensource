@@ -161,7 +161,7 @@ main(int argc, char **argv)
     device = *argv;
 
     if (ufs_disk_open(&disk, device) == -1)
-        err(1, "ufs_disk_open(%s) failed: %s", device, disk.d_error);
+        err(1, "ufs_disk_open(%s) failed", device);
 
     DBG_OPEN(out_file); /* already here we need a superblock */
 
@@ -196,7 +196,7 @@ main(int argc, char **argv)
                 (void *)(((char *)fscs)+i),
                 (size_t)(sblock.fs_cssize-i < sblock.fs_bsize ?
                 sblock.fs_cssize - i : sblock.fs_bsize)) == -1)
-                err(1, "ufs_sector_read: %s", disk.d_error);
+                err(1, "ufs_sector_read");
         }
 
         dbg_csp = fscs;
@@ -219,7 +219,7 @@ main(int argc, char **argv)
                 if (ufs_sector_read(&disk, fsbtodb(&sblock,
                     cgsblock(&sblock, cylno)),
                     (void *)&osblock, SBLOCKSIZE) == -1)
-                    err(1, "ufs_sector_read: %s", disk.d_error);
+                    err(1, "ufs_sector_read");
                 DBG_DUMP_FS(&osblock, dbg_line);
             }
 
@@ -230,7 +230,7 @@ main(int argc, char **argv)
             if (ufs_sector_read(&disk, fsbtodb(&sblock,
                 cgtod(&sblock, cylno)), (void *)&acg,
                 (size_t)sblock.fs_cgsize) == -1)
-                err(1, "ufs_sector_read: %s", disk.d_error);
+                err(1, "ufs_sector_read");
 
             if (cfg_lv & 0x008)
                 DBG_DUMP_CG(&sblock, dbg_line, &acg);
@@ -272,6 +272,36 @@ main(int argc, char **argv)
     return 0;
 }
 
+static int
+getino(ufs_t *disk, void **dino, ufs_ino_t ino)
+{
+    static ufs_ino_t min, max;
+    struct ufs1_dinode *dp1;
+    struct ufs2_dinode *dp2;
+    struct fs *fs = &disk->d_fs;
+    char inoblock [MAXBSIZE];
+
+    if (ino < min || ino >= max) {
+        ufs_sector_read(disk, fsbtodb(fs, ino_to_fsba(fs, ino)), inoblock, fs->fs_bsize);
+        min = ino - (ino % INOPB(fs));
+        max = min + INOPB(fs);
+    }
+    switch (disk->d_ufs) {
+    case 1:
+        dp1 = &((struct ufs1_dinode *)inoblock)[ino - min];
+        *dino = dp1;
+        return (0);
+    case 2:
+        dp2 = &((struct ufs2_dinode *)inoblock)[ino - min];
+        *dino = dp2;
+        return (0);
+    default:
+        break;
+    }
+    fprintf(stderr, "%s: unknown UFS filesystem type\n", __func__);
+    return (-1);
+}
+
 /* ********************************************** dump_whole_ufs1_inode ***** */
 /*
  * Here we dump a list of all blocks allocated by this inode. We follow
@@ -282,7 +312,7 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
 {
     DBG_FUNC("dump_whole_ufs1_inode")
     struct ufs1_dinode  *ino;
-    int rb, mode;
+    int rb;
     unsigned int    ind2ctr, ind3ctr;
     ufs1_daddr_t    *ind2ptr, *ind3ptr;
     char    comment[80];
@@ -292,8 +322,8 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
     /*
      * Read the inode from disk/cache.
      */
-    if (getino(&disk, (void **)&ino, inode, &mode) == -1)
-        err(1, "getino: %s", disk.d_error);
+    if (getino(&disk, (void **)&ino, inode) == -1)
+        err(1, "getino");
 
     if(ino->di_nlink==0) {
         DBG_LEAVE;
@@ -325,7 +355,7 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
          */
         if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[0]), (void *)&i1blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_sector_read: %s", disk.d_error);
+            err(1, "ufs_sector_read");
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 0",
             (unsigned)inode);
@@ -341,7 +371,7 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
          */
         if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[1]), (void *)&i2blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_sector_read: %s", disk.d_error);
+            err(1, "ufs_sector_read");
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 1",
             (unsigned)inode);
@@ -355,7 +385,7 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
 
             if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_sector_read: %s", disk.d_error);
+                err(1, "ufs_sector_read");
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 1->%d", (unsigned)inode, ind2ctr);
@@ -372,7 +402,7 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
          */
         if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[2]), (void *)&i3blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_sector_read: %s", disk.d_error);
+            err(1, "ufs_sector_read");
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 2",
             (unsigned)inode);
@@ -389,7 +419,7 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
 
             if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind3ptr), (void *)&i2blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_sector_read: %s", disk.d_error);
+                err(1, "ufs_sector_read");
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 2->%d", (unsigned)inode, ind3ctr);
@@ -405,7 +435,7 @@ dump_whole_ufs1_inode(ufs_ino_t inode, int level)
                 if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr),
                     (void *)&i1blk, (size_t)sblock.fs_bsize)
                     == -1) {
-                    err(1, "ufs_sector_read: %s", disk.d_error);
+                    err(1, "ufs_sector_read");
                 }
                 snprintf(comment, sizeof(comment),
                     "Inode 0x%08x: indirect 2->%d->%d", (unsigned)inode,
@@ -434,7 +464,7 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
 {
     DBG_FUNC("dump_whole_ufs2_inode")
     struct ufs2_dinode  *ino;
-    int rb, mode;
+    int rb;
     unsigned int    ind2ctr, ind3ctr;
     ufs2_daddr_t    *ind2ptr, *ind3ptr;
     char    comment[80];
@@ -444,8 +474,8 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
     /*
      * Read the inode from disk/cache.
      */
-    if (getino(&disk, (void **)&ino, inode, &mode) == -1)
-        err(1, "getino: %s", disk.d_error);
+    if (getino(&disk, (void **)&ino, inode) == -1)
+        err(1, "getino");
 
     if (ino->di_nlink == 0) {
         DBG_LEAVE;
@@ -475,7 +505,7 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
          */
         if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[0]), (void *)&i1blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_sector_read: %s", disk.d_error);
+            err(1, "ufs_sector_read");
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 0", (unsigned)inode);
         DBG_DUMP_IBLK(&sblock, comment, i1blk, (size_t)rb);
@@ -487,7 +517,7 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
          */
         if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[1]), (void *)&i2blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_sector_read: %s", disk.d_error);
+            err(1, "ufs_sector_read");
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 1", (unsigned)inode);
         DBG_DUMP_IBLK(&sblock,
@@ -500,7 +530,7 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
 
             if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_sector_read: %s", disk.d_error);
+                err(1, "ufs_sector_read");
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 1->%d", (unsigned)inode, ind2ctr);
@@ -514,7 +544,7 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
          */
         if (ufs_sector_read(&disk, fsbtodb(&sblock, ino->di_ib[2]), (void *)&i3blk,
             (size_t)sblock.fs_bsize) == -1) {
-            err(1, "ufs_sector_read: %s", disk.d_error);
+            err(1, "ufs_sector_read");
         }
         snprintf(comment, sizeof(comment), "Inode 0x%08x: indirect 2", (unsigned)inode);
 #define SQUARE(a) ((a)*(a))
@@ -530,7 +560,7 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
 
             if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind3ptr), (void *)&i2blk,
                 (size_t)sblock.fs_bsize) == -1) {
-                err(1, "ufs_sector_read: %s", disk.d_error);
+                err(1, "ufs_sector_read");
             }
             snprintf(comment, sizeof(comment),
                 "Inode 0x%08x: indirect 2->%d", (unsigned)inode, ind3ctr);
@@ -544,7 +574,7 @@ dump_whole_ufs2_inode(ufs_ino_t inode, int level)
                 ind2ptr = &((ufs2_daddr_t *)(void *)&i2blk) [ind2ctr];
                 if (ufs_sector_read(&disk, fsbtodb(&sblock, *ind2ptr), (void *)&i1blk,
                     (size_t)sblock.fs_bsize) == -1) {
-                    err(1, "ufs_sector_read: %s", disk.d_error);
+                    err(1, "ufs_sector_read");
                 }
                 snprintf(comment, sizeof(comment),
                     "Inode 0x%08x: indirect 2->%d->%d", (unsigned)inode,
