@@ -198,8 +198,7 @@ opendisk(void)
     if (disk == NULL)
         err(1, "malloc(%zu)", sizeof(*disk));
     if (ufs_disk_open(disk, devnam) == -1) {
-        err(1, "ufs_disk_open(%s) failed: %s", devnam,
-            disk->d_error);
+        err(1, "ufs_disk_open(%s) failed", devnam);
     }
     fs = &disk->d_fs;
 }
@@ -295,7 +294,7 @@ freeindir(ufs2_daddr_t blk, int level)
     int i;
 
     if (ufs_sector_read(disk, fsbtodb(fs, blk), (void *)&sblks, (size_t)fs->fs_bsize) == -1)
-        err(1, "ufs_sector_read: %s", disk->d_error);
+        err(1, "ufs_sector_read");
     blks = (ufs2_daddr_t *)&sblks;
     for (i = 0; i < NINDIR(fs); i++) {
         if (blks[i] == 0)
@@ -355,6 +354,50 @@ clear_inode(struct ufs2_dinode *dino)
         bsize = dblksize(fs, dino, i);
         blkfree(bn, bsize);
     }
+}
+
+static char inoblock[MAXBSIZE];
+static ufs_ino_t inomin, inomax;
+
+static int
+getino(ufs_t *disk, void **dino, ufs_ino_t ino, int *mode)
+{
+    struct ufs1_dinode *dp1;
+    struct ufs2_dinode *dp2;
+    struct fs *fs = &disk->d_fs;
+
+    if (ino < inomin || ino >= inomax) {
+        ufs_sector_read(disk, fsbtodb(fs, ino_to_fsba(fs, ino)), inoblock, fs->fs_bsize);
+        inomin = ino - (ino % INOPB(fs));
+        inomax = inomin + INOPB(fs);
+    }
+    switch (disk->d_ufs) {
+    case 1:
+        dp1 = &((struct ufs1_dinode *)inoblock)[ino - inomin];
+        *mode = dp1->di_mode & IFMT;
+        *dino = dp1;
+        return (0);
+    case 2:
+        dp2 = &((struct ufs2_dinode *)inoblock)[ino - inomin];
+        *mode = dp2->di_mode & IFMT;
+        *dino = dp2;
+        return (0);
+    default:
+        break;
+    }
+    fprintf(stderr, "%s: unknown UFS filesystem type\n", __func__);
+    return (-1);
+}
+
+static int
+putino(ufs_t *disk)
+{
+    struct fs *fs = &disk->d_fs;
+
+    if (ufs_sector_write(disk, fsbtodb(fs, ino_to_fsba(&disk->d_fs, inomin)),
+        inoblock, disk->d_fs.fs_bsize) <= 0)
+        return (-1);
+    return (0);
 }
 
 void

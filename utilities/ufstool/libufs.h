@@ -47,9 +47,6 @@ typedef struct {
     long d_secsize;         /* disk sector size in bytes */
     ufs1_daddr_t d_sblock;  /* superblock location */
     struct csum *d_sbcsum;  /* Superblock summary info */
-    caddr_t d_inoblock;     /* inode block */
-    ufs_ino_t d_inomin;     /* low inode */
-    ufs_ino_t d_inomax;     /* high inode */
     union {
         struct fs d_fs;     /* filesystem information */
         char d_sb[MAXBSIZE];
@@ -62,7 +59,6 @@ typedef struct {
     } d_cgunion;
     int d_ccg;              /* current cylinder group */
     int d_lcg;              /* last cylinder group (in d_cg) */
-    const char *d_error;    /* human readable disk error */
     int d_writable;         /* open for write */
 #define d_fs    d_sbunion.d_fs
 #define d_sb    d_sbunion.d_sb
@@ -159,8 +155,6 @@ int     ufs_disk_reopen_writable(ufs_t *);
 /*
  * inode.c
  */
-int     getino(ufs_t *, void **, ufs_ino_t, int *);
-int     putino(ufs_t *);
 int     ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum);
 void    ufs_inode_print (ufs_inode_t *inode, FILE *out);
 void    ufs_inode_print_path (ufs_inode_t *inode, const char *dirname,

@@ -461,9 +461,7 @@ pblklist(void *vp, int max, int64_t offset, int fflag)
 static void
 ufserr(const char *name)
 {
-    if (disk.d_error != NULL)
-        warnx("%s: %s", name, disk.d_error);
-    else if (errno)
+    if (errno)
         warn("%s", name);
 }
 

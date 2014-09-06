@@ -182,8 +182,7 @@ opendisk(const char *devnam)
     if (disk == NULL)
         err(EX_OSERR, "malloc(%zu)", sizeof(*disk));
     if (ufs_disk_open(disk, devnam) == -1) {
-        err(EX_OSERR, "ufs_disk_open(%s) failed: %s", devnam,
-            disk->d_error);
+        err(EX_OSERR, "ufs_disk_open(%s) failed", devnam);
     }
     fs = &disk->d_fs;
     if (check_real_dev_bsize == 0)
