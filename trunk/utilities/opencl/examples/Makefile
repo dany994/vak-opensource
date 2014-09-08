@@ -3,10 +3,11 @@ UNAME_S         := $(shell uname -s)
 # -std=c++11 -Wall -march=native
 ifeq ($(UNAME_S),Linux)
 CXX             = g++
-CFLAGS          = -O -I..
-CXXFLAGS        = -O -I..
-LDFLAGS         =
-LDLIBS          = -lOpenCL
+CC              = gcc -std=gnu99
+CFLAGS          = -O -g -I..
+CXXFLAGS        = -O -g -I..
+LDFLAGS         = -g
+LDLIBS          = -lPVROCL
 endif
 
 ifeq ($(UNAME_S),Darwin)
@@ -31,7 +32,7 @@ cldemo:         cldemo.o
 		$(CXX) $(CXXFLAGS) -c $<
 
 %.o:            %.c
-		$(CC) $(CFLAGS) -O -c $<
+		$(CC) $(CFLAGS) -c $<
 
 clean:
 		rm -f *.o $(EXEC)

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdlib.h>
 
 #define __NO_STD_VECTOR // Use cl::vector instead of STL version
 #define __CL_ENABLE_EXCEPTIONS

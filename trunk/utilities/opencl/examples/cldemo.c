@@ -112,9 +112,10 @@ int main(int argc, char **argv)
 
 	if (devices_n == 0)
 		return 1;
-
+printf ("=1=\n");
 	cl_context context;
 	context = CL_CHECK_ERR(clCreateContext(NULL, 1, devices, &pfn_notify, NULL, &_err));
+printf ("=2=\n");
 
 	const char *program_source[] = {
 		"__kernel void simple_demo(__global int *src, __global int *dst, int factor)\n",
@@ -126,40 +127,55 @@ int main(int argc, char **argv)
 
 	cl_program program;
 	program = CL_CHECK_ERR(clCreateProgramWithSource(context, sizeof(program_source)/sizeof(*program_source), program_source, NULL, &_err));
+printf ("=3=\n");
 	if (clBuildProgram(program, 1, devices, "", NULL, NULL) != CL_SUCCESS) {
 		char buffer[10240];
+printf ("=3a=\n");
 		clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, NULL);
 		fprintf(stderr, "CL Compilation failed:\n%s", buffer);
 		abort();
 	}
+printf ("=4=\n");
 	CL_CHECK(clUnloadCompiler());
+printf ("=5=\n");
 
 	cl_mem input_buffer;
 	input_buffer = CL_CHECK_ERR(clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int)*NUM_DATA, NULL, &_err));
+printf ("=6=\n");
 
 	cl_mem output_buffer;
 	output_buffer = CL_CHECK_ERR(clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(int)*NUM_DATA, NULL, &_err));
+printf ("=7=\n");
 
 	int factor = 2;
 
 	cl_kernel kernel;
 	kernel = CL_CHECK_ERR(clCreateKernel(program, "simple_demo", &_err));
+printf ("=8=\n");
 	CL_CHECK(clSetKernelArg(kernel, 0, sizeof(input_buffer), &input_buffer));
+printf ("=9=\n");
 	CL_CHECK(clSetKernelArg(kernel, 1, sizeof(output_buffer), &output_buffer));
+printf ("=10=\n");
 	CL_CHECK(clSetKernelArg(kernel, 2, sizeof(factor), &factor));
+printf ("=11=\n");
 
 	cl_command_queue queue;
 	queue = CL_CHECK_ERR(clCreateCommandQueue(context, devices[0], 0, &_err));
+printf ("=12=\n");
 
 	for (int i=0; i<NUM_DATA; i++) {
 		CL_CHECK(clEnqueueWriteBuffer(queue, input_buffer, CL_TRUE, i*sizeof(int), sizeof(int), &i, 0, NULL, NULL));
+printf ("=13=\n");
 	}
 
 	cl_event kernel_completion;
 	size_t global_work_size[1] = { NUM_DATA };
 	CL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_work_size, NULL, 0, NULL, &kernel_completion));
+printf ("=14=\n");
 	CL_CHECK(clWaitForEvents(1, &kernel_completion));
+printf ("=15=\n");
 	CL_CHECK(clReleaseEvent(kernel_completion));
+printf ("=16=\n");
 
 	printf("Result:");
 	for (int i=0; i<NUM_DATA; i++) {
@@ -170,12 +186,30 @@ int main(int argc, char **argv)
 	printf("\n");
 
 	CL_CHECK(clReleaseMemObject(input_buffer));
+printf ("=17=\n");
 	CL_CHECK(clReleaseMemObject(output_buffer));
+printf ("=18=\n");
 
 	CL_CHECK(clReleaseKernel(kernel));
+printf ("=19=\n");
 	CL_CHECK(clReleaseProgram(program));
+printf ("=20=\n");
 	CL_CHECK(clReleaseContext(context));
+printf ("=21=\n");
 
 	return 0;
 }
 
+size_t strlen(const char *s)
+{
+    size_t n = 0;
+    const char *s0 = s;
+
+    printf ("%p \n", s0);
+    if ((int)s == 1)
+        return 0;
+    while (*s++)
+        n++;
+    printf ("'%s' -> %u \n", s0, n);
+    return n;
+}
