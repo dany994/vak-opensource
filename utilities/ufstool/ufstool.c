@@ -29,6 +29,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <sys/disk.h>
 #include <errno.h>
 #include <getopt.h>
 
@@ -667,8 +669,10 @@ int main (int argc, char **argv)
             return -1;
         }
 
-        /* Create the file. */
-        close(open(argv[i], O_RDONLY | O_CREAT | O_TRUNC, 0664));
+        if (pindex == 0) {
+            /* Create the file. */
+            close(open(argv[i], O_RDONLY | O_CREAT | O_TRUNC, 0664));
+        }
         if (ufs_disk_open_blank(&disk, argv[i]) < 0 ||
             ufs_disk_reopen_writable(&disk) < 0) {
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
@@ -680,6 +684,38 @@ int main (int argc, char **argv)
             if (ufs_disk_set_partition (&disk, pindex) < 0)
                 return -1;
             kbytes = disk.d_part_nsectors / 2;
+        } else if (kbytes == 0) {
+            /* Get size of existing file or device. */
+            unsigned long long nbytes = 0;
+
+#ifdef DKIOCGETBLOCKCOUNT
+            if (ioctl(disk.d_fd, DKIOCGETBLOCKCOUNT, &nbytes) >= 0) {
+                /* For Apple Darwin */
+                nbytes *= 512;
+            } else
+#endif
+#ifdef BLKGETSIZE64
+            if (ioctl(disk.d_fd, BLKGETSIZE64, &nbytes) >= 0) {
+                /* For Linux */
+            } else
+#endif
+#ifdef DIOCGMEDIASIZE
+            if (ioctl(disk.d_fd, DIOCGMEDIASIZE, &nbytes) >= 0) {
+                /* For FreeBSD */
+            } else
+#endif
+            {
+                /* Get size of existing regular file. */
+                struct stat st;
+
+                fstat(disk.d_fd, &st);
+                if ((st.st_mode & S_IFMT) != S_IFREG) {
+                    fprintf (stderr, "%s: cannot get size of special fileh\n", argv[i]);
+                    return -1;
+                }
+                nbytes = st.st_size;
+            }
+            kbytes = nbytes / 1024;
         }
         if (kbytes < 64) {
             /* Need at least 16 blocks. */
