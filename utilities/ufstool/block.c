@@ -43,6 +43,7 @@ ufs_sector_read(ufs_t *disk, ufs1_daddr_t sectno, void *data, size_t size)
     ssize_t cnt;
     int64_t offset = (int64_t)sectno * disk->d_secsize;
 
+    offset += disk->d_part_offset;
     cnt = pread(disk->d_fd, data, size, offset);
     if (cnt == -1) {
         printf ("%s(sectno=%u, size=%zu) read error at offset=%jd \n", __func__, sectno, size, (intmax_t)offset);
@@ -76,6 +77,7 @@ ufs_sector_write(ufs_t *disk, ufs1_daddr_t sectno, const void *data, size_t size
         return (-1);
     }
 
+    offset += disk->d_part_offset;
     cnt = pwrite(disk->d_fd, data, size, offset);
     if (cnt == -1) {
         fprintf(stderr, "%s: write error to block device\n", __func__);
@@ -103,6 +105,7 @@ ufs_sector_erase(ufs_t *disk, ufs1_daddr_t sectno, ufs1_daddr_t size)
     }
 
     offset = sectno * disk->d_secsize;
+    offset += disk->d_part_offset;
     zero_chunk_size = 65536 * disk->d_secsize;
     zero_chunk = calloc(1, zero_chunk_size);
     if (zero_chunk == NULL) {
@@ -223,7 +226,8 @@ ufs_block_free (ufs_t *disk, ufs1_daddr_t bno)
     int cg;
 
     if (verbose > 1)
-        printf ("free block %d, total %lld\n", bno, fs->fs_cstotal.cs_nbfree);
+        printf ("free block %d, total %lld\n",
+            bno, (unsigned long long)fs->fs_cstotal.cs_nbfree);
     if (bno >= fs->fs_size) {
         fprintf (stderr, "%s: bad block %d\n", __func__, bno);
         return;

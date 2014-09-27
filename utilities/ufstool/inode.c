@@ -63,6 +63,7 @@ ufs_inode_get (ufs_t *disk, ufs_inode_t *inode, unsigned inum)
     bno = ino_to_fsba(fs, inum);
     offset = lfragtosize(fs, bno) +
         (ino_to_fsbo(fs, inum) * sizeof(struct ufs1_dinode));
+    offset += disk->d_part_offset;
 //printf("--- %s(inum = %u) bno=%u, offset=%ju, d_secsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_secsize);
     if (bno >= fs->fs_old_size) {
         fprintf(stderr, "%s: bad block number %u\n", __func__, bno);
@@ -118,6 +119,7 @@ ufs_inode_save (ufs_inode_t *inode, int force)
     bno = ino_to_fsba(fs, inode->number);
     offset = lfragtosize(fs, bno) +
         (ino_to_fsbo(fs, inode->number) * sizeof(struct ufs1_dinode));
+    offset += disk->d_part_offset;
 //printf("--- %s(inum = %u) bno=%u, offset=%ju, d_secsize=%lu \n", __func__, inum, bno, (uintmax_t) offset, disk->d_secsize);
     if (bno >= fs->fs_old_size) {
         fprintf(stderr, "%s: bad block number %u\n", __func__, bno);

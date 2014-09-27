@@ -350,7 +350,7 @@ int             check_flushentry(void);
 int             check_inode(union dinode *dp, struct inodesc *idesc);
 int             check_makeentry(ufs_ino_t parent, ufs_ino_t ino, const char *name);
 int             check_reply(const char *question);
-int             check_suj(const char *filesys);
+int             check_suj(const char *filesys, off_t offset);
 struct bufarea *check_cgget(int cg);
 struct bufarea *check_getdatablk(ufs2_daddr_t blkno, long size, int type);
 union dinode   *check_ginode(ufs_ino_t inumber);

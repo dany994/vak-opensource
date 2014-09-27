@@ -174,16 +174,20 @@ err_suj(const char *fmt, ...)
  * Open the given provider, load superblock.
  */
 static void
-opendisk(const char *devnam)
+opendisk(const char *devnam, off_t offset)
 {
     if (disk != NULL)
         return;
     disk = Malloc(sizeof(*disk));
     if (disk == NULL)
         err(EX_OSERR, "malloc(%zu)", sizeof(*disk));
-    if (ufs_disk_open(disk, devnam) == -1) {
-        err(EX_OSERR, "ufs_disk_open(%s) failed", devnam);
-    }
+    if (ufs_disk_open_blank(disk, devnam) == -1)
+        err(EX_OSERR, "ufs_disk_open_blank(%s) failed", devnam);
+
+    disk->d_part_offset = offset;
+    if (ufs_superblock_read(disk) == -1)
+        err(EX_OSERR, "ufs_superblock_read(%s) failed", devnam);
+
     fs = &disk->d_fs;
     if (check_real_dev_bsize == 0)
         check_real_dev_bsize = check_secsize;
@@ -1379,7 +1383,7 @@ ino_adjust(struct suj_ino *sino)
             ino, nlink, DIP(ip, di_nlink));
     if (check_debug)
         printf("Adjusting ino %u, nlink %d, old link %d lastmode %o\n",
-            ino, nlink, DIP(ip, di_nlink), sino->si_mode);
+            ino, (int)nlink, DIP(ip, di_nlink), sino->si_mode);
     if (mode == 0) {
         if (check_debug)
             printf("ino %u, zero inode freeing bitmap\n", ino);
@@ -1397,7 +1401,7 @@ ino_adjust(struct suj_ino *sino)
     if (nlink < reqlink) {
         if (check_debug)
             printf("ino %u not enough links to live %d < %d\n",
-                ino, nlink, reqlink);
+                ino, (int)nlink, reqlink);
         ino_reclaim(ip, ino, mode);
         return;
     }
@@ -1652,7 +1656,7 @@ ino_check(struct suj_ino *sino)
      */
     if (check_debug)
         printf("ino %u nlink %d newlinks %d removes %d dotlinks %d\n",
-            ino, nlink, newlinks, removes, dotlinks);
+            ino, (int)nlink, newlinks, removes, (int)dotlinks);
     nlink += newlinks;
     nlink -= removes;
     sino->si_linkadj = 1;
@@ -2634,7 +2638,7 @@ suj_find(ufs_ino_t ino, ufs_lbn_t lbn, ufs2_daddr_t blk, int frags)
  * Orchestrate the verification of a filesystem via the softupdates journal.
  */
 int
-check_suj(const char *filesys)
+check_suj(const char *filesys, off_t offset)
 {
     union dinode *jip;
     union dinode *ip;
@@ -2643,7 +2647,7 @@ check_suj(const char *filesys)
     struct suj_seg *seg;
     struct suj_seg *segn;
 
-    opendisk(filesys);
+    opendisk(filesys, offset);
     TAILQ_INIT(&allsegs);
 
     /*

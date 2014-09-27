@@ -43,27 +43,32 @@ static int check;
 static int fix;
 static int mount;
 static int scan;
+static int repartition;
 static unsigned kbytes;
+static unsigned pindex;
 static ufs_t disk;
 
 static const char *program_version =
-    "BSD 4.4 file system tool, version 0.0\n"
+    "BSD 4.4 file system tool, version 0.1\n"
     "Copyright (C) 2014 Serge Vakulenko";
 
 static const char *program_bug_address = "<serge@vak.ru>";
 
 static struct option program_options[] = {
-    { "help",       no_argument,        0,  'h' },
-    { "version",    no_argument,        0,  'V' },
-    { "verbose",    no_argument,        0,  'v' },
-    { "add",        no_argument,        0,  'a' },
-    { "extract",    no_argument,        0,  'x' },
-    { "check",      no_argument,        0,  'c' },
-    { "fix",        no_argument,        0,  'f' },
-    { "mount",      no_argument,        0,  'm' },
-    { "scan",       no_argument,        0,  'S' },
-    { "new",        required_argument,  0,  'n' },
-    { "manifest",   required_argument,  0,  'M' },
+    { "help",        no_argument,       0,  'h' },
+    { "version",     no_argument,       0,  'V' },
+    { "verbose",     no_argument,       0,  'v' },
+    { "add",         no_argument,       0,  'a' },
+    { "extract",     no_argument,       0,  'x' },
+    { "check",       no_argument,       0,  'c' },
+    { "fix",         no_argument,       0,  'f' },
+    { "mount",       no_argument,       0,  'm' },
+    { "scan",        no_argument,       0,  'S' },
+    { "new",         no_argument,       0,  'n' },
+    { "manifest",    required_argument, 0,  'M' },
+    { "partition",   required_argument, 0,  'p' },
+    { "repartition", required_argument, 0,  'r' },
+    { "size",        required_argument, 0,  's' },
     { 0 }
 };
 
@@ -78,23 +83,30 @@ static void print_help (char *progname)
             "see the BSD 3-Clause License for more details.\n");
     printf ("\n");
     printf ("Usage:\n");
-    printf ("  %s [--verbose] filesys.img\n", progname);
-    printf ("  %s --check [--fix] filesys.img\n", progname);
-    printf ("  %s --new=kbytes [--manifest=file] filesys.img [dir]\n", progname);
-    printf ("  %s --mount filesys.img dir\n", progname);
-    printf ("  %s --add filesys.img files...\n", progname);
-    printf ("  %s --extract filesys.img\n", progname);
+    printf ("  %s [--verbose] [--partition=n] disk.img\n", progname);
+    printf ("  %s --check [--fix] [--partition=n] disk.img\n", progname);
+    printf ("  %s --new [--size=kbytes | --partition=n] [--manifest=file] disk.img [dir]\n", progname);
+    printf ("  %s --mount [--partition=n] disk.img dir\n", progname);
+    printf ("  %s --add [--partition=n] disk.img files...\n", progname);
+    printf ("  %s --extract [--partition=n] disk.img\n", progname);
+    printf ("  %s --repartition=format disk.img\n", progname);
     printf ("  %s --scan dir > file\n", progname);
     printf ("\n");
     printf ("Options:\n");
     printf ("  -c, --check         Check filesystem, use -c -f to fix.\n");
     printf ("  -f, --fix           Fix bugs in filesystem.\n");
-    printf ("  -n NUM, --new=NUM   Create new filesystem, size in kbytes.\n");
-    printf ("                      Add files from specified directory (optional)\n");
-    printf ("  -M file, --manifest=file  List of files and attributes to create.\n");
+    printf ("  -n, --new           Create new filesystem; add files from\n");
+    printf ("                      specified directory and manifest (optional)\n");
+    printf ("  -s NUM, --size=NUM  Size of filesystem in kbytes.\n");
+    printf ("  -M file, --manifest=file\n");
+    printf ("                      List of files and attributes to create.\n");
     printf ("  -m, --mount         Mount the filesystem.\n");
     printf ("  -a, --add           Add files to filesystem.\n");
     printf ("  -x, --extract       Extract all files.\n");
+    printf ("  -r format, --repartition=format\n");
+    printf ("                      Install new partition table.\n");
+    printf ("  -p NUM, --partition=NUM\n");
+    printf ("                      Select a partition.\n");
     printf ("  -S, --scan          Create a manifest from directory contents.\n");
     printf ("  -v, --verbose       Be verbose.\n");
     printf ("  -V, --version       Print version information and then exit.\n");
@@ -492,14 +504,100 @@ add_contents (ufs_t *disk, const char *dirname, const char *manifest)
         ndirs, nfiles, ndevs, nlinks, nsymlinks);
 }
 
+void create_partition_table (const char *filename, char *format)
+{
+    unsigned char buf [512], *entry;
+    unsigned pindex, offset;
+    int fd, activated = 0;
+
+    /* Initialize an empty partition table. */
+    memset (buf, 0, sizeof(buf));
+    buf[510] = 0x55;
+    buf[511] = 0xaa;
+
+    /* Parse format string and fill partition entries. */
+    offset = 2;
+    char *p = strtok (format, ":");
+    for (pindex=1; p && pindex<=4; pindex++) {
+        char *q, *endptr;
+        unsigned type, len;
+
+        /* Split into type and length. */
+        q = strchr (p, '=');
+        if (! q) {
+            fprintf (stderr, "%s: wrong format '%s' for partition %u\n",
+                filename, p, pindex);
+            exit(-1);
+        }
+        *q++ = 0;
+
+        /* Get length in sectors. */
+        len = strtoul (q, &endptr, 0);
+        if (*endptr == 'k')
+            len *= 2;
+        else if (*endptr == 'm' || *endptr == 'M')
+            len *= 2*1024;
+        else if (*endptr != '\0') {
+            fprintf (stderr, "%s: wrong length '%s' for partition %u\n",
+                filename, q, pindex);
+            exit(-1);
+        }
+
+        /* Get type of partition. */
+        if (strcmp (p, "fs") == 0)
+            type = 0xb7;
+        else if (strcmp (p, "swap") == 0)
+            type = 0xb8;
+        else {
+            type = strtoul (p, &endptr, 16);
+            if (*endptr != '\0') {
+                fprintf (stderr, "%s: wrong type '%s' for partition %u\n",
+                    filename, p, pindex);
+                exit(-1);
+            }
+        }
+        printf ("Allocated partition %u, type %02x, start %u, size %u sectors\n",
+            pindex, type, offset, len);
+
+        /* Fill partition entry. */
+        entry = &buf [446 + (pindex-1)*16];
+        entry [4] = type;
+        *(unsigned*) &entry [8] = offset;
+        *(unsigned*) &entry [12] = len;
+
+        /* Make first FS active. */
+        if (type == 0xb7 && ! activated) {
+            entry [0] = 0x80;
+            activated = 1;
+        }
+
+        p = strtok (NULL, ":");
+        offset += len;
+    }
+
+    /* Open or create the file. */
+    fd = open (filename, O_CREAT | O_RDWR, 0666);
+    if (fd < 0) {
+        fprintf (stderr, "%s: cannot create file\n", filename);
+        exit(-1);
+    }
+
+    /* Write the partition table to file. */
+    if (write (fd, buf, 512) != 512) {
+        fprintf (stderr, "%s: error writing partition table\n", filename);
+        exit(-1);
+    }
+}
+
 int main (int argc, char **argv)
 {
     int i, key;
     manifest_t m;
     const char *manifest = 0;
+    char *partition_format = 0;
 
     for (;;) {
-        key = getopt_long (argc, argv, "vaxmSn:cfM:",
+        key = getopt_long (argc, argv, "vaxmSncfM:s:p:r:",
             program_options, 0);
         if (key == -1)
             break;
@@ -515,7 +613,6 @@ int main (int argc, char **argv)
             break;
         case 'n':
             ++newfs;
-            kbytes = strtol (optarg, 0, 0);
             break;
         case 'c':
             ++check;
@@ -532,6 +629,20 @@ int main (int argc, char **argv)
         case 'M':
             manifest = optarg;
             break;
+        case 's':
+             kbytes = strtol (optarg, 0, 0);
+             break;
+        case 'p':
+            pindex = strtol (optarg, 0, 0);
+            if (pindex < 1 || pindex > 4) {
+                fprintf (stderr, "Incorrect partition index %u\n", pindex);
+                return -1;
+            }
+            break;
+        case 'r':
+            ++repartition;
+            partition_format = optarg;
+            break;
         case 'V':
             printf ("%s\n", program_version);
             return 0;
@@ -544,7 +655,7 @@ int main (int argc, char **argv)
         }
     }
     i = optind;
-    if (extract + newfs + check + add + mount + scan > 1) {
+    if (extract + newfs + check + add + mount + scan + repartition > 1) {
         print_help (argv[0]);
         return -1;
     }
@@ -555,11 +666,32 @@ int main (int argc, char **argv)
             print_help (argv[0]);
             return -1;
         }
-        if (kbytes < 64) {
-            /* Need at least 16 blocks. */
-            fprintf (stderr, "%s: too small\n", argv[i]);
+
+        /* Create the file. */
+        close(open(argv[i], O_RDONLY | O_CREAT | O_TRUNC, 0664));
+        if (ufs_disk_open_blank(&disk, argv[i]) < 0 ||
+            ufs_disk_reopen_writable(&disk) < 0) {
+            fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
         }
+
+        /* Get size and offset from partition table. */
+        if (pindex > 0) {
+            if (ufs_disk_set_partition (&disk, pindex) < 0)
+                return -1;
+            kbytes = disk.d_part_nsectors / 2;
+        }
+        if (kbytes < 64) {
+            /* Need at least 16 blocks. */
+            fprintf (stderr, "%s: %u kbytes is not enough\n", argv[i], kbytes);
+            return -1;
+        }
+
+        /* Set size of filesystem. */
+        /* TODO: set fssize and part_ofs from the partition */
+        mkfs_mediasize = kbytes * 1024;
+        mkfs_fssize = mkfs_mediasize / 512;
+
         /* Set 4k block size, no fragments. */
         mkfs_bsize = 4096;
         mkfs_sectorsize = 512;
@@ -567,18 +699,6 @@ int main (int argc, char **argv)
         mkfs_fsize = mkfs_bsize;
         mkfs_nflag = 1; /* no .snap directory */
 
-        /* Set size of filesystem. */
-        /* TODO: set fssize and part_ofs from the partition */
-        mkfs_mediasize = kbytes * 1024;
-        mkfs_fssize = mkfs_mediasize / mkfs_sectorsize;
-
-        /* Create the file. */
-        close(open(argv[i], O_RDONLY | O_CREAT | O_TRUNC, 0664));
-        if (ufs_disk_open_blank(&disk, argv[i]) == -1 ||
-            ufs_disk_reopen_writable(&disk) == -1) {
-            fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
-            return -1;
-        }
         mkfs(&disk, argv[i]);
         if (ufs_superblock_read(&disk) < 0) {
             fprintf(stderr, "%s: cannot read superblock\n", argv[i]);
@@ -590,6 +710,11 @@ int main (int argc, char **argv)
             add_contents (&disk, argv[i+1], manifest);
         }
         ufs_disk_close (&disk);
+        if (pindex)
+            printf ("Created filesystem at partition %u of %s - %u kbytes\n",
+                pindex, argv[i], kbytes);
+        else
+            printf ("Created filesystem %s - %u kbytes\n", argv[i], kbytes);
         return 0;
     }
 
@@ -603,6 +728,10 @@ int main (int argc, char **argv)
             (fix && ufs_disk_reopen_writable(&disk) == -1)) {
             fprintf(stderr, "%s: cannot open disk image\n", argv[i]);
             return -1;
+        }
+        /* Get size and offset from partition table. */
+        if (pindex > 0 && ufs_disk_set_partition (&disk, pindex) < 0) {
+                return -1;
         }
         check_debug = verbose;
         ufs_check (&disk, argv[i], verbose, fix);
@@ -624,12 +753,22 @@ int main (int argc, char **argv)
         return 0;
     }
 
+    if (repartition) {
+        /* Install a new partition table. */
+        if (i != argc-1) {
+            print_help (argv[0]);
+            return -1;
+        }
+        create_partition_table (argv[i], partition_format);
+        return 0;
+    }
+
     /* Add or extract or info. */
     if (i >= argc) {
         print_help (argv[0]);
         return -1;
     }
-    if (ufs_disk_open (&disk, argv[i]) < 0) {
+    if (ufs_disk_open (&disk, argv[i], pindex) < 0) {
         fprintf (stderr, "%s: cannot open\n", argv[i]);
         return -1;
     }
