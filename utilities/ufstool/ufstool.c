@@ -30,9 +30,14 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/disk.h>
 #include <errno.h>
 #include <getopt.h>
+#ifdef __APPLE__
+#   include <sys/disk.h>
+#endif
+#ifdef linux
+#   include <linux/fs.h>
+#endif
 
 #include "libufs.h"
 #include "manifest.h"
@@ -688,13 +693,13 @@ int main (int argc, char **argv)
             /* Get size of existing file or device. */
             unsigned long long nbytes = 0;
 
-#ifdef DKIOCGETBLOCKCOUNT
+#ifdef __APPLE__
             if (ioctl(disk.d_fd, DKIOCGETBLOCKCOUNT, &nbytes) >= 0) {
                 /* For Apple Darwin */
                 nbytes *= 512;
             } else
 #endif
-#ifdef BLKGETSIZE64
+#ifdef linux
             if (ioctl(disk.d_fd, BLKGETSIZE64, &nbytes) >= 0) {
                 /* For Linux */
             } else
