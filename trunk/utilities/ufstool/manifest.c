@@ -133,9 +133,9 @@ static void add_entry (manifest_t *m, int filetype, char *path, char *link,
  * Compare two entries of file traverse scan.
  */
 #ifdef __APPLE__
-static int ftsent_compare (const FTSENT *const *a, const FTSENT *const *b)
-#else
 static int ftsent_compare (const FTSENT **a, const FTSENT **b)
+#else
+static int ftsent_compare (const FTSENT *const *a, const FTSENT *const *b)
 #endif
 {
     return strcmp((*a)->fts_name, (*b)->fts_name);

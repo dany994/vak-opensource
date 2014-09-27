@@ -254,7 +254,7 @@ rwerror(const char *mesg, ufs2_daddr_t blk)
 {
     if (check_preen == 0)
         printf("\n");
-    check_fatal("CANNOT %s: %ld", mesg, (long)blk);
+    check_fatal("CANNOT %s: %ld\n", mesg, (long)blk);
     if (check_reply("CONTINUE") == 0)
         exit(EEXIT);
 }
@@ -406,7 +406,7 @@ check_setup(const char *dev, int part_num)
         return (0);
     }
     if ((statb.st_mode & S_IFMT) != S_IFREG) {
-        check_fatal("%s is not a regular file", dev);
+        check_fatal("%s is not a regular file\n", dev);
         if (check_reply("CONTINUE") == 0) {
             return (0);
         }
@@ -420,7 +420,7 @@ check_setup(const char *dev, int part_num)
     if (check_nflag || (check_fswritefd = open(dev, O_WRONLY)) < 0) {
         check_fswritefd = -1;
         if (check_preen)
-            check_fatal("NO WRITE ACCESS");
+            check_fatal("NO WRITE ACCESS\n");
         printf(" (NO WRITE)");
     }
     if (check_preen == 0)
@@ -464,14 +464,14 @@ check_setup(const char *dev, int part_num)
      * Check and potentially fix certain fields in the super block.
      */
     if (check_sblk.b_un.b_fs->fs_optim != FS_OPTTIME && check_sblk.b_un.b_fs->fs_optim != FS_OPTSPACE) {
-        check_fatal("UNDEFINED OPTIMIZATION IN SUPERBLOCK");
+        check_fatal("UNDEFINED OPTIMIZATION IN SUPERBLOCK\n");
         if (check_reply("SET TO DEFAULT") == 1) {
             check_sblk.b_un.b_fs->fs_optim = FS_OPTTIME;
             dirty(&check_sblk);
         }
     }
     if ((check_sblk.b_un.b_fs->fs_minfree < 0 || check_sblk.b_un.b_fs->fs_minfree > 99)) {
-        check_fatal("IMPOSSIBLE MINFREE=%d IN SUPERBLOCK",
+        check_fatal("IMPOSSIBLE MINFREE=%d IN SUPERBLOCK\n",
             check_sblk.b_un.b_fs->fs_minfree);
         if (check_reply("SET TO DEFAULT") == 1) {
             check_sblk.b_un.b_fs->fs_minfree = 10;
@@ -505,7 +505,7 @@ check_setup(const char *dev, int part_num)
         if (check_blread(check_fsreadfd, (char *)check_sblk.b_un.b_fs->fs_csp + i,
             fsbtodb(check_sblk.b_un.b_fs, check_sblk.b_un.b_fs->fs_csaddr + j * check_sblk.b_un.b_fs->fs_frag),
             size) != 0 && !asked) {
-            check_fatal("BAD SUMMARY INFORMATION");
+            check_fatal("BAD SUMMARY INFORMATION\n");
             if (check_reply("CONTINUE") == 0) {
                 check_finish(0);
                 exit(EEXIT);
@@ -727,7 +727,7 @@ check_reply(const char *question)
     char c;
 
     if (check_preen)
-        check_fatal("INTERNAL ERROR: GOT TO reply()");
+        check_fatal("INTERNAL ERROR: GOT TO reply()\n");
     persevere = !strcmp(question, "CONTINUE");
     printf("\n");
     if (!persevere && (check_nflag || check_fswritefd < 0)) {
@@ -899,6 +899,7 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
     offset = blk;
     offset *= dev_bsize;
     offset += check_part_offset;
+//printf("--- %s(blk = %llu) dev_bsize=%lu, part_offset=%llu -> offset=%llu \n", __func__, blk, dev_bsize, check_part_offset, offset);
     if (lseek(fd, offset, 0) < 0)
         rwerror("SEEK BLK", blk);
     else if (read(fd, buf, (int)size) == size) {
@@ -911,7 +912,7 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
      * errors.  It should be refactored and fixed.
      */
     if (check_surrender) {
-        check_fatal("CANNOT READ_BLK: %ld", (long)blk);
+        check_fatal("CANNOT READ_BLK: %ld\n", (long)blk);
         errx(EEXIT, "ABORTING DUE TO READ ERRORS");
     } else
         rwerror("READ BLK", blk);
@@ -1007,7 +1008,7 @@ check_cgmagic(int cg, struct bufarea *cgbp)
           cgp->cg_initediblk <= check_sblk.b_un.b_fs->fs_ipg))) {
         return (1);
     }
-    check_fatal("CYLINDER GROUP %d: BAD MAGIC NUMBER", cg);
+    check_fatal("CYLINDER GROUP %d: BAD MAGIC NUMBER\n", cg);
     if (!check_reply("REBUILD CYLINDER GROUP")) {
         printf("YOU WILL NEED TO RERUN FSCK.\n");
         check_rerun = 1;
@@ -1540,7 +1541,7 @@ iblock(struct inodesc *idesc, long ilevel, int64_t isize, int type)
             (void)sprintf(buf, "PARTIALLY TRUNCATED INODE I=%lu",
                 (u_long)idesc->id_number);
             if (check_preen) {
-                check_fatal("%s", buf);
+                check_fatal("%s\n", buf);
             } else if (dofix(idesc, buf)) {
                 IBLK_SET(bp, i, 0);
                 dirty(bp);
@@ -1566,7 +1567,7 @@ iblock(struct inodesc *idesc, long ilevel, int64_t isize, int type)
                 /* An empty block in a directory XXX */
                 getpathname(pathbuf, idesc->id_number,
                         idesc->id_number);
-                check_fatal("DIRECTORY %s: CONTAINS EMPTY BLOCKS",
+                check_fatal("DIRECTORY %s: CONTAINS EMPTY BLOCKS\n",
                     pathbuf);
                 if (check_reply("ADJUST LENGTH") == 1) {
                     dp = check_ginode(idesc->id_number);
@@ -1625,7 +1626,7 @@ check_inode(union dinode *dp, struct inodesc *idesc)
                 /* An empty block in a directory XXX */
                 getpathname(pathbuf, idesc->id_number,
                         idesc->id_number);
-                check_fatal("DIRECTORY %s: CONTAINS EMPTY BLOCKS",
+                check_fatal("DIRECTORY %s: CONTAINS EMPTY BLOCKS\n",
                     pathbuf);
                 if (check_reply("ADJUST LENGTH") == 1) {
                     dp = check_ginode(idesc->id_number);
@@ -1664,7 +1665,7 @@ check_inode(union dinode *dp, struct inodesc *idesc)
                 /* An empty block in a directory XXX */
                 getpathname(pathbuf, idesc->id_number,
                         idesc->id_number);
-                check_fatal("DIRECTORY %s: CONTAINS EMPTY BLOCKS",
+                check_fatal("DIRECTORY %s: CONTAINS EMPTY BLOCKS\n",
                     pathbuf);
                 if (check_reply("ADJUST LENGTH") == 1) {
                     dp = check_ginode(idesc->id_number);
@@ -1956,7 +1957,7 @@ clearentry(struct inodesc *idesc)
 static void
 blkerror(ufs_ino_t ino, const char *type, ufs2_daddr_t blk)
 {
-    check_fatal("%jd %s I=%u", (intmax_t)blk, type, ino);
+    check_fatal("%jd %s I=%u\n", (intmax_t)blk, type, ino);
     printf("\n");
     switch (inoinfo(ino)->ino_state) {
 
@@ -2135,7 +2136,7 @@ adjust(struct inodesc *idesc, int lcnt)
         if (check_preen || check_usedsoftdep) {
             if (lcnt < 0) {
                 printf("\n");
-                check_fatal("LINK COUNT INCREASING");
+                check_fatal("LINK COUNT INCREASING\n");
             }
             if (check_preen)
                 printf(" (ADJUSTED)\n");
@@ -2348,14 +2349,14 @@ linkup(ufs_ino_t orphan, ufs_ino_t parentdir, char *name)
             }
         }
         if (lfdir == 0) {
-            check_fatal("SORRY. CANNOT CREATE lost+found DIRECTORY");
-            printf("\n\n");
+            check_fatal("SORRY. CANNOT CREATE lost+found DIRECTORY\n");
+            printf("\n");
             return (0);
         }
     }
     dp = check_ginode(lfdir);
     if ((DIP(dp, di_mode) & IFMT) != IFDIR) {
-        check_fatal("lost+found IS NOT A DIRECTORY");
+        check_fatal("lost+found IS NOT A DIRECTORY\n");
         if (check_reply("REALLOCATE") == 0)
             return (0);
         oldlfdir = lfdir;
@@ -2381,8 +2382,8 @@ linkup(ufs_ino_t orphan, ufs_ino_t parentdir, char *name)
     }
     (void)lftempname(tempname, orphan);
     if (check_makeentry(lfdir, orphan, (name ? name : tempname)) == 0) {
-        check_fatal("SORRY. NO SPACE IN lost+found DIRECTORY");
-        printf("\n\n");
+        check_fatal("SORRY. NO SPACE IN lost+found DIRECTORY\n");
+        printf("\n");
         return (0);
     }
     inoinfo(orphan)->ino_linkcnt--;
@@ -2577,7 +2578,7 @@ ckinode(ufs_ino_t inumber, struct inodesc *idesc, int rebuildcg)
               memcmp(dp->dp2.di_ib, ufs2_zino.di_ib,
             NIADDR * sizeof(ufs2_daddr_t)) ||
               dp->dp2.di_mode || dp->dp2.di_size))) {
-            check_fatal("PARTIALLY ALLOCATED INODE I=%lu",
+            check_fatal("PARTIALLY ALLOCATED INODE I=%lu\n",
                 (u_long)inumber);
             if (check_reply("CLEAR") == 1) {
                 dp = check_ginode(inumber);
@@ -2727,7 +2728,7 @@ ckinode(ufs_ino_t inumber, struct inodesc *idesc, int rebuildcg)
     }
     return (1);
 unknown:
-    check_fatal("UNKNOWN FILE TYPE I=%lu", (u_long)inumber);
+    check_fatal("UNKNOWN FILE TYPE I=%lu\n", (u_long)inumber);
     inoinfo(inumber)->ino_state = FCLEAR;
     if (check_reply("CLEAR") == 1) {
         inoinfo(inumber)->ino_state = USTATE;
@@ -2961,7 +2962,7 @@ pass1check(struct inodesc *idesc)
             }
             new = (struct dups *)Malloc(sizeof(struct dups));
             if (new == NULL) {
-                check_fatal("DUP TABLE OVERFLOW.");
+                check_fatal("DUP TABLE OVERFLOW.\n");
                 if (check_reply("CONTINUE") == 0) {
                     check_finish(0);
                     exit(EEXIT);
@@ -3389,7 +3390,7 @@ check_pass2(void)
     switch (inoinfo(ROOTINO)->ino_state) {
 
     case USTATE:
-        check_fatal("ROOT INODE UNALLOCATED");
+        check_fatal("ROOT INODE UNALLOCATED\n");
         if (check_reply("ALLOCATE") == 0) {
             check_finish(0);
             exit(EEXIT);
@@ -3399,7 +3400,7 @@ check_pass2(void)
         break;
 
     case DCLEAR:
-        check_fatal("DUPS/BAD IN ROOT INODE");
+        check_fatal("DUPS/BAD IN ROOT INODE\n");
         if (check_reply("REALLOCATE")) {
             freeino(ROOTINO);
             if (allocdir(ROOTINO, ROOTINO, 0755) != ROOTINO)
@@ -3415,7 +3416,7 @@ check_pass2(void)
     case FSTATE:
     case FCLEAR:
     case FZLINK:
-        check_fatal("ROOT INODE NOT DIRECTORY");
+        check_fatal("ROOT INODE NOT DIRECTORY\n");
         if (check_reply("REALLOCATE")) {
             freeino(ROOTINO);
             if (allocdir(ROOTINO, ROOTINO, 0755) != ROOTINO)
@@ -3479,7 +3480,7 @@ check_pass2(void)
         } else if ((inp->i_isize & (DIRBLKSIZ - 1)) != 0) {
             getpathname(pathbuf, inp->i_number, inp->i_number);
             if (check_usedsoftdep)
-                check_fatal("%s %s: LENGTH %jd NOT MULTIPLE OF %d",
+                check_fatal("%s %s: LENGTH %jd NOT MULTIPLE OF %d\n",
                     "DIRECTORY", pathbuf,
                     (intmax_t)inp->i_isize, DIRBLKSIZ);
             else
@@ -3620,7 +3621,7 @@ check_pass3(void)
             propagate();
             continue;
         }
-        check_fatal("ORPHANED DIRECTORY LOOP DETECTED I=%lu",
+        check_fatal("ORPHANED DIRECTORY LOOP DETECTED I=%lu\n",
             (u_long)orphan);
         if (check_reply("RECONNECT") == 0)
             continue;
@@ -3631,7 +3632,7 @@ check_pass3(void)
         idesc.id_func = findname;
         idesc.id_name = namebuf;
         if ((check_inode(check_ginode(inp->i_parent), &idesc) & FOUND) == 0)
-            check_fatal("COULD NOT FIND NAME IN PARENT DIRECTORY");
+            check_fatal("COULD NOT FIND NAME IN PARENT DIRECTORY\n");
         if (linkup(orphan, inp->i_parent, namebuf)) {
             idesc.id_func = clearentry;
             if (check_inode(check_ginode(inp->i_parent), &idesc) & FOUND)
@@ -4220,7 +4221,7 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     check_sblock_init();
     switch (check_setup(filesys, 0)) {
     case 0:
-        check_fatal("CAN'T CHECK FILE SYSTEM.");
+        check_fatal("CAN'T CHECK FILE SYSTEM.\n");
         return;
     case -1:
         check_warn("clean, %ld free ", (long)(check_sblk.b_un.b_fs->fs_cstotal.cs_nffree +
