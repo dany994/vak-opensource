@@ -41,25 +41,29 @@
  * userland ufs disk.
  */
 typedef struct {
-    const char *d_name;     /* disk name */
-    int d_ufs;              /* decimal UFS version */
-    int d_fd;               /* raw device file descriptor */
-    long d_secsize;         /* disk sector size in bytes */
-    ufs1_daddr_t d_sblock;  /* superblock location */
-    struct csum *d_sbcsum;  /* Superblock summary info */
+    const char *d_name;         /* disk name */
+    int d_ufs;                  /* decimal UFS version */
+    int d_fd;                   /* raw device file descriptor */
+    long d_secsize;             /* disk sector size in bytes */
+    ufs1_daddr_t d_sblock;      /* superblock location */
+    struct csum *d_sbcsum;      /* Superblock summary info */
     union {
-        struct fs d_fs;     /* filesystem information */
+        struct fs d_fs;         /* filesystem information */
         char d_sb[MAXBSIZE];
-                            /* superblock as buffer */
+                                /* superblock as buffer */
     } d_sbunion;
     union {
-        struct cg d_cg;     /* cylinder group */
+        struct cg d_cg;         /* cylinder group */
         char d_buf[MAXBSIZE];
-                            /* cylinder group storage */
+                                /* cylinder group storage */
     } d_cgunion;
-    int d_ccg;              /* current cylinder group */
-    int d_lcg;              /* last cylinder group (in d_cg) */
-    int d_writable;         /* open for write */
+    int d_ccg;                  /* current cylinder group */
+    int d_lcg;                  /* last cylinder group (in d_cg) */
+    int d_writable;             /* open for write */
+    int d_part_type;            /* partition type */
+    unsigned d_part_nsectors;   /* partition size in sectors */
+    off_t d_part_offset;        /* partition offset in bytes */
+
 #define d_fs    d_sbunion.d_fs
 #define d_sb    d_sbunion.d_sb
 #define d_cg    d_cgunion.d_cg
@@ -148,9 +152,10 @@ ufs1_daddr_t ufs_cgroup_hashalloc(ufs_t *disk, int cg, ufs1_daddr_t pref, int pa
  * disk.c
  */
 int     ufs_disk_close(ufs_t *);
-int     ufs_disk_open(ufs_t *, const char *);
+int     ufs_disk_open(ufs_t *, const char *, unsigned);
 int     ufs_disk_open_blank(ufs_t *, const char *);
 int     ufs_disk_reopen_writable(ufs_t *);
+int     ufs_disk_set_partition (ufs_t *, unsigned);
 
 /*
  * inode.c

@@ -53,6 +53,7 @@
 #define	ZEROBUFSIZE	(dev_bsize * 128) /* size of zero buffer used by -Z */
 
 int check_lfmode = 0700;
+off_t check_part_offset;
 
 static struct bufarea asblk;
 
@@ -269,6 +270,7 @@ check_blwrite(int fd, char *buf, ufs2_daddr_t blk, ssize_t size)
         return;
     offset = blk;
     offset *= dev_bsize;
+    offset += check_part_offset;
     if (lseek(fd, offset, 0) < 0)
         rwerror("SEEK BLK", blk);
     else if (write(fd, buf, size) == size) {
@@ -896,6 +898,7 @@ check_blread(int fd, char *buf, ufs2_daddr_t blk, long size)
 
     offset = blk;
     offset *= dev_bsize;
+    offset += check_part_offset;
     if (lseek(fd, offset, 0) < 0)
         rwerror("SEEK BLK", blk);
     else if (read(fd, buf, (int)size) == size) {
@@ -969,6 +972,7 @@ blzero(int fd, ufs2_daddr_t blk, long size)
             errx(EEXIT, "cannot allocate buffer pool");
     }
     offset = blk * dev_bsize;
+    offset += check_part_offset;
     if (lseek(fd, offset, 0) < 0)
         rwerror("SEEK BLK", blk);
     while (size > 0) {
@@ -4207,6 +4211,7 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
     intmax_t blks, files;
 
     check_filename = filesys;
+    check_part_offset = disk->d_part_offset;
     if (fix)
         check_yflag = 1;
     else
@@ -4232,7 +4237,7 @@ void ufs_check(ufs_t *disk, const char *filesys, int verbose, int fix)
      */
     if ((check_sblk.b_un.b_fs->fs_flags & FS_SUJ) == FS_SUJ) {
         if ((check_sblk.b_un.b_fs->fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && check_skipclean) {
-            if (check_suj(filesys) == 0) {
+            if (check_suj(filesys, check_part_offset) == 0) {
                 printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
                 exit(0);
             }

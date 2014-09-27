@@ -112,7 +112,7 @@ int mkfs_avgfilesize = AVFILESIZ;   /* expected average file size */
 int mkfs_avgfilesperdir = AFPDIR;   /* expected number of files per directory */
 u_char  *mkfs_volumelabel = NULL;   /* volume label for filesystem */
 
-ufs2_daddr_t mkfs_part_ofs;         /* partition offset in blocks, used with files */
+static ufs2_daddr_t mkfs_part_ofs;  /* partition offset in blocks, used with files */
 
 static caddr_t iobuf;
 static long iobufsize;
@@ -132,10 +132,12 @@ static u_int32_t newfs_random(void);
 static int
 do_sbwrite(ufs_t *disk)
 {
+    int64_t offset;
+
     if (!disk->d_sblock)
         disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_secsize;
-    return pwrite(disk->d_fd, &disk->d_fs, SBLOCKSIZE,
-        (mkfs_part_ofs + disk->d_sblock) * (int64_t)disk->d_secsize);
+    offset = (mkfs_part_ofs + disk->d_sblock) * (int64_t)disk->d_secsize;
+    return pwrite(disk->d_fd, &disk->d_fs, SBLOCKSIZE, offset);
 }
 
 void
@@ -156,6 +158,9 @@ mkfs(ufs_t *disk, const char *fsys)
     } dummy;
 #define fsdummy dummy.fdummy
 #define chdummy dummy.cdummy
+
+    /* Partition offset. */
+    mkfs_part_ofs = disk->d_part_offset / 512;
 
     /*
      * Our blocks == sector size, and the version of UFS we are using is

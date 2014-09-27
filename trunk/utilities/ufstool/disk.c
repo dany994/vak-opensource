@@ -45,10 +45,57 @@ ufs_disk_close(ufs_t *disk)
 }
 
 int
-ufs_disk_open(ufs_t *disk, const char *name)
+ufs_disk_set_partition (ufs_t *disk, unsigned pindex)
+{
+    unsigned char buf [512], *entry;
+
+    if (pindex > 4 || pindex < 1) {
+        fprintf (stderr, "%s: incorrect partition index=%u\n",
+            __func__, pindex);
+        return -1;
+    }
+    if (read (disk->d_fd, buf, 512) != 512) {
+        fprintf (stderr, "%s: cannot read partition table\n", __func__);
+        return -1;
+    }
+    if (buf[510] != 0x55 || buf[511] != 0xaa) {
+        fprintf (stderr, "%s: Warning: unexpected type of RetroBSD partition\n",
+            __func__);
+    }
+    /* Read partition entry. */
+    entry = &buf [446 + (pindex-1)*16];
+    disk->d_part_type = entry [4];
+    disk->d_part_offset = *(unsigned*) &entry [8];
+    disk->d_part_nsectors = *(unsigned*) &entry [12];
+    if (disk->d_part_type == 0) {
+        fprintf (stderr, "%s: Partition %u not allocated.\n",
+            __func__, pindex);
+        return -1;
+    }
+    if (disk->d_part_type != 0xb7) {
+        fprintf (stderr, "%s: Warning: unexpected type of RetroBSD partition\n",
+            __func__);
+    }
+    if (disk->d_part_offset & 1) {
+        fprintf (stderr, "%s: Incorrect partition offset=%llu, must be even\n",
+            __func__, (unsigned long long)disk->d_part_offset);
+        return -1;
+    }
+    disk->d_part_offset *= 512;
+printf ("Partition %u, type %02x, offset=%uk, length=%uk\n", pindex, disk->d_part_type, (unsigned)(disk->d_part_offset/1024), disk->d_part_nsectors/2);
+    return 0;
+}
+
+int
+ufs_disk_open(ufs_t *disk, const char *name, unsigned pindex)
 {
     if (ufs_disk_open_blank(disk, name) == -1) {
         return (-1);
+    }
+    if (pindex > 0) {
+        /* Get offset from partition table. */
+        if (ufs_disk_set_partition (disk, pindex) < 0)
+            return -1;
     }
     if (ufs_superblock_read(disk) == -1) {
         fprintf(stderr, "%s: could not read superblock to fill out disk\n", __func__);
