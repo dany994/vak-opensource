@@ -24,11 +24,5 @@ void avr_write_fuse_extended (avr_t *avr, unsigned char byte);
 
 void avr_identify (avr_t *avr);
 
-void avr_inc_delay (avr_t *avr);
-void avr_probe (avr_t *avr);
-void avr_set_delay_100ns (avr_t *avr, int ns100);
-int avr_check_cable_errors (avr_t *avr);
 int avr_check_block (avr_t *avr, u_int32_t addr,
 	unsigned char *buf, u_int32_t bytes);
-
-extern int user_setup_delay_limit;
