@@ -17,7 +17,6 @@
 #include "avr.h"
 
 #define VERSION		"1.5"
-#define SLINESZ		32
 
 /* Macros for converting between hex and binary. */
 #define NIBBLE(x)	(isdigit(x) ? (x)-'0' : tolower(x)+10-'a')
@@ -26,15 +25,6 @@
 unsigned char write_data [0x40000];	/* To MCU internal flash write buffer - up to 256 kbytes */
 u_int32_t srec_len;
 u_int32_t srec_start = 0x1fffe;
-
-int user_setup_delay_limit;
-#if defined(__WIN32__) || defined(WIN32) || defined (__DJGPP__)
-	/* Win32 or DOS mode */
-	int delay_low_limit_100ns = 25;
-#else
-	/* LINUX */
-	int delay_low_limit_100ns = 0;
-#endif
 
 avr_t *avr;
 u_int32_t count;
@@ -139,15 +129,10 @@ void usage ()
 {
 	printf ("\nAtmel ATmega Programmer, Version " VERSION "\n");
 	printf ("Copyright (C) 2000-2006 Serge Vakulenko, www.vak.ru\n");
-#if defined(__WIN32__) || defined(WIN32)
-	printf ("Win32 version, with support for turbo-mode by\n");
-	printf ("\"Advanced Serial Driver\" http://leo.yuriev.ru/SerialXP\n");
-#endif
 	printf ("\nUsage:\n");
 	printf ("\tmegaprog [-vnhuD] [-f dev] srec-file\n");
 	printf ("Options:\n");
 	printf ("\t-v\t\tverify only\n");
-	printf ("\t-d value\t\tset low-limit for io-delay in 100ns ticks\n");
 	printf ("\t-u\t\tleave memory unprotected\n");
 	printf ("\t-D\t\tprint debugging information\n");
 	printf ("\t-f dev\t\tserial device name, e.g. COM1 or /dev/cua01\n");
@@ -163,19 +148,6 @@ void print_symbols (char symbol, int cnt)
 {
 	while (cnt-- > 0)
 		putchar (symbol);
-}
-
-int program_block (avr_t *avr, u_int32_t addr, unsigned short len)
-{
-	if (program) {
-		avr_write_block (avr, addr, write_data+addr, 256);
-	}
-	++count;
-	fprintf (stderr, "%c\b%s", "/-\\|" [count & 3],
-		(count % blocks_per_dot == 0) ? "#" : "");
-	fflush (stderr);
-
-	return avr_check_block (avr, addr, write_data+addr, 256);
 }
 
 void set_option (char *arg)
@@ -235,8 +207,8 @@ void quit (void)
 int main (int argc, char **argv)
 {
 	char *devname = "/dev/cuaa0";
-	char *sre_file=NULL;
-	u_int32_t addr, bytes;
+	char *sre_file = NULL;
+	u_int32_t addr;
 	int ch;
 	extern char *optarg;
 	extern int optind;
@@ -244,7 +216,7 @@ int main (int argc, char **argv)
 	unsigned char fuse_low = 0, fuse_high = 0, fuse_ext = 0;
 	long left, used;
 
-	while ((ch = getopt(argc, argv, "5vDuf:o:d:")) != -1) {
+	while ((ch = getopt(argc, argv, "vDuf:o:")) != -1) {
 		switch (ch) {
 			case 'v':
 				program = 0;
@@ -261,15 +233,6 @@ int main (int argc, char **argv)
 			case 'o':
 				set_option (optarg);
 				break;
-			case '5':
-				/* ignore, for compatibility only */
-				break;
-			case 'd':
-				delay_low_limit_100ns = atoi(optarg);
-				if (delay_low_limit_100ns >= 0) {
-					user_setup_delay_limit = 1;
-					break;
-				}
 			default:
 				fprintf (stderr, "Incorrect option: `%c'\n", ch);
 				usage ();
@@ -294,7 +257,7 @@ int main (int argc, char **argv)
 	/* Open and detect the device. */
 	atexit (quit);
 	avr = avr_open (devname);
-again:
+
 	if (program) {
 		/* Erase flash and resyncronize. */
 		avr_erase (avr);
@@ -440,13 +403,17 @@ again:
 	count = 0;
 	t0 = fix_time ();
 	for (addr=srec_start; addr<srec_len; addr+=256) {
-		bytes = srec_len - addr;
-		if (bytes >= 256)
-			bytes = 256;
-		if (! program_block (avr, addr, (unsigned short) bytes)) {
-			avr_inc_delay(avr);
-			avr_probe(avr);
-			goto again;
+                if (program) {
+                        avr_write_block (avr, addr, write_data+addr, 256);
+                }
+                ++count;
+                fprintf (stderr, "%c\b%s", "/-\\|" [count & 3],
+                        (count % blocks_per_dot == 0) ? "#" : "");
+                fflush (stderr);
+
+		if (! avr_check_block (avr, addr, write_data+addr, 256)) {
+                        printf ("Failed.\n");
+                        exit (1);
 		}
 	}
 
