@@ -1,0 +1,4 @@
+Example of simple program for MikroElektronika MINI-32 board,
+equipped with factory UHB bootloader.
+
+Using GCC compiler and pic32prog programming utility.
