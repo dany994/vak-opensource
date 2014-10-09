@@ -38,6 +38,7 @@ const char copyright[] = "Copyright (C) 2014 Serge Vakulenko";
 
 char *progname;
 int verbose;
+int count = 1;
 
 #define TYPE_DATA   0   // Data record
 #define TYPE_EOF    1   // End of file
@@ -47,7 +48,7 @@ int verbose;
 void usage ()
 {
     fprintf (stderr, "HEX generator, Version %s, %s\n", version, copyright);
-    fprintf (stderr, "Usage:\n\t%s [-vtd] [-r count] address value\n", progname);
+    fprintf (stderr, "Usage:\n\t%s [-v] [-r count] address value...\n", progname);
     fprintf (stderr, "Options:\n");
     fprintf (stderr, "\t-v\tverbose mode\n");
     fprintf (stderr, "\t-r #\trepeat count\n");
@@ -65,17 +66,16 @@ void print_hex (unsigned char *data)
 
     printf (":");
     for (i=0; i<bytes; ++i) {
-        printf ("%02x",  data[i]);
-        sum += data[i];
+        printf ("%02x", data[i]);
+        sum -= data[i];
     }
     printf ("%02x\n", sum);
 }
 
 int main (int argc, char **argv)
 {
-    int count = 1;
     unsigned char data[128];
-    unsigned addr, value;
+    unsigned high;
 
     progname = *argv;
     for (;;) {
@@ -96,32 +96,46 @@ int main (int argc, char **argv)
     argc -= optind;
     argv += optind;
 
-    if (argc != 2)
+    if (argc < 2 || argc % 2)
         usage ();
-    addr = strtoul (argv[0], 0, 16);
-    value = strtoul (argv[1], 0, 16);
 
-    /* High part of address. */
-    data[0] = 2;
-    data[1] = 0;
-    data[2] = 0;
-    data[3] = TYPE_ADDR;
-    data[4] = addr >> 24;
-    data[5] = addr >> 16;
-    print_hex (data);
+    high = 0;
+    for (; argc > 0; argc -= 2, argv += 2) {
+        unsigned addr = strtoul (argv[0], 0, 16);
+        unsigned value = strtoul (argv[1], 0, 16);
+        unsigned i;
 
-    while (count-- > 0) {
-        /* Data record. */
-        data[0] = 4;
-        data[1] = addr >> 8;
-        data[2] = addr;
-        data[3] = TYPE_DATA;
-        data[4] = value;
-        data[5] = value >> 8;
-        data[6] = value >> 16;
-        data[7] = value >> 24;
-        print_hex (data);
+        if (verbose)
+            printf ("\n--- Address = %08x, value = %08x\n",
+                addr, value);
+
+        /* High part of address. */
+        if ((addr >> 16) != high) {
+            data[0] = 2;
+            data[1] = 0;
+            data[2] = 0;
+            data[3] = TYPE_ADDR;
+            data[4] = addr >> 24;
+            data[5] = addr >> 16;
+            print_hex (data);
+            high = addr >> 16;
+        }
+        for (i=0; i<count; i++) {
+            /* Data record. */
+            data[0] = 4;
+            data[1] = addr >> 8;
+            data[2] = addr;
+            data[3] = TYPE_DATA;
+            data[4] = value;
+            data[5] = value >> 8;
+            data[6] = value >> 16;
+            data[7] = value >> 24;
+            print_hex (data);
+        }
     }
+
+    if (verbose)
+        printf ("\n--- Done.\n");
 
     /* End of file. */
     data[0] = 0;
