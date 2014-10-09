@@ -6,7 +6,7 @@
 #define MHZ     80              /* CPU clock is 80 MHz. */
 
 /*
- * Entry point at 9d07c000.
+ * Entry point at 9d00c000.
  */
 asm ("          .section .startup,\"ax\",@progbits");
 asm ("          .globl _init");
@@ -51,9 +51,9 @@ void udelay (unsigned usec)
 int main()
 {
     /* Set memory wait states, for speedup. */
-    //CHECON = 2;
-    //BMXCONCLR = 0x40;
-    //CHECONSET = 0x30;
+    CHECON = 2;
+    BMXCONCLR = 0x40;
+    CHECONSET = 0x30;
 
     /* Enable cache for kseg0 segment. */
     int config = mfc0 (C0_CONFIG, 0);
@@ -67,29 +67,38 @@ int main()
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
-    /* Disable JTAG and Trace ports, to make more pins available. */
-    //DDPCONCLR = 3 << 2;
-
     /* Use all ports as digital. */
     AD1PCFG = ~0;
-    LATB = 0;
-    LATG = 0;
 
     /* Use pin RG6 as output: LED2 control. */
     TRISGCLR = 1 << 6;
+    LATG = 0;
 
     /* Use pin RD6 as output: LED3 control. */
     TRISDCLR = 1 << 6;
-    LATDSET = 1 << 6;
+    LATD = 0;
 
+#define TIMO 125000             /* Delay 1/8 of second */
     for (;;) {
-        /* Invert pin RG6. */
-        LATGINV = 1 << 6;
+        /* Stop simulation. */
+        asm volatile ("sltiu $zero, $zero, 0xABC2");
 
-        /* Invert pin RD6. */
-        LATDINV = 1 << 6;
+        LATGSET = 1 << 6;       /* Blink LED2: pin RG6. */
+        udelay (TIMO);
+        LATGCLR = 1 << 6;
+        udelay (TIMO);
+        LATGSET = 1 << 6;
+        udelay (TIMO);
+        LATGCLR = 1 << 6;
+        udelay (TIMO);
 
-        /* Delay. */
-        udelay (500000);
+        LATDSET = 1 << 6;       /* Blink LED3: pin RD6. */
+        udelay (TIMO);
+        LATDCLR = 1 << 6;
+        udelay (TIMO);
+        LATDSET = 1 << 6;
+        udelay (TIMO);
+        LATDCLR = 1 << 6;
+        udelay (TIMO);
     }
 }
