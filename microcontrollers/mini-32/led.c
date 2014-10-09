@@ -6,7 +6,7 @@
 #define MHZ     80              /* CPU clock is 80 MHz. */
 
 /*
- * Entry point at 9d00c000.
+ * Entry point at 9d00bff0.
  */
 asm ("          .section .startup,\"ax\",@progbits");
 asm ("          .globl _init");
@@ -62,7 +62,7 @@ int main()
     /* Initialize coprocessor 0. */
     mtc0 (C0_COUNT, 0, 0);
     mtc0 (C0_COMPARE, 0, -1);
-    mtc0 (C0_EBASE, 1, 0x9fc00000);     /* Vector base */
+    mtc0 (C0_EBASE, 1, 0x9d000000);     /* Vector base */
     mtc0 (C0_INTCTL, 1, 1 << 5);        /* Vector spacing 32 bytes */
     mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
