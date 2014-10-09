@@ -6,7 +6,7 @@ OBJDUMP         = $(P)objdump
 #GDB             = mipsel-elf32-gdb
 #GDB             = /usr/local/mips/insight681/bin/mipsel-elf32-insight
 GDB             = /usr/local/mips/insight70/bin/mips-elf-insight
-CFLAGS          = -O -Wall -Werror -DPIC32MX5
+CFLAGS          = -O -Wall -Werror -DPIC32MX7
 LDFLAGS         = -T mikroe-bootloader.ld -e _start
 
 PROG            = led
