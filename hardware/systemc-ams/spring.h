@@ -13,12 +13,12 @@ SCA_TDF_MODULE(elastic)
 
     sca_out<double> force_out;          // output port
 
-    double elastic_modulus;             // parameters
+    double stiffness;                   // parameters
 
     elastic(sc_module_name nm,          // constructor
         double k = 1.0)                 // 1 newton/meter by default
     {
-        elastic_modulus = k;
+        stiffness = k;
     }
 
     void set_attributes()               // called at elaboration
@@ -29,7 +29,7 @@ SCA_TDF_MODULE(elastic)
     void processing()                   // executed at each activation
     {
         double displacement = displacement_in.read();
-        double force = - displacement * elastic_modulus;
+        double force = - displacement * stiffness;
 
         force_out.write(force);
     }
