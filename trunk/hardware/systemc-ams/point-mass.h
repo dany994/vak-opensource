@@ -5,22 +5,28 @@
  */
 #include <systemc-ams>
 
+using namespace sca_tdf;
+
 SCA_TDF_MODULE(point_mass)
 {
-    sca_tdf::sca_in<double> force_in;           // input ports
+    sca_in<double> force_in;            // input port
 
-    sca_tdf::sca_out<double> velocity_out;      // output ports
-    sca_tdf::sca_out<double> position_out;
+    sca_out<double> velocity_out;       // output ports
+    sca_out<double> position_out;
 
     double mass;                        // parameters
     double position;
     double velocity;
     double time_last;
 
-    SCA_CTOR(point_mass) {              // constructor
-        mass = 0;
-        position = 0;
-        velocity = 0;
+    point_mass(sc_module_name nm,       // constructor
+        double m = 1.0,                 // 1kg by default
+        double x = 0,
+        double v = 0)
+    {
+        mass = m;
+        position = x;
+        velocity = v;
         time_last = 0;
     }
 
