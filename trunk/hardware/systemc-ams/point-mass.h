@@ -36,14 +36,11 @@ SCA_TDF_MODULE(point_mass)
         double time_now = get_time().to_seconds();
         double delta_t = time_now - time_last;
 
-        if (delta_t > 0) {
-            velocity += delta_t * force / mass;
-            position += velocity * delta_t;
-//printf("(%g) force=%g, position=%g, velocity=%g \n", time_now, force, position, velocity);
+        velocity += delta_t * force / mass;
+        position += velocity * delta_t;
+        time_last = time_now;
 
-            velocity_out.write(velocity);
-            position_out.write(position);
-            time_last = time_now;
-        }
+        velocity_out.write(velocity);
+        position_out.write(position);
     }
 };
