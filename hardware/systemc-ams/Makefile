@@ -21,4 +21,7 @@ pendulum:       $(OBJS)
 run:
 		LD_LIBRARY_PATH=$(SYSTEMC_AMS)/lib-linux64 ./pendulum
 
+view:
+		gtkwave -A trace.vcd &
+
 pendulum.o: pendulum.cpp point-mass.h spring.h
