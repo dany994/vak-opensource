@@ -5,16 +5,20 @@
  */
 #include <systemc-ams>
 
+using namespace sca_tdf;
+
 SCA_TDF_MODULE(elastic)
 {
-    sca_tdf::sca_in<double> displacement_in;    // input ports
+    sca_in<double> displacement_in;     // input port
 
-    sca_tdf::sca_out<double> force_out;         // output ports
+    sca_out<double> force_out;          // output port
 
     double elastic_modulus;             // parameters
 
-    SCA_CTOR(elastic) {                 // constructor
-        elastic_modulus = 0;
+    elastic(sc_module_name nm,          // constructor
+        double k = 1.0)                 // 1 newton/meter by default
+    {
+        elastic_modulus = k;
     }
 
     void set_attributes()               // called at elaboration
