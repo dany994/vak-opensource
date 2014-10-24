@@ -17,7 +17,7 @@ type Stream_t interface {
  */
 func Puts(x Stream_t, str string) {
 	for _, c := range str {
-		x.Putc (c)
+		x.Putc (int(c))
 	}
 }
 
