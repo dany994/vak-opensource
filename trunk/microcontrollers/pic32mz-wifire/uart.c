@@ -139,9 +139,13 @@ int main()
     printreg ("Debug   ", mfc0(23, 0));
     printreg ("PerfCtl0", mfc0(25, 0));
     printreg ("PerfCtl1", mfc0(25, 2));
+    printreg ("DEVID",    DEVID);
+    printreg ("OSCCON",   OSCCON);
     printreg ("SPLLCON ", SPLLCON);
-    printreg ("SBT2REG0", SBT2REG0);
-    printreg ("SBT3REG0", SBT3REG0);
+    printreg ("DEVCFG0",  DEVCFG0);
+    printreg ("DEVCFG1",  DEVCFG1);
+    printreg ("DEVCFG2",  DEVCFG2);
+    printreg ("DEVCFG3",  DEVCFG3);
 
     while (1) {
         /* Stop simulation. */

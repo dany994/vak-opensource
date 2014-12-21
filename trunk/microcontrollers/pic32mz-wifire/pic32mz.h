@@ -175,10 +175,10 @@
 /*--------------------------------------
  * Configuration registers.
  */
-#define DEVCFG0		0x9fc0fffc
-#define DEVCFG1		0x9fc0fff8
-#define DEVCFG2		0x9fc0fff4
-#define DEVCFG3		0x9fc0fff0
+#define DEVCFG0		*(volatile unsigned*) 0xbfc0ffcc
+#define DEVCFG1		*(volatile unsigned*) 0xbfc0ffc8
+#define DEVCFG2		*(volatile unsigned*) 0xbfc0ffc4
+#define DEVCFG3		*(volatile unsigned*) 0xbfc0ffc0
 
 #define PIC32_DEVCFG(cfg0, cfg1, cfg2, cfg3) \
     unsigned __DEVCFG0 __attribute__ ((section (".config0"))) = (cfg0) ^ 0x7fffffff; \
@@ -226,7 +226,7 @@
 #define DEVCFG1_DMTINV_63_64    0x00000030 /* 63/64 of counter value */
 #define DEVCFG1_DMTINV_127_128  0x00000038 /* 127/128 of counter value */
 #define DEVCFG1_FSOSCEN         0x00000040 /* Secondary oscillator enable */
-#define DEVCFG1_IESO            0x00000080 /* Internal-external switch over */
+#define DEVCFG1_IESO            0x00000080 /* Internal-external switch over enable */
 #define DEVCFG1_POSCMOD_MASK    0x00000300 /* Primary oscillator config */
 #define DEVCFG1_POSCMOD_EXT     0x00000000 /* External mode */
 #define DEVCFG1_POSCMOD_HS      0x00000200 /* HS oscillator */
