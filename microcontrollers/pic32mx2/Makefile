@@ -1,5 +1,5 @@
 #P               = /usr/local/pic32-tools/bin/pic32-
-P               = /usr/local/mips-gcc-4.7.2/bin/mips-elf-
+P               = /usr/local/mips-gcc-4.8.1/bin/mips-elf-
 CC              = $(P)gcc -EL -mips32r2 -g -nostdlib
 OBJCOPY         = $(P)objcopy
 OBJDUMP         = $(P)objdump
@@ -12,19 +12,19 @@ LDFLAGS         = -T mx2-ram4k.ld -e _start
 
 PROG            = flash
 
-all:            $(PROG).srec
+all:            $(PROG).hex
 
-$(PROG).srec:   $(PROG).c
+$(PROG).hex:    $(PROG).c
 		$(CC) $(CFLAGS) -c $<
 		$(CC) $(LDFLAGS) $(PROG).o -o $(PROG).elf
-		$(OBJCOPY) -O srec $(PROG).elf $(PROG).srec
+		$(OBJCOPY) -O ihex $(PROG).elf $(PROG).hex
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
 
-load:           $(PROG).srec
-		pic32prog -p $(PROG).srec
+load:           $(PROG).hex
+		pic32prog -p $(PROG).hex
 
 clean:
-		rm -f *.o *.lst *~ *.elf *.srec *.dis
+		rm -f *.o *.lst *~ *.elf *.hex *.dis
 
-debug:          $(PROG).srec
+debug:          $(PROG).hex
 		$(GDB) $(PROG).elf

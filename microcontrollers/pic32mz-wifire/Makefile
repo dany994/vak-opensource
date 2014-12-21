@@ -1,5 +1,6 @@
 #P               = /usr/local/pic32-tools/bin/pic32-
-P               = /usr/local/mips-2013.11/bin/mips-sde-elf-
+#P               = /usr/local/mips-2013.11/bin/mips-sde-elf-
+P               = /usr/local/mips-gcc-4.8.1/bin/mips-elf-
 CC              = $(P)gcc -mips32r2 -EL -g -nostdlib
 OBJCOPY         = $(P)objcopy
 OBJDUMP         = $(P)objdump
@@ -25,8 +26,8 @@ ifneq (,$(wildcard /Applications/Mpide.app/Contents/Resources/Java/hardware/tool
 endif
 PROGTOOL        += -c stk500v2 -p 32MZ2048ECG100 -b 115200
 
-#PROG            = led
-PROG            = uart
+PROG            = led
+#PROG            = uart
 
 all:            $(PROG).hex
 
