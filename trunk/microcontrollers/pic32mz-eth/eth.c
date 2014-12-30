@@ -69,7 +69,7 @@ typedef struct {
 
 static char rx_buffer[RX_BYTES];            // the RX buffer space
 static eth_desc_t rx_desc[RX_DESCRIPTORS+1]; // the +1 is the terminating descriptor, or room for a loop back pointer
-static eth_desc_t tx_desc[TX_DESCRIPTORS];  // just big enough for a transmit of an IPSTACK
+static eth_desc_t tx_desc[TX_DESCRIPTORS];  // just big enough for a transmit of packet
 
 static unsigned receive_index = 0;          // The next descriptor to look at waiting for incoming data
 
@@ -204,7 +204,7 @@ static int phy_write(int phy_id, int reg_id, int value, unsigned timeout)
     return 0;
 }
 
-static int is_phy_linked(int phy_id)
+static int is_phy_linked(int phy_id, int was_up)
 {
     int status = phy_read(phy_id, PHY_STATUS, 1);
     if (status < 0) {
@@ -217,7 +217,7 @@ static int is_phy_linked(int phy_id)
         (status & PHY_STATUS_ANEG_ACK);     // Auto-negotiation completed
 
     // Set our link speed.
-    if (link_is_up && !eth_is_up) {
+    if (link_is_up && ! was_up) {
         // Must disable the RX while setting these parameters.
         int rxen = ETHCON1 & PIC32_ETHCON1_RXEN;
         ETHCON1CLR = PIC32_ETHCON1_RXEN;
@@ -252,8 +252,6 @@ static int is_phy_linked(int phy_id)
         if (rxen)
             ETHCON1SET = PIC32_ETHCON1_RXEN;
     }
-    eth_is_up = link_is_up;
-
     return link_is_up;
 }
 
@@ -292,20 +290,22 @@ static void update_state()
 {
     static unsigned time_start = 0;
 
+    eth_is_up = is_phy_linked(eth_phy_id, eth_is_up);
+
     switch(eth_state) {
     case STATE_INIT:
         // we haven't initialized yet.
         break;
 
     case STATE_WAITLINK:
-        if (is_phy_linked(eth_phy_id)) {
+        if (eth_is_up) {
             time_start = SYSGetMilliSecond();
             eth_state = STATE_LINKDELAY;
         }
         break;
 
     case STATE_LINKDELAY:
-        if (! is_phy_linked(eth_phy_id)) {
+        if (! eth_is_up) {
             eth_state = STATE_WAITLINK;
         }
         else if (SYSGetMilliSecond() - time_start >= 1000) {
@@ -316,7 +316,7 @@ static void update_state()
 
     case STATE_REST:
         if (SYSGetMilliSecond() - time_start >= 10) {
-            if (is_phy_linked(eth_phy_id)) {
+            if (eth_is_up) {
                 eth_state = STATE_LINKED;
             } else {
                 time_start = SYSGetMilliSecond();
@@ -326,7 +326,7 @@ static void update_state()
 
     case STATE_LINKED:
     default:
-        if (! is_phy_linked(eth_phy_id)) {
+        if (! eth_is_up) {
             eth_state = STATE_REST;
             time_start = SYSGetMilliSecond();
         }
@@ -334,25 +334,8 @@ static void update_state()
     }
 }
 
-static void send_next_packet()
+static void send_packet(IPSTACK *packet)
 {
-    if (ETHCON1 & PIC32_ETHCON1_TXRTS)
-        return;
-
-    if (eth_tx_packet != 0){
-        IPSRelease(eth_tx_packet);
-        eth_tx_packet = 0;
-    }
-
-    // if we can send right now
-    // is the adaptor up and do we have the transmit bit?
-    if (! eth_is_linked())
-        return;
-
-    IPSTACK *packet = get_packet(&transmit_queue);
-    if (! packet)
-        return;
-
     // clear the tx buffer, but we don't have to
     // worry about the last one as it is just
     // a dummy that will always have the software
@@ -415,15 +398,16 @@ static void send_next_packet()
 
     // transmit
     ETHCON1SET = PIC32_ETHCON1_TXRTS;
-
-    eth_tx_packet = packet;
 }
 
 static void read_packet(char *buf, unsigned bufsz)
 {
-    // we are not reading a frame
-    if (frame_size == 0 || read_nbytes == frame_size)
-    {
+    if (! DESC_SOP(&rx_desc[read_index])) {
+        // Start of packet is expected
+        //printf("Something is wrong!\n");
+    }
+
+    if (frame_size == 0 || read_nbytes == frame_size) {
         return;
     }
 
@@ -522,11 +506,6 @@ static int is_frame_received()
     if (DESC_EOWN(rd)) {
         // There are no receive descriptors to process.
         return 0;
-    }
-
-    if (! DESC_SOP(rd)) {
-        // Start of packet is expected
-        //printf("Something is wrong!\n");
     }
     return 1;
 }
@@ -699,14 +678,28 @@ void eth_periodic()
 {
     update_state();
 
-    // Transmit any pending data.
-    send_next_packet();
+    if (! (ETHCON1 & PIC32_ETHCON1_TXRTS)) {
+        // TX is idle; transmit any pending data.
+        if (eth_tx_packet != 0){
+            // Release previous packet.
+            release_packet(eth_tx_packet);
+            eth_tx_packet = 0;
+        }
 
-// POTENTIALLY THIS COULD GO IN AN ISR
-    if (is_frame_received()) {
+        if (eth_state == STATE_LINKED) {
+            IPSTACK *packet = get_packet(&transmit_queue);
+            if (packet != 0) {
+                send_packet(packet);
+                eth_tx_packet = packet;
+            }
+        }
+    }
+
+    // Check whether a frame has been received.
+    if (eth_state >= STATE_WAITLINK &&
+        ! DESC_EOWN(&rx_desc[receive_index])) {
         receive_packet();
     }
-// END OF ISR
 }
 
 //
