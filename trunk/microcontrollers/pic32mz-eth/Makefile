@@ -10,8 +10,8 @@ GDB             = /usr/local/mips-gcc-4.7.2/bin/mips-elf-gdb
 CFLAGS          = -O -Wall -Werror -DPIC32MZ
 LDFLAGS         = -T pic32mz.ld -e _start
 
-PROG            = blink
-#PROG            = uart
+#PROG            = blink
+PROG            = uart
 
 all:            $(PROG).hex
 

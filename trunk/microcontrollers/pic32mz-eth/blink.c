@@ -76,11 +76,11 @@ int main()
     mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
     /* Use pins RH0-RH2, RH6, RH11 as output: LED control. */
-    LATHCLR = (1 << 0) |        // RH0 - LED1 on SK (red), LED1 on MEB-II
-              (1 << 1) |        // RH1 - LED2 on SK (yellow), LED3 on MEB-II
-              (1 << 2) |        // RH2 - LED3 on SK (green), LED2 on MEB-II
-              (1 << 6) |        // RH6 - LED4 on MEB-II
-              (1 << 11);        // RH11 - LED5 on MEB-II
+    LATHCLR = (1 << 0) |        /* RH0 - LED1 on SK (red), LED1 on MEB-II */
+              (1 << 1) |        /* RH1 - LED2 on SK (yellow), LED3 on MEB-II */
+              (1 << 2) |        /* RH2 - LED3 on SK (green), LED2 on MEB-II */
+              (1 << 6) |        /* RH6 - LED4 on MEB-II */
+              (1 << 11);        /* RH11 - LED5 on MEB-II */
     TRISHCLR = (1 << 0) |
                (1 << 1) |
                (1 << 2) |
