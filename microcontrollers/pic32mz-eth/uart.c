@@ -11,22 +11,8 @@
 PIC32_DEVCFG (
     DEVCFG0_JTAG_DISABLE |      /* Disable JTAG port */
     DEVCFG0_TRC_DISABLE,        /* Disable trace port */
-#if 0
-    /* Case #1: using internal fast RC oscillator.
-     * The frequency is around 8 MHz.
-     * PLL multiplies it to 200 MHz. */
-    DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
-    DEVCFG1_POSCMOD_DISABLE |   /* Primary oscillator disabled */
-    DEVCFG1_CLKO_DISABLE,       /* CLKO output disable */
 
-    DEVCFG2_FPLLIDIV_1 |        /* PLL input divider = 1 */
-    DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
-    DEVCFG2_FPLLICLK_FRC |      /* Select FRC as input to PLL */
-    DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
-    DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
-#endif
-#if 1
-    /* Case #2: using primary oscillator with external crystal 24 MHz.
+    /* Using primary oscillator with external crystal 24 MHz.
      * PLL multiplies it to 200 MHz. */
     DEVCFG1_FNOSC_SPLL |        /* System clock supplied by SPLL */
     DEVCFG1_POSCMOD_EXT |       /* External generator */
@@ -39,7 +25,7 @@ PIC32_DEVCFG (
     DEVCFG2_FPLLRNG_5_10 |      /* PLL input range is 5-10 MHz */
     DEVCFG2_FPLLMULT(50) |      /* PLL multiplier = 50x */
     DEVCFG2_FPLLODIV_2,         /* PLL postscaler = 1/2 */
-#endif
+
     DEVCFG3_FETHIO |            /* Default Ethernet pins */
     DEVCFG3_USERID(0xffff));    /* User-defined ID */
 
@@ -152,15 +138,21 @@ int main()
     //mtc0 (C0_CAUSE, 0, 1 << 23);        /* Set IV */
     //mtc0 (C0_STATUS, 0, 0);             /* Clear BEV */
 
-    /* Use pins PA0-PA3, PF13, PF12, PA6-PA7 as output: LED control. */
-    LATACLR = 0xCF;
-    TRISACLR = 0xCF;
-    LATFCLR = 0x3000;
-    TRISFCLR = 0x3000;
+    /* Use pins RH0-RH2, RH6, RH11 as output: LED control. */
+    LATHCLR = (1 << 0) |        /* RH0 - LED1 on SK (red), LED1 on MEB-II */
+              (1 << 1) |        /* RH1 - LED2 on SK (yellow), LED3 on MEB-II */
+              (1 << 2) |        /* RH2 - LED3 on SK (green), LED2 on MEB-II */
+              (1 << 6) |        /* RH6 - LED4 on MEB-II */
+              (1 << 11);        /* RH11 - LED5 on MEB-II */
+    TRISHCLR = (1 << 0) |
+               (1 << 1) |
+               (1 << 2) |
+               (1 << 6) |
+               (1 << 11);
 
     /* Initialize UART. */
-    U1RXR = 2;                          /* assign UART1 receive to pin RPF4 */
-    RPF5R = 1;                          /* assign pin RPF5 to UART1 transmit */
+    U1RXR = 13;                 /* assign UART1 receive to pin RA14 */
+    RPA15R = 1;                 /* assign pin RA15 to UART1 transmit */
 
     U1BRG = PIC32_BRG_BAUD (MHZ * 500000, 115200);
     U1STA = 0;
@@ -203,15 +195,12 @@ int main()
     printreg ("DEVCFG3 ", DEVCFG3);
 
     while (1) {
-        /* Invert pins PA7-PA0. */
-        LATAINV = 1 << 0;  udelay (100000);
-        LATAINV = 1 << 1;  udelay (100000);
-        LATAINV = 1 << 2;  udelay (100000);
-        LATAINV = 1 << 3;  udelay (100000);
-        LATFINV = 1 << 13; udelay (100000);
-        LATFINV = 1 << 12; udelay (100000);
-        LATAINV = 1 << 6;  udelay (100000);
-        LATAINV = 1 << 7;  udelay (100000);
+        /* Invert pins RH0-RH2, RH6, RH11. */
+        LATHINV = 1 << 0;  udelay (100000);
+        LATHINV = 1 << 1;  udelay (100000);
+        LATHINV = 1 << 2;  udelay (100000);
+        LATHINV = 1 << 6;  udelay (100000);
+        LATHINV = 1 << 11; udelay (100000);
 
         loop++;
         putch ('.');
