@@ -1,7 +1,7 @@
 #!/usr/bin/env seed
 
-Seed.import_namespace("Gtk");
-Gtk.init (null, null);
+Gtk = imports.gi.Gtk;
+Gtk.init(Seed.argv);
 
 var builder = new Gtk.Builder ();
 builder.add_from_file ("demo.xml")

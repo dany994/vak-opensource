@@ -33,45 +33,45 @@
 ~~~~~~~~~~~~~~~~~~~~
 
 	if (условие)
-		предложение
+            предложение
 
 	if (условие)
-		предложение
+            предложение
 	else
-		предложение
+            предложение
 
 	switch (предложение)
 	case (предложение)
-		предложение
+            предложение
 	...
 	else
-		предложение
+            предложение
 
 	while (условие)
-		предложение
+            предложение
 	else
-		предложение
+            предложение
 
 	do
-		предложение
+            предложение
 	while (условие)
 	else
-		предложение
+            предложение
 
 Завершители:
-	формула return;
-	формула return when (условие)
+	return (формула);
+	return (формула) when (условие)
 	break
 	continue
 
 Пример: вычисление факториала.
 
-	fact (n)
+	fact(n)
 	{
-		if (n < 1)
-			1;
-		else
-			fact(n-1) * n;
+            if (n < 1)
+                1;
+            else
+                fact(n-1) * n;
 	}
 
 Пример: таблица идентификаторов.
@@ -81,23 +81,23 @@
 	var dict [100];
 	var ptab, pdict;
 
-	function hash (name) =
+	function hash(name) =
 	{
-		(name >> 24) + (name >> 16) + (name >> 8) + name % 100;
+            (name >> 24) + (name >> 16) + (name >> 8) + name % 100;
 	}
 
-	function search (name) =
+	function search(name) =
 	{
-		var ptr, elem;
+            var ptr, elem;
 
-		hash (name) -> ptr;
-		dict[ptr] -> elem;
-		if (elem != 0) {
-			do {
-				if (tab[elem].name == name)
-					elem return;
-			} while (tab[elem].next -> elem);
-		}
-		dict[ptr] -> tab [1 +->
+            hash(name) -> ptr;
+            dict[ptr] -> elem;
+            if (elem != 0) {
+                do {
+                    if (tab[elem].name == name)
+                        return (elem);
+                } while (tab[elem].next -> elem);
+            }
+            dict[ptr] -> tab [1 +->
 	}
 }
