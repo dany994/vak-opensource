@@ -1,4 +1,3 @@
-000020 @OPTIONS MAIN
 000021 Identification Division.
 000030 Program-Id.  Hello.
 000040 Environment Division.

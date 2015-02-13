@@ -1,4 +1,3 @@
-000010 @OPTIONS MAIN
 000020 Identification Division.
 000030 Program-Id.  Chapt04c.
 000031* Data Entry Screen
@@ -13,12 +12,13 @@
 000057 Working-Storage Section.
 000058 01  Keyboard-Status.
 000059     03  Accept-Status Pic 9.
-000060     03  Function-Key  Pic X.
+000060     03  Filler        Pic X.
 000061     03  System-Use    Pic X.
-000062 01  Cursor-Position.
-000063     03  Cursor-Row    Pic 9(2) Value 1.
-000064     03  Cursor-Column Pic 9(2) Value 1.
-000065 01  Screen-Items.
+000062     03  Function-Key  Pic X.
+000063 01  Cursor-Position.
+000064     03  Cursor-Row    Pic 9(2) Value 1.
+000065     03  Cursor-Column Pic 9(2) Value 1.
+000066 01  Screen-Items.
 000075     03  Last-Name           Pic X(25)   Value Spaces.
 000085     03  First-Name          Pic X(15)   Value Spaces.
 000095     03  Middle-Name         Pic X(10)   Value Spaces.
@@ -31,7 +31,7 @@
 000180     03  Work-Phone          Pic X(20)   Value Spaces.
 000190     03  Other-Phone         Pic X(20)   Value Spaces.
 000200     03  Start-Date          Pic 9(8)    Value Zeros.
-000210     03  Last-Rent-Paid-Date Pic 9(8)    Value Zeros.
+000210     03  Last-Rent-Paid-Dat  Pic 9(8)    Value Zeros.
 000220     03  Next-Rent-Due-Date  Pic 9(8)    Value Zeros.
 000230     03  Rent-Amount         Pic 9(4)v99 Value Zeros.
 000240     03  Consignment-Percent Pic 9(3)    Value Zeros.
@@ -89,7 +89,7 @@
 000307     03  Line 14 Column 13 Pic 99/99/9999 Using Start-Date
 000308         Reverse-Video.
 000309     03  Line 14 Column 24 Value "Last Paid Date: ".
-000310     03  Line 14 Column 40 Pic 99/99/9999 Using Last-Rent-Paid-Date
+000310     03  Line 14 Column 40 Pic 99/99/9999 Using Last-Rent-Paid-Dat
 000311         Reverse-Video.
 000312     03  Line 14 Column 50 Value "Next Rent Due on: ".
 000313     03  Line 14 Column 68 Pic 99/99/9999 Using Next-Rent-Due-Date
@@ -104,4 +104,4 @@
 000322 Chapt04c-Start.
 000323     Display Data-Entry-Screen.
 000324     Accept Data-Entry-Screen.
-000325     Stop Run.
+000325     Stop Run.

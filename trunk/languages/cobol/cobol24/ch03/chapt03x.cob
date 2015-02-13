@@ -1,4 +1,3 @@
-000460 @OPTIONS MAIN
 000470 Identification Division.
 000480 Program-Id.  Chapt03x.
 000481* Chapter 3 Exercise Solution
