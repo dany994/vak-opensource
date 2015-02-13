@@ -30,7 +30,7 @@ func Sieve() {
 	go Generate(ch);  // Start Generate() as a subprocess.
 	for {
 		prime := <-ch;
-		print(prime, "\n");
+		print(prime, " ");
 		ch1 := make(chan int);
 		go Filter(ch, ch1, prime);
 		ch = ch1
