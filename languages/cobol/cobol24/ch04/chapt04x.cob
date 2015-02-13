@@ -1,4 +1,3 @@
-000010 @OPTIONS MAIN
 000020 Identification Division.
 000030 Program-Id.  Chapt04x.
 000031* Chapter 4 Exercise Solution
@@ -13,12 +12,13 @@
 000057 Working-Storage Section.
 000058 01  Keyboard-Status.
 000059     03  Accept-Status Pic 9.
-000060     03  Function-Key  Pic X.
+000060     03  Filler        Pic X.
 000061     03  System-Use    Pic X.
-000062 01  Cursor-Position.
-000063     03  Cursor-Row    Pic 9(2) Value 1.
-000064     03  Cursor-Column Pic 9(2) Value 1.
-000065 01  Screen-Items.
+000062     03  Function-Key  Pic X.
+000063 01  Cursor-Position.
+000064     03  Cursor-Row    Pic 9(2) Value 1.
+000065     03  Cursor-Column Pic 9(2) Value 1.
+000066 01  Screen-Items.
 000075     03  Last-Name           Pic X(25)   Value Spaces.
 000085     03  First-Name          Pic X(15)   Value Spaces.
 000095     03  Middle-Name         Pic X(10)   Value Spaces.
@@ -91,4 +91,4 @@
 000327 Chapt04x-Start.
 000328     Display Data-Entry-Screen.
 000329     Accept Data-Entry-Screen.
-000330     Stop Run.
+000330     Stop Run.

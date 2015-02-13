@@ -1,4 +1,3 @@
-000460 @OPTIONS MAIN
 000470 Identification Division.
 000480 Program-Id.  Chapt03b.
 000490 Environment Division.

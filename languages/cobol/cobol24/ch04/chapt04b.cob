@@ -8,4 +8,4 @@
 000110 Working-Storage Section.
 000120 01  Cursor-Position.
 000130     03  Cursor-Row    Pic 9(2) Value 1.
-000140     03  Cursor-Column Pic 9(2) Value 1.
+000140     03  Cursor-Column Pic 9(2) Value 1.
