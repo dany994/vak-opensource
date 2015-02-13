@@ -74,6 +74,7 @@
 #	define	SWLO	swl
 
         .globl  bcopy_under_test
+	.type	bcopy_under_test, @function
 bcopy_under_test:
 	.set	noreorder
 	addu	t0, a0, a2		# t0 = end of s1 region

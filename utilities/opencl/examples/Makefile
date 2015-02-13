@@ -8,7 +8,8 @@ CFLAGS          = -O -g -I..
 CXXFLAGS        = -O -g -I..
 #CPPFLAGS        = -O -I.. -DCL_USE_DEPRECATED_OPENCL_1_1_APIS
 LDFLAGS         = -g
-LDLIBS          = -lPVROCL
+#LDLIBS          = -lPVROCL
+LDLIBS          = -lOpenCL
 #LDLIBS          = -lOpenCL
 endif
 

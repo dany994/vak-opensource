@@ -16,7 +16,7 @@ ifneq (,$(wildcard /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude)
     # Linux
     PROGTOOL    = /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude \
                   -C /opt/mpide-0023-linux32-20140605-test/hardware/tools/avrdude.conf \
-                  -P /dev/ttyUSB0
+                  -P /dev/ttyUSB1
 endif
 ifneq (,$(wildcard /Applications/Mpide.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude))
     # Mac OS X
@@ -26,15 +26,15 @@ ifneq (,$(wildcard /Applications/Mpide.app/Contents/Resources/Java/hardware/tool
 endif
 PROGTOOL        += -c stk500v2 -p 32MZ2048ECG100 -b 115200
 
-PROG            = led
-#PROG            = uart
+#PROG            = led
+PROG            = uart
 
 all:            $(PROG).hex
 
 $(PROG).hex:    $(PROG).c
 		$(CC) $(CFLAGS) -c $<
 		$(CC) $(LDFLAGS) $(PROG).o -o $(PROG).elf
-		$(OBJCOPY) -O ihex $(PROG).elf $(PROG).hex
+		$(OBJCOPY) -O ihex --change-addresses=0x80000000 $(PROG).elf $(PROG).hex
 #		$(BIN2HEX) -a $(PROG).elf
 		$(OBJDUMP) -mmips:isa32r2 -d -S $(PROG).elf > $(PROG).dis
 

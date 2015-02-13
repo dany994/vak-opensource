@@ -24,7 +24,8 @@
 #   make show_boards - list all the boards defined in boards.txt
 #
 #MPIDE_DIR       = /opt/mpide-0023-linux-20120903
-MPIDE_DIR       = /opt/mpide-0023-linux32-20130817-test
+#MPIDE_DIR       = /opt/mpide-0023-linux32-20130817-test
+MPIDE_DIR       = /opt/mpide-0023-linux32-20140605-test
 
 ARDUINO_PORT    = /dev/ttyUSB*
 

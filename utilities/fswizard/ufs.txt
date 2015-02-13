@@ -1,6 +1,6 @@
 
 (*) Linux tools for UFS:
-        badsect.ufs, dumpfs.ufs, ffsinfo, fsck.ufs, fsdb.ufs, growfs.ufs, mkfs.ufs, tunefs.ufs
+        ufsutils: badsect.ufs, dumpfs.ufs, ffsinfo, fsck.ufs, fsdb.ufs, growfs.ufs, mkfs.ufs, tunefs.ufs
         makefs
         testdisk
 

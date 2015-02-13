@@ -146,6 +146,9 @@ int main()
     printreg ("DEVCFG1",  DEVCFG1);
     printreg ("DEVCFG2",  DEVCFG2);
     printreg ("DEVCFG3",  DEVCFG3);
+    printreg ("EMAC1SA0", EMAC1SA0);
+    printreg ("EMAC1SA1", EMAC1SA1);
+    printreg ("EMAC1SA2", EMAC1SA2);
 
     while (1) {
         /* Stop simulation. */

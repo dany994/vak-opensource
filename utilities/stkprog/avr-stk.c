@@ -26,20 +26,20 @@ struct _avr_t {
 	char		*name;
 	unsigned char	sequence_number;
 	unsigned char	have_fuse;
-	unsigned char	have_checksum_cmd;
-	unsigned char	vendor_code;
-	unsigned char	part_family;
-	unsigned char	part_number;
+//	unsigned char	have_checksum_cmd;
+//	unsigned char	vendor_code;
+//	unsigned char	part_family;
+//	unsigned char	part_number;
 	unsigned char	stk_flag;
-	unsigned char	hardware_version;
-	unsigned char	software_major;
-	unsigned char	software_minor;
-	unsigned char	sck_duration;
-	unsigned char	topcard;
-	unsigned char	target_voltage;
-	unsigned char	aref_voltage;
-	unsigned char	osc_pscale;
-	unsigned char	osc_cmatch;
+//	unsigned char	hardware_version;
+//	unsigned char	software_major;
+//	unsigned char	software_minor;
+//	unsigned char	sck_duration;
+//	unsigned char	topcard;
+//	unsigned char	target_voltage;
+//	unsigned char	aref_voltage;
+//	unsigned char	osc_pscale;
+//	unsigned char	osc_cmatch;
 	unsigned char	page_addr_fetched;
 	u_int32_t	flash_size;
 	unsigned short	page_size;
@@ -292,6 +292,7 @@ static void avr_prog_disable (avr_t *avr)
 	}
 }
 
+#if 0
 static unsigned char avr_read_signature (avr_t *avr, unsigned char addr)
 {
 	unsigned char cmd [6] = { CMD_READ_FUSE_ISP,
@@ -329,6 +330,7 @@ static void avr_set_param (avr_t *avr, unsigned char addr, unsigned char val)
 		exit (-1);
 	}
 }
+#endif
 
 static int avr_detect (avr_t *avr)
 {
@@ -361,7 +363,7 @@ retry:
 	}
 	if (retry_count >= 7)
 		return 0;
-
+#if 0
 	avr_set_param (avr, PARAM_SCK_DURATION, 2);
 
 	/* Get programmer parameters */
@@ -377,10 +379,10 @@ retry:
 		avr->osc_pscale = avr_get_param (avr, PARAM_OSC_PSCALE);
 		avr->osc_cmatch = avr_get_param (avr, PARAM_OSC_CMATCH);
 	}
-
+#endif
 	avr_prog_enable (avr);
 	avr->last_load_addr = -1;
-
+#if 0
 	/* Get AVR Info */
 	avr->vendor_code = avr_read_signature (avr, 0);	/* 0x1e is Atmel */
 	avr->part_family = avr_read_signature (avr, 1);
@@ -439,14 +441,14 @@ retry:
 		printf ("Vendor Code = %x, Part Family = %x, Part Number = %x\n",
 			avr->vendor_code, avr->part_family, avr->part_number);
 	}
-
+#endif
 	/* Identify device according to family.
 	 * Assume ATmega128. */
 	avr->flash_size = 0xfe00 * 2;
-	avr->have_fuse = 1;
+//	avr->have_fuse = 1;
 	avr->page_delay = 5;
 	avr->page_size = 256;
-
+#if 0
 	/* Identify device according to family. */
 	switch (avr->part_family) {
 	case 0x01:
@@ -776,6 +778,7 @@ retry:
 		avr->name = "Unknown";
 		break;
 	}
+#endif
 	return 1;
 }
 
@@ -878,14 +881,10 @@ avr_t *avr_open (char *devname)
 		fprintf (stderr, "No response from device.\n");
 		exit (-1);
 	}
-
-#if defined(__WIN32__) || defined(WIN32)
 ok:
+#if defined(__WIN32__) || defined(WIN32)
 	ctmo.ReadTotalTimeoutConstant = 5000;
 	SetCommTimeouts (avr->fd, &ctmo);
-
-#else
-ok:
 #endif
 	return avr;
 }
@@ -1048,6 +1047,7 @@ void avr_write_block (avr_t *avr, u_int32_t addr,
 	avr_flush_write_buffer (avr);
 }
 
+#if 0
 static int avr_get_checksum (avr_t *avr, u_int32_t addr,
 	u_int32_t bytes, unsigned short *sum)
 {
@@ -1074,7 +1074,7 @@ static int avr_get_checksum (avr_t *avr, u_int32_t addr,
  * Use 0xffff as the initial sum value.
  * Do not forget to invert the final checksum value.
  */
-unsigned short
+static unsigned short
 crc16 (unsigned const char *buf, unsigned short len)
 {
 	static const unsigned short poly_tab [16] = {
@@ -1097,13 +1097,15 @@ crc16 (unsigned const char *buf, unsigned short len)
 	}
 	return sum;
 }
+#endif
 
 int avr_check_block (avr_t *avr, u_int32_t addr,
 	unsigned char *buf, u_int32_t bytes)
 {
-	unsigned short i, sum, memsum;
+	unsigned short i;
 	unsigned char page [256];
-
+#if 0
+	unsigned short sum, memsum;
 	if (avr->have_checksum_cmd &&
 	    avr_get_checksum (avr, addr, bytes, &memsum)) {
 		sum = crc16 (buf, bytes);
@@ -1116,7 +1118,7 @@ int avr_check_block (avr_t *avr, u_int32_t addr,
 	}
 	/* No checksum command available. */
 	avr->have_checksum_cmd = 0;
-
+#endif
 	avr_read_block (avr, addr, page, 256);
 	for (i=0; i<bytes; ++i) {
 		if (page[i] != buf[i]) {
@@ -1156,6 +1158,7 @@ again:
 	avr->last_load_addr += 256 / 2;
 }
 
+#if 0
 void avr_lock (avr_t *avr)
 {
 	unsigned char cmd [6] = { CMD_READ_FUSE_ISP,
@@ -1171,12 +1174,14 @@ void avr_lock (avr_t *avr)
 		exit (-1);
 	}
 }
+#endif
 
 unsigned char avr_have_fuse (avr_t *avr)
 {
 	return avr->have_fuse;
 }
 
+#if 0
 unsigned char avr_read_fuse (avr_t *avr)
 {
 	unsigned char cmd [6] = { CMD_READ_FUSE_ISP,
@@ -1275,3 +1280,4 @@ void avr_write_fuse_extended (avr_t *avr, unsigned char val)
 		exit (-1);
 	}
 }
+#endif

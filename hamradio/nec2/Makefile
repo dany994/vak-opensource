@@ -4,12 +4,12 @@
 #VERSION         = $(shell $(FC) --version | head -1)
 
 #--- Linux, gfortran
-#FC              = gfortran -fno-automatic -fsecond-underscore
-#VERSION         = $(shell $(FC) --version | head -1)
+FC              = gfortran -fno-automatic -fsecond-underscore
+VERSION         = $(shell $(FC) --version | head -1)
 
 #--- Linux, f2c and fort77
-FC              = fort77
-VERSION         = $(shell f2c --version)
+#FC              = fort77
+#VERSION         = $(shell f2c --version)
 
 CFLAGS          = -O -Wall
 
