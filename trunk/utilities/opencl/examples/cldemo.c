@@ -200,6 +200,7 @@ printf ("=21=\n");
 	return 0;
 }
 
+#if 0
 size_t strlen(const char *s)
 {
     size_t n = 0;
@@ -213,3 +214,4 @@ size_t strlen(const char *s)
     printf ("'%s' -> %u \n", s0, n);
     return n;
 }
+#endif

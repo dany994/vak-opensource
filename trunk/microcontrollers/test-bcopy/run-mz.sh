@@ -1,4 +1,4 @@
 #!/bin/sh
 
-#trace="-t bcopy.trace"
-../../pic32mz -m $trace ../wifire/boot.hex test-bcopy.hex
+trace="-t bcopy.trace"
+/local/BSD/pic32sim/pic32mz -m $trace /local/BSD/pic32sim/demo/wifire/boot.hex test-bcopy.hex

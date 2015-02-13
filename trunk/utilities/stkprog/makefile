@@ -1,4 +1,3 @@
-DEST		= /usr/local/bin
 MINGW		= /usr/bin/i586-mingw32msvc-
 CC		= gcc
 CFLAGS		= -Wall -Werror -O

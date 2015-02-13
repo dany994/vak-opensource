@@ -237,7 +237,7 @@ int main()
              PIC32_UMODE_ON;                /* UART Enable */
     U4STASET = PIC32_USTA_URXEN |           /* Receiver Enable */
                PIC32_USTA_UTXEN;            /* Transmit Enable */
-
+#if 0
     /*
      * Test bcopy function with length from 0 up to maximum.
      */
@@ -245,7 +245,44 @@ int main()
     for (nbytes=0; nbytes<=MAX_NBYTES; nbytes++) {
         test(nbytes);
     }
+#else
+    static const char src[] = "/etc/master.passwd";
+    //char *dst = malloc(1024);
+    static char dst[1024];
 
+    int slen = sizeof(src);
+    const char *s;
+    char *d;
+
+    // Place an initial copy at the start of the scratchpad.
+    bcopy_under_test(src, dst, slen);  // memcpy
+    putstr("Copy from internal to dst: "); putstr(dst); putstr("\n");
+
+    s = dst;
+    d = dst + 64;
+    bcopy_under_test(s, d, slen);      // 1
+    putstr("Copy from offset=0 to offset=64: "); putstr(d); putstr("\n");
+
+    s = dst + 64;
+    d = dst;
+    bcopy_under_test(s, d, slen);      // 2
+    putstr("Copy from offset=64 to offset=0: "); putstr(d); putstr("\n");
+
+    s = dst;
+    d = dst + 65;
+    bcopy_under_test(s, d, slen);      // 3
+    putstr("Copy from offset=0 to offset=65: "); putstr(d); putstr("\n");
+
+    s = src;
+    d = dst + 64;
+    bcopy_under_test(s, d, slen);      // memcpy
+    putstr("Copy from internal to offset=64: "); putstr(dst); putstr("\n");
+
+    s = dst + 64;
+    d = dst + 1;
+    bcopy_under_test(s, d, slen);      // 4
+    putstr("Copy from offset=64 to offset=1: "); putstr(d); putstr("\n");
+#endif
     while (1) {
         /* Stop simulation. */
         asm volatile ("sltiu $zero, $zero, 0xABC2");

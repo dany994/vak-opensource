@@ -213,7 +213,6 @@ int main (int argc, char **argv)
 	extern char *optarg;
 	extern int optind;
 	void *t0;
-	unsigned char fuse_low = 0, fuse_high = 0, fuse_ext = 0;
 	long left, used;
 
 	while ((ch = getopt(argc, argv, "vDuf:o:")) != -1) {
@@ -276,8 +275,10 @@ int main (int argc, char **argv)
 		printf ("Device: %s, using %ld bytes of total %ld flash memory, %ld bytes free\n",
 			avr_name (avr), (unsigned long) used, (unsigned long) avr_flash_size (avr), (unsigned long) left);
 	}
-
+#if 0
 	if (avr_have_fuse (avr)) {
+                unsigned char fuse_low = 0, fuse_high = 0, fuse_ext = 0;
+
 		if(!program) {
 			/* Read settings from device. */
 			fuse_low = avr_read_fuse (avr);
@@ -386,7 +387,7 @@ int main (int argc, char **argv)
 		printf ("WARNING: device has no fuses\n");
 		do_options = 0;
 	}
-
+#endif
 	blocks_per_dot = 8;
 	for (;;) {
 		count = 1 + (srec_len - srec_start) /
@@ -420,11 +421,12 @@ int main (int argc, char **argv)
 	printf ("#\nDone in %ld seconds, %ld bytes per second\n",
 		(unsigned long) seconds_elapsed (t0),
                 (unsigned long) (srec_len - srec_start) / seconds_elapsed (t0));
-
+#if 0
 	if (program && ! dont_lock) {
 		/* Write lock bits. */
 		avr_lock (avr);
 		printf ("Memory read/write protection enabled.\n");
 	}
+#endif
 	return 0;
 }

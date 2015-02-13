@@ -1585,6 +1585,67 @@
 #define SBT13WR0        PIC32_R (0xFB458)
 
 /*--------------------------------------
+ * Ethernet registers.
+ */
+#define ETHCON1         PIC32_R (0x82000)   /* Control 1 */
+#define ETHCON1CLR      PIC32_R (0x82004)
+#define ETHCON1SET      PIC32_R (0x82008)
+#define ETHCON1INV      PIC32_R (0x8200c)
+#define ETHCON2         PIC32_R (0x82010)   /* Control 2: RX data buffer size */
+#define ETHTXST         PIC32_R (0x82020)   /* Tx descriptor start address */
+#define ETHRXST         PIC32_R (0x82030)   /* Rx descriptor start address */
+#define ETHHT0          PIC32_R (0x82040)   /* Hash tasble 0 */
+#define ETHHT1          PIC32_R (0x82050)   /* Hash tasble 1 */
+#define ETHPMM0         PIC32_R (0x82060)   /* Pattern match mask 0 */
+#define ETHPMM1         PIC32_R (0x82070)   /* Pattern match mask 1 */
+#define ETHPMCS         PIC32_R (0x82080)   /* Pattern match checksum */
+#define ETHPMO          PIC32_R (0x82090)   /* Pattern match offset */
+#define ETHRXFC         PIC32_R (0x820a0)   /* Receive filter configuration */
+#define ETHRXWM         PIC32_R (0x820b0)   /* Receive watermarks */
+#define ETHIEN          PIC32_R (0x820c0)   /* Interrupt enable */
+#define ETHIENCLR       PIC32_R (0x820c4)
+#define ETHIENSET       PIC32_R (0x820c8)
+#define ETHIENINV       PIC32_R (0x820cc)
+#define ETHIRQ          PIC32_R (0x820d0)   /* Interrupt request */
+#define ETHIRQCLR       PIC32_R (0x820d4)
+#define ETHIRQSET       PIC32_R (0x820d8)
+#define ETHIRQINV       PIC32_R (0x820dc)
+#define ETHSTAT         PIC32_R (0x820e0)   /* Status */
+#define ETHRXOVFLOW     PIC32_R (0x82100)   /* Receive overflow statistics */
+#define ETHFRMTXOK      PIC32_R (0x82110)   /* Frames transmitted OK statistics */
+#define ETHSCOLFRM      PIC32_R (0x82120)   /* Single collision frames statistics */
+#define ETHMCOLFRM      PIC32_R (0x82130)   /* Multiple collision frames statistics */
+#define ETHFRMRXOK      PIC32_R (0x82140)   /* Frames received OK statistics */
+#define ETHFCSERR       PIC32_R (0x82150)   /* Frame check sequence error statistics */
+#define ETHALGNERR      PIC32_R (0x82160)   /* Alignment errors statistics */
+#define EMAC1CFG1       PIC32_R (0x82200)   /* MAC configuration 1 */
+#define EMAC1CFG2       PIC32_R (0x82210)   /* MAC configuration 2 */
+#define EMAC1CFG2CLR    PIC32_R (0x82214)
+#define EMAC1CFG2SET    PIC32_R (0x82218)
+#define EMAC1CFG2INV    PIC32_R (0x8221c)
+#define EMAC1IPGT       PIC32_R (0x82220)   /* MAC back-to-back interpacket gap */
+#define EMAC1IPGR       PIC32_R (0x82230)   /* MAC non-back-to-back interpacket gap */
+#define EMAC1CLRT       PIC32_R (0x82240)   /* MAC collision window/retry limit */
+#define EMAC1MAXF       PIC32_R (0x82250)   /* MAC maximum frame length */
+#define EMAC1SUPP       PIC32_R (0x82260)   /* MAC PHY support */
+#define EMAC1SUPPCLR    PIC32_R (0x82264)
+#define EMAC1SUPPSET    PIC32_R (0x82268)
+#define EMAC1SUPPINV    PIC32_R (0x8226c)
+#define EMAC1TEST       PIC32_R (0x82270)   /* MAC test */
+#define EMAC1MCFG       PIC32_R (0x82280)   /* MII configuration */
+#define EMAC1MCMD       PIC32_R (0x82290)   /* MII command */
+#define EMAC1MCMDCLR    PIC32_R (0x82294)
+#define EMAC1MCMDSET    PIC32_R (0x82298)
+#define EMAC1MCMDINV    PIC32_R (0x8229c)
+#define EMAC1MADR       PIC32_R (0x822a0)   /* MII address */
+#define EMAC1MWTD       PIC32_R (0x822b0)   /* MII write data */
+#define EMAC1MRDD       PIC32_R (0x822c0)   /* MII read data */
+#define EMAC1MIND       PIC32_R (0x822d0)   /* MII indicators */
+#define EMAC1SA0        PIC32_R (0x82300)   /* MAC station address 0 */
+#define EMAC1SA1        PIC32_R (0x82310)   /* MAC station address 1 */
+#define EMAC1SA2        PIC32_R (0x82320)   /* MAC station address 2 */
+
+/*--------------------------------------
  * Interrupt controller registers.
  */
 #define INTCON		PIC32_R (0x10000)	/* Interrupt Control */
