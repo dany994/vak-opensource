@@ -79,7 +79,7 @@ static bool    g_reactivatePsPoll = false;
 //==============================================================================
 static void SendPowerModeMsg(t_WFPwrModeReq *p_powerMode);
 static void PowerStateSet(uint8_t powerSaveState);
-static INLINE void SetPsPollReactivate(void);
+static void SetPsPollReactivate(void);
 extern void SetListenInterval(uint16_t listenInterval);
 extern void SetDtimInterval(uint16_t dtimInterval);
 
@@ -354,7 +354,7 @@ static void PowerStateSet(uint8_t powerSaveState)
     g_powerSaveState = powerSaveState;
 }
 
-INLINE void WF_PowerStateGet(uint8_t *p_powerState)
+void WF_PowerStateGet(uint8_t *p_powerState)
 {
     *p_powerState = g_powerSaveState;
 }
@@ -369,17 +369,17 @@ void EnsureWFisAwake(void)
     }
 }
 
-static INLINE void SetPsPollReactivate(void)
+static void SetPsPollReactivate(void)
 {
     g_reactivatePsPoll = true;
 }
 
-INLINE bool isPsPollNeedReactivate(void)
+bool isPsPollNeedReactivate(void)
 {
     return g_reactivatePsPoll;
 }
 
-INLINE void ClearPsPollReactivate(void)
+void ClearPsPollReactivate(void)
 {
     g_reactivatePsPoll = false;
 }

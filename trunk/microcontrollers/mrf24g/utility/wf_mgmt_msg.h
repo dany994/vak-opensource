@@ -1,67 +1,23 @@
-/*******************************************************************************
- MRF24WG Universal Driver Management Messages
-
-  Summary: This module contains management message defintions
-
-  Description: None
-*******************************************************************************/
-
-/* MRF24WG0M Universal Driver
-*
-* Copyright (c) 2012-2013, Microchip <www.microchip.com>
-* Contact Microchip for the latest version.
-*
-* This program is free software; distributed under the terms of BSD
-* license:
-*
-* Redistribution and use in source and binary forms, with or without modification,
-* are permitted provided that the following conditions are met:
-*
-* 1.    Redistributions of source code must retain the above copyright notice, this
-*        list of conditions and the following disclaimer.
-* 2.    Redistributions in binary form must reproduce the above copyright notice,
-*        this list of conditions and the following disclaimer in the documentation
-*        and/or other materials provided with the distribution.
-* 3.    Neither the name(s) of the above-listed copyright holder(s) nor the names
-*        of its contributors may be used to endorse or promote products derived
-*        from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-
+/*
+ * MRF24WG Universal Driver Management Messages
+ *
+ * This module contains management message defintions
+ */
 #ifndef __WF_MGMT_MSG_H
 #define __WF_MGMT_MSG_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define WF_MAX_TX_MGMT_MSG_SIZE         (128)
 #define MGMT_RESP_1ST_DATA_BYTE_INDEX   (4)  /* first data byte of Mgmt response starts at index 4 */
 
-enum
-{
+enum {
     DO_NOT_FREE_MGMT_BUFFER = 0,
     FREE_MGMT_BUFFER        = 1,
 };
 
-
-
 /*----------------------------------------------*/
 /* Management Message Request/Response Subtypes */
 /*----------------------------------------------*/
-typedef enum
-{
+typedef enum {
     /* Misc subtypes */
     WF_SCAN_SUBTYPE                             = 1,
     WF_JOIN_SUBTYPE                             = 2,
@@ -112,8 +68,7 @@ typedef enum
 } tMgmtMsgSubtypes;
 
 // parameter message subtypes
-typedef enum
-{
+typedef enum {
     PARAM_MAC_ADDRESS                   = 1,       /* the device MAC address (6 bytes)                              */
     PARAM_REGIONAL_DOMAIN               = 2,       /* the device Regional Domain (1 byte)                           */
     PARAM_RTS_THRESHOLD                 = 3,       /* the RTS byte threshold 256 - 2347 (2 bytes)                   */
@@ -175,8 +130,7 @@ typedef enum
 /* Used in conjunction with the WF_CA_SET_ELEMENT_SUBTYPE and  */
 /* WF_CA_GET_ELEMENT_SUBTYPE message subtypes                  */
 /*-------------------------------------------------------------*/
-typedef enum
-{
+typedef enum {
     WF_CA_ELEMENT_ALL                          = 0,
     WF_CA_ELEMENT_SCANTYPE                     = 1,
     WF_CA_ELEMENT_RSSI                         = 2,
@@ -200,8 +154,7 @@ typedef enum
 /* Connection Manager Event Message Subtypes */
 /* (Used in Mgmt Indicate messages)          */
 /*-------------------------------------------*/
-typedef enum t_mgmtIndicateSubtypes
-{
+typedef enum t_mgmtIndicateSubtypes {
     WF_EVENT_CONNECTION_ATTEMPT_STATUS_SUBTYPE = 6,
     WF_EVENT_CONNECTION_LOST_SUBTYPE           = 7,
     WF_EVENT_CONNECTION_REESTABLISHED_SUBTYPE  = 8,
@@ -222,8 +175,7 @@ typedef enum t_mgmtIndicateSubtypes
 
 /* This structure describes the format of the first four bytes of all */
 /* mgmt response messages received from the MRF24W                 */
-typedef struct mgmtRxHdrStruct
-{
+typedef struct mgmtRxHdrStruct {
     uint8_t  type;          /* always 0x02                  */
     uint8_t  subtype;       /* mgmt msg subtype             */
     uint8_t  result;        /* 1 if success, else failure   */
@@ -231,24 +183,18 @@ typedef struct mgmtRxHdrStruct
 
 } t_mgmtMsgRxHdr;
 
-typedef struct mgmtIndicateHdrStruct
-{
+typedef struct mgmtIndicateHdrStruct {
     uint8_t type;       /* always WF_MGMT_INDICATE_MSG_TYPE (2) */
     uint8_t subType;    /* event type                           */
 } t_mgmtIndicateHdr;
 
 
 void WF_CPCreate(void);
-INLINE void SignalMgmtMsgRx();
+void SignalMgmtMsgRx();
 void SendMgmtMsg(uint8_t *p_header, uint8_t headerLength, uint8_t *p_data, uint8_t dataLength);
 void WaitForMgmtResponse(uint8_t expectedSubtype, uint8_t freeAction);
 void WaitForMgmtResponseAndReadData(uint8_t expectedSubtype, uint8_t numDataBytes, uint8_t startIndex, uint8_t *p_data);
 
-INLINE void ClearMgmtConfirmMsg(void);
-
-#ifdef __cplusplus
-}
-#endif
+void ClearMgmtConfirmMsg(void);
 
 #endif /* __WF_MGMT_MSG_H */
-

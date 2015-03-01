@@ -1,43 +1,8 @@
-/*******************************************************************************
- MRF24WG primary header file
-
-  Summary: Function prototypes and defines for Universal Driver API.
-
-  Description: None
-*******************************************************************************/
-
-/* MRF24WG0M Universal Driver
-*
-* Copyright (c) 2012-2013, Microchip <www.microchip.com>
-* Contact Microchip for the latest version.
-*
-* This program is free software; distributed under the terms of BSD
-* license:
-*
-* Redistribution and use in source and binary forms, with or without modification,
-* are permitted provided that the following conditions are met:
-*
-* 1.    Redistributions of source code must retain the above copyright notice, this
-*        list of conditions and the following disclaimer.
-* 2.    Redistributions in binary form must reproduce the above copyright notice,
-*        this list of conditions and the following disclaimer in the documentation
-*        and/or other materials provided with the distribution.
-* 3.    Neither the name(s) of the above-listed copyright holder(s) nor the names
-*        of its contributors may be used to endorse or promote products derived
-*        from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
+/*
+ * MRF24WG primary header file
+ *
+ * Function prototypes and defines for Universal Driver API.
+ */
 #ifndef __MRF24WG_UNIVERSAL_DRIVER_API_H
 #define __MRF24WG_UNIVERSAL_DRIVER_API_H
 
@@ -50,11 +15,6 @@
 #include "wf_events.h"
 #include "wf_connection_event_codes.h"
 #include "wf_stubs.h"
-#include "wf_customize.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define UD_VERSION  "v1.2"
 
@@ -346,23 +306,18 @@ typedef struct wpaContext
     t_wpaKeyInfo keyInfo;
 } t_wpaContext;
 
-#if defined(WF_USE_WPS_SECURITY)
 // See WF_SetSecurityWps()
 typedef struct wpsContext
 {
-    uint8_t wpsSecurityType;                    // WF_SECURITY_WPS_PUSH_BUTTON or WF_SECURITY_WPS_PIN
-    uint8_t wpsPin[WF_WPS_PIN_LENGTH];          // if using WF_SECURITY_WPS_PIN then pointer to 8-digit pin
-    uint8_t wpsPinLength;                       // should always be 8
-    #if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
-        bool    getPassPhrase;                  // True if ASCII passphrase should be sent back to host
-                                                //  so host can (more quickly) calculate binary key.  False
-                                                //  if the MRF24WG should calculate the binary key
-
-        t_wpaKeyInfo *p_keyInfo;                // pointer to where the Universal driver will
-                                                // store passphrase info (must be global memory)
-    #endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
+    uint8_t wpsSecurityType;                // WF_SECURITY_WPS_PUSH_BUTTON or WF_SECURITY_WPS_PIN
+    uint8_t wpsPin[WF_WPS_PIN_LENGTH];      // if using WF_SECURITY_WPS_PIN then pointer to 8-digit pin
+    uint8_t wpsPinLength;                   // should always be 8
+    bool    getPassPhrase;                  // True if ASCII passphrase should be sent back to host
+                                            //  so host can (more quickly) calculate binary key.  False
+                                            //  if the MRF24WG should calculate the binary key
+    t_wpaKeyInfo *p_keyInfo;                // pointer to where the Universal driver will
+                                            // store passphrase info (must be global memory)
 } t_wpsContext;
-#endif /* WF_USE_WPS_SECURITY */
 
 // structure/union can be used in functions WF_SecurityWepSet, WF_SecurityWpaSet,
 // and WF_SetSecurityWps
@@ -373,9 +328,7 @@ typedef struct
     {
         t_wepContext wepContext;
         t_wpaContext wpaContext;
-#if defined(WF_USE_WPS_SECURITY)
         t_wpsContext wpsContext;
-#endif
     } t_context;
 } t_securityContext;
 #endif
@@ -384,9 +337,7 @@ typedef union
 {
     t_wepContext wepContext;
     t_wpaContext wpaContext;
-#if defined(WF_USE_WPS_SECURITY)
     t_wpsContext wpsContext;
-#endif
 } t_securityContext;
 
 
@@ -485,7 +436,6 @@ typedef struct
 
 } t_scanResult;
 
-#if defined(WF_USE_SOFTWARE_MULTICAST_FILTER)
 // see WF_SwMulticastFilterSet
 typedef struct swMulticastConfigStruct
 {
@@ -494,9 +444,7 @@ typedef struct swMulticastConfigStruct
     uint8_t macAddress[WF_MAC_ADDRESS_LENGTH];
     uint8_t macBitMask;
 } t_swMulticastConfig;
-#endif /* WF_USE_SOFTWARE_MULTICAST_FILTER */
 
-#if defined(WF_USE_WPS_SECURITY)
 typedef struct wpsCredentialsStruct
 {
     uint8_t  ssid[WF_MAX_SSID_LENGTH];          // network SSID
@@ -509,7 +457,6 @@ typedef struct wpsCredentialsStruct
     uint8_t  keyLen;                            // key length, in bytes
     uint8_t  bssid[WF_MAC_ADDRESS_LENGTH];      // BSSID
 } t_wpsCredentials;
-#endif /* WF_USE_WPS_SECURITY */
 
 //==============================================================================
 //                                  MRF24WG API
@@ -537,15 +484,10 @@ void WF_ReconnectModeSet(uint8_t retryCount, uint8_t deauthAction, uint8_t beaco
 void WF_SecurityOpenSet(void);
 void WF_SecurityWepSet(t_wepContext *p_context);
 void WF_SecurityWpaSet(t_wpaContext *p_context);
-#if defined(WF_USE_WPS_SECURITY)
-    void WF_SecurityWpsSet(t_wpsContext *p_context);
-    void WF_WpsCredentialsGet(t_wpsCredentials *p_cred);
-#endif /* WF_USE_WPS_SECURITY */
-
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
-    void WF_WpaConvPassphraseToKey(t_wpaKeyInfo *p_keyInfo);
-    void WF_WpsKeyGenerate(void);
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
+void WF_SecurityWpsSet(t_wpsContext *p_context);
+void WF_WpsCredentialsGet(t_wpsCredentials *p_cred);
+void WF_WpaConvPassphraseToKey(t_wpaKeyInfo *p_keyInfo);
+void WF_WpsKeyGenerate(void);
 
 // WiFi Connection functions
 //--------------------------
@@ -563,14 +505,12 @@ void WF_ScanResultGet(uint8_t listIndex, t_scanResult *p_scanResult);
 void WF_PsPollEnable(t_psPollContext *p_context);
 void WF_PsPollDisable(void);
 void WF_Hibernate(void);
-INLINE void WF_PowerStateGet(uint8_t *p_powerState);
-
+void WF_PowerStateGet(uint8_t *p_powerState);
 
 // Maximum Tx power functions
 //---------------------------
 void WF_TxPowerFactoryMaxGet(uint8_t *p_maxTPower);
 void WF_TxPowerMaxSet(uint8_t maxTxPower);
-
 
 // WiFi status functions
 //----------------------
@@ -578,12 +518,7 @@ void WF_DeviceInfoGet(t_deviceInfo *p_deviceInfo);
 void WF_MacStatsGet(t_macStats *p_stats);
 
 // multicast filter functions
-#if defined(WF_USE_HARDWARE_MULTICAST_FILTER)
-    void WF_SetHwMultiCastFilter(uint8_t multicastFilterId, uint8_t multicastAddress[WF_MAC_ADDRESS_LENGTH]);
-#endif /* WF_USE_HARDWARE_MULTICAST_FILTER */
-#if defined(WF_USE_SOFTWARE_MULTICAST_FILTER)
-    void WF_SwMulticastFilterSet(t_swMulticastConfig *p_config);
-#endif /* WF_USE_SOFTWARE_MULTICAST_FILTER */
+void WF_SetHwMultiCastFilter(uint8_t multicastFilterId, uint8_t multicastAddress[WF_MAC_ADDRESS_LENGTH]);
 
 // data tx functions
 //------------------
@@ -613,10 +548,5 @@ void WF_BssidSet(uint8_t *p_bssid);
 void WF_RssiSet(uint8_t rssi);
 void WF_RtsThresholdSet(uint16_t rstThreshold);
 void WF_LinkDownThresholdSet(uint8_t threshold);
-
-#ifdef __cplusplus
-}
-#endif
-
 
 #endif /* __MRF24WG_UNIVERSAL_DRIVER_API_H */

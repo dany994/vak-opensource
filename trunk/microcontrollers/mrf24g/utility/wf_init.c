@@ -313,10 +313,6 @@ static uint32_t CompleteInitialization(void)
     WF_PsPollDisable();
     ClearPsPollReactivate();
 
-#if defined(WF_USE_SOFTWARE_MULTICAST_FILTER)
-    EnableSWMulticastFilter();
-#endif
-
     return errorCode;
 }
 

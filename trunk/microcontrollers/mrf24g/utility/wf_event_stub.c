@@ -67,13 +67,11 @@ void WF_ProcessEvent(uint8_t eventType, uint32_t eventData)
             wfmrf24.priv.cScanResults = eventData;
             break;
 
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
         case WF_WPS_EVENT_KEY_CALCULATION_REQUEST:
             WF_WpsKeyGenerate(); // can be called here or later, but must be called
                                  // to complete WPS connection
             wfmrf24.priv.fMRFBusy = TRUE;   // wait for connection status or error.
             break;
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
 
         case WF_EVENT_MRF24WG_MODULE_ASSERT:
             //TODO: OutputMrf24wgAssertInfo(eventData);
