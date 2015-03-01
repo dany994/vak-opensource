@@ -1,5 +1,5 @@
 /*******************************************************************************
- MRF24WG Data Tx/Rx 
+ MRF24WG Data Tx/Rx
 
   Summary: Contains functions pertaining to WiFi data Tx/Rx
 
@@ -82,7 +82,7 @@ INLINE void ClearPacketRx(void)
 }
 
 // called from WiFi_Task
-void  RxPacketCheck(void)
+void RxPacketCheck(void)
 {
     if (isPacketRx())
     {
@@ -132,7 +132,7 @@ void WF_TxPacketTransmit(uint16_t packetSize)
     // write out internal preamble, starting at index 0 in the raw window
     RawWrite(RAW_DATA_TX_ID, 0, sizeof(txDataPreamble), txDataPreamble);
 
-    // overwrite the Ethernet source address in Tx packet with SNAP header 
+    // overwrite the Ethernet source address in Tx packet with SNAP header
     // (starts at index 10 within packet, after 4 bytes of preamble and 6 bytes of dest address)
     RawWrite(RAW_DATA_TX_ID, sizeof(txDataPreamble) + WF_MAC_ADDRESS_LENGTH, SNAP_SIZE, snapHdr);
 
@@ -168,7 +168,7 @@ uint16_t WF_RxPacketLengthGet(void)
 
     // set raw pointer to start of 802.11 payload (start of Ethernet packet)
     RawSetIndex(RAW_DATA_RX_ID, sizeof(t_rxPreamble) + ENC_PREAMBLE_OFFSET);
-    
+
     // now that buffer mounted it is safe to reenable interrupts, which were left disabled
     // in the WiFi interrupt handler.
     WF_EintEnable();
@@ -185,4 +185,3 @@ void WF_RxPacketCopy(uint8_t *p_buf, uint16_t length)
 {
     RawGetByte(RAW_DATA_RX_ID, p_buf, length);
 }
-

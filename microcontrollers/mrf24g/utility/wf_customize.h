@@ -46,7 +46,8 @@ extern "C" {
 // Compiler specific keyword used for inline functions.  Customize for your compiler.
 // If inline functions are not supported make the define empty.
 //------------------------------------------------------------------------------
-#define INLINE  inline
+//#define INLINE  inline
+#define INLINE
 // TODO: need OVERLAY_MEMORY_USED switch for global variables in interrupt?
 
 
@@ -92,7 +93,7 @@ extern "C" {
 //   filtering is done with software and is not as efficient as the above option.
 //
 //  If multicast filters are not needed for the application, simply comment
-//  out both options.  
+//  out both options.
 //------------------------------------------------------------------------------
 #define WF_USE_HARDWARE_MULTICAST_FILTER
 //#define WF_USE_SOFTWARE_MULTICAST_FILTER
@@ -112,6 +113,3 @@ extern "C" {
 
 
 #endif /* __WF_CUSTOMIZE_H */
-
-
-

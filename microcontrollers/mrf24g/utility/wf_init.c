@@ -107,7 +107,7 @@ void WF_Init(void)
     uint32_t    tStart = 0;
 
     UdStateInit();      // initialize internal state machine
-    
+
     WF_SpiInit();       // initialize the SPI interface
     WF_GpioInit();      // initialize HIBERNATE and RESET I/O lines
     WF_TimerInit();     // initialize and start the 1ms timer
@@ -115,26 +115,26 @@ void WF_Init(void)
 
     // take chip out of hibernate and out of reset; must be done before calling ResetPll()
     WF_GpioSetHibernate(WF_HIGH);  // Toggle the module into and then out of hibernate
-    tStart = SYSGetMilliSecond();
-    while(SYSGetMilliSecond() - tStart <= 2);
+    tStart = WF_TimerRead();
+    while(WF_TimerRead() - tStart <= 2);
     WF_GpioSetHibernate(WF_LOW);
-    tStart = SYSGetMilliSecond();
-    while(SYSGetMilliSecond() - tStart <= 300);
+    tStart = WF_TimerRead();
+    while(WF_TimerRead() - tStart <= 300);
 
 
     WF_GpioSetReset(WF_LOW);       // Toggle the module into and out of reset
-    tStart = SYSGetMilliSecond();
-    while(SYSGetMilliSecond() - tStart <= 2);
+    tStart = WF_TimerRead();
+    while(WF_TimerRead() - tStart <= 2);
     WF_GpioSetReset(WF_HIGH);
-    tStart = SYSGetMilliSecond();
-    while(SYSGetMilliSecond() - tStart <= 5);
+    tStart = WF_TimerRead();
+    while(WF_TimerRead() - tStart <= 5);
 
 
     // MRF24WG silicon work-around -- needed for A1 silicon to initialize PLL values correctly
     ResetPll();
 
     ClearMgmtConfirmMsg();    // no mgmt response messages received
-    
+
     g_mrf24wgResetState = MRF24WG_RESET_START;
 
 }
@@ -275,7 +275,7 @@ void ChipResetStateMachine(void)
   Summary:
     Completes the MRF24WG intitialization after the MRF24WG has been reset and is
     ready for operations.
- 
+
   Description:
     Called from ChipResetStateMachine().
 
@@ -307,7 +307,7 @@ static uint32_t CompleteInitialization(void)
         errorCode = (((uint32_t)WF_EVENT_ERROR << 16) | (uint32_t)UD_ERROR_MRF24WB_NOT_SUPPORTED);
     }
 
-    WF_SetTxDataConfirm(WF_DISABLED);     // Disable Tx Data confirms (from the MRF24W) 
+    WF_SetTxDataConfirm(WF_DISABLED);     // Disable Tx Data confirms (from the MRF24W)
     WF_CPCreate();                        // create a connection profile, get its ID and store it
 
     WF_PsPollDisable();
@@ -361,14 +361,14 @@ static void Init_Interrupts(void)
              WF_HOST_INT_MASK_FIFO_0_THRESHOLD |     // Data Rx Msg interrupt
              WF_HOST_INT_MASK_RAW_0_INT_0      |     // RAW0 Move Complete (Data Rx) interrupt
              WF_HOST_INT_MASK_RAW_1_INT_0      |     // RAW1 Move Complete (Data Tx) interrupt
-             WF_HOST_INT_MASK_INT2);                 // Interrupt 2 interrupt                  
+             WF_HOST_INT_MASK_INT2);                 // Interrupt 2 interrupt
     HostInterruptRegInit(mask8, WF_INT_ENABLE);
 
     // enable the following MRF24W interrupts in the INT2 16-bit register
     mask16 = (WF_HOST_INT_MASK_RAW_2_INT_0     |    // RAW2 Move Complete (Mgmt Rx) interrupt
               WF_HOST_INT_MASK_RAW_3_INT_0     |    // RAW3 Move Complete (Mgmt Tx) interrupt
               WF_HOST_INT_MASK_RAW_4_INT_0     |    // RAW4 Move Complete (Scratch) interrupt
-              WF_HOST_INT_MASK_RAW_5_INT_0     |    // RAW5 Move Complete (Scratch) interrupt 
+              WF_HOST_INT_MASK_RAW_5_INT_0     |    // RAW5 Move Complete (Scratch) interrupt
               WF_HOST_INT_MASK_MAIL_BOX_0_WRT);     // MRF24WG assertion interrupt
     HostInterrupt2RegInit(mask16, WF_INT_ENABLE);
 
