@@ -45,8 +45,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  DEFINES
@@ -689,7 +689,7 @@ uint32_t udSetTxPowerMax(uint8_t maxTxPower)
 uint32_t UdSetHwMulticastFilter(uint8_t multicastFilterId, uint8_t *p_multicastAddress)
 {
     p_multicastAddress = p_multicastAddress;  // avoid warning
-    
+
     if((multicastFilterId != WF_MULTICAST_FILTER_1) && (multicastFilterId != WF_MULTICAST_FILTER_2))
     {
         return UD_ERROR_INVALID_MULTICAST_FILTER_ID;
@@ -812,7 +812,7 @@ static uint32_t ValidateSsid(uint8_t *p_ssid, uint8_t ssidLength)
         errorCode = UD_ERROR_SSID_TOO_LONG;
         goto errorExit;
     }
-    
+
     // if SSID length > 0, but SSID string not defined
     if ((ssidLength > 0) && (p_ssid[0] == 0x00))
     {

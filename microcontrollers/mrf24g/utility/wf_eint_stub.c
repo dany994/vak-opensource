@@ -4,7 +4,7 @@
  * Summary: Functions to control MRF24WG External Interrupt.
  */
 #include "board_profile.h"
-#include "./ud_inc/shared/wf_universal_driver.h"
+#include "wf_universal_driver.h"
 
 /*
  * Configure host processor external interrupt.

@@ -26,7 +26,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "./ud_inc/shared/wf_universal_driver.h"
+#include "wf_universal_driver.h"
 
 #if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
 
@@ -261,11 +261,11 @@ static void pbkdf2_sha1_f(const char *passphrase, const char *ssid,
 	for (i = 1; i < iterations; i++) {
 		uint8_t* pTemp;
 
-		
+
 		hmac_sha1((uint8_t *) passphrase, passphrase_len, ((i&0x01)? tmp:tmp2), SHA1_MAC_LEN,
 			  ((i&0x01)? tmp2:tmp));
 		//memcpy(tmp, tmp2, SHA1_MAC_LEN);
-		 
+
 		pTemp = (i&0x01)? tmp2 : tmp;
 
 		for (j = 0; j < SHA1_MAC_LEN; j++)
@@ -360,7 +360,7 @@ By Steve Reid <sreid@sea-to-sky.net>
 100% Public Domain
 
 -----------------
-Modified 7/98 
+Modified 7/98
 By James H. Brown <jbrown@burgoyne.com>
 Still 100% Public Domain
 
@@ -382,7 +382,7 @@ Since the file IO in main() reads 16K at a time, any file 8K or larger would
 be guaranteed to generate the wrong hash (e.g. Test Vector #3, a million
 "a"s).
 
-I also changed the declaration of variables i & j in SHA1Update to 
+I also changed the declaration of variables i & j in SHA1Update to
 unsigned long from unsigned int for the same reason.
 
 These changes should make no difference to any 32 bit implementations since
@@ -409,7 +409,7 @@ Still 100% public domain
 Modified 4/01
 By Saul Kravitz <Saul.Kravitz@celera.com>
 Still 100% PD
-Modified to run on Compaq Alpha hardware.  
+Modified to run on Compaq Alpha hardware.
 
 -----------------
 Modified 4/01
@@ -467,7 +467,7 @@ void SHAPrintContext(SHA1_CTX *context, char *msg)
 {
 	printf("%s (%d,%d) %x %x %x %x %x\n",
 	       msg,
-	       context->count[0], context->count[1], 
+	       context->count[0], context->count[1],
 	       context->state[0],
 	       context->state[1],
 	       context->state[2],

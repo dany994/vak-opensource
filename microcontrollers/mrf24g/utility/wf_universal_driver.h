@@ -50,7 +50,7 @@
 #include "wf_events.h"
 #include "wf_connection_event_codes.h"
 #include "wf_stubs.h"
-#include "../../wf_customize.h"
+#include "wf_customize.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -182,7 +182,7 @@ typedef enum t_networkType
     WF_NETWORK_TYPE_INFRASTRUCTURE = 1,
     WF_NETWORK_TYPE_ADHOC          = 2,
     WF_NETWORK_TYPE_P2P            = 3,
-            
+
     WF_MAX_NETWORK_TYPE            = 3
 } t_networkType;
 
@@ -620,4 +620,3 @@ void WF_LinkDownThresholdSet(uint8_t threshold);
 
 
 #endif /* __MRF24WG_UNIVERSAL_DRIVER_API_H */
-

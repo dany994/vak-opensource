@@ -46,8 +46,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  LOCAL DATA TYPES
@@ -183,14 +183,14 @@ void WF_Connect(void)
                       1:255 -- number of missed beacons before connection declared lost
 
     beaconTimeoutAction -- WF_ATTEMPT_TO_RECONNECT or WF_DO_NOT_ATTEMPT_TO_RECONNECT
- 
+
   Returns:
     None
 
   Remarks:
     If this function is not called, the MRF2WG default is the equivalent of:
         WF_SetReconnectMode(3, WF_ATTEMPT_TO_RECONNECT, 0, WF_DO_NOT_ATTEMPT_TO_RECONNECT);
-        
+
     Examples of different scenarios are below.
 
     Example 1: MRF24WG should not do any connection retries and only report deauth events to host:
@@ -259,7 +259,7 @@ void WF_ReconnectModeSet(uint8_t retryCount, uint8_t deauthAction, uint8_t beaco
     WF_Connect() is called.
 
   Precondition:
-    
+
 
   Parameters:
     None.
@@ -279,7 +279,7 @@ void WF_Disconnect(void)
     * Disconnect is allowed only in connected state.
     * If module FW is in the midst of connection (or reconnection) process, then
     * disconnect can hammer connection process, and furthermore it may cause
-    * fatal failure in module FW operation. 
+    * fatal failure in module FW operation.
     */
 
     // verify it is OK to issue a disconnect command
@@ -342,7 +342,7 @@ void WF_ChannelListSet(uint8_t *p_channelList, uint8_t numChannels)
         return;
     }
 #endif
-    
+
     LowLevel_CASetElement(WF_CA_ELEMENT_CHANNEL_LIST,  /* Element ID                   */
                           p_channelList,               /* pointer to element data      */
                           numChannels);                /* number of element data bytes */
@@ -418,7 +418,7 @@ void WF_RssiSet(uint8_t rssi)
 #endif
     LowLevel_CASetElement(WF_CA_ELEMENT_RSSI,   // Element ID
                           &rssi,                // pointer to element data
-                          sizeof(rssi));        // number of element data bytes 
+                          sizeof(rssi));        // number of element data bytes
 }
 
 
@@ -440,7 +440,7 @@ void WF_RssiSet(uint8_t rssi)
 
   Remarks:
     Response msg is actually two bytes, the second byte being the Connection Profile ID.
-    Since this is not being used, set msgData to a 1-byte array.  
+    Since this is not being used, set msgData to a 1-byte array.
   *****************************************************************************/
 void WF_ConnectionStateGet(uint8_t *p_state)
 {
@@ -457,7 +457,7 @@ void WF_ConnectionStateGet(uint8_t *p_state)
 
     // wait for mgmt response, read data, free after read
     WaitForMgmtResponseAndReadData(WF_CM_GET_CONNECTION_STATUS_SUBYTPE,
-                                   sizeof(msgData),                  // num data bytes to read          
+                                   sizeof(msgData),                  // num data bytes to read
                                    MGMT_RESP_1ST_DATA_BYTE_INDEX,    // only used if num data bytes > 0
                                    msgData);                         // only used if num data bytes > 0
 
@@ -657,4 +657,3 @@ static void LowLevel_CAGetElement(uint8_t elementId,
     }
 }
 #endif
-

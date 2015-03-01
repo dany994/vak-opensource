@@ -41,8 +41,8 @@
 //==============================================================================
 //                                  INCLUDES
 //==============================================================================
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  DEFINES
@@ -136,7 +136,7 @@ void RawInit(void)
     RawMoveState.waitingForRawMoveCompleteInterrupt = false;    // not waiting for RAW move complete
 
     // By default the MRF24WG firmware mounts Scratch to RAW 1 after reset. This
-    // is not being used, so unmount the scratch from this RAW window. 
+    // is not being used, so unmount the scratch from this RAW window.
     ScratchUnmount(RAW_ID_1);
 
     /* Permanently mount scratch memory, index defaults to 0. */
@@ -845,5 +845,3 @@ INLINE uint8_t GetRawDataWindowState(uint8_t rawId)
 {
     return RawWindowState[rawId];
 }
-
-
