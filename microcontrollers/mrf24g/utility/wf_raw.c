@@ -148,18 +148,17 @@ void RawInit(void)
 
 }
 
-
-INLINE bool isWaitingForRawMoveCompleteInterrupt(void)
+bool isWaitingForRawMoveCompleteInterrupt(void)
 {
     return RawMoveState.waitingForRawMoveCompleteInterrupt;
 }
 
-INLINE void ClearWaitingForRawMoveCompleteInterrupt(void)
+void ClearWaitingForRawMoveCompleteInterrupt(void)
 {
     RawMoveState.waitingForRawMoveCompleteInterrupt = false;
 }
 
-INLINE void SignalRawInterruptEvent(uint8_t rawIntMask)
+void SignalRawInterruptEvent(uint8_t rawIntMask)
 {
     RawMoveState.rawInterruptMask = rawIntMask;
 }
@@ -834,14 +833,13 @@ static uint16_t WaitForRawMoveComplete(uint8_t rawId)
     return ( byteCount );
 }
 
-
 /* sets and gets the state of RAW data tx/rx windows */
-INLINE void SetRawDataWindowState(uint8_t rawId, uint8_t state)
+void SetRawDataWindowState(uint8_t rawId, uint8_t state)
 {
     RawWindowState[rawId] = state;
 }
 
-INLINE uint8_t GetRawDataWindowState(uint8_t rawId)
+uint8_t GetRawDataWindowState(uint8_t rawId)
 {
     return RawWindowState[rawId];
 }

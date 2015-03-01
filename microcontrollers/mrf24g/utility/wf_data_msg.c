@@ -66,17 +66,17 @@ const uint8_t snapHdr[6] = {SNAP_VAL, SNAP_VAL, SNAP_CTRL_VAL, SNAP_TYPE_VAL, SN
 bool g_HostRAWPacketRx;
 
 
-INLINE void SignalPacketRx(void)
+void SignalPacketRx(void)
 {
     g_HostRAWPacketRx = true;
 }
 
-INLINE bool isPacketRx(void)
+bool isPacketRx(void)
 {
     return g_HostRAWPacketRx;
 }
 
-INLINE void ClearPacketRx(void)
+void ClearPacketRx(void)
 {
     g_HostRAWPacketRx = false;
 }

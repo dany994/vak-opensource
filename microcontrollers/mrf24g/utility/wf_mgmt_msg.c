@@ -53,27 +53,26 @@ static volatile bool gMgmtConfirmMsgReceived  = false;
 //==============================================================================
 //                                  LOCAL FUNCTION PROTOTYPES
 //==============================================================================
-static INLINE void SignalMgmtConfirmMsg(void);
+static void SignalMgmtConfirmMsg(void);
 static void WFProcessMgmtIndicateMsg(void);
 
 
-INLINE void ClearMgmtConfirmMsg(void)
+void ClearMgmtConfirmMsg(void)
 {
     gMgmtConfirmMsgReceived = false;
 }
 
-static INLINE void SignalMgmtConfirmMsg(void)
+static void SignalMgmtConfirmMsg(void)
 {
     gMgmtConfirmMsgReceived = true;
 }
 
-static INLINE bool isMgmtConfirmMsg(void)
+static bool isMgmtConfirmMsg(void)
 {
     return gMgmtConfirmMsgReceived;
 }
 
-
-INLINE void SignalMgmtMsgRx()
+void SignalMgmtMsgRx()
 {
     uint8_t msgType;
 
@@ -378,7 +377,6 @@ static void WFProcessMgmtIndicateMsg(void)
             break;
 #endif
 
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
         //--------------------------------------------
         case WF_EVENT_KEY_CALCULATION_REQUEST_SUBTYPE:
         //--------------------------------------------
@@ -390,7 +388,6 @@ static void WFProcessMgmtIndicateMsg(void)
                     sizeof(t_wpaKeyInfo),
                     (uint8_t *)GetWpsPassPhraseInfo());
             break;
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
 
         //------
         default:

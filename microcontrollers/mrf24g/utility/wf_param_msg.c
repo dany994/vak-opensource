@@ -301,7 +301,6 @@ void WF_RtsThresholdSet(uint16_t rtsThreshold)
     SendSetParamMsg(PARAM_RTS_THRESHOLD, (uint8_t *)&tmp, sizeof(tmp));
 }
 
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
 /*******************************************************************************
   Function:
     void WF_WpsYieldPassphrase2Host(void)
@@ -336,9 +335,6 @@ void SetPSK(uint8_t *psk)
 {
     SendSetParamMsg(PARAM_SET_PSK, psk, WF_WPA_KEY_LENGTH);
 }
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
-
-
 
 /*******************************************************************************
   Function:
@@ -425,7 +421,6 @@ void WF_LinkDownThresholdSet(uint8_t threshold)
 }
 
 
-#if defined(WF_USE_HARDWARE_MULTICAST_FILTER)
 /*******************************************************************************
   Function:
     void WF_SetHwMultiCastFilter(UINT8 multicastFilterId,
@@ -495,119 +490,6 @@ void WF_SetHwMultiCastFilter(uint8_t multicastFilterId,
     memcpy(&msgData[2], (void *)multicastAddress, WF_MAC_ADDRESS_LENGTH);
     SendSetParamMsg(PARAM_COMPARE_ADDRESS, msgData, sizeof(msgData) );
 }
-#endif /* WF_USE_HARDWARE_MULTICAST_FILTER */
-
-#if defined(WF_USE_SOFTWARE_MULTICAST_FILTER)
-void EnableSWMulticastFilter(void)
-{
-    uint8_t enable = 1;
-
-    SendSetParamMsg(PARAM_USE_SW_MULTICAST_FILTER, &enable, sizeof(enable));
-}
-
-/*******************************************************************************
-  Function:
-    void WF_SwMulticastFilterSet(tWFMulticastConfig *p_config);
-
-  Summary:
-    Sets a multicast address filter using one of the 16 multicast filters.
-
-  Description:
-    This function allows the application to configure up to 16 Multicast
-    Address Filters on the MRF24WG.
-
-    filterId -- WF_MULTICAST_FILTER_1 thru WF_MULTICAST_FILTER_16
-
-    action   -- WF_MULTICAST_DISABLE_ALL (default)
-                   The Multicast Filter discards all received
-                   multicast messages -- they will not be forwarded
-                   to the Host MCU.  The remaining fields in this
-                   structure are ignored.
-
-                WF_MULTICAST_ENABLE_ALL
-                   The Multicast Filter forwards all received multicast messages
-                   to the Host MCU. The remaining fields in this structure are
-                   ignored.
-
-                WF_MULTICAST_USE_FILTERS
-                   The MAC filter will be used and the remaining fields in this
-                   structure configure which Multicast messages are forwarded to
-                   the Host MCU.
-
-    macBytes -- Array containing the MAC address to filter on (using the destination
-                address of each incoming 802.11 frame).  Specific bytes within the
-                MAC address can be designated as "don't care" bytes.  See macBitMask.
-                This field in only used if action = WF_MULTICAST_USE_FILTERS.
-
-    macBitMask -- A byte where bits 5:0 correspond to macBytes[5:0].  If the bit is
-                  zero then the corresponding MAC byte must be an exact match for the
-                  frame to be forwarded to the Host PIC.  If the bit is one then the
-                  corresponding MAC byte is a ?don?t care? and not used in the
-                  Multicast filtering process.  This field in only used if
-                  action = WF_MULTICAST_USE_FILTERS.
-
-    By default, all Multicast Filters are inactive.
-
-    Example -- Filter on Multicast Address of 01:00:5e:xx:xx:xx where xx are don't care bytes.
-                  p_config->filterId = WF_MULTICAST_FILTER_1
-
-                                         [0] [1] [2] [3] [4] [5]
-                  p_config->macBytes[] = 01, 00, 5e, ff, ff, ff  (0xff are the don't care bytes)
-
-                  p_config->macBitMask = 0x38 --> bits 5:3 = 1 (don't care on bytes 3,4,5)
-                                              --> bits 2:0 = 0 (exact match required on bytes 0,1,2)
-
-  Precondition:
-    MACInit must be called first.
-
-  Parameters:
-    p_config -- pointer to the multicast config structure.  See documentation.
-
-  Returns:
-    None.
-
-  Remarks:
-    None.
- *****************************************************************************/
- void WF_SwMulticastFilterSet(t_swMulticastConfig *p_config)
-{
-    t_swMulticastConfig msg;
-    uint8_t filterId;
-
-#if defined(WF_ERROR_CHECKING)
-    UdSetSwMulticastFilter(p_config);
-#endif
-
-    filterId = p_config->filterId;
-
-    // if want no multicast messages forwarded to the host PIC
-    if (p_config->action == WF_MULTICAST_DISABLE_ALL)
-    {
-        msg.filterId   = WF_MULTICAST_FILTER_1;
-        msg.action     = ADDRESS_FILTER_DEACTIVATE;
-        msg.macBitMask = 0x00;  // don't care
-        memset(msg.macAddress, 0xff, WF_MAC_ADDRESS_LENGTH);
-    }
-    /* else if want all multicast messages forwarded to the host PIC */
-    else if (p_config->action == WF_MULTICAST_ENABLE_ALL)
-    {
-        msg.filterId   = WF_MULTICAST_FILTER_1;
-        msg.action     = MULTICAST_ADDRESS;
-        msg.macBitMask = 0x3f;  // don't care from host, but MRF24WG needs to see this bitmask
-        memcpy((void *)msg.macAddress, (void *)p_config->macAddress, WF_MAC_ADDRESS_LENGTH);
-    }
-    /* else if want a single multicast address or group of multicast addresses forwarded to Host PIC */
-    else if (p_config->action == WF_MULTICAST_USE_FILTERS)
-    {
-        msg.filterId   = filterId;
-        msg.action     = MULTICAST_ADDRESS;
-        msg.macBitMask = p_config->macBitMask;
-        memcpy((void *)&msg.macAddress, (void *)p_config->macAddress, WF_MAC_ADDRESS_LENGTH);
-    }
-
-    SendSetParamMsg(PARAM_COMPARE_ADDRESS, (uint8_t *)&msg, sizeof(msg) );
-}
-#endif /* WF_USE_SOFTWARE_MULTICAST_FILTER */
 
 /*******************************************************************************
   Function:

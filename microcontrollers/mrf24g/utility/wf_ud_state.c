@@ -70,14 +70,9 @@ static uint32_t CheckInfrastructureConnect(void);
 static uint32_t CheckAdHocConnect(void);
 static uint32_t CheckP2pConnect(void);
 static bool isSsidDefined(void);
-    #if defined(WF_USE_WPS_SECURITY)
-        static uint32_t ValidateWpsPin(uint8_t *p_wpsPin);
-        static uint32_t ValidateWpsChannelList(const uint8_t domain, const uint8_t *p_channelList, const uint8_t numChannels);
-    #endif /* WF_USE_WPS_SECURITY */
+static uint32_t ValidateWpsPin(uint8_t *p_wpsPin);
+static uint32_t ValidateWpsChannelList(const uint8_t domain, const uint8_t *p_channelList, const uint8_t numChannels);
 #endif /* WF_ERROR_CHECKING */
-
-
-
 
 //==============================================================================
 void UdStateInit(void)
@@ -102,7 +97,7 @@ void UdStateInit(void)
 #endif
 }
 
-void  UdEnablePsPoll(t_psPollContext *p_context)
+void UdEnablePsPoll(t_psPollContext *p_context)
 {
     g_udState.psPollEnabled = true;
     memcpy(&g_udState.psPollContext, p_context, sizeof(t_psPollContext));
@@ -113,7 +108,7 @@ void UdDisablePsPoll(void)
     g_udState.psPollEnabled = false;
 }
 
-INLINE bool  UdisPsPollEnabled(void)
+bool UdisPsPollEnabled(void)
 {
     return g_udState.psPollEnabled;
 }
@@ -318,7 +313,6 @@ errorExit:
     return errorCode;
 }
 
-#if defined(WF_USE_WPS_SECURITY)
 //==============================================================================
 uint32_t UdSetSecurityWps(t_wpsContext *p_context)
 {
@@ -333,7 +327,7 @@ uint32_t UdSetSecurityWps(t_wpsContext *p_context)
         errorCode = UD_ERROR_ONLY_VALID_WHEN_NOT_CONNECTED;
         goto errorExit;
     }
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
+
     if ((p_context->getPassPhrase != true) && (p_context->getPassPhrase != false))
     {
         errorCode = UD_ERROR_INVALID_GET_PASS_PHRASE;
@@ -348,7 +342,6 @@ uint32_t UdSetSecurityWps(t_wpsContext *p_context)
             goto errorExit;
         }
     }
-#endif
 
     if (securityType == WF_SECURITY_WPS_PUSH_BUTTON)
     {
@@ -385,7 +378,6 @@ errorExit:
 
     return errorCode;
 }
-#endif /* WF_USE_WPS_SECURITY */
 
 //==============================================================================
 uint32_t UdSetScanContext(t_scanContext *p_context)
@@ -685,7 +677,6 @@ uint32_t udSetTxPowerMax(uint8_t maxTxPower)
     }
 }
 
-#if defined(WF_USE_HARDWARE_MULTICAST_FILTER)
 uint32_t UdSetHwMulticastFilter(uint8_t multicastFilterId, uint8_t *p_multicastAddress)
 {
     p_multicastAddress = p_multicastAddress;  // avoid warning
@@ -699,35 +690,9 @@ uint32_t UdSetHwMulticastFilter(uint8_t multicastFilterId, uint8_t *p_multicastA
         return UD_SUCCESS;
     }
 }
-#endif /* WF_USE_HARDWARE_MULTICAST_FILTER */
 
-#if defined(WF_USE_SOFTWARE_MULTICAST_FILTER)
-uint32_t UdSetSwMulticastFilter(t_swMulticastConfig *p_config)
-{
-    uint32_t errorCode = UD_SUCCESS;
-
-    if (p_config->action > WF_MULTICAST_USE_FILTERS)
-    {
-        errorCode = UD_ERROR_INVALID_MULTICAST_ACTION;
-        goto errorExit;
-    }
-
-    if ((p_config->filterId < WF_MULTICAST_FILTER_1) || (p_config->filterId > WF_MULTICAST_FILTER_16))
-    {
-        errorCode = UD_ERROR_INVALID_MULTICAST_FILTER_ID;
-        goto errorExit;
-    }
-
-errorExit:
-    return errorCode;
-}
-#endif /* WF_USE_SOFTWARE_MULTICAST_FILTER */
-
-
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
 uint32_t UdConvWpaPassphrase(t_wpaKeyInfo *p_keyInfo)
 {
-
     // WPA passphrase must be between 8 and 63 bytes
     if ((p_keyInfo->keyLength < 8) || (p_keyInfo->keyLength > 63))
     {
@@ -741,9 +706,7 @@ uint32_t UdConvWpaPassphrase(t_wpaKeyInfo *p_keyInfo)
 
     return UD_SUCCESS;
 }
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
 
-#if defined(WF_USE_WPS_SECURITY)
 uint32_t UdGetWpsCredentials(void)
 {
     if ((g_udState.securityType != WF_SECURITY_WPS_PIN) || (g_udState.securityType != WF_SECURITY_WPS_PUSH_BUTTON))
@@ -755,7 +718,6 @@ uint32_t UdGetWpsCredentials(void)
         return UD_SUCCESS;
     }
 }
-#endif /* WF_USE_WPS_SECURITY */
 
 //==============================================================================
 static uint32_t ValidateChannelList(uint8_t *p_channelList, uint8_t numChannels)
@@ -858,7 +820,6 @@ static uint32_t CheckInfrastructureConnect(void)
     // else WPS is being used
     else
     {
-#if defined(WF_USE_WPS_SECURITY)
         // if using WPS PIN
         if (g_udState.securityType == WF_SECURITY_WPS_PIN)
         {
@@ -885,7 +846,6 @@ static uint32_t CheckInfrastructureConnect(void)
         {
             goto errorExit;
         }
-#endif /* WF_USE_WPS_SECURITY */
     }
 errorExit:
     return errorCode;
@@ -1010,7 +970,6 @@ errorExit:
     return errorCode;
 }
 
-#if defined(WF_USE_WPS_SECURITY)
 static uint32_t ValidateWpsPin(uint8_t *p_wpsPin)
 {
     uint32_t pin = 0;
@@ -1101,6 +1060,5 @@ static uint32_t ValidateWpsChannelList(const uint8_t domain, const uint8_t *p_ch
 
     return errorCode;
 }
-#endif /* WF_USE_WPS_SECURITY */
 
 #endif /* WF_ERROR_CHECKING */

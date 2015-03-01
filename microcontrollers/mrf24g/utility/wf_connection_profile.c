@@ -105,14 +105,9 @@ static void WF_SetSecurity(uint8_t securityType,
 //==============================================================================
 static uint8_t g_cpid;
 
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
-static t_wpaKeyInfo *g_p_wpaKeyInfo ;
-#endif
+static t_wpaKeyInfo *g_p_wpaKeyInfo;
 
-
-
-
-INLINE uint8_t GetCpid(void)
+uint8_t GetCpid(void)
 {
     return g_cpid;
 }
@@ -383,7 +378,6 @@ void WF_SecurityWpaSet(t_wpaContext* p_context)
                    p_context->keyInfo.keyLength);
 }
 
-#if defined(WF_USE_WPS_SECURITY)
 //============================================================================
 void WF_SecurityWpsSet(t_wpsContext *p_context)
 {
@@ -401,7 +395,6 @@ void WF_SecurityWpsSet(t_wpsContext *p_context)
                    p_context->wpsPin,
                    p_context->wpsPinLength);
 
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
     // if host wants the host to calculate a binary key from a possible WPS-PSK passphrase
     if (p_context->getPassPhrase == true)
     {
@@ -411,12 +404,8 @@ void WF_SecurityWpsSet(t_wpsContext *p_context)
         // save pointer to passphrase info block
         g_p_wpaKeyInfo = p_context->p_keyInfo;
     }
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
 }
-#endif /* WF_USE_WPS_SECURITY */
 
-
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
 t_wpaKeyInfo * GetWpsPassPhraseInfo(void)
 {
    return g_p_wpaKeyInfo;
@@ -431,8 +420,6 @@ void WF_WpsKeyGenerate(void)
     // send it to MRF24WG
     SetPSK(g_p_wpaKeyInfo->key);
 }
-
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
 
 //============================================================================
 void WF_BssidSet(uint8_t *p_bssid)
@@ -555,7 +542,6 @@ static void WF_SetSecurity(uint8_t securityType,
     WaitForMgmtResponse(WF_CP_SET_ELEMENT_SUBTYPE, FREE_MGMT_BUFFER);
 }
 
-#if defined(WF_USE_WPS_SECURITY)
 void WF_WpsCredentialsGet(t_wpsCredentials *p_cred)
 {
 #if defined(WF_ERROR_CHECKING)
@@ -571,8 +557,6 @@ void WF_WpsCredentialsGet(t_wpsCredentials *p_cred)
                           sizeof(*p_cred),                // number of element data bytes
                           true);                          // read data, free buffer after read
 }
-#endif /* WF_USE_WPS_SECURITY */
-
 
 /*******************************************************************************
   Function:

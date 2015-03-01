@@ -1,39 +1,19 @@
-/* WPA Supplicant
-*
-* SHA1 hash implementation and interface functions
-* Copyright (c) 2003-2005, Jouni Malinen <jkmaline@cc.hut.fi>
-*
-* This program is free software; distributed under the terms of BSD
-* license:
-*
-* Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-*
-* 1.    Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-* 2.    Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer
-*        in the documentation and/or other materials provided with the distribution.
-* 3.    Neither the name(s) of the above-listed copyright holder(s) nor the names of its contributors may be used to endorse
-*        or promote products derived from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
-* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
-* OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
+/*
+ * WPA Supplicant
+ *
+ * SHA1 hash implementation and interface functions
+ * Copyright (c) 2003-2005, Jouni Malinen <jkmaline@cc.hut.fi>
+ *
+ * This program is free software; distributed under the terms of BSD
+ * license.
+ */
 #include <string.h>
 #include <stdint.h>
+#include <machine/endian.h>
 
 #include "wf_universal_driver.h"
 
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
-
-
 #define SHA1_MAC_LEN 20
-
-#define LITTLEENDIAN 1
 
 void sha1_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_t *mac);
 
@@ -109,7 +89,6 @@ void hmac_sha1_vector(const uint8_t *key, size_t key_len, size_t num_elem,
 	sha1_vector(2, _addr, _len, mac);
 }
 
-
 /**
  * hmac_sha1 - HMAC-SHA1 over data buffer (RFC 2104)
  * @key: Key for HMAC operations
@@ -123,7 +102,6 @@ void hmac_sha1(const uint8_t *key, size_t key_len, const uint8_t *data, size_t d
 {
 	hmac_sha1_vector(key, key_len, 1, &data, &data_len, mac);
 }
-
 
 /**
  * sha1_prf - SHA1-based Pseudo-Random Function (PRF) (IEEE 802.11i, 8.5.1.1)
@@ -173,7 +151,6 @@ void sha1_prf(const uint8_t *key, size_t key_len, const char *label,
 		counter++;
 	}
 }
-
 
 /**
  * sha1_t_prf - EAP-FAST Pseudo-Random Function (T-PRF)
@@ -273,7 +250,6 @@ static void pbkdf2_sha1_f(const char *passphrase, const char *ssid,
 	}
 }
 
-
 /**
  * pbkdf2_sha1 - SHA1-based key derivation function (PBKDF2) for IEEE 802.11i
  * @passphrase: ASCII passphrase
@@ -287,7 +263,6 @@ static void pbkdf2_sha1_f(const char *passphrase, const char *ssid,
  * iterations is set to 4096 and buflen to 32. This function is described in
  * IEEE Std 802.11-2004, Clause H.4. The main construction is from PKCS#5 v2.0.
  */
-
 void pbkdf2_sha1(const char *passphrase, const char *ssid, uint16_t ssid_len,
 		 uint16_t iterations, uint8_t *buf, uint16_t buflen)
 {
@@ -436,7 +411,7 @@ A million repetitions of "a"
 
 /* blk0() and blk() perform the initial expand. */
 /* I got the idea of expanding during the round function from SSLeay */
-#if defined(LITTLE_ENDIAN)
+#if BYTE_ORDER == LITTLE_ENDIAN
 #define blk0(i) (block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) | \
 	(rol(block->l[i], 8) & 0x00FF00FF))
 #else
@@ -599,5 +574,3 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 	memset((uint8_t*)(context->count), 0, 8);
 	memset(finalcount, 0, 8);
 }
-
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */

@@ -464,9 +464,6 @@ void WF_ConnectionStateGet(uint8_t *p_state)
     *p_state = msgData[0]; // connection state
 }
 
-
-
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
 /*******************************************************************************
   Function:
     void WF_WpaConvPassphraseToKey(t_wpaKeyInfo *p_wpaPhrase)
@@ -516,10 +513,6 @@ void WF_WpaConvPassphraseToKey(t_wpaKeyInfo *p_keyInfo)
     // overwrite the length with the length of the binary key (always 32)
     p_keyInfo->keyLength = WF_WPA_KEY_LENGTH;
 }
-
-
-
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
 
 void SetListenInterval(uint16_t listenInterval)
 {

@@ -215,13 +215,13 @@ void EventDequeue(t_event *p_event)
     Doing it this way is much more efficient.
 *****************************************************************************/
 
-INLINE bool isEventQEmpty(void)
+bool isEventQEmpty(void)
 {
     return (g_eventQueue.readIndex == g_eventQueue.writeIndex);
 }
 
 // queue full when writeIndex + 1 = readIndex
-INLINE bool isEventQFull(void)
+bool isEventQFull(void)
 {
     uint8_t readIndex  = g_eventQueue.readIndex;
     uint8_t writeIndex = g_eventQueue.writeIndex;
