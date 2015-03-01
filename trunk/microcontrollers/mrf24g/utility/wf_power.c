@@ -41,8 +41,8 @@
 //==============================================================================
 //                                  INCLUDES
 //==============================================================================
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  DEFINES
@@ -274,7 +274,7 @@ void WFConfigureLowPowerMode(uint8_t action)
     None.
 
   Remarks:
-  
+
 
   *****************************************************************************/
 void WF_Hibernate(void)

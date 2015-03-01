@@ -45,8 +45,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  LOCAL FUNCTION PROTOTYPES
@@ -56,7 +56,7 @@ static void SendGetParamMsg(uint8_t paramType, uint8_t *p_paramData, uint8_t par
 
 
 /*******************************************************************************
-  Function:    
+  Function:
     void WFEnableMRF24WB0MMode(void)
 
   Summary:
@@ -72,15 +72,15 @@ static void SendGetParamMsg(uint8_t paramType, uint8_t *p_paramData, uint8_t par
 
   Returns:
     None.
-      
+
   Remarks:
     None.
  *****************************************************************************/
 void WFEnableMRF24WB0MMode(void)
 {
     uint8_t buf[1] = {ENABLE_MRF24WB0M};
-    
-    SendSetParamMsg(PARAM_MRF24WB0M, buf, sizeof(buf)); 
+
+    SendSetParamMsg(PARAM_MRF24WB0M, buf, sizeof(buf));
 }
 
 /*******************************************************************************
@@ -136,7 +136,7 @@ void WF_DeviceInfoGet(t_deviceInfo *p_Info)
     Sets the regional domain.
 
   Description:
-    Sets the regional domain on the MRF24W.  By default the MRF24W will use the 
+    Sets the regional domain on the MRF24W.  By default the MRF24W will use the
     factory-set regional domain.  It is invalid to call this function while in a
     connected state.
 
@@ -514,7 +514,7 @@ void EnableSWMulticastFilter(void)
 
   Description:
     This function allows the application to configure up to 16 Multicast
-    Address Filters on the MRF24WG.  
+    Address Filters on the MRF24WG.
 
     filterId -- WF_MULTICAST_FILTER_1 thru WF_MULTICAST_FILTER_16
 
@@ -766,4 +766,3 @@ static void SendGetParamMsg(uint8_t paramType, uint8_t *p_paramData, uint8_t par
                                    MSG_PARAM_START_DATA_INDEX, /* data for GetParam always starts at index 6 */
                                    p_paramData);               /* write the response data here               */
 }
-

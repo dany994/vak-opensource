@@ -41,13 +41,13 @@
 //==============================================================================
 //                                  INCLUDES
 //==============================================================================
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  LOCAL GLOBALS
 //==============================================================================
-// using global buffers because the register functions are called from the 
+// using global buffers because the register functions are called from the
 // external interrupt routine, and for parts that use overlay memory using local
 // buffers fails.
 static uint8_t g_txBuf[3];
@@ -220,6 +220,3 @@ void ReadWFArray(uint8_t  regId, uint8_t *p_Buf, uint16_t length)
 
     WF_SpiDisableChipSelect();
 }
-
-
-

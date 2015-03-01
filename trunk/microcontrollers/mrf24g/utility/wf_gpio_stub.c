@@ -6,7 +6,7 @@
  * directly by the application code.
  */
 #include "board_profile.h"
-#include "./ud_inc/shared/wf_universal_driver.h"
+#include "wf_universal_driver.h"
 
 /*
  * Configures GPIO pins used for RESET and HIBERNATE as outputs

@@ -41,11 +41,11 @@
 #ifndef __WF_GLOBAL_INCLUDES_H
 #define __WF_GLOBAL_INCLUDES_H
 
-#include "../../wf_customize.h"
+#include "wf_customize.h"
 #include "wf_endian.h"
-#include "../shared/wf_stubs.h"
-#include "../shared/wf_events.h"
-#include "../shared/wf_connection_event_codes.h"
+#include "wf_stubs.h"
+#include "wf_events.h"
+#include "wf_connection_event_codes.h"
 #include "wf_power.h"
 #include "wf_spi_msg_types.h"
 #include "wf_mgmt_msg.h"
@@ -60,5 +60,18 @@
 #include "wf_timer.h"
 #include "wf_eint.h"
 
+/*
+ * host is little-endian: need to convert as MRF24WG is big-endian
+ */
+#define htons(A) ((((uint16_t)(A) & 0xff00) >> 8) | \
+                  (((uint16_t)(A) & 0x00ff) << 8))
+
+#define htonl(A) ((((uint32_t)(A) & 0xff000000) >> 24) | \
+                  (((uint32_t)(A) & 0x00ff0000) >> 8)  | \
+                  (((uint32_t)(A) & 0x0000ff00) << 8)  | \
+                  (((uint32_t)(A) & 0x000000ff) << 24))
+
+#define ntohs  htons
+#define ntohl  htonl
 
 #endif /* __WF_GLOBAL_INCLUDES_H */

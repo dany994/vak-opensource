@@ -3,7 +3,7 @@
  *
  * This module contains Timer functions needed by the Universal Driver.
  */
-#include "./ud_inc/shared/wf_universal_driver.h"
+#include "wf_universal_driver.h"
 
 /*
  * Configures a timer that increments a 32-bit counter every 1ms.

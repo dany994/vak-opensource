@@ -42,8 +42,8 @@
 //==============================================================================
 //                                  INCLUDES
 //==============================================================================
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  LOCAL FUNCTION PROTOTYPES
@@ -154,4 +154,3 @@ static void WriteAnalogRegisterBitBang(uint8_t regType, uint16_t address, uint16
     hrVal &= ~HR_HOST_ANA_SPI_EN_MASK;
     Write16BitWFRegister(WF_HOST_RESET_REG, hrVal);
 }
-

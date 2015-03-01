@@ -43,8 +43,8 @@
 //                                  INCLUDES
 //==============================================================================
 #include <stdio.h>
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  CONSTANTS
@@ -147,7 +147,7 @@ void WF_CPCreate(void)
 {
     uint8_t  hdr[2];
 
-    g_cpid = 0xff; 
+    g_cpid = 0xff;
 
     hdr[0] = WF_MGMT_REQUEST_TYPE;
     hdr[1] = WF_CP_CREATE_PROFILE_SUBTYPE;
@@ -339,7 +339,7 @@ void WF_SecurityOpenSet()
         return;
     }
 #endif
-    
+
     WF_SetSecurity(WF_SECURITY_OPEN, 0, NULL, 0);
 }
 
@@ -407,7 +407,7 @@ void WF_SecurityWpsSet(t_wpsContext *p_context)
     {
         // tell MRF24WG to send wpa-psk passphrase back to host (if AP using WPA passphrase)
         YieldPassPhraseToHost();
-        
+
         // save pointer to passphrase info block
         g_p_wpaKeyInfo = p_context->p_keyInfo;
     }
@@ -575,7 +575,7 @@ void WF_WpsCredentialsGet(t_wpsCredentials *p_cred)
 
 
 /*******************************************************************************
-  Function:    
+  Function:
     void LowLevel_CPSetElement(uint8_t elementId,
                                uint8_t *p_elementData,
                                uint8_t elementDataLength)
@@ -584,8 +584,8 @@ void WF_WpsCredentialsGet(t_wpsCredentials *p_cred)
     Set an element of the connection profile on the MRF24W.
 
   Description:
-    All Connection Profile 'Set Element' functions call this function to 
-    construct the management message.  The caller must fix up any endian issues 
+    All Connection Profile 'Set Element' functions call this function to
+    construct the management message.  The caller must fix up any endian issues
     prior to calling this function.
 
   Precondition:
@@ -598,7 +598,7 @@ void WF_WpsCredentialsGet(t_wpsCredentials *p_cred)
 
   Returns:
     None.
-      
+
   Remarks:
     None.
   *****************************************************************************/
@@ -607,26 +607,26 @@ void LowLevel_CPSetElement(uint8_t elementId,
                            uint8_t elementDataLength)
 {
     uint8_t  hdrBuf[5];
-    
+
     /* Write out header portion of msg */
     hdrBuf[0] = WF_MGMT_REQUEST_TYPE;       /* indicate this is a mgmt msg     */
-    hdrBuf[1] = WF_CP_SET_ELEMENT_SUBTYPE;  /* mgmt request subtype            */     
+    hdrBuf[1] = WF_CP_SET_ELEMENT_SUBTYPE;  /* mgmt request subtype            */
     hdrBuf[2] = g_cpid;                     /* Connection Profile ID           */
     hdrBuf[3] = elementId;                  /* Element ID                      */
     hdrBuf[4] = elementDataLength;          /* number of bytes of element data */
-    
+
     SendMgmtMsg(hdrBuf,              /* msg header        */
                 sizeof(hdrBuf),      /* msg header length */
                 p_elementData,       /* msg data          */
                 elementDataLength);  /* msg data length   */
-    
+
     /* wait for mgmt response, free after it comes in, don't need data bytes */
     WaitForMgmtResponse(WF_CP_SET_ELEMENT_SUBTYPE, FREE_MGMT_BUFFER);
 
-}    
+}
 
 /*******************************************************************************
-  Function:    
+  Function:
     static void LowLevel_CPGetElement(uint8_t elementId,
                                       uint8_t *p_elementData,
                                       uint8_t elementDataLength,
@@ -636,8 +636,8 @@ void LowLevel_CPSetElement(uint8_t elementId,
     Get an element of the connection profile on the MRF24W.
 
   Description:
-    All Connection Profile 'Get Element' functions call this function to 
-    construct the management message.  The caller must fix up any endian issues 
+    All Connection Profile 'Get Element' functions call this function to
+    construct the management message.  The caller must fix up any endian issues
     prior to calling this function.
 
   Precondition:
@@ -647,14 +647,14 @@ void LowLevel_CPSetElement(uint8_t elementId,
     elementId - Element that is being read
     p_elementData - Pointer to where element data will be written
     elementDataLength - Number of element data bytes that will be read
-    dataReadAction - If TRUE then read data per paramters and free mgmt 
-                      response buffer. If FALSE then return after response 
-                      received, do not read any data as the caller will do that, 
+    dataReadAction - If TRUE then read data per paramters and free mgmt
+                      response buffer. If FALSE then return after response
+                      received, do not read any data as the caller will do that,
                       and don't free buffer, as caller will do that as well.
 
   Returns:
     None.
-      
+
   Remarks:
     None.
   *****************************************************************************/
@@ -664,9 +664,9 @@ static void LowLevel_CPGetElement(uint8_t elementId,
                                   bool    dataReadAction)
 {
     uint8_t  hdrBuf[4];
-      
+
     hdrBuf[0] = WF_MGMT_REQUEST_TYPE;          /* indicate this is a mgmt msg     */
-    hdrBuf[1] = WF_CP_GET_ELEMENT_SUBTYPE;  /* mgmt request subtype            */     
+    hdrBuf[1] = WF_CP_GET_ELEMENT_SUBTYPE;  /* mgmt request subtype            */
     hdrBuf[2] = g_cpid;                       /* Connection Profile ID           */
     hdrBuf[3] = elementId;                  /* Element ID                      */
 
@@ -674,11 +674,11 @@ static void LowLevel_CPGetElement(uint8_t elementId,
                 sizeof(hdrBuf),      /* msg header length */
                 NULL,                /* msg data          */
                 0);                  /* msg data length   */
-  
+
     if (dataReadAction == (uint8_t)true)
     {
         /* wait for mgmt response, read desired data, and then free response buffer */
-        WaitForMgmtResponseAndReadData(WF_CP_GET_ELEMENT_SUBTYPE, 
+        WaitForMgmtResponseAndReadData(WF_CP_GET_ELEMENT_SUBTYPE,
                                        elementDataLength,                   /* num data bytes to read                */
                                        sizeof(t_cPElementResponseHdr),      /* index of first byte of element data   */
                                        p_elementData);                      /* where to write element data           */
@@ -687,5 +687,5 @@ static void LowLevel_CPGetElement(uint8_t elementId,
     {
         /* wait for mgmt response, don't read any data bytes, do not release mgmt buffer */
         WaitForMgmtResponse(WF_CP_GET_ELEMENT_SUBTYPE, DO_NOT_FREE_MGMT_BUFFER);
-    }                                                    
+    }
 }

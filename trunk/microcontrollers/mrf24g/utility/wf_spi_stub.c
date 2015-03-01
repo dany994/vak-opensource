@@ -6,7 +6,7 @@
  * directly by the application code.
  */
 #include "board_profile.h"
-#include "./ud_inc/shared/wf_universal_driver.h"
+#include "wf_universal_driver.h"
 
 /*
  * Initializes SPI controller used to communicate with MRF24WG.

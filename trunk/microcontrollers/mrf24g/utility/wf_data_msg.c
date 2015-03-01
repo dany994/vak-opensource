@@ -42,8 +42,8 @@
 //==============================================================================
 //                                  INCLUDES
 //==============================================================================
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 #define WF_TX_PREAMBLE_SIZE (4)
 #define ETHER_HEADER_SIZE   (16)    // 6 bytes dest address, 6 bytes src address, 2 bytes for type field

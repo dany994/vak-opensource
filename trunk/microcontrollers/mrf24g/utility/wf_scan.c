@@ -4,7 +4,7 @@
   Summary: Functions to initiate a scan and retrieve scan results
 
   Description: Same as summary
- 
+
 *******************************************************************************/
 
 /* MRF24WG0M Universal Driver
@@ -44,8 +44,8 @@
 //==============================================================================
 #include <stdio.h>
 
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 
 /*******************************************************************************
@@ -71,7 +71,7 @@
 
   Parameters:
     mode - WF_SCAN_FILTERED or WF_SCAN_ALL
- 
+
       WF_SCAN_FILTERED:
             * If SSID defined only scan results with that SSID are retained
             * If SSID not defined all scanned SSID?s will be retained
@@ -94,7 +94,7 @@ void WF_Scan(uint8_t scanMode)
 {
     uint8_t connectionState;
     uint8_t   hdr[4];
-    
+
 #if defined(WF_ERROR_CHECKING)
     uint32_t errorCode = UdScan(scanMode);
     if (errorCode != UD_SUCCESS)
@@ -182,4 +182,3 @@ void WF_ScanResultGet(uint8_t listIndex,  t_scanResult *p_scanResult)
     p_scanResult->beaconPeriod = htons(p_scanResult->beaconPeriod);
     p_scanResult->atimWindow   = htons(p_scanResult->atimWindow);
 }
-

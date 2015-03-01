@@ -42,8 +42,8 @@
 //==============================================================================
 //                                  INCLUDES
 //==============================================================================
-#include "./ud_inc/shared/wf_universal_driver.h"
-#include "./ud_inc/internal/wf_global_includes.h"
+#include "wf_universal_driver.h"
+#include "wf_global_includes.h"
 
 //==============================================================================
 //                                  LOCAL GLOBALS
@@ -87,7 +87,7 @@ static uint8_t  g_EintHostInt;
 *****************************************************************************/
 void WF_EintHandler(void)
 {
-    /*--------------------------------------------------------*/    
+    /*--------------------------------------------------------*/
     /* if driver is waiting for a RAW Move Complete interrupt */
     /*--------------------------------------------------------*/
     if (isWaitingForRawMoveCompleteInterrupt())
@@ -109,17 +109,17 @@ void WF_EintHandler(void)
             // Let the Raw driver know which interrupt occurred and clear the flag
             SignalRawInterruptEvent(g_EintHostInt);
             ClearWaitingForRawMoveCompleteInterrupt();
-            
+
             /* if no other interrupts occurred other than a RAW0/RAW1/RAW2/RAW3/RAW4 Raw Move Complete */
             if((g_EintHostInt & ~(WF_HOST_INT_MASK_RAW_0_INT_0 | WF_HOST_INT_MASK_RAW_1_INT_0 | WF_HOST_INT_MASK_INT2)) == 0)
             {
                 /* clear the RAW interrupts, re-enable interrupts, and exit */
-                Write8BitWFRegister(WF_HOST_INTR_REG, (WF_HOST_INT_MASK_RAW_0_INT_0 | 
-                                                       WF_HOST_INT_MASK_RAW_1_INT_0 | 
+                Write8BitWFRegister(WF_HOST_INTR_REG, (WF_HOST_INT_MASK_RAW_0_INT_0 |
+                                                       WF_HOST_INT_MASK_RAW_1_INT_0 |
                                                        WF_HOST_INT_MASK_INT2));
 
-                Write16BitWFRegister(WF_HOST_INTR2_REG, (WF_HOST_INT_MASK_RAW_2_INT_0 | 
-                                                         WF_HOST_INT_MASK_RAW_3_INT_0 | 
+                Write16BitWFRegister(WF_HOST_INTR2_REG, (WF_HOST_INT_MASK_RAW_2_INT_0 |
+                                                         WF_HOST_INT_MASK_RAW_3_INT_0 |
                                                          WF_HOST_INT_MASK_RAW_4_INT_0 |
                                                          WF_HOST_INT_MASK_RAW_5_INT_0));
 
@@ -132,8 +132,8 @@ void WF_EintHandler(void)
             {
                 // save the other interrupts and clear them, along with the Raw Move Complete interrupts
                 // keep interrupts disabled
-                Write16BitWFRegister(WF_HOST_INTR2_REG, (WF_HOST_INT_MASK_RAW_2_INT_0   | 
-                                                         WF_HOST_INT_MASK_RAW_3_INT_0   | 
+                Write16BitWFRegister(WF_HOST_INTR2_REG, (WF_HOST_INT_MASK_RAW_2_INT_0   |
+                                                         WF_HOST_INT_MASK_RAW_3_INT_0   |
                                                          WF_HOST_INT_MASK_RAW_4_INT_0   |
                                                          WF_HOST_INT_MASK_RAW_5_INT_0));
                 g_HostIntSaved |= (g_EintHostInt & ~(WF_HOST_INT_MASK_RAW_0_INT_0 | WF_HOST_INT_MASK_RAW_1_INT_0 | WF_HOST_INT_MASK_INT2));
@@ -142,7 +142,7 @@ void WF_EintHandler(void)
                 // leave interrupt disabled for now
             }
         }
-        /*--------------------------------------------------------------------------------------------------*/        
+        /*--------------------------------------------------------------------------------------------------*/
         /* else we did not get a 'RAW Move Complete' interrupt, but we did get at least one other interrupt */
         /*--------------------------------------------------------------------------------------------------*/
         else
@@ -181,7 +181,7 @@ void WF_EintHandler(void)
 *****************************************************************************/
 void InterruptCheck(void)
 {
-    uint8_t  hostIntRegValue;  
+    uint8_t  hostIntRegValue;
     uint8_t  hostIntMaskRegValue;
     uint8_t  hostInt;
     uint16_t hostInt2;
@@ -266,4 +266,3 @@ void InterruptCheck(void)
         WF_EintEnable();
     }
 }
-
