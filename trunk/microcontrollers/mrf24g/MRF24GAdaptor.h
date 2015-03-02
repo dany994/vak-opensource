@@ -1,65 +1,15 @@
-/************************************************************************/
-/*                                                                      */
-/*	MRF24GAdaptor.h This implements a Nework adaptor                    */
-/*	for the MRF24WG0MA                                                  */
-/*                                                                      */
-/************************************************************************/
-/*	Author: 	Keith Vogel                                             */
-/*	Copyright 2013, Digilent Inc.                                       */
-/************************************************************************/
-/* 
-*
-* Copyright (c) 2013-2014, Digilent <www.digilentinc.com>
-* Contact Digilent for the latest version.
-*
-* This program is free software; distributed under the terms of 
-* BSD 3-clause license ("Revised BSD License", "New BSD License", or "Modified BSD License")
-*
-* Redistribution and use in source and binary forms, with or without modification,
-* are permitted provided that the following conditions are met:
-*
-* 1.    Redistributions of source code must retain the above copyright notice, this
-*        list of conditions and the following disclaimer.
-* 2.    Redistributions in binary form must reproduce the above copyright notice,
-*        this list of conditions and the following disclaimer in the documentation
-*        and/or other materials provided with the distribution.
-* 3.    Neither the name(s) of the above-listed copyright holder(s) nor the names
-*        of its contributors may be used to endorse or promote products derived
-*        from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-/************************************************************************/
-/*  Module Description:                                                 */
-/*                                                                      */
-/*	A WiFi Network adaptor using the Microchip Universal Driver         */
-/*                                                                      */
-/************************************************************************/
-/*  Revision History:                                                   */
-/*                                                                      */
-/*	5/31/2013(KeithV): Created                                          */
-/*                                                                      */
-/************************************************************************/
-
-
+/*
+ * MRF24GAdaptor.h This implements a Nework adaptor
+ * for the MRF24WG0MA
+ *
+ * Revision History:
+ *      5/31/2013(KeithV): Created
+ */
 #ifndef MRF24GADAPTOR_H
 #define	MRF24GADAPTOR_H
 
-#ifdef	__cplusplus
-extern "C" {
-#endif
-
 #include "../DEIPck/utility/deIP.h"
-#include "./utility/ud_inc/shared/wf_universal_driver.h"
+#include "utility/wf_universal_driver.h"
 
 // there are a lot of MRF24 Universal driver errors, here are some of the error masks
 // for each of the various sections
@@ -75,8 +25,6 @@ extern "C" {
 #define WFDMask     0x0000A000
 
 // 00000001 -> 0000FFFF; Adaptor status; specific to adaptor
-
-
 
 // 10000001 -> 1000FFFF; Adaptor errors; specific to adaptor
 
@@ -158,23 +106,13 @@ typedef struct WFMRF_T
     void (* LinkDownThresholdSet)(uint8_t threshold);
 
     // multicast filter functions
-#if defined(WF_USE_HARDWARE_MULTICAST_FILTER)
-        void (* SetHwMultiCastFilter)(uint8_t multicastFilterId, uint8_t multicastAddress[WF_MAC_ADDRESS_LENGTH]);
-#endif /* WF_USE_HARDWARE_MULTICAST_FILTER */
+    void (* SetHwMultiCastFilter)(uint8_t multicastFilterId, uint8_t multicastAddress[WF_MAC_ADDRESS_LENGTH]);
 
-#if defined(WF_USE_SOFTWARE_MULTICAST_FILTER)
-        void (* SwMulticastFilterSet)(t_swMulticastConfig *p_config);
-#endif /* WF_USE_SOFTWARE_MULTICAST_FILTER */
+    void (* SecurityWpsSet)(t_wpsContext *p_context);
+    void (* WpsCredentialsGet)(t_wpsCredentials *p_cred);
 
-#if defined(WF_USE_WPS_SECURITY)
-        void (* SecurityWpsSet)(t_wpsContext *p_context);
-        void (* WpsCredentialsGet)(t_wpsCredentials *p_cred);
-#endif /* WF_USE_WPS_SECURITY */
-
-#if defined(WF_USE_HOST_WPA_KEY_CALCULATION)
-        void (* WpaConvPassphraseToKey)(t_wpaKeyInfo *p_keyInfo);
-        void (* WpsKeyGenerate)(void);
-#endif /* WF_USE_HOST_WPA_KEY_CALCULATION */
+    void (* WpaConvPassphraseToKey)(t_wpaKeyInfo *p_keyInfo);
+    void (* WpsKeyGenerate)(void);
 
 } WFMRF;
 
@@ -199,14 +137,7 @@ typedef struct WFMRFD_T
     WFMRFP  priv;
 } WFMRFD;
 
-void __attribute__((interrupt(),nomips16)) _WFInterrupt(void);
+void _WFInterrupt(void); // Interrupt handler
 const NWADP * GetMRF24GAdaptor(MACADDR *pUseThisMac, HRRHEAP hAdpHeap, IPSTATUS * pStatus);
-const NWWF *  GetMRF24WF(void);
-const WFMRF * GetMRF24GFunc(void);
-
-#ifdef	__cplusplus
-}
-#endif
 
 #endif	/* MRF24GADAPTOR_H */
-
