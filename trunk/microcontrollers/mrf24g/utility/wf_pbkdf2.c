@@ -9,7 +9,7 @@
  */
 #include <string.h>
 #include <stdint.h>
-#include <machine/endian.h>
+#include <endian.h>
 
 #include "wf_universal_driver.h"
 
