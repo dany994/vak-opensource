@@ -1,90 +1,43 @@
-/*******************************************************************************
- MRF24WG External Interrupt
-
-  Summary: Contains functions pertaining MRF24WG external interrupt
-
-  Description: MRF24WG interrupts the host CPU to signal data Rx messages, events,
-               and management response messages.
-*******************************************************************************/
-
-/* MRF24WG0M Universal Driver
-*
-* Copyright (c) 2012-2013, Microchip <www.microchip.com>
-* Contact Microchip for the latest version.
-*
-* This program is free software; distributed under the terms of BSD
-* license:
-*
-* Redistribution and use in source and binary forms, with or without modification,
-* are permitted provided that the following conditions are met:
-*
-* 1.    Redistributions of source code must retain the above copyright notice, this
-*        list of conditions and the following disclaimer.
-* 2.    Redistributions in binary form must reproduce the above copyright notice,
-*        this list of conditions and the following disclaimer in the documentation
-*        and/or other materials provided with the distribution.
-* 3.    Neither the name(s) of the above-listed copyright holder(s) nor the names
-*        of its contributors may be used to endorse or promote products derived
-*        from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-//==============================================================================
-//                                  INCLUDES
-//==============================================================================
+/*
+ * MRF24WG External Interrupt
+ *
+ * Functions pertaining MRF24WG external interrupt
+ * MRF24WG interrupts the host CPU to signal data Rx messages, events,
+ * and management response messages.
+ */
 #include "wf_universal_driver.h"
 #include "wf_global_includes.h"
 
-//==============================================================================
-//                                  LOCAL GLOBALS
-//==============================================================================
-static uint8_t          g_HostIntSaved = 0;
-static volatile bool    g_ExIntNeedsServicing;  /* true if external interrupt needs processing, else false */
+static uint8_t g_HostIntSaved = 0;
 
-// Keep these as static globals instead of local variables in the Eint Handler.
-// If declared as local variables, causes stack corruption in PIC18, or other
-// MCU's with overlay memory.
+/*
+ * true if external interrupt needs processing, else false
+ */
+static volatile bool g_ExIntNeedsServicing;
+
+/*
+ * Keep these as static globals instead of local variables in the Eint Handler.
+ * If declared as local variables, causes stack corruption in PIC18, or other
+ * MCU's with overlay memory.
+ */
 static uint8_t  g_EintHostIntRegValue;
 static uint8_t  g_EintHostIntMaskRegValue;
 static uint8_t  g_EintHostInt;
 
-
-/*****************************************************************************
-  Function:
-    void WF_EintHandler(void);
-
-  Summary:
-    MRF24WG interrupt handler, called directly from the the interrupt routine,
-    _WFInterrupt() in wf_eint_stub.c.
-
-  Description:
-    Must be called, once, for each MRF24WG interrupt.
-
- Parameters:
-    None
-
-  Returns:
-    None
-
-  Remarks:
-    IMPORTANT: This function, and functions called from this function must not
-               use local variables, especially if the MCU uses overlay memory
-               like the Microchip PIC18 MCU.  The logical stack is contained
-               within the overlay memory, and if the interrupt uses local variables
-               the toolchain cannot be relied on to not overwrite local variables
-               in non-interrupt functions, specifically the function that was
-               interrupted by this interrupt.
-*****************************************************************************/
+/*
+ * MRF24WG interrupt handler, called directly from the the interrupt routine,
+ * _WFInterrupt() in wf_eint_stub.c.
+ *
+ * Must be called, once, for each MRF24WG interrupt.
+ *
+ * IMPORTANT: This function, and functions called from this function must not
+ * use local variables, especially if the MCU uses overlay memory
+ * like the Microchip PIC18 MCU.  The logical stack is contained
+ * within the overlay memory, and if the interrupt uses local variables
+ * the toolchain cannot be relied on to not overwrite local variables
+ * in non-interrupt functions, specifically the function that was
+ * interrupted by this interrupt.
+ */
 void WF_EintHandler(void)
 {
     /*--------------------------------------------------------*/
@@ -157,28 +110,14 @@ void WF_EintHandler(void)
     g_ExIntNeedsServicing = true;
 }
 
-/*****************************************************************************
-  Function:
-    void InterruptCheck(void);
-
-  Summary:
-    Periodically called to check if the MRF24WG external interrupt occurred, and
-    completes the interrupt processing.
-
- Description:
-    Some processing takes place in the actual interrupt routine, and some processing
-    takes place later in the round robin.  This function checks if an interrupt
-    has occurred, and if so, performs the rest of the interrupt processing.
-
- Parameters:
-    None
-
-  Returns:
-    None
-
-  Remarks:
-    None
-*****************************************************************************/
+/*
+ * Periodically called to check if the MRF24WG external interrupt occurred, and
+ * completes the interrupt processing.
+ *
+ * Some processing takes place in the actual interrupt routine, and some processing
+ * takes place later in the round robin.  This function checks if an interrupt
+ * has occurred, and if so, performs the rest of the interrupt processing.
+ */
 void InterruptCheck(void)
 {
     uint8_t  hostIntRegValue;

@@ -1,0 +1,134 @@
+C source files:
+    wf_connection_algorithm.c
+        Functions:
+            WF_Connect()
+            WF_ReconnectModeSet(retryCount, deauthAction, beaconTimeout, beaconTimeoutAction)
+            WF_Disconnect()
+            WF_ChannelListSet(p_channelList, numChannels)
+            WF_ScanContextSet(p_context)
+            WF_AdhocContextSet(p_context)
+            WF_RssiSet(rssi)
+            WF_ConnectionStateGet(p_state)
+            WF_WpaConvPassphraseToKey(p_keyInfo)
+            SetListenInterval(listenInterval)
+            SetDtimInterval(dtimInterval)
+
+        These functions use lower-level calls:
+            SendMgmtMsg(buf, sizeofBuf, p_elementData, elementDataLength)
+            WaitForMgmtResponse(elementType, buffer)
+
+    wf_connection_profile.c
+        Functions:
+            GetCpid()
+            WF_CPCreate()
+            WF_SsidSet(p_ssid, ssidLength)
+            WF_SsidGet(p_ssid, p_ssidLength)
+            WF_NetworkTypeSet(networkType)
+            WF_SsidTypeSet(hidden)
+            WF_SecurityOpenSet()
+            WF_SecurityWepSet(p_context)
+            WF_SecurityWpaSet(p_context)
+            WF_SecurityWpsSet(p_context)
+            GetWpsPassPhraseInfo()
+            WF_WpsKeyGenerate()
+            WF_BssidSet(p_bssid)
+            SetHiddenSsid(hiddenSsid)
+            SetAdHocMode(mode)
+            WF_WpsCredentialsGet(p_cred)
+
+        These functions use lower-level calls:
+            SendMgmtMsg(buf, sizeofBuf, p_elementData, elementDataLength)
+            WaitForMgmtResponse(elementType, buffer)
+
+    wf_data_msg.c
+        Functions:
+            SignalPacketRx()
+            isPacketRx()
+            ClearPacketRx()
+            RxPacketCheck()
+            WF_TxPacketAllocate(packetSize)
+            WF_TxPacketCopy(p_buf, length)
+            WF_TxPacketTransmit(packetSize)
+            WF_RxPacketLengthGet()
+            WF_RxPacketDeallocate()
+            WF_RxPacketCopy(p_buf, length)
+
+    wf_eint.c
+        Functions:
+            WF_EintHandler()
+            InterruptCheck()
+
+    wf_eint_stub.c
+        Hardware-level functions related to interrupt control:
+            WF_EintInit()
+            WF_EintEnable()
+            WF_EintDisable()
+            WF_isEintDisabled()
+            WF_isEintPending()
+            _WFInterrupt()
+
+    wf_event_queue.c
+        Functions:
+            EventQInit()
+            EventEnqueue(eventType, eventData)
+            EventDequeue(p_event)
+            isEventQEmpty()
+            isEventQFull()
+
+    wf_event_stub.c
+        OS-dependent functions:
+            WF_ProcessEvent(eventType, eventData)
+            WF_ProcessRxPacket()
+
+    wf_gpio_stub.c
+        Hardware-level functions related to i/o signal control:
+            WF_GpioInit()
+            WF_GpioSetReset(level)
+            WF_GpioSetHibernate(level)
+
+    wf_init.c
+        Functions:
+            WF_Init()
+            ChipResetStateMachine()
+
+    wf_mgmt_msg.c
+        Functions:
+            ClearMgmtConfirmMsg()
+            SignalMgmtMsgRx()
+            SendMgmtMsg(p_header, headerLength, p_data, dataLength)
+            WaitForMgmtResponse(expectedSubtype, freeAction)
+            WaitForMgmtResponseAndReadData(expectedSubtype, numDataBytes, startIndex, p_data)
+
+    wf_param_msg.c
+        Functions:
+            WFEnableMRF24WB0MMode()
+            WF_DeviceInfoGet(p_Info)
+            WF_RegionalDomainSet(regionalDomain)
+            WF_RegionalDomainGet(p_regionalDomain)
+            WF_MacAddressSet(p_mac)
+            WF_MacAddressGet(p_macAddress)
+            WF_SetTxDataConfirm(state)
+            WF_TxModeSet(mode)
+            WF_RtsThresholdSet(rtsThreshold)
+            YieldPassPhraseToHost()
+            SetPSK(psk)
+            WF_MacStatsGet(p_macStats)
+            WF_LinkDownThresholdSet(threshold)
+            WF_SetHwMultiCastFilter(multicastFilterId, multicastAddress)
+            GetFactoryMax()
+
+        These functions use lower-level calls:
+            SendMgmtMsg(buf, sizeofBuf, p_elementData, elementDataLength)
+            WaitForMgmtResponse(elementType, buffer)
+
+    wf_pbkdf2.c
+    wf_pll.c
+    wf_power.c
+    wf_raw.c
+    wf_registers.c
+    wf_scan.c
+    wf_spi_stub.c
+    wf_task.c
+    wf_timer.c
+    wf_timer_stub.c
+    wf_ud_state.c

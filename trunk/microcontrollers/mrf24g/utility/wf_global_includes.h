@@ -13,7 +13,7 @@
 #include "wf_ud_state.h"
 #include "wf_raw.h"
 #include "wf_registers.h"
-#include <endian.h>
+#include <arpa/inet.h>
 
 /*
  * Connection profile functions.
