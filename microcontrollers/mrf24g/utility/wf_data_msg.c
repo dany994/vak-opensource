@@ -1,70 +1,27 @@
-/*******************************************************************************
- MRF24WG Data Tx/Rx
-
-  Summary: Contains functions pertaining to WiFi data Tx/Rx
-
-  Description: Contains functions that allocate and deallocate Tx/Rx data messages
-               as well as functions that perform Tx/Rx processing.
-*******************************************************************************/
-
-/* MRF24WG0M Universal Driver
-*
-* Copyright (c) 2012-2013, Microchip <www.microchip.com>
-* Contact Microchip for the latest version.
-*
-* This program is free software; distributed under the terms of BSD
-* license:
-*
-* Redistribution and use in source and binary forms, with or without modification,
-* are permitted provided that the following conditions are met:
-*
-* 1.    Redistributions of source code must retain the above copyright notice, this
-*        list of conditions and the following disclaimer.
-* 2.    Redistributions in binary form must reproduce the above copyright notice,
-*        this list of conditions and the following disclaimer in the documentation
-*        and/or other materials provided with the distribution.
-* 3.    Neither the name(s) of the above-listed copyright holder(s) nor the names
-*        of its contributors may be used to endorse or promote products derived
-*        from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-//==============================================================================
-//                                  INCLUDES
-//==============================================================================
+/*
+ * MRF24WG Data Tx/Rx
+ *
+ * Functions that allocate and deallocate Tx/Rx data messages
+ * as well as functions that perform Tx/Rx processing.
+ */
 #include "wf_universal_driver.h"
 #include "wf_global_includes.h"
 
-#define WF_TX_PREAMBLE_SIZE (4)
-#define ETHER_HEADER_SIZE   (16)    // 6 bytes dest address, 6 bytes src address, 2 bytes for type field
-#define ENC_PREAMBLE_OFFSET (14)
+#define WF_TX_PREAMBLE_SIZE 4
+#define ETHER_HEADER_SIZE   16  // 6 bytes dest address, 6 bytes src address, 2 bytes for type field
+#define ENC_PREAMBLE_OFFSET 14
 
-//==============================================================================
-//                                  LOCAL DATA TYPES
-//==============================================================================
-typedef struct
-{
+typedef struct {
     uint8_t type;
     uint8_t subType;
 } t_rxPreamble;
 
-//==============================================================================
-//                                  LOCAL GLOBALS
-//==============================================================================
 // will be overwriting the ethernet header source address with the snap header
-const uint8_t snapHdr[6] = {SNAP_VAL, SNAP_VAL, SNAP_CTRL_VAL, SNAP_TYPE_VAL, SNAP_TYPE_VAL, SNAP_TYPE_VAL};
-bool g_HostRAWPacketRx;
+static const uint8_t snapHdr[6] = {
+    SNAP_VAL, SNAP_VAL, SNAP_CTRL_VAL, SNAP_TYPE_VAL, SNAP_TYPE_VAL, SNAP_TYPE_VAL
+};
 
+static bool g_HostRAWPacketRx;
 
 void SignalPacketRx(void)
 {
@@ -81,17 +38,20 @@ void ClearPacketRx(void)
     g_HostRAWPacketRx = false;
 }
 
-// called from WiFi_Task
+/*
+ * called from WiFi_Task
+ */
 void RxPacketCheck(void)
 {
-    if (isPacketRx())
-    {
+    if (isPacketRx()) {
         ClearPacketRx();
         WF_ProcessRxPacket();
     }
 }
 
-// packetSize includes the ethernet header bytes
+/*
+ * packetSize includes the ethernet header bytes
+ */
 bool WF_TxPacketAllocate(uint16_t packetSize)
 {
     bool result = false;
@@ -104,8 +64,7 @@ bool WF_TxPacketAllocate(uint16_t packetSize)
     {
         // allocate an extra 4 bytes for WiFi message preamble
         result = AllocateDataTxBuffer(packetSize + WF_TX_PREAMBLE_SIZE);
-        if (result == true)
-        {
+        if (result) {
             // set the RAW index at 4 to leave room for internal 4 byte header.  Ethernet
             // packet data starts at index 4.
             RawSetIndex(RAW_DATA_TX_ID, 4);
@@ -113,7 +72,6 @@ bool WF_TxPacketAllocate(uint16_t packetSize)
             break;
         }
     }
-
     return result;
 }
 

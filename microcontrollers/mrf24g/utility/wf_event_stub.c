@@ -95,12 +95,9 @@ void WF_ProcessRxPacket(void)
 #if 0
     uint16_t cbPkt = WF_RxPacketLengthGet();
 
-    if(cbPkt > 0)
-    {
+    if (cbPkt > 0) {
         IPSTACK * pIpStack = RRHPAlloc(wfmrf24.adpMRF24G.hAdpHeap, cbPkt + sizeof(IPSTACK));
-        if(pIpStack != NULL)
-        {
-
+        if (pIpStack != NULL) {
             // fill in info about the frame data
             pIpStack->fFrameIsParsed    = FALSE;
             pIpStack->fFreeIpStackToAdp = TRUE;
@@ -114,10 +111,8 @@ void WF_ProcessRxPacket(void)
             pIpStack->fOwnedByAdp = true;
             FFInPacket(&wfmrf24.priv.ffptRead, pIpStack);
         }
-
         // if we know we can never allocate this packet, then just drop it
-        else
-        {
+        else {
             WF_RxPacketDeallocate();
         }
     }
