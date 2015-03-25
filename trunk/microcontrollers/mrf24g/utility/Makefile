@@ -22,6 +22,8 @@ OBJS    = wf_connection_algorithm.o \
           wf_timer_stub.o \
           wf_ud_state.o
 
+CFLAGS  = -Wall -DWF_ERROR_CHECKING
+
 all:    $(OBJS)
 
 clean:

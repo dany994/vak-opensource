@@ -6,22 +6,22 @@
 
 static volatile bool gMgmtConfirmMsgReceived = false;
 
-void ClearMgmtConfirmMsg(void)
+void ClearMgmtConfirmMsg()
 {
     gMgmtConfirmMsgReceived = false;
 }
 
-static void SignalMgmtConfirmMsg(void)
+static void SignalMgmtConfirmMsg()
 {
     gMgmtConfirmMsgReceived = true;
 }
 
-static bool isMgmtConfirmMsg(void)
+static bool isMgmtConfirmMsg()
 {
     return gMgmtConfirmMsgReceived;
 }
 
-static void WFProcessMgmtIndicateMsg(void)
+static void WFProcessMgmtIndicateMsg()
 {
     t_mgmtIndicateHdr hdr;
     uint8_t buf[6];

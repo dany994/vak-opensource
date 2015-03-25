@@ -184,7 +184,7 @@ static void LowLevel_SetSecurity(uint8_t securityType,
     WaitForMgmtResponse(WF_CP_SET_ELEMENT_SUBTYPE, FREE_MGMT_BUFFER);
 }
 
-uint8_t GetCpid(void)
+uint8_t GetCpid()
 {
     return g_cpid;
 }
@@ -203,7 +203,7 @@ uint8_t GetCpid(void)
  *  p_CpId - Pointer to where Connection Profile ID will be written.  If
  *           function fails, the CP ID will be set to 0xff.
  */
-void WF_CPCreate(void)
+void WF_CPCreate()
 {
     uint8_t  hdr[2];
 
@@ -398,12 +398,12 @@ void WF_SecurityWpsSet(t_wpsContext *p_context)
     }
 }
 
-t_wpaKeyInfo *GetWpsPassPhraseInfo(void)
+t_wpaKeyInfo *GetWpsPassPhraseInfo()
 {
    return g_p_wpaKeyInfo;
 }
 
-void WF_WpsKeyGenerate(void)
+void WF_WpsKeyGenerate()
 {
     // create the binary key
     WF_WpaConvPassphraseToKey(g_p_wpaKeyInfo);

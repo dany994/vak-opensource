@@ -122,13 +122,106 @@ C source files:
             WaitForMgmtResponse(elementType, buffer)
 
     wf_pbkdf2.c
+        Functions:
+            pbkdf2_sha1(passphrase, ssid, ssid_len, iterations, buf, buflen)
+
     wf_pll.c
+        Functions:
+            ResetPll()
+
     wf_power.c
+        Functions:
+            WF_PowerStateGet(p_powerState)
+            isPsPollNeedReactivate()
+            ClearPsPollReactivate()
+            WF_PsPollEnable(p_context)
+            WFConfigureLowPowerMode(action)
+            WF_Hibernate()
+            WF_TxPowerMaxSet(maxTxPower)
+            WF_TxPowerFactoryMaxGet(p_maxPower)
+            EnsureWFisAwake()
+
     wf_raw.c
+        Functions:
+            RawInit()
+            isWaitingForRawMoveCompleteInterrupt()
+            ClearWaitingForRawMoveCompleteInterrupt()
+            SignalRawInterruptEvent(rawIntMask)
+            ScratchMount(rawId)
+            ScratchUnmount(rawId)
+            AllocateMgmtTxBuffer(bytesNeeded)
+            DeallocateMgmtRxBuffer()
+            RawSetByte(rawId, p_buffer, length)
+            RawGetByte(rawId, pBuffer, length)
+            SendRAWManagementFrame(bufLen)
+            RawMountRxBuffer(rawId)
+            RawRead(rawId, startIndex, length, p_dest)
+            RawWrite(rawId, startIndex, length, p_src)
+            RawSetIndex(rawId, index)
+            AllocateDataTxBuffer(bytesNeeded)
+            DeallocateDataRxBuffer()
+            RawMove(rawId, srcDest, rawIsDestination, size)
+            SetRawDataWindowState(rawId, state)
+            GetRawDataWindowState(rawId)
+
     wf_registers.c
+        Functions:
+            Read8BitWFRegister(regId)
+            Write8BitWFRegister(regId, value)
+            Write16BitWFRegister(regId, value)
+            Read16BitWFRegister(regId)
+            WriteWFArray(regId, p_Buf, length)
+            ReadWFArray(regId, p_Buf, length)
+
     wf_scan.c
+        Functions:
+            WF_Scan(scanMode)
+            WF_ScanResultGet(listIndex, p_scanResult)
+
     wf_spi_stub.c
+        Functions:
+            WF_SpiInit()
+            WF_SpiEnableChipSelect()
+            WF_SpiDisableChipSelect()
+            WF_SpiTxRx(p_txBuf, txLength, p_rxBuf, rxLength)
+
     wf_task.c
+        Functions:
+            WF_Task()
+
     wf_timer.c
+        Functions:
+            GetElapsedTime(startTime, currentTime)
+
     wf_timer_stub.c
+        Functions:
+            WF_TimerInit()
+            WF_TimerRead()
+
     wf_ud_state.c
+        Functions:
+            UdSetDomain(domain)
+            UdSetSecurityOpen()
+            UdSetSecurityWep(p_context)
+            UdSetSecurityWpa(p_context)
+            UdSetSecurityWps(p_context)
+            UdSetScanContext(p_context)
+            UdSetAdhocNetworkContext(p_context)
+            UdSetNetworkType(networkType)
+            UdSetChannelList(p_channelList, numChannels)
+            UdSetSsid(p_ssid, ssidLength)
+            UdSetBssid(p_bssid)
+            UdSetRssi(rssi)
+            UdSetRtsThreshold(rtsThreshold)
+            UdSetReconnectMode(retryCount, deauthAction,
+            UdCheckConnectionConfig()
+            UdSetTxMode(mode)
+            UdScan(mode)
+            udSetTxPowerMax(maxTxPower)
+            UdSetHwMulticastFilter(multicastFilterId, p_multicastAddress)
+            UdConvWpaPassphrase(p_keyInfo)
+            UdGetWpsCredentials()
+            UdStateInit()
+            UdEnablePsPoll(p_context)
+            UdDisablePsPoll()
+            UdisPsPollEnabled()

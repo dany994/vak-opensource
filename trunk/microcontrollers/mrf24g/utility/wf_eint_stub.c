@@ -11,7 +11,7 @@
  * This line is asserted low by MRF24WG.
  * Called by Universal Driver during initialization.
  */
-void WF_EintInit(void)
+void WF_EintInit()
 {
     WIFI_IECxCLR = WIFI_INT_MASK;       // disable INT1 interrupt
 
@@ -45,7 +45,7 @@ void WF_EintInit(void)
  * interrupt must be forced.
  * This is not an issue for level-triggered interrupts.
  */
-void WF_EintEnable(void)
+void WF_EintEnable()
 {
     // PIC32 uses level-triggered interrupts, so it is possible the Universal Driver
     // may have temporarily disabled the external interrupt, and then missed the
@@ -74,7 +74,7 @@ void WF_EintEnable(void)
  * Called by Universal Driver during normal operations
  * to disable the MRF24WG external interrupt.
  */
-void WF_EintDisable(void)
+void WF_EintDisable()
 {
     WIFI_IECxCLR = WIFI_INT_MASK;
 }
@@ -85,7 +85,7 @@ void WF_EintDisable(void)
  * state of the external interrupt is disabled.
  * Returns True if interrupt is disabled, else False.
  */
-bool WF_isEintDisabled(void)
+bool WF_isEintDisabled()
 {
     return (WIFI_INT_IE == 0);
 }
@@ -96,7 +96,7 @@ bool WF_isEintDisabled(void)
  * to check if an external interrupt is pending.
  * Returns True if interrupt is pending, else False.
  */
-bool WF_isEintPending(void)
+bool WF_isEintPending()
 {
     // if interrupt line is low, but interrupt request has not occurred
     return(((WF_INT_VAL == 0) && (WIFI_INT_IF == 0)));
@@ -110,7 +110,7 @@ bool WF_isEintPending(void)
  * 2) clear the interrupt
  * 3) call WFEintHandler()
  */
-void _WFInterrupt(void)         // TODO: assign to PIC32_IRQ_INT4 vector
+void _WFInterrupt()             // TODO: assign to PIC32_IRQ_INT4 vector
 {
     // clear EINT
     WIFI_IFSxCLR = WIFI_INT_MASK;        // clear the interrupt

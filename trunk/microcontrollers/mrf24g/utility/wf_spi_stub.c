@@ -12,9 +12,9 @@
  * Initializes SPI controller used to communicate with MRF24WG.
  * Called by Universal Driver during initialization to initialize SPI interface.
  */
-void WF_SpiInit(void)
+void WF_SpiInit()
 {
-    uint8_t rxData;
+    uint8_t rxData __attribute__((unused));
 
 #ifdef WF_INT_PPS
     WF_INT_PPS();
@@ -64,7 +64,7 @@ void WF_SpiInit(void)
  * Select the MRF24WG SPI by setting the CS line low.
  * Called by Universal Driver when preparing to transmit data to the MRF24WG.
  */
-void WF_SpiEnableChipSelect(void)
+void WF_SpiEnableChipSelect()
 {
     // if the SPI controller is being shared with another device then save its
     // context here and configure the SPI controller for the MRF24WG
@@ -78,7 +78,7 @@ void WF_SpiEnableChipSelect(void)
  * Deselect the MRF24WG SPI by setting CS high.
  * Called by Universal Driver after completing an SPI transaction.
  */
-void WF_SpiDisableChipSelect(void)
+void WF_SpiDisableChipSelect()
 {
     // deselect the MRF24WG
     WF_CS_SET(1);
@@ -105,7 +105,7 @@ void WF_SpiTxRx(const uint8_t *p_txBuf,
 {
     uint16_t byteCount;
     uint16_t i;
-    uint8_t  rxTrash;
+    uint8_t  rxTrash __attribute__((unused));
 
     // TODO: need a check either here or somewhere else to flag an error if
     //       MRF24WG is in hibernate mode.  Another stub function to check if
