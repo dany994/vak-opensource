@@ -23,17 +23,17 @@ static const uint8_t snapHdr[6] = {
 
 static bool g_HostRAWPacketRx;
 
-void SignalPacketRx(void)
+void SignalPacketRx()
 {
     g_HostRAWPacketRx = true;
 }
 
-bool isPacketRx(void)
+bool isPacketRx()
 {
     return g_HostRAWPacketRx;
 }
 
-void ClearPacketRx(void)
+void ClearPacketRx()
 {
     g_HostRAWPacketRx = false;
 }
@@ -41,7 +41,7 @@ void ClearPacketRx(void)
 /*
  * called from WiFi_Task
  */
-void RxPacketCheck(void)
+void RxPacketCheck()
 {
     if (isPacketRx()) {
         ClearPacketRx();
@@ -103,7 +103,7 @@ void WF_TxPacketTransmit(uint16_t packetSize)
     SetRawDataWindowState(RAW_DATA_TX_ID, WF_RAW_UNMOUNTED);
 }
 
-uint16_t WF_RxPacketLengthGet(void)
+uint16_t WF_RxPacketLengthGet()
 {
     uint16_t len;
     t_rxPreamble rxPreamble;
@@ -134,7 +134,7 @@ uint16_t WF_RxPacketLengthGet(void)
     return len - sizeof(t_rxPreamble) - ENC_PREAMBLE_OFFSET;
 }
 
-void WF_RxPacketDeallocate(void)
+void WF_RxPacketDeallocate()
 {
     DeallocateDataRxBuffer();
 }

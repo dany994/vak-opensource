@@ -32,7 +32,7 @@ static t_wfEventQueue g_eventQueue;
  * Called by Universal Driver during initialization.  After this call the
  * event queue is in an empty state.
  */
-void EventQInit(void)
+void EventQInit()
 {
     memset(&g_eventQueue, 0x00, sizeof(g_eventQueue));
 
@@ -106,7 +106,7 @@ void EventDequeue(t_event *p_event)
 /*
  * Determine if event queue is empty.
  */
-bool isEventQEmpty(void)
+bool isEventQEmpty()
 {
     return (g_eventQueue.readIndex == g_eventQueue.writeIndex);
 }
@@ -114,7 +114,7 @@ bool isEventQEmpty(void)
 /*
  * Queue full when writeIndex + 1 = readIndex
  */
-bool isEventQFull(void)
+bool isEventQFull()
 {
     uint8_t readIndex  = g_eventQueue.readIndex;
     uint8_t writeIndex = g_eventQueue.writeIndex;

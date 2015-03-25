@@ -10,7 +10,7 @@
  * Called by Universal Driver during initialization to start a 1ms timer that
  * will be used for various reasons.
  */
-void WF_TimerInit(void)
+void WF_TimerInit()
 {
 }
 
@@ -19,7 +19,7 @@ void WF_TimerInit(void)
  * Returns the current value of the 1ms timer.
  * Returns current value of 1ms timer.
  */
-uint32_t WF_TimerRead(void)
+uint32_t WF_TimerRead()
 {
     //TODO
     return 0;   //SYSGetMilliSecond();

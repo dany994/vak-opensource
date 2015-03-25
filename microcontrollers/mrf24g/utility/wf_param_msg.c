@@ -106,7 +106,7 @@ static void SendGetParamMsg(uint8_t paramType, uint8_t *p_paramData, uint8_t par
  * Must be called to configure the MRF24W for operations.
  * MACInit must be called first.
  */
-void WFEnableMRF24WB0MMode(void)
+void WFEnableMRF24WB0MMode()
 {
     uint8_t buf[1] = {ENABLE_MRF24WB0M};
 
@@ -255,7 +255,7 @@ void WF_RtsThresholdSet(uint16_t rtsThreshold)
  *
  * MACInit must be called first.
  */
-void YieldPassPhraseToHost(void)
+void YieldPassPhraseToHost()
 {
     uint8_t yield = 1;
 
@@ -385,7 +385,7 @@ void WF_SetHwMultiCastFilter(uint8_t multicastFilterId,
  * Parameter:
  *  p_factoryMaxTxPower - desired maxTxPower ( 0 to 18 dBm), in 1dB steps
  */
-uint8_t GetFactoryMax(void)
+uint8_t GetFactoryMax()
 {
     uint8_t msgData[2];
 

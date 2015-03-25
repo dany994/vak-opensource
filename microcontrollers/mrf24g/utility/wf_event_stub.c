@@ -29,59 +29,58 @@ void WF_ProcessEvent(uint8_t eventType, uint32_t eventData)
     wfmrf24.priv.lastEventType = eventType;
     wfmrf24.priv.lastEventData = eventData;
 
-    switch (eventType)
-    {
-        case WF_EVENT_INITIALIZATION:
-            if(eventData == WF_INIT_SUCCESSFUL)
-            {
-                wfmrf24.priv.initStatus = ForceIPStatus((InitMask | eventData));
-            }
-            else
-            {
-                wfmrf24.priv.initStatus = ForceIPError((InitMask | eventData));
-            }
-            break;
+    switch (eventType) {
+    case WF_EVENT_INITIALIZATION:
+        if (eventData == WF_INIT_SUCCESSFUL)
+        {
+            wfmrf24.priv.initStatus = ForceIPStatus((InitMask | eventData));
+        }
+        else
+        {
+            wfmrf24.priv.initStatus = ForceIPError((InitMask | eventData));
+        }
+        break;
 
-        case WF_EVENT_CONNECTION_SUCCESSFUL:
-            wfmrf24.priv.connectionStatus = ipsSuccess;
-            break;
+    case WF_EVENT_CONNECTION_SUCCESSFUL:
+        wfmrf24.priv.connectionStatus = ipsSuccess;
+        break;
 
-        case WF_EVENT_CONNECTION_TEMPORARILY_LOST:
-            wfmrf24.priv.connectionStatus = ForceIPStatus((CLMask | eventData));
-            wfmrf24.priv.fMRFBusy = true;   // don't do anything during the reconnect!
-            break;
+    case WF_EVENT_CONNECTION_TEMPORARILY_LOST:
+        wfmrf24.priv.connectionStatus = ForceIPStatus((CLMask | eventData));
+        wfmrf24.priv.fMRFBusy = true;   // don't do anything during the reconnect!
+        break;
 
-        case WF_EVENT_CONNECTION_REESTABLISHED:
-            wfmrf24.priv.connectionStatus = ipsSuccess;
-            break;
+    case WF_EVENT_CONNECTION_REESTABLISHED:
+        wfmrf24.priv.connectionStatus = ipsSuccess;
+        break;
 
-        case WF_EVENT_CONNECTION_PERMANENTLY_LOST:
-            wfmrf24.priv.connectionStatus = ForceIPError((CLMask | eventData));
-            break;
+    case WF_EVENT_CONNECTION_PERMANENTLY_LOST:
+        wfmrf24.priv.connectionStatus = ForceIPError((CLMask | eventData));
+        break;
 
-        case WF_EVENT_CONNECTION_FAILED:
-            wfmrf24.priv.connectionStatus = ForceIPError((CFMask | eventData));
-            break;
+    case WF_EVENT_CONNECTION_FAILED:
+        wfmrf24.priv.connectionStatus = ForceIPError((CFMask | eventData));
+        break;
 
-        case WF_EVENT_SCAN_RESULTS_READY:
-            wfmrf24.priv.cScanResults = eventData;
-            break;
+    case WF_EVENT_SCAN_RESULTS_READY:
+        wfmrf24.priv.cScanResults = eventData;
+        break;
 
-        case WF_WPS_EVENT_KEY_CALCULATION_REQUEST:
-            WF_WpsKeyGenerate(); // can be called here or later, but must be called
-                                 // to complete WPS connection
-            wfmrf24.priv.fMRFBusy = TRUE;   // wait for connection status or error.
-            break;
+    case WF_WPS_EVENT_KEY_CALCULATION_REQUEST:
+        WF_WpsKeyGenerate(); // can be called here or later, but must be called
+                             // to complete WPS connection
+        wfmrf24.priv.fMRFBusy = TRUE;   // wait for connection status or error.
+        break;
 
-        case WF_EVENT_MRF24WG_MODULE_ASSERT:
-            //TODO: OutputMrf24wgAssertInfo(eventData);
-            break;
+    case WF_EVENT_MRF24WG_MODULE_ASSERT:
+        //TODO: OutputMrf24wgAssertInfo(eventData);
+        break;
 
-        // if we get an event error, it will be in
-        // the last eventData
-        case WF_EVENT_ERROR:
-        default:
-            break;
+    // if we get an event error, it will be in
+    // the last eventData
+    case WF_EVENT_ERROR:
+    default:
+        break;
     }
 #endif
 }
@@ -89,7 +88,7 @@ void WF_ProcessEvent(uint8_t eventType, uint32_t eventData)
 /*
  * Called by Universal Driver to notify application of incoming packet.
  */
-void WF_ProcessRxPacket(void)
+void WF_ProcessRxPacket()
 {
     //TODO
 #if 0

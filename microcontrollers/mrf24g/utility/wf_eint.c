@@ -38,7 +38,7 @@ static uint8_t  g_EintHostInt;
  * in non-interrupt functions, specifically the function that was
  * interrupted by this interrupt.
  */
-void WF_EintHandler(void)
+void WF_EintHandler()
 {
     /*--------------------------------------------------------*/
     /* if driver is waiting for a RAW Move Complete interrupt */
@@ -64,7 +64,9 @@ void WF_EintHandler(void)
             ClearWaitingForRawMoveCompleteInterrupt();
 
             /* if no other interrupts occurred other than a RAW0/RAW1/RAW2/RAW3/RAW4 Raw Move Complete */
-            if((g_EintHostInt & ~(WF_HOST_INT_MASK_RAW_0_INT_0 | WF_HOST_INT_MASK_RAW_1_INT_0 | WF_HOST_INT_MASK_INT2)) == 0)
+            if ((g_EintHostInt & ~(WF_HOST_INT_MASK_RAW_0_INT_0 |
+                                   WF_HOST_INT_MASK_RAW_1_INT_0 |
+                                   WF_HOST_INT_MASK_INT2)) == 0)
             {
                 /* clear the RAW interrupts, re-enable interrupts, and exit */
                 Write8BitWFRegister(WF_HOST_INTR_REG, (WF_HOST_INT_MASK_RAW_0_INT_0 |
@@ -118,7 +120,7 @@ void WF_EintHandler(void)
  * takes place later in the round robin.  This function checks if an interrupt
  * has occurred, and if so, performs the rest of the interrupt processing.
  */
-void InterruptCheck(void)
+void InterruptCheck()
 {
     uint8_t  hostIntRegValue;
     uint8_t  hostIntMaskRegValue;
@@ -149,7 +151,7 @@ void InterruptCheck(void)
     hostInt = hostIntRegValue & hostIntMaskRegValue;
 
     // if received a level 2 interrupt
-    if((hostInt & WF_HOST_INT_MASK_INT2) == WF_HOST_INT_MASK_INT2)
+    if ((hostInt & WF_HOST_INT_MASK_INT2) == WF_HOST_INT_MASK_INT2)
     {
         // Either a mgmt tx or mgmt rx Raw move complete occurred, which is how
         // this interrupt is normally used.  If this is the case, the event was
@@ -173,7 +175,7 @@ void InterruptCheck(void)
         Write16BitWFRegister(WF_HOST_INTR2_REG, WF_HOST_INT_MASK_INT2);
     }
     /* else if got a FIFO 1 Threshold interrupt (Management Fifo).  Mgmt Rx msg ready to proces. */
-    else if((hostInt & WF_HOST_INT_MASK_FIFO_1_THRESHOLD) == WF_HOST_INT_MASK_FIFO_1_THRESHOLD)
+    else if ((hostInt & WF_HOST_INT_MASK_FIFO_1_THRESHOLD) == WF_HOST_INT_MASK_FIFO_1_THRESHOLD)
     {
         /* clear this interrupt */
         Write8BitWFRegister(WF_HOST_INTR_REG, WF_HOST_INT_MASK_FIFO_1_THRESHOLD);
@@ -183,7 +185,7 @@ void InterruptCheck(void)
         SignalMgmtMsgRx();
     }
     /* else if got a FIFO 0 Threshold Interrupt (Data Fifo).  Data Rx msg ready to process. */
-    else if((hostInt & WF_HOST_INT_MASK_FIFO_0_THRESHOLD) == WF_HOST_INT_MASK_FIFO_0_THRESHOLD)
+    else if ((hostInt & WF_HOST_INT_MASK_FIFO_0_THRESHOLD) == WF_HOST_INT_MASK_FIFO_0_THRESHOLD)
     {
         /* clear this interrupt */
         Write8BitWFRegister(WF_HOST_INTR_REG, WF_HOST_INT_MASK_FIFO_0_THRESHOLD);
@@ -192,15 +194,13 @@ void InterruptCheck(void)
         SignalPacketRx();
     }
     /* else got a Host interrupt that we don't handle */
-    else if(hostInt)
-    {
+    else if (hostInt) {
         /* clear this interrupt */
         Write8BitWFRegister(WF_HOST_INTR_REG, hostInt);
         WF_EintEnable();
     }
     /* we got a spurious interrupt (no bits set in register) */
-    else
-    {
+    else {
         /* spurious interrupt */
         WF_EintEnable();
     }

@@ -18,7 +18,7 @@
  * an output to avoid a glitch.  This function initially sets the HIBERNATE
  * pin high (in hibernate mode) and sets the RESET line low (in reset).
  */
-void WF_GpioInit(void)
+void WF_GpioInit()
 {
     // Set level on HIBERNATE I/O to high (MRF24WG in hibernate) and then
     // configure as an output.

@@ -129,7 +129,7 @@ static void LowLevel_CAGetElement(uint8_t elementId,
  *          connectionProfileList will be used to connect, starting with the
  *          first Connection Profile in the list.
  */
-void WF_Connect(void)
+void WF_Connect()
 {
     uint8_t  hdrBuf[4];
 
@@ -247,7 +247,7 @@ void WF_ReconnectModeSet(uint8_t retryCount, uint8_t deauthAction,
  * attempt in progress.  No further attempts to connect are taken until
  * WF_Connect() is called.
  */
-void WF_Disconnect(void)
+void WF_Disconnect()
 {
     uint8_t  hdrBuf[2];
     uint8_t   connectionState; // not used, but required for function call
