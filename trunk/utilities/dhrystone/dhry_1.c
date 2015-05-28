@@ -25,6 +25,8 @@
 #define NRUNS 0         /* Ask */
 #endif
 
+#define DHRYSTONES_PER_DMIPS 1757
+
 /* Global Variables: */
 
 Rec_Pointer     Ptr_Glob,
@@ -88,10 +90,13 @@ int main ()
   printf ("Dhrystone Benchmark, Version 2.1 (Language: C)\n");
   printf ("\n");
 
-  if (Number_Of_Runs == 0) {
+  while (Number_Of_Runs == 0) {
     int n;
     printf ("Please give the number of runs through the benchmark: ");
-    scanf ("%d", &n);
+    if (scanf ("%d", &n) != 1) {
+        printf ("Wrong number!\n");
+        continue;
+    }
     Number_Of_Runs = n;
     printf ("\n");
   }
@@ -175,7 +180,7 @@ int main ()
   printf ("Arr_2_Glob[8][7]:    %d\n", Arr_2_Glob[8][7]);
   printf ("        should be:   Number_Of_Runs + 10\n");
   printf ("Ptr_Glob->\n");
-  printf ("  Ptr_Comp:          %d\n", (int) Ptr_Glob->Ptr_Comp);
+  printf ("  Ptr_Comp:          %p\n", Ptr_Glob->Ptr_Comp);
   printf ("        should be:   (implementation-dependent)\n");
   printf ("  Discr:             %d\n", Ptr_Glob->Discr);
   printf ("        should be:   %d\n", 0);
@@ -186,7 +191,7 @@ int main ()
   printf ("  Str_Comp:          %s\n", Ptr_Glob->variant.var_1.Str_Comp);
   printf ("        should be:   DHRYSTONE PROGRAM, SOME STRING\n");
   printf ("Next_Ptr_Glob->\n");
-  printf ("  Ptr_Comp:          %d\n", (int) Next_Ptr_Glob->Ptr_Comp);
+  printf ("  Ptr_Comp:          %p\n", Next_Ptr_Glob->Ptr_Comp);
   printf ("        should be:   (implementation-dependent), same as above\n");
   printf ("  Discr:             %d\n", Next_Ptr_Glob->Discr);
   printf ("        should be:   %d\n", 0);
@@ -227,10 +232,13 @@ int main ()
 
     printf ("Nanoseconds for one run through Dhrystone: %-7.1f \n",
             Microseconds * 1000);
-    printf ("                                    DMIPS: %-7.3f \n",
+    printf ("            Million Dhrystones per Second: %-7.3f \n",
             Dhrystones_Per_Second / 1000000);
+    printf ("                                    DMIPS: %-7.1f \n",
+            Dhrystones_Per_Second / DHRYSTONES_PER_DMIPS);
     printf ("\n");
   }
+  return 0;
 }
 
 
