@@ -13,8 +13,8 @@ ifeq ($(UNAME),Darwin)
     LIBS        += /opt/local/lib/libusb-legacy/libusb-legacy.a
 endif
 
-led8:           led8.o ft232r.o
-		$(CC) $(LDFLAGS) led8.o ft232r.o $(LIBS) -o $@
+demo:           demo.o ft232r.o
+		$(CC) $(LDFLAGS) demo.o ft232r.o $(LIBS) -o $@
 
 clean:
-		rm -f *.o led8
+		rm -f *.o demo
