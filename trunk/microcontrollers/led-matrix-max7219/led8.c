@@ -75,7 +75,7 @@ void max_command(int addr, int byte)
     bitbang_io(output, nbytes, 0);
 }
 
-int main()
+void max_init()
 {
     /* Use FT232R adapter to connect to MAX7219. */
     if (bitbang_open("FT232R USB UART", MASK_CS | MASK_CLK | MASK_DIN) < 0) {
@@ -92,30 +92,561 @@ int main()
     max_command(MAX_SHUTDOWN, 1);     /* no shutdown mode */
     max_command(MAX_DISPLAY_TEST, 0); /* no display test */
     max_command(MAX_INTENSITY, 1);    /* minimum intensity (from 1 to 15) */
+}
+
+/*
+ * Twelve pictures from Master Kit NM5101 kit.
+ */
+#define ROW(a,b,c,d,e,f,g) (a | b<<1 | c<<2 | d<<3 | e<<4 | f<<5 | g<<6)
+#define _ 0
+#define O 1
+
+unsigned char pic_heart[] = {
+    ROW (_,O,O,_,O,O,_),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,O,O,_,O,O,_),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    0xff
+};
+
+unsigned char pic_bar[] = {
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (_,_,_,_,_,_,O),
+    ROW (_,_,_,_,_,O,_),
+    ROW (_,_,_,_,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,_,_,_,_),
+    ROW (_,O,_,_,_,_,_),
+    ROW (O,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (O,O,O,O,O,O,O),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (O,_,_,_,_,_,_),
+    ROW (_,O,_,_,_,_,_),
+    ROW (_,_,O,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,O,_,_),
+    ROW (_,_,_,_,_,O,_),
+    ROW (_,_,_,_,_,_,O),
+
+    0xff
+};
+
+unsigned char pic_coin[] = {
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,_,O,_,O,_),
+    ROW (O,_,_,O,_,_,O),
+    ROW (O,_,_,O,_,_,O),
+    ROW (O,_,O,_,O,_,O),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,O,O,_,_),
+
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,_,O,_,O,_),
+    ROW (_,O,_,O,_,O,_),
+    ROW (_,O,_,O,_,O,_),
+    ROW (_,O,O,_,O,O,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,O,O,_,_),
+
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    0xff
+};
+
+unsigned char pic_cross[] = {
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (O,O,O,O,O,O,O),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (O,_,_,_,_,_,O),
+
+    0xff
+};
+
+unsigned char pic_bird[] = {
+    ROW (_,_,_,_,_,_,_),
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,O,_,O,O,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (O,O,O,_,O,O,O),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,O,O,_,O,O,_),
+    ROW (O,_,_,O,_,_,O),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    0xff
+};
+
+unsigned char pic_asterisk[] = {
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,O,_,O,_,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,_,O,_,O,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (O,_,_,O,_,_,O),
+    ROW (_,O,_,O,_,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (O,O,O,O,O,O,O),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,_,O,_,O,_),
+    ROW (O,_,_,O,_,_,O),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    0xff
+};
+
+unsigned char pic_snow[] = {
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (O,O,O,O,O,O,O),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (O,O,O,_,O,O,O),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (O,O,_,_,_,O,O),
+    ROW (_,O,_,_,_,_,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,O,O,O,O,O,O),
+
+    0xff
+};
+
+unsigned char pic_fire[] = {
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,O,_,_,_,_,_),
+    ROW (_,O,_,_,O,_,_),
+    ROW (_,O,_,O,O,_,O),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (O,_,_,_,_,_,_),
+    ROW (O,_,_,_,_,_,_),
+    ROW (O,_,O,_,O,_,_),
+    ROW (O,O,O,O,O,O,_),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,O),
+    ROW (_,_,_,O,_,O,O),
+    ROW (_,O,_,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,O,_,_,O),
+    ROW (_,O,_,O,_,O,O),
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,O,O,O,O,O,O),
+
+    0xff
+};
+
+unsigned char pic_square[] = {
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,O,O,O,O,O,O),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,O,O,O,O,O,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    0xff
+};
+
+unsigned char pic_round[] = {
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,O,O,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    0xff
+};
+
+unsigned char pic_romb[] = {
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,O,O,O,O,O,O),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    0xff
+};
+
+unsigned char pic_ice[] = {
+    ROW (O,O,O,O,O,O,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,O,O,O,O,O,O),
+
+    ROW (_,O,O,O,O,O,_),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,O,O,O,O,_),
+
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,O,_,_,_,O,_),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,_,_,_,O,_),
+    ROW (_,_,O,O,O,_,_),
+
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,O,O,_,O,O,_),
+    ROW (O,_,_,_,_,_,O),
+    ROW (_,O,O,_,O,O,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,_,O,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,O,O,_,O,O,_),
+    ROW (_,_,_,O,_,O,_),
+    ROW (_,O,O,_,O,O,_),
+    ROW (_,_,O,_,O,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,O,O,O,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,O,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+    ROW (_,_,_,_,_,_,_),
+
+    0xff
+};
+
+void show(int msec, unsigned char *sequence)
+{
+    unsigned char *data = sequence;
 
     for (;;) {
-        max_command(MAX_DIGIT0, 0x01);
-        max_command(MAX_DIGIT1, 0x02);
-        max_command(MAX_DIGIT2, 0x04);
-        max_command(MAX_DIGIT3, 0x08);
-        max_command(MAX_DIGIT4, 0x10);
-        max_command(MAX_DIGIT5, 0x20);
-        max_command(MAX_DIGIT6, 0x40);
-        max_command(MAX_DIGIT7, 0x80);
+        /* Display every frame for 125 msec. */
+        max_command(MAX_DIGIT0, *data++);
+        max_command(MAX_DIGIT1, *data++);
+        max_command(MAX_DIGIT2, *data++);
+        max_command(MAX_DIGIT3, *data++);
+        max_command(MAX_DIGIT4, *data++);
+        max_command(MAX_DIGIT5, *data++);
+        max_command(MAX_DIGIT6, *data++);
+        max_command(MAX_DIGIT7, 0);
 
-        usleep(500000);
-
-        max_command(MAX_DIGIT0, 0x80);
-        max_command(MAX_DIGIT1, 0x40);
-        max_command(MAX_DIGIT2, 0x20);
-        max_command(MAX_DIGIT3, 0x10);
-        max_command(MAX_DIGIT4, 0x08);
-        max_command(MAX_DIGIT5, 0x04);
-        max_command(MAX_DIGIT6, 0x02);
-        max_command(MAX_DIGIT7, 0x01);
-
-        usleep(500000);
+        usleep(125000);
+        msec -= 125;
+        if (*data == 0xff) {
+            if (msec < 0)
+                break;
+            data = sequence;
+        }
     }
-    bitbang_close();
+}
+
+int main()
+{
+    max_init();
+
+    for (;;) {
+	show(3000, pic_heart);
+	show(3000, pic_bar);
+	show(3000, pic_coin);
+	show(3000, pic_cross);
+	show(3000, pic_bird);
+	show(3000, pic_asterisk);
+	show(3000, pic_snow);
+	show(3000, pic_fire);
+	show(3000, pic_square);
+	show(3000, pic_round);
+	show(3000, pic_romb);
+	show(3000, pic_ice);
+    }
     return 0;
 }
