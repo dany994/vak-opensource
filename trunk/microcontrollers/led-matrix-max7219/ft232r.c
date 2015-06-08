@@ -3,8 +3,17 @@
  * in FTDI Application Note AN232R-01:
  * "Bit Bang Modes for the FT232R and FT245R".
  *
- * In case you have FTDI Virtual Com Port (VCP) driver installed,
- * this needs to be disabled before bitbang mode will work on the Mac;
+ * On Linux, access to FTDI USB devices is restricted to root by default.
+ * You can use 'sudo' to run the program, or open the user access
+ * by creaating a rule for udev service:
+ *      gedit /etc/udev/rules.d/10-ftdi.rules
+ *
+ * Add the following line:
+ *      # FTDI USB-Serial
+ *      SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", GROUP="users", MODE="0666"
+ *
+ * On Mac OS X, in case you have FTDI Virtual Com Port (VCP) driver installed,
+ * this needs to be disabled before bitbang mode will work;
  * the two cannot coexist. In a Terminal window, type:
  *
  *      sudo kextunload /System/Library/Extensions/IOUSBFamily.kext/Contents/PlugIns/AppleUSBFTDI.kext
@@ -15,6 +24,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <usb.h>
 #include "bitbang.h"
 
@@ -78,13 +88,22 @@ int bitbang_open(char *device_desc, int output_mask)
                 if (! adapter)
                     continue;
 
-                /* Check description. */
-                if (usb_get_string_simple (adapter,
-                    dev->descriptor.iProduct,
-                    string, sizeof(string)) <= 0 ||
-                    strncmp (string, device_desc,
-                    sizeof(string)) != 0)
-                {
+                /* Get product description string. */
+                if (usb_get_string_simple (adapter, dev->descriptor.iProduct,
+                    string, sizeof(string)) <= 0) {
+                    if (errno == EPERM) {
+                        printf("No access to FTDI USB-Serial device from user mode.\n");
+                        printf("Please, run this application via 'sudo', or enable\n");
+                        printf("user access to FTDI USB-Serial devices in /etc/udev/rules.d\n\n");
+                    } else
+                        printf("Cannot get iProduct string\n");
+                    usb_close (adapter);
+                    continue;
+                }
+
+                /* Select device by description. */
+                if (strncmp (string, device_desc, sizeof(string)) != 0) {
+                    printf("Device name '%s' don't match\n", string);
                     usb_close (adapter);
                     continue;
                 }
@@ -92,10 +111,20 @@ int bitbang_open(char *device_desc, int output_mask)
             }
         }
     }
-    /* Adapter not found. */
+    printf("FTDI FT232R adapter not found.\n");
     return -1;
 
-found:
+found:;
+
+#if ! defined (__CYGWIN32__) && ! defined (MINGW32) && ! defined (__APPLE__)
+    if (usb_get_driver_np (adapter, 0, string, sizeof(string)) == 0) {
+        if (usb_detach_kernel_driver_np (adapter, 0) < 0) {
+            printf("Failed to detach the '%s' kernel driver.\n", string);
+            usb_close(adapter);
+            return -1;
+        }
+    }
+#endif
     usb_claim_interface (adapter, 0);
 
     /* Reset the device. */
@@ -103,6 +132,7 @@ found:
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
         SIO_RESET, 0, 0, 0, 0, 1000) != 0) {
             /* Unable to reset device. */
+            printf("FT232R: Unable to reset device.\n");
             return -1;
     }
 
@@ -111,7 +141,7 @@ found:
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
         SIO_SET_BITMODE, output_mask | 0x400,
         0, 0, 0, 1000) != 0) {
-            /* Cannot set sync bitbang mode. */
+            printf("FT232R: Cannot set sync bitbang mode.\n");
             return -1;
     }
 
@@ -124,13 +154,13 @@ found:
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
         SIO_SET_BAUD_RATE, divisor,
         0, 0, 0, 1000) != 0) {
-            /* Cannot set baud rate. */
+            printf("FT232R: Cannot set baud rate.\n");
             return -1;
     }
     if (usb_control_msg (adapter,
         USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT,
         SIO_SET_LATENCY_TIMER, latency_timer, 0, 0, 0, 1000) != 0) {
-            /* Unable to set latency timer. */
+            printf("FT232R: Unable to set latency timer.\n");
             return -1;
     }
 
