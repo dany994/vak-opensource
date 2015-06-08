@@ -79,7 +79,6 @@ void max_init()
 {
     /* Use FT232R adapter to connect to MAX7219. */
     if (bitbang_open("FT232R USB UART", MASK_CS | MASK_CLK | MASK_DIN) < 0) {
-        printf("Cannot connect to FT232R adapter.\n");
         exit(-1);
     }
 
