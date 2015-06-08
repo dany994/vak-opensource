@@ -75,7 +75,7 @@ void max_command(int addr, int byte)
     bitbang_io(output, nbytes, 0);
 }
 
-void max_init()
+void max_init(int intensity)
 {
     /* Use FT232R adapter to connect to MAX7219. */
     if (bitbang_open("FT232R USB UART", MASK_CS | MASK_CLK | MASK_DIN) < 0) {
@@ -90,7 +90,7 @@ void max_init()
     max_command(MAX_DECODE_MODE, 0);  /* no code B decode */
     max_command(MAX_SHUTDOWN, 1);     /* no shutdown mode */
     max_command(MAX_DISPLAY_TEST, 0); /* no display test */
-    max_command(MAX_INTENSITY, 1);    /* minimum intensity (from 1 to 15) */
+    max_command(MAX_INTENSITY, intensity);
 }
 
 /*
@@ -631,21 +631,25 @@ void show(int msec, unsigned char *sequence)
 
 int main()
 {
-    max_init();
+    /* Display every pattern for 3 seconds. */
+    int msec = 3000;
+
+    /* Set intensity to minimum (from 1 to 15). */
+    max_init(1);
 
     for (;;) {
-	show(3000, pic_heart);
-	show(3000, pic_bar);
-	show(3000, pic_coin);
-	show(3000, pic_cross);
-	show(3000, pic_bird);
-	show(3000, pic_asterisk);
-	show(3000, pic_snow);
-	show(3000, pic_fire);
-	show(3000, pic_square);
-	show(3000, pic_round);
-	show(3000, pic_romb);
-	show(3000, pic_ice);
+	show(msec, pic_heart);
+	show(msec, pic_bar);
+	show(msec, pic_coin);
+	show(msec, pic_cross);
+	show(msec, pic_bird);
+	show(msec, pic_asterisk);
+	show(msec, pic_snow);
+	show(msec, pic_fire);
+	show(msec, pic_square);
+	show(msec, pic_round);
+	show(msec, pic_romb);
+	show(msec, pic_ice);
     }
     return 0;
 }

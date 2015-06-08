@@ -1,7 +1,5 @@
 /*
- * We use FT232RL chip in synchronous bit bang mode, as described
- * in FTDI Application Note AN232R-01:
- * "Bit Bang Modes for the FT232R and FT245R".
+ * Generic interface to FT232R chip in bitbang mode.
  */
 #define MASK_TXD    0x01
 #define MASK_RXD    0x02

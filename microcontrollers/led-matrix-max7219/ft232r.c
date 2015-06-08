@@ -38,11 +38,11 @@
 #define OUT_EP			0x81
 
 /* Requests */
-#define SIO_RESET		0 /* Reset the port */
-#define SIO_MODEM_CTRL		1 /* Set the modem control register */
-#define SIO_SET_FLOW_CTRL	2 /* Set flow control register */
-#define SIO_SET_BAUD_RATE	3 /* Set baud rate */
-#define SIO_SET_DATA		4 /* Set the data characteristics of the port */
+#define SIO_RESET		0   /* Reset the port */
+#define SIO_MODEM_CTRL		1   /* Set the modem control register */
+#define SIO_SET_FLOW_CTRL	2   /* Set flow control register */
+#define SIO_SET_BAUD_RATE	3   /* Set baud rate */
+#define SIO_SET_DATA		4   /* Set the data characteristics of the port */
 #define SIO_POLL_MODEM_STATUS	5
 #define SIO_SET_EVENT_CHAR	6
 #define SIO_SET_ERROR_CHAR	7
@@ -223,7 +223,7 @@ int bitbang_io(unsigned char *output, int nbytes, unsigned char *reply)
                 (char*) output + txdone + bytes_written,
                 bytes_to_write - bytes_written, 1000);
             if (n < 0) {
-                printf("--usb bulk write failed (%u bytes)\n",
+                printf("FT232R: write failed (%u bytes)\n",
                     bytes_to_write - bytes_written);
                 exit(-1);
             }
@@ -244,14 +244,14 @@ int bitbang_io(unsigned char *output, int nbytes, unsigned char *reply)
                     (char*) buf,
                     bytes_to_read - bytes_read + 2, 2000);
                 if (n < 0) {
-                    printf("--usb bulk read failed\n");
+                    printf("FT232R: read failed\n");
                     exit(-1);
                 }
-                if (n != bytes_to_read + 2)
+                /*if (n != bytes_to_read + 2)
                     printf("--usb error: bulk read %d bytes of %d\n",
                         n, bytes_to_read - bytes_read + 2);
                 else
-                    /*printf("--usb bulk read %d bytes\n", n)*/;
+                    printf("--usb bulk read %d bytes\n", n)*/;
 
                 if (n > 2) {
                     /* Copy data. */
