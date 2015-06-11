@@ -18,7 +18,6 @@ const char copyright[] = "Copyright (C) 2015 Serge Vakulenko";
 
 char *progname;
 int verbose;
-int trace;
 int dyio_debug;
 uint8_t dyio_mac[6] = { 0 };
 uint8_t dyio_reply[256];
@@ -38,6 +37,14 @@ struct dyio_header {
 #define TYPE_ASYNC      0x40    /* Asynchronous, high priority, state changing */
 
     uint8_t id;                 /* Namespace index; high bit is response flag */
+#define ID_BCS_CORE     0       /* _png, _nms */
+#define ID_BCS_RPC      1       /* _rpc, args */
+#define ID_BCS_IO       2
+#define ID_BCS_SETMODE  3
+#define ID_DYIO         4
+#define ID_BCS_PID      5
+#define ID_BCS_DYPID    6
+#define ID_BCS_SAFE     7
 #define ID_RESPONSE     0x80
 
     uint8_t datalen;            /* The length of data including the RPC */
@@ -45,22 +52,10 @@ struct dyio_header {
     uint8_t rpc[4];             /* RPC call identifier */
 };
 
-void usage()
-{
-    fprintf(stderr, "DyIO usility, Version %s, %s\n", version, copyright);
-    fprintf(stderr, "Usage:\n\t%s [-vtd] [-r count] file...\n", progname);
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, "\t-v\tverbose mode\n");
-    fprintf(stderr, "\t-t\ttrace mode\n");
-    fprintf(stderr, "\t-d\tdebug\n");
-    exit(-1);
-}
-
 /*
  * Send the command sequence and get back a response.
  */
-static int send_receive(int type, int namespace, char *rpc,
-    uint8_t *data, int datalen)
+void dyio_call(int type, int namespace, char *rpc, uint8_t *data, int datalen)
 {
     struct dyio_header hdr;
     uint8_t *p, sum;
@@ -117,8 +112,10 @@ next:
     len = 0;
     while (len < sizeof(hdr)) {
         got = serial_read(p, sizeof(hdr) - len);
-        if (! got)
-            return 0;
+        if (! got) {
+            fprintf(stderr, "dyio: connection lost\n");
+            exit(-1);
+        }
 
         p += got;
         len += got;
@@ -139,7 +136,8 @@ flush_input:
             retry = 1;
             goto again;
         }
-        return 0;
+        fprintf(stderr, "dyio: unable to synchronize\n");
+        exit(-1);
     }
 
     /*
@@ -150,8 +148,10 @@ flush_input:
     len = 0;
     while (len <= dyio_replylen) {
         got = serial_read(p, dyio_replylen + 1 - len);
-        if (! got)
-            return 0;
+        if (! got) {
+            fprintf(stderr, "dyio: connection lost\n");
+            exit(-1);
+        }
 
         p += got;
         len += got;
@@ -193,13 +193,13 @@ flush_input:
     if (hdr.type == TYPE_ASYNC) {
         goto next;
     }
-    return 1;
 }
 
+/*
+ * Establish a connection to the DyIO device.
+ */
 void dyio_connect(const char *devname)
 {
-    int retry_count;
-
     /* Open serial port */
     if (serial_open(devname, 115200) < 0) {
         /* failed to open serial port */
@@ -207,38 +207,63 @@ void dyio_connect(const char *devname)
         exit(-1);
     }
 
-    /* Synchronize */
-    retry_count = 0;
-    for (;;) {
-        /* Ping the device. */
-        if (send_receive(TYPE_GET, 0, "_png", 0, 0)) {
-            if (dyio_debug > 1)
-                printf("dyio-connect: OK\n");
-            return;
-        }
-        ++retry_count;
-        if (dyio_debug > 1)
-            printf("dyio-connect: error %d\n", retry_count);
-        if (retry_count >= 3) {
-            /* Bad reply or no device connected */
-            printf("dyio-connect: Connection failed.\n");
+    /* Ping the device. */
+    dyio_call(TYPE_GET, ID_BCS_CORE, "_png", 0, 0);
+    if (dyio_debug > 1)
+        printf("dyio-connect: OK\n");
+}
+
+/*
+ * Query and display information about the DyIO device.
+ */
+void dyio_info()
+{
+    int num_spaces, i;
+    uint8_t query[1];
+
+    /* Query the number of namespaces.
+     * TODO: The reply length must be 1 byte, but it's 3 for some reason. */
+    dyio_call(TYPE_GET, ID_BCS_CORE, "_nms", 0, 0);
+    if (dyio_replylen < 1) {
+        printf("dyio-info: incorrect _nms reply: length %u bytes\n", dyio_replylen);
+        exit(-1);
+    }
+    num_spaces = dyio_reply[0];
+    printf("Connected to DyIO device with %u namespaces.\n", num_spaces);
+
+    /* Print info about every namespace. */
+    for (i=0; i<num_spaces; i++) {
+        query[0] = i;
+        dyio_call(TYPE_GET, ID_BCS_CORE, "_nms", query, 1);
+        if (dyio_replylen < 1) {
+            printf("dyio-info: incorrect _nms[%u] reply\n", i);
             exit(-1);
         }
+        printf("Namespace %u: %s\n", i, dyio_reply);
     }
+}
+
+void usage()
+{
+    printf("DyIO usility, Version %s, %s\n", version, copyright);
+    printf("Usage:\n\t%s [-vd] portname\n", progname);
+    printf("Options:\n");
+    printf("\t-v\tverbose mode\n");
+    printf("\t-d\tdebug\n");
+    exit(-1);
 }
 
 int main(int argc, char **argv)
 {
+    char *devname;
+
     progname = *argv;
     for (;;) {
-        switch (getopt(argc, argv, "vtd")) {
+        switch (getopt(argc, argv, "vd")) {
         case EOF:
             break;
         case 'v':
             ++verbose;
-            continue;
-        case 't':
-            ++trace;
             continue;
         case 'd':
             ++dyio_debug;
@@ -256,11 +281,14 @@ int main(int argc, char **argv)
     argc -= optind;
     argv += optind;
 
-    if (argc < 0)
+    if (argc != 1)
         usage();
+    devname = argv[0];
+    printf("Port name: %s\n", devname);
 
-    dyio_connect("/dev/ttyACM0");
-    printf("Connection succeeded.\n");
+    dyio_connect(devname);
+
+    dyio_info();
 
     return 0;
 }
