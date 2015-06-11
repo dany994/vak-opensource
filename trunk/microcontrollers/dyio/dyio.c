@@ -20,6 +20,7 @@ char *progname;
 int verbose;
 int dyio_debug;
 uint8_t dyio_mac[6] = { 0 };
+uint8_t dyio_reply_mac[6];
 uint8_t dyio_reply[256];
 int dyio_replylen;
 
@@ -139,6 +140,7 @@ flush_input:
         fprintf(stderr, "dyio: unable to synchronize\n");
         exit(-1);
     }
+    memcpy(dyio_reply_mac, hdr.mac, sizeof(hdr.mac));
 
     /*
      * Get response.
@@ -203,7 +205,6 @@ void dyio_connect(const char *devname)
     /* Open serial port */
     if (serial_open(devname, 115200) < 0) {
         /* failed to open serial port */
-        perror(devname);
         exit(-1);
     }
 
@@ -211,6 +212,10 @@ void dyio_connect(const char *devname)
     dyio_call(TYPE_GET, ID_BCS_CORE, "_png", 0, 0);
     if (dyio_debug > 1)
         printf("dyio-connect: OK\n");
+
+    printf("DyIO device address: %02x-%02x-%02x-%02x-%02x-%02x\n",
+        dyio_reply_mac[0], dyio_reply_mac[1], dyio_reply_mac[2],
+        dyio_reply_mac[3], dyio_reply_mac[4], dyio_reply_mac[5]);
 }
 
 /*
@@ -229,7 +234,7 @@ void dyio_info()
         exit(-1);
     }
     num_spaces = dyio_reply[0];
-    printf("Connected to DyIO device with %u namespaces.\n", num_spaces);
+    printf("Total %u namespaces:\n", num_spaces);
 
     /* Print info about every namespace. */
     for (i=0; i<num_spaces; i++) {
@@ -239,7 +244,7 @@ void dyio_info()
             printf("dyio-info: incorrect _nms[%u] reply\n", i);
             exit(-1);
         }
-        printf("Namespace %u: %s\n", i, dyio_reply);
+        printf("    Namespace %u: %s\n", i, dyio_reply);
     }
 }
 
