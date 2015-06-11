@@ -24,21 +24,24 @@ uint8_t dyio_mac[6] = { 0 };
 uint8_t dyio_reply[256];
 int dyio_replylen;
 
-#define PROTOCOL_VERSION 3
+struct dyio_header {
+    uint8_t proto;              /* Protocol revision */
+#define PROTO_VERSION   3
 
+    uint8_t mac[6];             /* MAC address of the device */
+
+    uint8_t type;               /* Packet type */
 #define TYPE_STATUS     0x00    /* Synchronous, high priority, non state changing */
 #define TYPE_GET        0x10    /* Synchronous, query for information, non state changing */
 #define TYPE_POST       0x20    /* Synchronous, device state changing */
 #define TYPE_CRITICAL   0x30    /* Synchronous, high priority, state changing */
 #define TYPE_ASYNC      0x40    /* Asynchronous, high priority, state changing */
 
-struct dyio_header {
-    uint8_t proto;              /* Protocol revision */
-    uint8_t mac[6];             /* MAC address of the device */
-    uint8_t type;               /* Packet type */
-    uint8_t namespace;          /* Low bit is direction flag */
+    uint8_t id;                 /* Namespace index; high bit is response flag */
+#define ID_RESPONSE     0x80
+
     uint8_t datalen;            /* The length of data including the RPC */
-    uint8_t hsum;               /* Header checksum */
+    uint8_t hsum;               /* Sum of previous bytes */
     uint8_t rpc[4];             /* RPC call identifier */
 };
 
@@ -60,21 +63,25 @@ static int send_receive(int type, int namespace, char *rpc,
     uint8_t *data, int datalen)
 {
     struct dyio_header hdr;
-    uint8_t *p;
-    int len, i, got, sum, retry = 0;
-again:
+    uint8_t *p, sum;
+    int len, i, got, retry = 0;
+
     /*
      * Prepare header and checksum.
      */
-    hdr.proto     = PROTOCOL_VERSION;
+again:
+    hdr.proto     = PROTO_VERSION;
     hdr.type      = type;
-    hdr.namespace = namespace;
+    hdr.id        = namespace;
     hdr.datalen   = datalen + sizeof(hdr.rpc);
     memcpy(hdr.mac, dyio_mac, sizeof(hdr.mac));
     memcpy(hdr.rpc, rpc, sizeof(hdr.rpc));
     hdr.hsum = hdr.proto + hdr.mac[0] + hdr.mac[1] + hdr.mac[2] +
                hdr.mac[3] + hdr.mac[4] + hdr.mac[5] + hdr.type +
-               hdr.namespace + hdr.datalen;
+               hdr.id + hdr.datalen;
+    sum = hdr.rpc[0] + hdr.rpc[1] + hdr.rpc[2] + hdr.rpc[3];
+    for (i=0; i<datalen; ++i)
+        sum += data[i];
 
     /*
      * Send command.
@@ -83,18 +90,22 @@ again:
         printf("send %x-%x-%x-%x-%x-%x-%x-%x-%x-[%u]-%x-'%c%c%c%c'",
             hdr.proto, hdr.mac[0], hdr.mac[1], hdr.mac[2],
             hdr.mac[3], hdr.mac[4], hdr.mac[5], hdr.type,
-            hdr.namespace, hdr.datalen, hdr.hsum,
+            hdr.id, hdr.datalen, hdr.hsum,
             hdr.rpc[0], hdr.rpc[1], hdr.rpc[2], hdr.rpc[3]);
         for (i=0; i<datalen; ++i)
             printf("-%x", data[i]);
-        printf("\n");
+        printf("-%x\n", sum);
     }
     if (serial_write((uint8_t*)&hdr, sizeof(hdr)) < 0) {
-        fprintf(stderr, "dyio-send: header write error\n");
+        fprintf(stderr, "dyio: header write error\n");
         exit(-1);
     }
     if (datalen > 0 && serial_write(data, datalen) < 0) {
-        fprintf(stderr, "dyio-send: data write error\n");
+        fprintf(stderr, "dyio: data write error\n");
+        exit(-1);
+    }
+    if (serial_write(&sum, 1) < 0) {
+        fprintf(stderr, "dyio: data sum write error\n");
         exit(-1);
     }
 
@@ -112,7 +123,7 @@ next:
         p += got;
         len += got;
     }
-    if (hdr.proto != PROTOCOL_VERSION) {
+    if (hdr.proto != PROTO_VERSION) {
         /* Skip all incoming data. */
         unsigned char buf [300];
 
@@ -120,9 +131,9 @@ next:
             printf("got invalid header: %x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x\n",
                 hdr.proto, hdr.mac[0], hdr.mac[1], hdr.mac[2],
                 hdr.mac[3], hdr.mac[4], hdr.mac[5], hdr.type,
-                hdr.namespace, hdr.datalen, hdr.hsum,
+                hdr.id, hdr.datalen, hdr.hsum,
                 hdr.rpc[0], hdr.rpc[1], hdr.rpc[2], hdr.rpc[3]);
-//flush_input:
+flush_input:
         serial_read(buf, sizeof(buf));
         if (! retry) {
             retry = 1;
@@ -134,11 +145,11 @@ next:
     /*
      * Get response.
      */
-    dyio_replylen = hdr.datalen - sizeof(hdr.rpc) + 1;
+    dyio_replylen = hdr.datalen - sizeof(hdr.rpc);
     p = dyio_reply;
     len = 0;
-    while (len < dyio_replylen) {
-        got = serial_read(p, dyio_replylen - len);
+    while (len <= dyio_replylen) {
+        got = serial_read(p, dyio_replylen + 1 - len);
         if (! got)
             return 0;
 
@@ -146,33 +157,48 @@ next:
         len += got;
     }
     if (dyio_debug > 1) {
-        printf(" got %x-%x-%x-%x-%x-%x-%x-%x-%x-[%u]-%x-'%c%c%c%c'",
+        printf(">>>> %x-%x-%x-%x-%x-%x-%x-%x-%x-[%u]-%x-'%c%c%c%c'",
             hdr.proto, hdr.mac[0], hdr.mac[1], hdr.mac[2],
             hdr.mac[3], hdr.mac[4], hdr.mac[5], hdr.type,
-            hdr.namespace, hdr.datalen, hdr.hsum,
+            hdr.id, hdr.datalen, hdr.hsum,
             hdr.rpc[0], hdr.rpc[1], hdr.rpc[2], hdr.rpc[3]);
-        for (i=0; i<dyio_replylen; ++i)
+        for (i=0; i<=dyio_replylen; ++i)
             printf("-%x", dyio_reply[i]);
         printf("\n");
     }
 
-    /* Check sum. */
+    /* Check header sum. */
     sum = hdr.proto + hdr.mac[0] + hdr.mac[1] + hdr.mac[2] +
           hdr.mac[3] + hdr.mac[4] + hdr.mac[5] + hdr.type +
-          hdr.namespace + hdr.datalen;
+          hdr.id + hdr.datalen;
     if (sum != hdr.hsum) {
-        printf("invalid reply checksum\n");
-        //goto flush_input;
+        printf("dyio: invalid reply header sum = %02x, expected %02x \n", sum, hdr.hsum);
+        goto flush_input;
     }
-    if (hdr.type == TYPE_ASYNC)
+
+    /* Check data sum. */
+    sum = hdr.rpc[0] + hdr.rpc[1] + hdr.rpc[2] + hdr.rpc[3];
+    for (i=0; i<dyio_replylen; ++i)
+        sum += dyio_reply[i];
+    if (sum != dyio_reply[dyio_replylen]) {
+        printf("dyio: invalid reply data sum = %02x, expected %02x \n", sum, dyio_reply[dyio_replylen]);
+        goto flush_input;
+    }
+
+    if (! (hdr.id & ID_RESPONSE)) {
+        printf("dyio: incorrect response flag\n");
         goto next;
+    }
+
+    if (hdr.type == TYPE_ASYNC) {
+        goto next;
+    }
     return 1;
 }
 
 void dyio_connect(const char *devname)
 {
     int retry_count;
-    unsigned char response [12];
 
     /* Open serial port */
     if (serial_open(devname, 115200) < 0) {
@@ -184,19 +210,19 @@ void dyio_connect(const char *devname)
     /* Synchronize */
     retry_count = 0;
     for (;;) {
+        /* Ping the device. */
         if (send_receive(TYPE_GET, 0, "_png", 0, 0)) {
-            if (memcmp(response, "xxxx", 4) == 0) {
-                if (dyio_debug > 1)
-                    printf("dyio-connect: OK\n");
-                break;
-            }
+            if (dyio_debug > 1)
+                printf("dyio-connect: OK\n");
+            return;
         }
         ++retry_count;
         if (dyio_debug > 1)
             printf("dyio-connect: error %d\n", retry_count);
         if (retry_count >= 3) {
             /* Bad reply or no device connected */
-            return;
+            printf("dyio-connect: Connection failed.\n");
+            exit(-1);
         }
     }
 }
@@ -234,6 +260,7 @@ int main(int argc, char **argv)
         usage();
 
     dyio_connect("/dev/ttyACM0");
+    printf("Connection succeeded.\n");
 
     return 0;
 }
