@@ -69,6 +69,31 @@ struct dyio_header {
 #define TYPE_BOOL           43  /* a boolean value */
 #define TYPE_FIXED1K_STR    44  /* first byte is number of values, next is floats */
 
+/* Channel modes. */
+#define MODE_NO_CHANGE              0x00
+#define MODE_HIGH_IMPEDANCE         0x01
+#define MODE_DI                     0x02
+#define MODE_DO                     0x03
+#define MODE_ANALOG_IN              0x04
+#define MODE_ANALOG_OUT             0x05
+#define MODE_PWM                    0x06
+#define MODE_SERVO                  0x07
+#define MODE_UART_TX                0x08
+#define MODE_UART_RX                0x09
+#define MODE_SPI_MOSI               0x0A
+#define MODE_SPI_MISO               0x0B
+#define MODE_SPI_SCK                0x0C
+                                 /* 0x0D unused */
+#define MODE_COUNTER_INPUT_INT      0x0E
+#define MODE_COUNTER_INPUT_DIR      0x0F
+#define MODE_COUNTER_INPUT_HOME     0x10
+#define MODE_COUNTER_OUTPUT_INT     0x11
+#define MODE_COUNTER_OUTPUT_DIR     0x12
+#define MODE_COUNTER_OUTPUT_HOME    0x13
+#define MODE_DC_MOTOR_VEL           0x14
+#define MODE_DC_MOTOR_DIR           0x15
+#define MODE_PPM_IN                 0x16
+
 /*
  * Send the command sequence and get back a response.
  */
@@ -270,13 +295,42 @@ static void print_args(int nargs, uint8_t *arg)
     }
 }
 
+static const char *mode_name(int mode)
+{
+    switch (mode) {
+    case MODE_NO_CHANGE:           return "No Change";
+    case MODE_HIGH_IMPEDANCE:      return "High Impedance";
+    case MODE_DI:                  return "Digital Input";
+    case MODE_DO:                  return "Digital Output";
+    case MODE_ANALOG_IN:           return "Analog Input";
+    case MODE_ANALOG_OUT:          return "Analog Output";
+    case MODE_PWM:                 return "PWM";
+    case MODE_SERVO:               return "Servo";
+    case MODE_UART_TX:             return "UART Transmit";
+    case MODE_UART_RX:             return "UART Receive";
+    case MODE_SPI_MOSI:            return "SPI MOSI";
+    case MODE_SPI_MISO:            return "SPI MISO";
+    case MODE_SPI_SCK:             return "SPI SCK";
+    case MODE_COUNTER_INPUT_INT:   return "Counter Input INT";
+    case MODE_COUNTER_INPUT_DIR:   return "Counter Input DIR";
+    case MODE_COUNTER_INPUT_HOME:  return "Counter Input HOME";
+    case MODE_COUNTER_OUTPUT_INT:  return "Counter Output INT";
+    case MODE_COUNTER_OUTPUT_DIR:  return "Counter Output DIR";
+    case MODE_COUNTER_OUTPUT_HOME: return "Counter Output HOME";
+    case MODE_DC_MOTOR_VEL:        return "DC Motor VEL";
+    case MODE_DC_MOTOR_DIR:        return "DC Motor DIR";
+    case MODE_PPM_IN:              return "PPM Input";
+    default:                       return "UNKNOWN";
+    }
+}
+
 /*
  * Query and display information about the DyIO device.
  */
 void dyio_info()
 {
     int num_spaces, ns, num_methods, m, num_args, num_resp;
-    int query_type, resp_type, voltage;
+    int query_type, resp_type, voltage, num_channels, c;
     uint8_t query[2], *args, *resp;
     char rpc[5];
 
@@ -363,6 +417,18 @@ void dyio_info()
             print_args(num_resp, resp);
             printf(")\n");
         }
+    }
+
+    /* Print channels */
+    dyio_call(PKT_GET, ID_BCS_IO, "gacm", 0, 0);
+    if (dyio_replylen < 1) {
+        printf("dyio-info: incorrect gacm reply: length %u bytes\n", dyio_replylen);
+        exit(-1);
+    }
+    num_channels = dyio_reply[0];
+    printf("\nChannels:\n");
+    for (c=0; c<num_channels; c++) {
+        printf("    %u: %s\n", c, mode_name(dyio_reply[1+c]));
     }
 }
 

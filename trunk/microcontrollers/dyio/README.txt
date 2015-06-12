@@ -28,7 +28,11 @@ Namespace 2: bcs.io
 ~~~~~~~~~~~~~~~~~~~
     gchm GET(byte) -> POST(byte, byte)
 
+        Get channel mode.
+
     gacm GET() -> POST(byte[])
+
+        Get modes for all channels.
 
     gchv GET(byte) -> POST(byte, int)
 
