@@ -66,7 +66,12 @@ Namespace 4: neuronrobotics.dyio
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     _rev GET() -> POST(byte, byte, byte, byte, byte, byte)
 
+        Get firmware revision numbers.
+
     _pwr GET() -> POST(byte, byte, int16, bool)
+
+        Get external power input voltage and
+        power source for right and left rails.
 
     _mac CRITICAL(byte, byte, byte, byte, byte, byte) -> POST(byte, byte)
 
