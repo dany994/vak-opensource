@@ -31,11 +31,11 @@ struct dyio_header {
     uint8_t mac[6];             /* MAC address of the device */
 
     uint8_t type;               /* Packet type */
-#define TYPE_STATUS     0x00    /* Synchronous, high priority, non state changing */
-#define TYPE_GET        0x10    /* Synchronous, query for information, non state changing */
-#define TYPE_POST       0x20    /* Synchronous, device state changing */
-#define TYPE_CRITICAL   0x30    /* Synchronous, high priority, state changing */
-#define TYPE_ASYNC      0x40    /* Asynchronous, high priority, state changing */
+#define PKT_STATUS      0x00    /* Synchronous, high priority, non state changing */
+#define PKT_GET         0x10    /* Synchronous, query for information, non state changing */
+#define PKT_POST        0x20    /* Synchronous, device state changing */
+#define PKT_CRITICAL    0x30    /* Synchronous, high priority, state changing */
+#define PKT_ASYNC       0x40    /* Asynchronous, high priority, state changing */
 
     uint8_t id;                 /* Namespace index; high bit is response flag */
 #define ID_BCS_CORE     0       /* _png, _nms */
@@ -52,6 +52,20 @@ struct dyio_header {
     uint8_t hsum;               /* Sum of previous bytes */
     uint8_t rpc[4];             /* RPC call identifier */
 };
+
+/*
+ * Types of method parameters.
+ */
+#define TYPE_I08            8   /* 8 bit integer */
+#define TYPE_I16            16  /* 16 bit integer */
+#define TYPE_I32            32  /* 32 bit integer */
+#define TYPE_STR            37  /* first byte is number of values, next is byte values */
+#define TYPE_I32STR         38  /* first byte is number of values, next is 32-bit values */
+#define TYPE_ASCII          39  /* ASCII string, null terminated */
+#define TYPE_FIXED100       41  /* float */
+#define TYPE_FIXED1K        42  /* float */
+#define TYPE_BOOL           43  /* a boolean value */
+#define TYPE_FIXED1K_STR    44  /* first byte is number of values, next is floats */
 
 /*
  * Send the command sequence and get back a response.
@@ -192,7 +206,7 @@ flush_input:
         goto next;
     }
 
-    if (hdr.type == TYPE_ASYNC) {
+    if (hdr.type == PKT_ASYNC) {
         goto next;
     }
 }
@@ -209,7 +223,7 @@ void dyio_connect(const char *devname)
     }
 
     /* Ping the device. */
-    dyio_call(TYPE_GET, ID_BCS_CORE, "_png", 0, 0);
+    dyio_call(PKT_GET, ID_BCS_CORE, "_png", 0, 0);
     if (dyio_debug > 1)
         printf("dyio-connect: OK\n");
 
@@ -218,33 +232,110 @@ void dyio_connect(const char *devname)
         dyio_reply_mac[3], dyio_reply_mac[4], dyio_reply_mac[5]);
 }
 
+static const char *pkt_name(int type)
+{
+    switch (type) {
+    case PKT_STATUS:    return "STATUS";
+    case PKT_GET:       return "GET";
+    case PKT_POST:      return "POST";
+    case PKT_CRITICAL:  return "CRITICAL";
+    case PKT_ASYNC:     return "ASYNC";
+    default:            return "UNKNOWN";
+    }
+}
+
+static void print_args(int nargs, uint8_t *arg)
+{
+    int i;
+
+    for (i=0; i<nargs; i++) {
+        if (i)
+            printf(", ");
+
+        switch (arg[i]) {
+        case TYPE_I08:          printf("byte");     break;
+        case TYPE_I16:          printf("int16");    break;
+        case TYPE_I32:          printf("int");      break;
+        case TYPE_STR:          printf("byte[]");   break;
+        case TYPE_I32STR:       printf("int[]");    break;
+        case TYPE_ASCII:        printf("asciiz");   break;
+        case TYPE_FIXED100:     printf("f100");     break;
+        case TYPE_FIXED1K:      printf("fixed");    break;
+        case TYPE_BOOL:         printf("bool");     break;
+        case TYPE_FIXED1K_STR:  printf("fixed[]");  break;
+        default:                printf("unknown");  break;
+        }
+    }
+}
+
 /*
  * Query and display information about the DyIO device.
  */
 void dyio_info()
 {
-    int num_spaces, i;
-    uint8_t query[1];
+    int num_spaces, ns, num_methods, m, num_args, num_resp;
+    int query_type, resp_type;
+    uint8_t query[2], *args, *resp;
+    char rpc[5];
 
     /* Query the number of namespaces.
      * TODO: The reply length must be 1 byte, but it's 3 for some reason. */
-    dyio_call(TYPE_GET, ID_BCS_CORE, "_nms", 0, 0);
+    dyio_call(PKT_GET, ID_BCS_CORE, "_nms", 0, 0);
     if (dyio_replylen < 1) {
         printf("dyio-info: incorrect _nms reply: length %u bytes\n", dyio_replylen);
         exit(-1);
     }
     num_spaces = dyio_reply[0];
-    printf("Total %u namespaces:\n", num_spaces);
 
     /* Print info about every namespace. */
-    for (i=0; i<num_spaces; i++) {
-        query[0] = i;
-        dyio_call(TYPE_GET, ID_BCS_CORE, "_nms", query, 1);
+    for (ns=0; ns<num_spaces; ns++) {
+        query[0] = ns;
+        dyio_call(PKT_GET, ID_BCS_CORE, "_nms", query, 1);
         if (dyio_replylen < 1) {
-            printf("dyio-info: incorrect _nms[%u] reply\n", i);
+            printf("dyio-info: incorrect _nms[%u] reply\n", ns);
             exit(-1);
         }
-        printf("    Namespace %u: %s\n", i, dyio_reply);
+        printf("Namespace %u: %s\n", ns, dyio_reply);
+
+        /* Print available methods. */
+        num_methods = 1;
+        for (m=0; m<num_methods; m++) {
+            /* Get method name (RPC). */
+            query[0] = ns;
+            query[1] = m;
+            dyio_call(PKT_GET, ID_BCS_RPC, "_rpc", query, 2);
+            if (dyio_replylen < 7) {
+                printf("dyio-info: incorrect _rpc[%u] reply\n", ns);
+                exit(-1);
+            }
+            num_methods = dyio_reply[2];
+            rpc[0] = dyio_reply[3];
+            rpc[1] = dyio_reply[4];
+            rpc[2] = dyio_reply[5];
+            rpc[3] = dyio_reply[6];
+            rpc[4] = 0;
+
+            /* Get method args. */
+            query[0] = ns;
+            query[1] = m;
+            dyio_call(PKT_GET, ID_BCS_RPC, "args", query, 2);
+            if (dyio_replylen < 6) {
+                printf("dyio-info: incorrect args[%u] reply\n", ns);
+                exit(-1);
+            }
+            query_type = dyio_reply[2];
+            num_args = dyio_reply[3];
+            args = &dyio_reply[4];
+            resp_type = dyio_reply[4 + num_args];
+            num_resp = dyio_reply[5 + num_args];
+            resp = &dyio_reply[6 + num_args];
+
+            printf("    %s %s(", rpc, pkt_name(query_type));
+            print_args(num_args, args);
+            printf(") -> %s(", pkt_name(resp_type));
+            print_args(num_resp, resp);
+            printf(")\n");
+        }
     }
 }
 
