@@ -40,12 +40,14 @@ struct dyio_header {
     uint8_t id;                 /* Namespace index; high bit is response flag */
 #define ID_BCS_CORE     0       /* _png, _nms */
 #define ID_BCS_RPC      1       /* _rpc, args */
-#define ID_BCS_IO       2
-#define ID_BCS_SETMODE  3
-#define ID_DYIO         4
-#define ID_BCS_PID      5
-#define ID_BCS_DYPID    6
-#define ID_BCS_SAFE     7
+#define ID_BCS_IO       2       /* asyn, cchn, gacm, gacv, gchc, gchm,
+                                 * gchv, gcml, sacv, schv, strm */
+#define ID_BCS_SETMODE  3       /* schm, sacm */
+#define ID_DYIO         4       /* _mac, _pwr, _rev */
+#define ID_BCS_PID      5       /* acal, apid, cpdv, cpid, gpdc,
+                                 * kpid, _pid, rpid, _vpd */
+#define ID_BCS_DYPID    6       /* dpid */
+#define ID_BCS_SAFE     7       /* safe */
 #define ID_RESPONSE     0x80
 
     uint8_t datalen;            /* The length of data including the RPC */
@@ -277,6 +279,15 @@ void dyio_info()
     int query_type, resp_type;
     uint8_t query[2], *args, *resp;
     char rpc[5];
+
+    /* Print firmware revision. */
+    dyio_call(PKT_GET, ID_DYIO, "_rev", 0, 0);
+    if (dyio_replylen < 6) {
+        printf("dyio-info: incorrect _rev reply: length %u bytes\n", dyio_replylen);
+        exit(-1);
+    }
+    printf("Firmware Revision %u.%u.%u\n",
+        dyio_reply[0], dyio_reply[1], dyio_reply[2]);
 
     /* Query the number of namespaces.
      * TODO: The reply length must be 1 byte, but it's 3 for some reason. */
