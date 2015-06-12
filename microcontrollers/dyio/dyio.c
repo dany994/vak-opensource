@@ -98,8 +98,8 @@ again:
     /*
      * Send command.
      */
-    if (dyio_debug > 1) {
-        printf("send %x-%x-%x-%x-%x-%x-%x-%x-%x-[%u]-%x-'%c%c%c%c'",
+    if (dyio_debug) {
+        printf("--- send %x-%x-%x-%x-%x-%x-%x-%x-%x-[%u]-%x-'%c%c%c%c'",
             hdr.proto, hdr.mac[0], hdr.mac[1], hdr.mac[2],
             hdr.mac[3], hdr.mac[4], hdr.mac[5], hdr.type,
             hdr.id, hdr.datalen, hdr.hsum,
@@ -174,8 +174,8 @@ flush_input:
         p += got;
         len += got;
     }
-    if (dyio_debug > 1) {
-        printf(">>>> %x-%x-%x-%x-%x-%x-%x-%x-%x-[%u]-%x-'%c%c%c%c'",
+    if (dyio_debug) {
+        printf("-- reply %x-%x-%x-%x-%x-%x-%x-%x-%x-[%u]-%x-'%c%c%c%c'",
             hdr.proto, hdr.mac[0], hdr.mac[1], hdr.mac[2],
             hdr.mac[3], hdr.mac[4], hdr.mac[5], hdr.type,
             hdr.id, hdr.datalen, hdr.hsum,
@@ -226,7 +226,7 @@ void dyio_connect(const char *devname)
 
     /* Ping the device. */
     dyio_call(PKT_GET, ID_BCS_CORE, "_png", 0, 0);
-    if (dyio_debug > 1)
+    if (dyio_debug)
         printf("dyio-connect: OK\n");
 
     printf("DyIO device address: %02x-%02x-%02x-%02x-%02x-%02x\n",
@@ -276,7 +276,7 @@ static void print_args(int nargs, uint8_t *arg)
 void dyio_info()
 {
     int num_spaces, ns, num_methods, m, num_args, num_resp;
-    int query_type, resp_type;
+    int query_type, resp_type, voltage;
     uint8_t query[2], *args, *resp;
     char rpc[5];
 
@@ -288,6 +288,22 @@ void dyio_info()
     }
     printf("Firmware Revision %u.%u.%u\n",
         dyio_reply[0], dyio_reply[1], dyio_reply[2]);
+
+    /* Print voltage and power status. */
+    dyio_call(PKT_GET, ID_DYIO, "_pwr", 0, 0);
+    if (dyio_replylen < 5) {
+        printf("dyio-info: incorrect _pwr reply: length %u bytes\n", dyio_replylen);
+        exit(-1);
+    }
+    voltage = (dyio_reply[2] << 8) | dyio_reply[3];
+    printf("Power Input: %.1fV, Override=%u\n",
+        voltage / 1000.0, dyio_reply[4]);
+    printf("Power Source: Right Rail=%s, Left Rail=%s\n",
+        dyio_reply[0] ? "Internal" : "External",
+        dyio_reply[1] ? "Internal" : "External");
+
+    if (! verbose)
+        return;
 
     /* Query the number of namespaces.
      * TODO: The reply length must be 1 byte, but it's 3 for some reason. */
