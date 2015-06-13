@@ -117,7 +117,7 @@ again:
                hdr.mac[3] + hdr.mac[4] + hdr.mac[5] + hdr.type +
                hdr.id + hdr.datalen;
     sum = hdr.rpc[0] + hdr.rpc[1] + hdr.rpc[2] + hdr.rpc[3];
-    for (i=0; i<datalen; ++i)
+    for (i=0; i<datalen; i++)
         sum += data[i];
 
     /*
@@ -129,7 +129,7 @@ again:
             hdr.mac[3], hdr.mac[4], hdr.mac[5], hdr.type,
             hdr.id, hdr.datalen, hdr.hsum,
             hdr.rpc[0], hdr.rpc[1], hdr.rpc[2], hdr.rpc[3]);
-        for (i=0; i<datalen; ++i)
+        for (i=0; i<datalen; i++)
             printf("-%x", data[i]);
         printf("-%x\n", sum);
     }
@@ -205,7 +205,7 @@ flush_input:
             hdr.mac[3], hdr.mac[4], hdr.mac[5], hdr.type,
             hdr.id, hdr.datalen, hdr.hsum,
             hdr.rpc[0], hdr.rpc[1], hdr.rpc[2], hdr.rpc[3]);
-        for (i=0; i<=dyio_replylen; ++i)
+        for (i=0; i<=dyio_replylen; i++)
             printf("-%x", dyio_reply[i]);
         printf("\n");
     }
@@ -221,7 +221,7 @@ flush_input:
 
     /* Check data sum. */
     sum = hdr.rpc[0] + hdr.rpc[1] + hdr.rpc[2] + hdr.rpc[3];
-    for (i=0; i<dyio_replylen; ++i)
+    for (i=0; i<dyio_replylen; i++)
         sum += dyio_reply[i];
     if (sum != dyio_reply[dyio_replylen]) {
         printf("dyio: invalid reply data sum = %02x, expected %02x \n", sum, dyio_reply[dyio_replylen]);
@@ -254,9 +254,10 @@ void dyio_connect(const char *devname)
     if (dyio_debug)
         printf("dyio-connect: OK\n");
 
-    printf("DyIO device address: %02x-%02x-%02x-%02x-%02x-%02x\n",
-        dyio_reply_mac[0], dyio_reply_mac[1], dyio_reply_mac[2],
-        dyio_reply_mac[3], dyio_reply_mac[4], dyio_reply_mac[5]);
+    if (verbose)
+        printf("DyIO device address: %02x-%02x-%02x-%02x-%02x-%02x\n",
+            dyio_reply_mac[0], dyio_reply_mac[1], dyio_reply_mac[2],
+            dyio_reply_mac[3], dyio_reply_mac[4], dyio_reply_mac[5]);
 }
 
 static const char *pkt_name(int type)
@@ -325,14 +326,11 @@ static const char *mode_name(int mode)
 }
 
 /*
- * Query and display information about the DyIO device.
+ * Query and display generic information about the DyIO device.
  */
 void dyio_info()
 {
-    int num_spaces, ns, num_methods, m, num_args, num_resp;
-    int query_type, resp_type, voltage, num_channels, c;
-    uint8_t query[2], *args, *resp;
-    char rpc[5];
+    int voltage;
 
     /* Print firmware revision. */
     dyio_call(PKT_GET, ID_DYIO, "_rev", 0, 0);
@@ -355,12 +353,19 @@ void dyio_info()
     printf("Rail Power Source: Right=%s, Left=%s\n",
         dyio_reply[0] ? "Internal" : "External",
         dyio_reply[1] ? "Internal" : "External");
+}
 
-    if (! verbose)
-        return;
+/*
+ * Query and display information about the namespaces.
+ */
+void dyio_print_namespaces()
+{
+    int query_type, resp_type, num_args, num_resp;
+    int num_spaces, ns, num_methods, m;
+    uint8_t query[2], *args, *resp;
+    char rpc[5];
 
-    /* Query the number of namespaces.
-     * TODO: The reply length must be 1 byte, but it's 3 for some reason. */
+    /* Query the number of namespaces. */
     dyio_call(PKT_GET, ID_BCS_CORE, "_nms", 0, 0);
     if (dyio_replylen < 1) {
         printf("dyio-info: incorrect _nms reply: length %u bytes\n", dyio_replylen);
@@ -418,14 +423,22 @@ void dyio_info()
             printf(")\n");
         }
     }
+}
 
-    /* Print channels */
+/*
+ * Query and display information about the channels.
+ */
+void dyio_print_channels()
+{
+    int num_channels, c;
+
     dyio_call(PKT_GET, ID_BCS_IO, "gacm", 0, 0);
     if (dyio_replylen < 1) {
         printf("dyio-info: incorrect gacm reply: length %u bytes\n", dyio_replylen);
         exit(-1);
     }
     num_channels = dyio_reply[0];
+
     printf("\nChannels:\n");
     for (c=0; c<num_channels; c++) {
         printf("    %u: %s\n", c, mode_name(dyio_reply[1+c]));
@@ -434,28 +447,41 @@ void dyio_info()
 
 void usage()
 {
-    printf("DyIO usility, Version %s, %s\n", version, copyright);
-    printf("Usage:\n\t%s [-vd] portname\n", progname);
+    printf("DyIO utility, Version %s, %s\n", version, copyright);
+    printf("Usage:\n\t%s [-vdinc] portname\n", progname);
     printf("Options:\n");
     printf("\t-v\tverbose mode\n");
-    printf("\t-d\tdebug\n");
+    printf("\t-i\tdisplay generic information about DyIO device\n");
+    printf("\t-n\tshow namespaces and RPC calls\n");
+    printf("\t-c\tshow channel status\n");
+    printf("\t-d\tprint debug trace of the USB protocol\n");
     exit(-1);
 }
 
 int main(int argc, char **argv)
 {
     char *devname;
+    int iflag = 0, nflag = 0, cflag = 0;
 
     progname = *argv;
     for (;;) {
-        switch (getopt(argc, argv, "vd")) {
+        switch (getopt(argc, argv, "vdinc")) {
         case EOF:
             break;
         case 'v':
-            ++verbose;
+            verbose++;
             continue;
         case 'd':
-            ++dyio_debug;
+            dyio_debug++;
+            continue;
+        case 'i':
+            iflag++;
+            continue;
+        case 'n':
+            nflag++;
+            continue;
+        case 'c':
+            cflag++;
             continue;
 #if 0
         case 'r':
@@ -469,15 +495,27 @@ int main(int argc, char **argv)
     }
     argc -= optind;
     argv += optind;
+    if (! iflag && ! nflag && ! cflag) {
+        /* By default, print generic information. */
+        iflag++;
+        verbose++;
+    }
 
     if (argc != 1)
         usage();
     devname = argv[0];
-    printf("Port name: %s\n", devname);
+
+    if (verbose)
+        printf("Port name: %s\n", devname);
 
     dyio_connect(devname);
 
-    dyio_info();
+    if (iflag)
+        dyio_info();
+    if (nflag)
+        dyio_print_namespaces();
+    if (cflag)
+        dyio_print_channels();
 
     return 0;
 }
