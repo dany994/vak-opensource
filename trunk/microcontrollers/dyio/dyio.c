@@ -431,17 +431,33 @@ void dyio_print_namespaces()
 void dyio_print_channels()
 {
     int num_channels, c;
+    uint8_t chan_mode[64], *p;
+    int chan_value[64];
 
+    /* Get channel modes. */
     dyio_call(PKT_GET, ID_BCS_IO, "gacm", 0, 0);
     if (dyio_replylen < 1) {
         printf("dyio-info: incorrect gacm reply: length %u bytes\n", dyio_replylen);
         exit(-1);
     }
     num_channels = dyio_reply[0];
+    memcpy(chan_mode, &dyio_reply[1], num_channels);
+
+    /* Get pin values. */
+    dyio_call(PKT_GET, ID_BCS_IO, "gacv", 0, 0);
+    if (dyio_replylen < 1) {
+        printf("dyio-info: incorrect gacv reply: length %u bytes\n", dyio_replylen);
+        exit(-1);
+    }
+    for (c=0; c<num_channels; c++) {
+        p = &dyio_reply[1 + c*4];
+        chan_value[c] = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+    }
 
     printf("\nChannels:\n");
     for (c=0; c<num_channels; c++) {
-        printf("    %u: %s\n", c, mode_name(dyio_reply[1+c]));
+        printf("    %2u: %-14s = %u\n", c,
+            mode_name(chan_mode[c]), chan_value[c]);
     }
 }
 
