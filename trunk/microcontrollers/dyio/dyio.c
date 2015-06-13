@@ -340,7 +340,7 @@ void dyio_info()
         printf("dyio-info: incorrect _rev reply: length %u bytes\n", dyio_replylen);
         exit(-1);
     }
-    printf("Firmware Revision %u.%u.%u\n",
+    printf("Firmware Revision: %u.%u.%u\n",
         dyio_reply[0], dyio_reply[1], dyio_reply[2]);
 
     /* Print voltage and power status. */
@@ -352,7 +352,7 @@ void dyio_info()
     voltage = (dyio_reply[2] << 8) | dyio_reply[3];
     printf("Power Input: %.1fV, Override=%u\n",
         voltage / 1000.0, dyio_reply[4]);
-    printf("Power Source: Right Rail=%s, Left Rail=%s\n",
+    printf("Rail Power Source: Right=%s, Left=%s\n",
         dyio_reply[0] ? "Internal" : "External",
         dyio_reply[1] ? "Internal" : "External");
 
