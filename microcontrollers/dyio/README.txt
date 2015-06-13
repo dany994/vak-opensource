@@ -31,13 +31,21 @@ Namespace 1: bcs.rpc
 
 Namespace 2: bcs.io
 ~~~~~~~~~~~~~~~~~~~
+    gchc GET() -> POST(int)
+
+        Get number of i/o channels.
+
+    gcml GET(byte) -> POST(byte[])
+
+        Get a list of channel modes.
+
     gchm GET(byte) -> POST(byte, byte)
 
         Get channel mode.
 
     gacm GET() -> POST(byte[])
 
-        Get modes for all channels.
+        Get current modes for all channels.
 
     gchv GET(byte) -> POST(byte, int)
 
@@ -45,13 +53,12 @@ Namespace 2: bcs.io
 
     gacv GET() -> POST(int[])
 
-        Get values of all channels.
+        Get current values of all channels.
 
     asyn GET(byte) -> POST(byte, byte)
 
-    gchc GET() -> POST(int)
-
-    gcml GET(byte) -> POST(byte[])
+        Query whether the channel can generate asynchronous data
+        (counter and servo modes).
 
     strm GET(byte) -> POST(byte, byte[])
 
