@@ -1,3 +1,8 @@
+Sources of DyIO software and firmware are available on GitHub:
+    https://github.com/NeuronRobotics/dyio.git
+    https://github.com/NeuronRobotics/c-bowler.git
+    https://github.com/NeuronRobotics/java-bowler.git
+
 Namespace 0: bcs.core
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -36,7 +41,11 @@ Namespace 2: bcs.io
 
     gchv GET(byte) -> POST(byte, int)
 
+        Get channel value.
+
     gacv GET() -> POST(int[])
+
+        Get values of all channels.
 
     asyn GET(byte) -> POST(byte, byte)
 
