@@ -83,7 +83,7 @@ struct dyio_header {
 #define MODE_SPI_MOSI               0x0A
 #define MODE_SPI_MISO               0x0B
 #define MODE_SPI_SCK                0x0C
-                                 /* 0x0D unused */
+#define MODE_UNUSED                 0x0D
 #define MODE_COUNTER_INPUT_INT      0x0E
 #define MODE_COUNTER_INPUT_DIR      0x0F
 #define MODE_COUNTER_INPUT_HOME     0x10
@@ -93,6 +93,7 @@ struct dyio_header {
 #define MODE_DC_MOTOR_VEL           0x14
 #define MODE_DC_MOTOR_DIR           0x15
 #define MODE_PPM_IN                 0x16
+#define MODE_MAX                    0x17    /* limit */
 
 /*
  * Send the command sequence and get back a response.
@@ -426,6 +427,55 @@ void dyio_print_namespaces()
 }
 
 /*
+ * Query and print a table of channel capabilities.
+ */
+void print_channel_features()
+{
+    int num_channels, c, num_modes, i, m;
+    uint8_t query[1], chan_feature[64][MODE_MAX];
+
+    /* Get number of channels. */
+    dyio_call(PKT_GET, ID_BCS_IO, "gchc", 0, 0);
+    if (dyio_replylen < 4) {
+        printf("dyio-info: incorrect gchc reply: length %u bytes\n", dyio_replylen);
+        exit(-1);
+    }
+    num_channels = dyio_reply[3];
+    memset(chan_feature, 0, sizeof(chan_feature));
+
+    /* Build a matrix of channel features. */
+    for (c=0; c<num_channels; c++) {
+        /* Get a list of channel modes. */
+        query[0] = c;
+        dyio_call(PKT_GET, ID_BCS_IO, "gcml", query, 1);
+        if (dyio_replylen < 1) {
+            printf("dyio-info: incorrect gcml[%u] reply\n", c);
+            exit(-1);
+        }
+        num_modes = dyio_reply[0];
+
+        for (i=0; i<num_modes; i++) {
+            m = dyio_reply[1+i];
+            chan_feature[c][m] = 1;
+        }
+    }
+
+    printf("\n");
+    printf("Channel Features:                             1 1 1 1 1 1 1 1 1 1 2 2 2 2\n");
+    printf("                          0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3\n");
+    for (m=MODE_DI; m<MODE_MAX; m++) {
+        if (m == MODE_UNUSED)
+            continue;
+
+        printf("    %-22s", mode_name(m));
+        for (c=0; c<num_channels; c++) {
+            printf("%c ", chan_feature[c][m] ? '+' : '.');
+        }
+        printf("\n");
+    }
+}
+
+/*
  * Query and display information about the channels.
  */
 void dyio_print_channels()
@@ -434,7 +484,10 @@ void dyio_print_channels()
     uint8_t chan_mode[64], *p;
     int chan_value[64];
 
-    /* Get channel modes. */
+    if (verbose)
+        print_channel_features();
+
+    /* Get current channel modes. */
     dyio_call(PKT_GET, ID_BCS_IO, "gacm", 0, 0);
     if (dyio_replylen < 1) {
         printf("dyio-info: incorrect gacm reply: length %u bytes\n", dyio_replylen);
@@ -443,7 +496,7 @@ void dyio_print_channels()
     num_channels = dyio_reply[0];
     memcpy(chan_mode, &dyio_reply[1], num_channels);
 
-    /* Get pin values. */
+    /* Get current pin values. */
     dyio_call(PKT_GET, ID_BCS_IO, "gacv", 0, 0);
     if (dyio_replylen < 1) {
         printf("dyio-info: incorrect gacv reply: length %u bytes\n", dyio_replylen);
@@ -454,9 +507,9 @@ void dyio_print_channels()
         chan_value[c] = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
     }
 
-    printf("\nChannels:\n");
+    printf("\nChannel Status:\n");
     for (c=0; c<num_channels; c++) {
-        printf("    %2u: %-14s = %u\n", c,
+        printf("    %2u: %-20s = %u\n", c,
             mode_name(chan_mode[c]), chan_value[c]);
     }
 }
