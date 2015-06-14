@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include <getopt.h>
 #include "serial.h"
 
@@ -514,27 +515,131 @@ void dyio_print_channels()
     }
 }
 
+/*
+ * Set channel mode.
+ */
+void dyio_set_mode(int ch, int mode)
+{
+    uint8_t query[3];
+
+    query[0] = ch;
+    query[1] = mode;
+    query[2] = 0;
+    dyio_call(PKT_POST, ID_BCS_SETMODE, "schm", query, 3);
+    if (dyio_replylen < 1) {
+        printf("dyio-info: incorrect schm[%u] reply\n", ch);
+        exit(-1);
+    }
+}
+
+/*
+ * Set channel value.
+ */
+void dyio_set_value(int ch, int value, int msec)
+{
+    uint8_t query[9];
+
+    query[0] = ch;
+    query[1] = value >> 24;
+    query[2] = value >> 16;
+    query[3] = value >> 8;
+    query[4] = value;
+    query[5] = msec >> 24;
+    query[6] = msec >> 16;
+    query[7] = msec >> 8;
+    query[8] = msec;
+    dyio_call(PKT_POST, ID_BCS_IO, "schv", query, 9);
+    if (dyio_replylen < 2) {
+        printf("dyio-info: incorrect schv[%u] reply\n", ch);
+        exit(-1);
+    }
+}
+
+/*
+ * Set channel value.
+ */
+int dyio_get_value(int ch)
+{
+    uint8_t query[1];
+    int value;
+
+    query[0] = ch;
+    dyio_call(PKT_GET, ID_BCS_IO, "gchv", query, 1);
+    if (dyio_replylen < 5) {
+        printf("dyio-info: incorrect gchv[%u] reply\n", ch);
+        exit(-1);
+    }
+    value = (dyio_reply[1] << 24) | (dyio_reply[2] << 16) |
+            (dyio_reply[3] << 8) | dyio_reply[4];
+    return value;
+}
+
 void usage()
 {
     printf("DyIO utility, Version %s, %s\n", version, copyright);
-    printf("Usage:\n\t%s [-vdinc] portname\n", progname);
+    printf("Usage:\n\t%s [-vdinc] -t#] portname\n", progname);
     printf("Options:\n");
     printf("\t-v\tverbose mode\n");
     printf("\t-i\tdisplay generic information about DyIO device\n");
     printf("\t-n\tshow namespaces and RPC calls\n");
     printf("\t-c\tshow channel status\n");
     printf("\t-d\tprint debug trace of the USB protocol\n");
+    printf("\t-t num\trun test with given number\n");
     exit(-1);
+}
+
+/*
+ * Simple test of digital inputs and outputs.
+ * Input sensor (button) is connected to channel 23.
+ * Two LEDs are connected to channels 01 and 02.
+ * While button is idle, LED1 is off and LED2 is on.
+ * When button is pressed, LED1 is turned on, and LED2 is turned off.
+ */
+void test1()
+{
+    int led0, led1, button;
+    dyio_set_mode(23, MODE_DI);
+    dyio_set_mode(0, MODE_DO);
+    dyio_set_mode(1, MODE_DO);
+    led0 = 0;
+    led1 = 0;
+    dyio_print_channels();
+    for (;;) {
+        button = !dyio_get_value(23);
+        if (button) {
+            if (! led0) {
+                printf("#");
+                led0 = 1;
+                dyio_set_value(0, led0, 0);
+            }
+            if (led1) {
+                led1 = 0;
+                dyio_set_value(1, led1, 0);
+            }
+        } else {
+            if (led0) {
+                printf(".");
+                led0 = 0;
+                dyio_set_value(0, led0, 0);
+            }
+            if (! led1) {
+                led1 = 1;
+                dyio_set_value(1, led1, 0);
+            }
+        }
+        fflush(stdout);
+        usleep(10000);
+    }
 }
 
 int main(int argc, char **argv)
 {
     char *devname;
-    int iflag = 0, nflag = 0, cflag = 0;
+    int iflag = 0, nflag = 0, cflag = 0, tflag = 0;
 
     progname = *argv;
     for (;;) {
-        switch (getopt(argc, argv, "vdinc")) {
+        switch (getopt(argc, argv, "vdinct:")) {
         case EOF:
             break;
         case 'v':
@@ -552,19 +657,16 @@ int main(int argc, char **argv)
         case 'c':
             cflag++;
             continue;
-#if 0
-        case 'r':
-            count = strtol(optarg, 0, 0);
+        case 't':
+            tflag = strtol(optarg, 0, 0);
             continue;
-#endif
-        default:
             usage();
         }
         break;
     }
     argc -= optind;
     argv += optind;
-    if (! iflag && ! nflag && ! cflag) {
+    if (! iflag && ! nflag && ! cflag && !tflag) {
         /* By default, print generic information. */
         iflag++;
         verbose++;
@@ -585,6 +687,9 @@ int main(int argc, char **argv)
         dyio_print_namespaces();
     if (cflag)
         dyio_print_channels();
-
+    switch (tflag) {
+    case 1:
+        test1();
+    }
     return 0;
 }

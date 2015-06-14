@@ -62,25 +62,54 @@ Namespace 2: bcs.io
 
     strm GET(byte) -> POST(byte, byte[])
 
+        Read data from input stream.
+        (UART receive, SPI receive, PPM input)
+
     strm POST(byte, byte[]) -> POST(byte, byte)
+
+        Write data to output stream.
+        (UART transmit, SPI transmit, PPM configuration)
 
     schv POST(byte, int, int) -> POST(byte, byte)
 
-    sacv POST(int, int[]) -> POST(int[])
-
-    cchn CRITICAL(byte, bool, int[]) -> POST(int[])
+        Set channel value.
+        Third parameter is time in milliseconds, for counter output.
 
     schv CRITICAL(byte, int[]) -> POST()
 
-    asyn CRITICAL(byte, byte, int, int, byte) -> POST()
+        Set channel value (deprecated version).
 
+    sacv POST(int, int[]) -> POST(int[])
+
+        Set values of all channels.
+        First parameter is time in milliseconds, for counter output.
+
+    cchn CRITICAL(byte, bool, int[]) -> POST(int[])
+
+        Configure channel.
+        Looks buggy.
+
+    asyn CRITICAL(pin: byte, mode: byte, time: int, value: int, edge: byte) -> POST()
+
+        Set the pin to advanced async mode.
+        Parameters:
+            pin   - channel number
+            mode  - one of AUTOSAMP, NOTEQUAL, DEADBAND or THRESHHOLD
+            time  -
+            value - for THRESHOLD mode
+            edge  - for THRESHOLD mode
 
 Namespace 3: bcs.io.setmode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     schm POST(byte, byte, byte) -> POST(byte[])
 
+        Set channel mode. Third parameter ignored.
+        Return a list of all channel modes.
+
     sacm POST(byte[]) -> POST(byte[])
 
+        Set all channel modes.
+        Return a list of all channel modes.
 
 Namespace 4: neuronrobotics.dyio
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
