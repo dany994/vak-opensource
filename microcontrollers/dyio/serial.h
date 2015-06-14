@@ -14,12 +14,6 @@
 int serial_open (const char *devname, int baud_rate);
 
 /*
- * Change the serial baud rate
- * Return -1 on error.
- */
-int serial_baud (int baud_rate);
-
-/*
  * Close the serial port.
  */
 void serial_close (void);
@@ -35,10 +29,3 @@ int serial_write (unsigned char *data, int len);
  * Return number of bytes, or -1 on error.
  */
 int serial_read (unsigned char *data, int len);
-
-/*
- * Check whether the given speed in bits per second
- * is supported by the system.
- * Return 0 when not supported.
- */
-int serial_speed_valid (int bps);
