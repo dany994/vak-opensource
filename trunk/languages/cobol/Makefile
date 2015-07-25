@@ -1,4 +1,4 @@
-PROG            = fact screendemo
+PROG            = fact screendemo hello
 COBC		= cobc -x
 
 all:		$(PROG)
