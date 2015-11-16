@@ -1,0 +1,1 @@
+This is a repository for storing a number of miscellaneous opensource projects, developed by Serge Vakulenko.
